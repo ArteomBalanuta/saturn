@@ -86,10 +86,12 @@ public class Saturn {
 
     private static void sendChatMessage(String message) {
         String chatPayload = String.format(CHAT_JSON, message);
-        WebSocketFrame chatFrame = new WebSocketStandardFrameImpl(chatPayload);
 
+        WebSocketFrame chatFrame;
         if (chatPayload.length() > STANDARD_FRAME_MAX_TEXT_PAYLOAD_SIZE) {
             chatFrame = new WebSocketExtendedFrameImpl(chatPayload);
+        } else {
+            chatFrame = new WebSocketStandardFrameImpl(chatPayload);
         }
 
         try {
@@ -174,7 +176,7 @@ public class Saturn {
             switch (message.getTrip()) {
                 case "8Wotmg": {
                     if (message.getText().toLowerCase().trim().equals("!fish")) {
-                        outgoingMessageQueue.add("BeEp bEep, bloop bl0op " + message.getNick() + "!");
+                        outgoingMessageQueue.add("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + message.getNick() + "!");
                     }
                     break;
                 }
