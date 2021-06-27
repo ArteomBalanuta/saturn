@@ -71,8 +71,16 @@ public class Saturn {
 
     public void stop() {
         /* make sure */
+        this.executorScheduler.shutdownNow();
         this.appExecutor.shutdownNow();
+        try {
+            boolean awaitTermination = this.appExecutor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         this.connection.close();
+        this.connection = null;
     }
 
     public static void main(String[] args) {
@@ -290,7 +298,7 @@ public class Saturn {
         }
     }
 
-    public void websocketFrameDispatcher() {
+    public synchronized void websocketFrameDispatcher() {
         System.out.println("websocketFrameDispatcher() triggered");
         try {
             if (this.connection != null) {

@@ -61,11 +61,6 @@ public class WebSocketExtendedFrameImpl implements WebSocketFrame {
         }
     }
 
-//    public WebSocketExtendedFrameImpl getPongWebsocketFrame() {
-//        WebSocketExtendedFrameImpl pongFrame = new WebSocketExtendedFrameImpl();
-//        return
-//    }
-
     @Override
     public byte[] getWebSocketReadTextBytes() {
         return this.textPayloadBytes;
