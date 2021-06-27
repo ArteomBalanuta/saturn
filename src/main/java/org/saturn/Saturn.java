@@ -31,11 +31,11 @@ public class Saturn {
 
     public final Gson gson = new Gson();
 
-    public final BlockingQueue<WebSocketFrame> incomingFramesQueue = new ArrayBlockingQueue<>(1024);
-    public final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(1024);
-    public volatile List<String> incomingSetOnlineMessageQueue = new ArrayList<>();
+    public final BlockingQueue<WebSocketFrame> incomingFramesQueue = new ArrayBlockingQueue<>(256);
+    public final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
+    public volatile BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
 
-    public volatile BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(1024);
+    public volatile List<String> incomingSetOnlineMessageQueue = new ArrayList<>();
 
     private final ExecutorService appExecutor = Executors.newFixedThreadPool(THREAD_NUMBER);
     private final ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
@@ -170,7 +170,7 @@ public class Saturn {
     }
 
     private synchronized void messageDispatcher() {
-        System.out.println("messageDispatcher() triggered");
+//        System.out.println("messageDispatcher() triggered");
         if (!incomingFramesQueue.isEmpty()) {
             WebSocketFrame frame = incomingFramesQueue.poll();
             String jsonText = new String(frame.getWebSocketReadTextBytes());
@@ -210,7 +210,7 @@ public class Saturn {
     }
 
     public synchronized void messageProcessor() {
-        System.out.println("messageProcessor() triggered");
+//        System.out.println("messageProcessor() triggered");
         if (!incomingChatMessageQueue.isEmpty()) {
             ChatMessage message = incomingChatMessageQueue.poll();
 
@@ -284,36 +284,42 @@ public class Saturn {
     }
 
     public synchronized void shareMessages() {
-        System.out.println("shareMessages() triggered");
+//        System.out.println("shareMessages() triggered");
         if (!outgoingMessageQueue.isEmpty()) {
             sendChatMessage(outgoingMessageQueue.poll());
         }
     }
 
-    public synchronized void websocketFrameDispatcher() {
+    public void websocketFrameDispatcher() {
         System.out.println("websocketFrameDispatcher() triggered");
-        if (this.connection != null) {
-            ReadDto readDto = this.connection.read();
-            byte[] bytes = readDto.bytes;
-            int nrOfBytes = readDto.nrOfBytesRead;
+        try {
+            if (this.connection != null) {
+                ReadDto readDto = this.connection.read();
+                byte[] bytes = readDto.bytes;
+                int nrOfBytes = readDto.nrOfBytesRead;
 
-            if (nrOfBytes != -1) {
-                System.out.println("GOT WS FRAME");
-                boolean isWebSocketPing = (0xff & bytes[0]) == 0b10001001;
-                boolean isWebSocketText = (0xff & bytes[0]) == 0b10000001;
-                boolean isExtendedFrame = (0xff & bytes[1]) == 126;
+                if (nrOfBytes != -1) {
+                    System.out.println("GOT WS FRAME");
+                    boolean isWebSocketPing = (0xff & bytes[0]) == 0b10001001;
+                    boolean isWebSocketText = (0xff & bytes[0]) == 0b10000001;
+                    boolean isExtendedFrame = (0xff & bytes[1]) == 126;
 
-                if (isWebSocketText) {
-                    OpCode opCode = isExtendedFrame ? TEXT_EXTENDED : TEXT;
-                    WebSocketFrame webSocketFrame = getWebSocketFrame(bytes, opCode);
-                    incomingFramesQueue.add(webSocketFrame);
-                }
+                    if (isWebSocketText) {
+                        OpCode opCode = isExtendedFrame ? TEXT_EXTENDED : TEXT;
+                        WebSocketFrame webSocketFrame = getWebSocketFrame(bytes, opCode);
+                        incomingFramesQueue.add(webSocketFrame);
+                    }
 
-                /* Ponging */
-                if (isWebSocketPing && isMainThread) {
-                    sendPong(connection);
+                    /* Ponging */
+                    if (isWebSocketPing && isMainThread) {
+                        sendPong(connection);
+                    }
+                } else {
+                    System.out.println("GOT NOTHING");
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

@@ -41,14 +41,14 @@ public class Connection {
 
     public ReadDto read() {
         ReadDto readDto = new ReadDto();
-        readDto.bytes = new byte[2048];
+        readDto.bytes = new byte[8192];
         try {
             readDto.nrOfBytesRead = inputStream.read(readDto.bytes, 0, readDto.bytes.length);
         } catch (IOException e) {
             if (e.getMessage().equals("Connection or inbound has closed")) {
                 System.out.println("Connection is closed for " + (isMain ? " main thread " : " list thread "));
             }
-            throw new RuntimeException();
+            throw new RuntimeException("Connection is closed for \" + (isMain ? \" main thread \" : \" list thread \"");
         }
 
         return readDto;
