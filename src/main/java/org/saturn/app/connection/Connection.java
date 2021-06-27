@@ -10,13 +10,16 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 public class Connection {
+    private boolean isMain;
+
     private final String uri;
     private final int port;
 
-    private static InputStream inputStream;
-    private static OutputStream outputStream;
+    private InputStream inputStream;
+    private OutputStream outputStream;
 
-    public Connection(String uri, int port) {
+    public Connection(String uri, int port, boolean isMain) {
+        this.isMain = isMain;
         this.uri = uri;
         this.port = port;
 
@@ -36,17 +39,16 @@ public class Connection {
         outputStream = sslSocket.getOutputStream();
     }
 
-    public InputStream getInputStream() {
-        return inputStream;
-    }
-
-    public static ReadDto read() {
+    public ReadDto read() {
         ReadDto readDto = new ReadDto();
         readDto.bytes = new byte[2048];
         try {
             readDto.nrOfBytesRead = inputStream.read(readDto.bytes, 0, readDto.bytes.length);
         } catch (IOException e) {
-            e.printStackTrace();
+            if (e.getMessage().equals("Connection or inbound has closed")) {
+                System.out.println("Connection is closed for " + (isMain ? " main thread " : " list thread "));
+            }
+            throw new RuntimeException();
         }
 
         return readDto;
@@ -55,5 +57,14 @@ public class Connection {
     public void write(byte[] bytes) throws IOException {
         outputStream.write(bytes);
         outputStream.flush();
+    }
+
+    public void close() {
+        try {
+            inputStream.close();
+            outputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
