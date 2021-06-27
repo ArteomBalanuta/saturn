@@ -2,7 +2,7 @@ package org.saturn.app.util;
 
 public class Constants {
 
-    public static final int THREAD_NUMBER = 2;
+    public static final int THREAD_NUMBER = 4;
     public static final int STANDARD_FRAME_MAX_TEXT_PAYLOAD_SIZE = 125;
 
     /* chat-ws */

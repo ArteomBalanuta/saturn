@@ -51,7 +51,6 @@ public class WebSocketExtendedFrameImpl implements WebSocketFrame {
         short payloadLength = bb.getShort(0);
 
         /* Fill the payload field from the incoming packet */
-        System.out.println("payload length: " + payloadLength);
         if (payloadLength > 0) {
             byte[] textPayload = new byte[payloadLength];
             for (int i = 0; i < payloadLength; i++) {

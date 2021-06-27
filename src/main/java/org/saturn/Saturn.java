@@ -61,8 +61,8 @@ public class Saturn {
     }
 
     public void start() {
-        setUpAppThreads();
         setUpConnectionToHackChat();
+        setUpAppThreads();
 
         sendUpgradeRequest();
         sleep();
@@ -85,7 +85,7 @@ public class Saturn {
 
     public static void main(String[] args) {
         Saturn saturn = new Saturn();
-        saturn.setChannel("forge");
+        saturn.setChannel("programming");
         saturn.setNick("JavaBot#256c392");
         saturn.isMainThread = true;
         saturn.joinDelay = 1000;
@@ -162,22 +162,28 @@ public class Saturn {
     }
 
     private void setUpAppThreads() {
-        websocketDispatcherRunnable = () -> executorScheduler.scheduleWithFixedDelay(this::websocketFrameDispatcher, 0, 10, TimeUnit.MILLISECONDS);
+        websocketDispatcherRunnable = () -> executorScheduler.scheduleWithFixedDelay(() -> websocketFrameDispatcher(), 0, 50, TimeUnit.MILLISECONDS);
 
-        /* TODO: refactor into single call line function */
+        // ADD CALLBACKS
         pipeLineRunnable = () -> executorScheduler.scheduleWithFixedDelay(
                 () -> {
-                    messageDispatcher();
-                    messageProcessor();
-                    shareMessages();
-                }
-                , 0, 10, TimeUnit.MILLISECONDS);
+                    try {
+                        messageDispatcher();
+                        messageProcessor();
+                        shareMessages();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }, 0, 50, TimeUnit.MILLISECONDS);
 
-        appExecutor.submit(websocketDispatcherRunnable);
         appExecutor.submit(pipeLineRunnable);
+        appExecutor.submit(websocketDispatcherRunnable);
+
+        pipeLineRunnable.run();
+        websocketDispatcherRunnable.run();
     }
 
-    private synchronized void messageDispatcher() {
+    private void messageDispatcher() {
 //        System.out.println("messageDispatcher() triggered");
         if (!incomingFramesQueue.isEmpty()) {
             WebSocketFrame frame = incomingFramesQueue.poll();
@@ -217,7 +223,7 @@ public class Saturn {
         }
     }
 
-    public synchronized void messageProcessor() {
+    public void messageProcessor() {
 //        System.out.println("messageProcessor() triggered");
         if (!incomingChatMessageQueue.isEmpty()) {
             ChatMessage message = incomingChatMessageQueue.poll();
@@ -291,7 +297,7 @@ public class Saturn {
         return nickList;
     }
 
-    public synchronized void shareMessages() {
+    public void shareMessages() {
 //        System.out.println("shareMessages() triggered");
         if (!outgoingMessageQueue.isEmpty()) {
             sendChatMessage(outgoingMessageQueue.poll());
@@ -299,7 +305,6 @@ public class Saturn {
     }
 
     public synchronized void websocketFrameDispatcher() {
-        System.out.println("websocketFrameDispatcher() triggered");
         try {
             if (this.connection != null) {
                 ReadDto readDto = this.connection.read();
@@ -307,7 +312,6 @@ public class Saturn {
                 int nrOfBytes = readDto.nrOfBytesRead;
 
                 if (nrOfBytes != -1) {
-                    System.out.println("GOT WS FRAME");
                     boolean isWebSocketPing = (0xff & bytes[0]) == 0b10001001;
                     boolean isWebSocketText = (0xff & bytes[0]) == 0b10000001;
                     boolean isExtendedFrame = (0xff & bytes[1]) == 126;
@@ -322,8 +326,6 @@ public class Saturn {
                     if (isWebSocketPing && isMainThread) {
                         sendPong(connection);
                     }
-                } else {
-                    System.out.println("GOT NOTHING");
                 }
             }
         } catch (Exception e) {
