@@ -8,8 +8,8 @@ public class Util {
     static Gson gson = new Gson();
 
     public static String getCmdFromJson(String jsonText) {
-        JsonElement element = new JsonParser().parse(jsonText); //parse to json tree
-        JsonElement listingElement = element.getAsJsonObject().get("cmd"); // extract key
+        JsonElement element = new JsonParser().parse(jsonText);
+        JsonElement listingElement = element.getAsJsonObject().get("cmd");
         String cmd = gson.fromJson(listingElement, String.class);
 
         return cmd;

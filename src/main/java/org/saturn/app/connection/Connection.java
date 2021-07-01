@@ -28,13 +28,13 @@ public class Connection {
             var factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
             var sslSocket = (SSLSocket) factory.createSocket(socket, uri, port, false);
 
-            setUpStreams(sslSocket);
+            setUpConnectionStreams(sslSocket);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void setUpStreams(Socket sslSocket) throws IOException {
+    private void setUpConnectionStreams(Socket sslSocket) throws IOException {
         inputStream = sslSocket.getInputStream();
         outputStream = sslSocket.getOutputStream();
     }
@@ -45,9 +45,6 @@ public class Connection {
         try {
             readDto.nrOfBytesRead = inputStream.read(readDto.bytes, 0, readDto.bytes.length);
         } catch (IOException e) {
-            if (e.getMessage().equals("Connection or inbound has closed")) {
-                System.out.println("Connection is closed for " + (isMain ? " main thread " : " list thread "));
-            }
             throw new RuntimeException("Connection is closed for \" + (isMain ? \" main thread \" : \" list thread \"");
         }
 

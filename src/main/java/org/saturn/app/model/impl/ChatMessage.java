@@ -4,6 +4,7 @@ public class ChatMessage {
     private String size;
     private String nick;
     private String trip;
+    private String hash;
     private String time;
     private String text;
 
@@ -11,12 +12,13 @@ public class ChatMessage {
 
     }
 
-    public ChatMessage(String size, String nick, String trip, String time, String text) {
+    public ChatMessage(String size, String nick, String trip, String hash, String time, String text) {
         this.size = size;
         this.nick = nick;
         this.trip = trip;
         this.time = time;
         this.text = text;
+        this.hash = hash;
     }
 
     public String getSize() {
