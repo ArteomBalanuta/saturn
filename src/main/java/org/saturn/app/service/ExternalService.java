@@ -14,7 +14,6 @@ import org.apache.http.util.EntityUtils;
 import java.io.IOException;
 
 public class ExternalService {
-
     private String getSCPWiki(int scpId) {
 
         CloseableHttpClient httpClient = HttpClients.createDefault();

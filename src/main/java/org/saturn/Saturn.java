@@ -9,6 +9,8 @@ import org.saturn.app.connection.Connection;
 import org.saturn.app.model.WebSocketFrame;
 import org.saturn.app.model.impl.*;
 import org.saturn.app.service.ExternalService;
+import org.saturn.app.service.NoteService;
+import org.saturn.app.service.impl.NoteServiceImpl;
 import org.saturn.app.util.OpCode;
 
 import java.io.IOException;
@@ -250,6 +252,7 @@ public class Saturn {
             ChatMessage message = incomingChatMessageQueue.poll();
 
             String author = message.getNick();
+            String trip = message.getTrip();
             String cmd = message.getText().toLowerCase().trim();
             if (cmd.equals("'help")) {
                 String helpResponse = "```" +
@@ -262,8 +265,13 @@ public class Saturn {
                         "'SOLID         - solid. \\n" +
                         "'Rust          - prints Rust's doc page. \\n" +
                         "\\n" +
+                        "'note $note    - keeps the note. \\n" +
+                        "'notes         - prints saved notes. \\n" +
+                        "'notes purge   - removes saved notes. \\n" +
+                        " \\n" +
                         "'fish          - prints 'bloop bloop'. \\n" +
-                        "'list $channel - prints active users in the specified channel with delay of 3 seconds. If channel is not set prints users in current channel \\n" +
+                        "'list $channel - prints active users in the specified channel with delay of 3 seconds.\\n                 " +
+                        "If channel is not set prints users in current channel \\n" +
                         "```";
                 outgoingMessageQueue.add(helpResponse);
             }
@@ -308,6 +316,28 @@ public class Saturn {
 
                 outgoingMessageQueue.add("```Text \\n" + scpDescription.trim() + " \\n```\\n " + "@" + author);
                 // 50 - 5500
+            }
+            if (cmd.contains("'note ")) {
+                String[] args = cmd.split(" ");
+                StringBuilder note = new StringBuilder();
+                for(int i=1; i<args.length; i++) {
+                    note.append(" ").append(args[i]);
+                }
+
+                NoteService ns = new NoteServiceImpl();
+                ns.save(trip, note.toString());
+            }
+
+            if (cmd.equals("'notes")) {
+                NoteService ns = new NoteServiceImpl();
+                List<String> notes = ns.getNotesByTrip(trip);
+                outgoingMessageQueue.add("@" + author + "'s notes: \\n ```Text \\n" + notes.toString() + "\\n```");
+            }
+
+            if (cmd.equals("'notes purge")) {
+                NoteService ns = new NoteServiceImpl();
+                ns.clearNotesByTrip(trip);
+                outgoingMessageQueue.add("@" + author + "'s notes are gone");
             }
         }
     }
