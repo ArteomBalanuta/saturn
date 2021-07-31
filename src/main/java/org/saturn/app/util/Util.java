@@ -14,6 +14,4 @@ public class Util {
 
         return cmd;
     }
-
-
 }

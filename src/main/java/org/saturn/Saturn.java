@@ -355,9 +355,9 @@ public class Saturn {
                 List<String> nickList = getNicksFromChannel(channel);
 
                 if (nickList.isEmpty()) {
-                    outgoingMessageQueue.add("Channel - " + channel + " is empty");
+                    outgoingMessageQueue.add("@" + author + ", channel - " + channel + " is empty");
                 } else {
-                    outgoingMessageQueue.add("Users in '" + channel + "' channel: " + nickList);
+                    outgoingMessageQueue.add("@" + author + ", users in '" + channel + "' channel: " + nickList);
                 }
             } else {
                 // parse nicks from current channel
