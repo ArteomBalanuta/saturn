@@ -1,4 +1,4 @@
-package org.saturn.app.service;
+package org.saturn.app.service.impl;
 
 
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -13,7 +13,7 @@ import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
 
-public class ExternalService {
+public class ExternalServiceImpl {
     private String getSCPWiki(int scpId) {
 
         CloseableHttpClient httpClient = HttpClients.createDefault();

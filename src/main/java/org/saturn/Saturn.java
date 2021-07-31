@@ -8,12 +8,16 @@ import org.apache.commons.lang3.RandomUtils;
 import org.saturn.app.connection.Connection;
 import org.saturn.app.model.WebSocketFrame;
 import org.saturn.app.model.impl.*;
-import org.saturn.app.service.ExternalService;
+import org.saturn.app.service.InternalService;
+import org.saturn.app.service.impl.ExternalServiceImpl;
 import org.saturn.app.service.NoteService;
+import org.saturn.app.service.impl.InternalServiceImpl;
 import org.saturn.app.service.impl.NoteServiceImpl;
 import org.saturn.app.util.OpCode;
 
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,7 +33,9 @@ import static org.saturn.app.util.Util.getCmdFromJson;
 
 public class Saturn {
     // use the DI lib!
-    private final ExternalService externalServicesService = new ExternalService();
+    private final ExternalServiceImpl externalServicesServiceImpl = new ExternalServiceImpl();
+    private final InternalService internalService = new InternalServiceImpl();
+    
     public boolean isMainThread;
     public int joinDelay;
 
@@ -87,16 +93,6 @@ public class Saturn {
 
         this.connection.close();
         this.connection = null;
-    }
-
-    public static void main(String[] args) {
-        Saturn saturn = new Saturn();
-        saturn.setChannel("programming");
-        saturn.setNick("JavaBot#256c392");
-        saturn.isMainThread = true;
-        saturn.joinDelay = 1000;
-
-        saturn.start();
     }
 
     private void sleep() {
@@ -194,12 +190,12 @@ public class Saturn {
         if (!incomingFramesQueue.isEmpty()) {
             WebSocketFrame frame = incomingFramesQueue.poll();
             String jsonText = new String(frame.getWebSocketReadTextBytes());
-            System.out.println("GOT: " + jsonText);
             switch (getCmdFromJson(jsonText)) {
                 case "join": {
                     break;
                 }
                 case "onlineSet": {
+                    internalService.log("joinChannel", "successfully", getTimestampNow());
                     /*
                     {"cmd":"onlineSet",
                     "nicks":["test","JavaBot"],
@@ -232,11 +228,13 @@ public class Saturn {
                     } else {
                         incomingChatMessageQueue.add(message);
 
-                        System.out.println(String.format("%-5d ", jsonText.length()) +
+                        String hcMessage = String.format("%-5d ", jsonText.length()) +
                                 message.getTime() + " " +
                                 String.format("%-6s ", message.getTrip()) + " " +
                                 String.format("%-15s ", message.getNick()) + ":" + " " +
-                                message.getText());
+                                message.getText();
+                        
+                        internalService.log("chat",hcMessage, getTimestampNow());
                         break;
                     }
                 }
@@ -246,7 +244,11 @@ public class Saturn {
             }
         }
     }
-
+    
+    private long getTimestampNow() {
+        return Timestamp.valueOf(LocalDateTime.now()).getTime();
+    }
+    
     public void messageProcessor() {
         if (!incomingChatMessageQueue.isEmpty()) {
             ChatMessage message = incomingChatMessageQueue.poll();
@@ -312,7 +314,7 @@ public class Saturn {
                 int randomScpId = RandomUtils.nextInt(1, 5500);
 
                 // consider async flow
-                String scpDescription = externalServicesService.getSCPDescription(randomScpId);
+                String scpDescription = externalServicesServiceImpl.getSCPDescription(randomScpId);
 
                 outgoingMessageQueue.add("```Text \\n" + scpDescription.trim() + " \\n```\\n " + "@" + author);
                 // 50 - 5500
