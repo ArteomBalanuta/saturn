@@ -8,7 +8,9 @@ import org.apache.commons.lang3.RandomUtils;
 import org.saturn.app.connection.Connection;
 import org.saturn.app.model.WebSocketFrame;
 import org.saturn.app.model.impl.*;
+import org.saturn.app.service.DataBaseConnection;
 import org.saturn.app.service.InternalService;
+import org.saturn.app.service.impl.DataBaseConnectionImpl;
 import org.saturn.app.service.impl.ExternalServiceImpl;
 import org.saturn.app.service.NoteService;
 import org.saturn.app.service.impl.InternalServiceImpl;
@@ -16,10 +18,14 @@ import org.saturn.app.service.impl.NoteServiceImpl;
 import org.saturn.app.util.OpCode;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.channels.SocketChannel;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -32,30 +38,36 @@ import static org.saturn.app.util.OpCode.TEXT_EXTENDED;
 import static org.saturn.app.util.Util.getCmdFromJson;
 
 public class Saturn {
-    // use the DI lib!
-    private final ExternalServiceImpl externalServicesServiceImpl = new ExternalServiceImpl();
-    private final InternalService internalService = new InternalServiceImpl();
+    public final Gson gson = new Gson();    
     
     public boolean isMainThread;
     public int joinDelay;
 
-    public final Gson gson = new Gson();
-
+    // use interface
+    private final ExternalServiceImpl externalServicesServiceImpl;
+    private final InternalService internalService;
+    private final NoteService noteService;
+    
     public final BlockingQueue<WebSocketFrame> incomingFramesQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
-    public volatile BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
-
+    public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
+    
     public volatile List<String> incomingSetOnlineMessageQueue = new ArrayList<>();
-
     public volatile List<User> currentChannelUsers = new ArrayList<>();
 
     private final ExecutorService appExecutor = Executors.newFixedThreadPool(THREAD_NUMBER);
     private final ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
 
+    public Saturn(java.sql.Connection dbConnection) {
+        this.externalServicesServiceImpl = new ExternalServiceImpl();
+        this.internalService = new InternalServiceImpl(dbConnection);
+        this.noteService = new NoteServiceImpl(dbConnection);
+    }
+
     private Runnable websocketDispatcherRunnable;
     private Runnable pipeLineRunnable;
 
-    private Connection connection;
+    private Connection hcConnection;
 
     private String channel;
     private String nick;
@@ -82,7 +94,6 @@ public class Saturn {
     }
 
     public void stop() {
-        /* make sure */
         this.executorScheduler.shutdownNow();
         this.appExecutor.shutdownNow();
         try {
@@ -91,8 +102,8 @@ public class Saturn {
             e.printStackTrace();
         }
 
-        this.connection.close();
-        this.connection = null;
+        this.hcConnection.close();
+        this.hcConnection = null;
     }
 
     private void sleep() {
@@ -106,24 +117,24 @@ public class Saturn {
     private void setUpConnectionToHackChat() {
         String uri = "hack.chat";
         int port = 443;
-        connection = new Connection(uri, port, this.isMainThread);
+        hcConnection = new Connection(uri, port, this.isMainThread);
     }
 
     private void sendUpgradeRequest() {
         try {
-            connection.write(UPGRADE_REQUEST.getBytes(UTF_8));
+            hcConnection.write(UPGRADE_REQUEST.getBytes(UTF_8));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    /*TODO: make sure join payload size always fits standard frame */
+    /*TODO: make sure join payload size always fits standard frame size */
     private void sendJoinMessage(String channel, String nick) {
         String joinPayload = String.format(JOIN_JSON, channel, nick);
         WebSocketFrame joinFrame = new WebSocketStandardFrameImpl(joinPayload);
 
         try {
-            connection.write(joinFrame.getWebSocketWriteTextBytes());
+            hcConnection.write(joinFrame.getWebSocketWriteTextBytes());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -140,7 +151,7 @@ public class Saturn {
         }
 
         try {
-            connection.write(chatFrame.getWebSocketWriteTextBytes());
+            hcConnection.write(chatFrame.getWebSocketWriteTextBytes());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -270,6 +281,7 @@ public class Saturn {
                         "'note $note    - keeps the note. \\n" +
                         "'notes         - prints saved notes. \\n" +
                         "'notes purge   - removes saved notes. \\n" +
+                        "'ping          - prints hack.chat response time. \\n" +
                         " \\n" +
                         "'fish          - prints 'bloop bloop'. \\n" +
                         "'list $channel - prints active users in the specified channel with delay of 3 seconds.\\n                 " +
@@ -296,6 +308,11 @@ public class Saturn {
 
             if (cmd.equals("'rust")) {
                 outgoingMessageQueue.add("@" + author + " https://doc.rust-lang.org/book/title-page.html");
+            }
+
+            if (cmd.equals("'ping")) {
+                long ms = executePing();
+                outgoingMessageQueue.add("@" + author + " response time: " + ms + " milliseconds");
             }
 
             if (cmd.equals("'solid")) {
@@ -326,22 +343,45 @@ public class Saturn {
                     note.append(" ").append(args[i]);
                 }
 
-                NoteService ns = new NoteServiceImpl();
-                ns.save(trip, note.toString());
+                noteService.save(trip, note.toString());
             }
 
             if (cmd.equals("'notes")) {
-                NoteService ns = new NoteServiceImpl();
-                List<String> notes = ns.getNotesByTrip(trip);
+                List<String> notes = noteService.getNotesByTrip(trip);
                 outgoingMessageQueue.add("@" + author + "'s notes: \\n ```Text \\n" + notes.toString() + "\\n```");
             }
 
             if (cmd.equals("'notes purge")) {
-                NoteService ns = new NoteServiceImpl();
-                ns.clearNotesByTrip(trip);
+                noteService.clearNotesByTrip(trip);
                 outgoingMessageQueue.add("@" + author + "'s notes are gone");
             }
         }
+    }
+    private long executePing() {
+        long timeToRespond = 0;
+        try {
+            String hostAddress = "hack.chat";
+            int port = 80;
+            
+            InetAddress inetAddress = InetAddress.getByName(hostAddress);
+            InetSocketAddress socketAddress = new InetSocketAddress(inetAddress, port);
+    
+            SocketChannel sc = SocketChannel.open();
+            sc.configureBlocking(true);
+    
+            Date start = new Date();
+            if (sc.connect(socketAddress)) {
+               Date stop = new Date();
+               timeToRespond = (stop.getTime() - start.getTime());
+            }
+    
+            System.out.println("Response time: " + timeToRespond + " ms");
+    
+         } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+         }
+
+         return timeToRespond;
     }
 
     private void executeListCommand(String cmd, String author) {
@@ -370,7 +410,7 @@ public class Saturn {
     }
 
     private List<String> getNicksFromChannel(String channel) {
-        Saturn listBot = new Saturn();
+        Saturn listBot = new Saturn(null); // no db connection for this one needed
         listBot.isMainThread = false;
         listBot.setChannel(channel);
         listBot.joinDelay = 1000;
@@ -409,8 +449,8 @@ public class Saturn {
 
     public synchronized void websocketFrameDispatcher() {
         try {
-            if (this.connection != null) {
-                ReadDto readDto = this.connection.read();
+            if (this.hcConnection != null) {
+                ReadDto readDto = this.hcConnection.read();
                 byte[] bytes = readDto.bytes;
                 int nrOfBytes = readDto.nrOfBytesRead;
 
@@ -427,7 +467,7 @@ public class Saturn {
 
                     /* Ponging */
                     if (isWebSocketPing && isMainThread) {
-                        sendPong(connection);
+                        sendPong(hcConnection);
                     }
                 }
             }

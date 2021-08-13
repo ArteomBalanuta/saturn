@@ -11,13 +11,15 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class InternalServiceImpl implements InternalService {
-    public InternalServiceImpl() {
+    private Connection connection;
+
+    public InternalServiceImpl(Connection connection) {
+        this.connection = connection;
     }
 
     @Override
     public void log(String cmd, String status, long executedOn) {
         try {
-            Connection connection = Connect.connect();
             PreparedStatement logEvent = connection.prepareStatement("INSERT INTO internal_events ('cmd', 'status', 'executed_on') VALUES (?, ?, ?);");
             logEvent.setString(1, cmd);
             logEvent.setString(2, status);
@@ -26,24 +28,9 @@ public class InternalServiceImpl implements InternalService {
             logEvent.executeUpdate();
 
             logEvent.close();
-            connection.close();
-            
-        } catch (URISyntaxException | SQLException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-    
-    private static class Connect {
-        public static Connection connect() throws URISyntaxException {
-            URL resource = Connect.class.getResource("/hackchat.db");
-            String dbPath = Paths.get(resource.toURI()).toFile().getAbsolutePath();
-            String url = "jdbc:sqlite:" + dbPath;
-            try {
-                return DriverManager.getConnection(url);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-    }
+
 }
