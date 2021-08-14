@@ -1,4 +1,11 @@
 package org.saturn;
+
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.FileBasedConfiguration;
+import org.apache.commons.configuration2.PropertiesConfiguration;
+import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
+import org.apache.commons.configuration2.builder.fluent.Parameters;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.saturn.app.facade.BotFacade;
 import org.saturn.app.service.DataBaseConnection;
 import org.saturn.app.service.LogService;
@@ -9,35 +16,44 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 public class ApplicationRunner {
+    private Configuration config;
     private final DataBaseConnection dbConnection;
     private final LogService internalService;
 
-    public ApplicationRunner(){
+    public ApplicationRunner() {
         this.dbConnection = new DataBaseConnectionImpl();
         this.internalService = new LogServiceImpl(this.dbConnection.getConnection());
+        
+        Parameters params = new Parameters();
+        FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(
+                PropertiesConfiguration.class).configure(params.properties().setFileName("application.properties"));
+        try {
+            this.config = builder.getConfiguration();
+        } catch (ConfigurationException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {
         ApplicationRunner applicationRunner = new ApplicationRunner();
         applicationRunner.start();
     }
-    
-    void start(){
+
+    void start() {
         logStartBotEvent();
         runSaturnBot();
     }
-    
-    private void logStartBotEvent(){
+
+    private void logStartBotEvent() {
         internalService.log("appStart", "started", Timestamp.valueOf(LocalDateTime.now()).getTime());
     }
-    
-    private void runSaturnBot(){
-        BotFacade saturn = new BotFacade(dbConnection.getConnection());
-        saturn.setChannel("programming");
-        saturn.setNick("JavaBot#256c392");
+
+    private void runSaturnBot() {
+
+        BotFacade saturn = new BotFacade(dbConnection.getConnection(), config);
         saturn.isMainThread = true;
         saturn.joinDelay = 1000;
-        
+
         saturn.start();
     }
 }

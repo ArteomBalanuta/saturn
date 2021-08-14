@@ -21,7 +21,7 @@ public class Constants {
             "Upgrade: websocket\r\n\r\n";
 
     public static String CHAT_JSON = "{ \"cmd\": \"chat\", \"text\": \"%s\"}";
-    public static String JOIN_JSON = "{ \"cmd\": \"join\", \"channel\": \"%s\", \"nick\": \"%s\" }";
+    public static String JOIN_JSON = "{ \"cmd\": \"join\", \"channel\": \"%s\", \"nick\": \"%s#%s\" }";
 
     public static final String HELP_RESPONSE = "```" +
                         "Text \\n Welcome and have fun ;) \\n \\n" +
