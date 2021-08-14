@@ -1,6 +1,5 @@
 package org.saturn.app.model.impl;
 
-import org.saturn.app.connection.Connection;
 import org.saturn.app.model.WebSocketFrame;
 
 import java.nio.ByteBuffer;
