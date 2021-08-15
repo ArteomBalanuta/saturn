@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.saturn.app.model.impl.Mail;
 import org.saturn.app.service.MailService;
+import org.saturn.app.util.Util;
 
 public class MailServiceImpl implements MailService {
     private Connection connection;
@@ -28,7 +29,7 @@ public class MailServiceImpl implements MailService {
             insertMessage.setString(2, receiver);
             insertMessage.setString(3, message);
             insertMessage.setString(4, "PENDING");
-            insertMessage.setLong(5, Timestamp.from(Instant.now()).getTime());
+            insertMessage.setLong(5, Util.getTimestampNow());
 
             insertMessage.executeUpdate();
 

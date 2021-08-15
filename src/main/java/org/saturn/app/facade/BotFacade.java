@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -284,7 +285,12 @@ public class BotFacade {
                 }
                 case "onlineRemove": {
                     //{"cmd":"onlineRemove","userid":3910366301486,"nick":"newuser2","channel":"programming","time":1629034916215}
-                    removeActiveUser(jsonText);
+                    JsonElement element = new JsonParser().parse(jsonText);
+                    JsonObject object = element.getAsJsonObject();
+                    User leftUser = gson.fromJson(object, User.class);
+                    
+                    logService.log("user " + leftUser + " left channel", "", getTimestampNow());
+                    removeActiveUser(leftUser);
                     break;
                 }
 
@@ -313,13 +319,9 @@ public class BotFacade {
         }
     }
 
-    private synchronized void removeActiveUser(String jsonText) {
-        JsonElement element = new JsonParser().parse(jsonText);
-        JsonObject object = element.getAsJsonObject();
-        User leftUser = gson.fromJson(object, User.class);
-        
+    private synchronized void removeActiveUser(String leftUser) {
         for (User user : currentChannelUsers) { 
-                if (user.getNick().equals(leftUser.getNick())) {
+                if (user.getNick().equals(leftUser)) {
                     currentChannelUsers.remove(user);
                 }
         }
@@ -431,10 +433,11 @@ public class BotFacade {
         
         StringBuilder message = new StringBuilder();
         for (int i = 2; i < args.length; i++) {
-            message.append(" ").append(args[i]);
+            message.append(args[i]).append(" ");
         }
         
         mailService.orderMessageDelivery(message.toString(), owner, receiver);
+        enqueueMessageForSending("@" + owner + ",  " + receiver + " will receive your message as soon he chat");
     }
 
 

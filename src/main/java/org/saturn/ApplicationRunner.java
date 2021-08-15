@@ -11,6 +11,7 @@ import org.saturn.app.service.DataBaseConnection;
 import org.saturn.app.service.LogService;
 import org.saturn.app.service.impl.DataBaseConnectionImpl;
 import org.saturn.app.service.impl.LogServiceImpl;
+import org.saturn.app.util.Util;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -45,7 +46,7 @@ public class ApplicationRunner {
     }
 
     private void logStartBotEvent() {
-        internalService.log("appStart", "started", Timestamp.valueOf(LocalDateTime.now()).getTime());
+        internalService.log("appStart", "started", Util.getTimestampNow());
     }
 
     private void runSaturnBot() {

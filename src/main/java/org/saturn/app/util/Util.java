@@ -1,6 +1,7 @@
 package org.saturn.app.util;
 
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 import com.google.gson.Gson;
@@ -19,6 +20,6 @@ public class Util {
     }
 
     public static long getTimestampNow() {
-        return Timestamp.valueOf(LocalDateTime.now()).getTime();
+        return Timestamp.from(Instant.now()).getTime();
     }
 }
