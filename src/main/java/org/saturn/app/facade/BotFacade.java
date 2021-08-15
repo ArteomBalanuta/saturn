@@ -289,8 +289,8 @@ public class BotFacade {
                     JsonObject object = element.getAsJsonObject();
                     User leftUser = gson.fromJson(object, User.class);
                     
-                    logService.log("user " + leftUser + " left channel", "", getTimestampNow());
-                    removeActiveUser(leftUser);
+                    logService.log("user " + leftUser.getNick() + " left channel", "", getTimestampNow());
+                    removeActiveUser(leftUser.getNick());
                     break;
                 }
 
