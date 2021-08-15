@@ -13,7 +13,8 @@ public enum Cmd {
     NOTE("note "), 
     NOTES("notes"),
     NOTES_PURGE("notes purge"), 
-    SEARCH("s ");
+    SEARCH("s "),
+    MAIL("mail ");
 
     private final String cmdCode;
 

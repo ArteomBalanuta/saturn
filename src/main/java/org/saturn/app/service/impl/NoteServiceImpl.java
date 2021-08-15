@@ -43,7 +43,7 @@ public class NoteServiceImpl implements NoteService {
             while (resultSet.next()) {
                 notes.add(resultSet.getString(3));
             }
-
+            notesByTrip.close();
             resultSet.close();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -57,7 +57,8 @@ public class NoteServiceImpl implements NoteService {
             PreparedStatement notesByTrip = connection.prepareStatement("DELETE FROM notes WHERE name = ?");
             notesByTrip.setString(1, trip);
             notesByTrip.execute();
-
+            
+            notesByTrip.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }

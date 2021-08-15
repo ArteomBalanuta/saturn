@@ -9,6 +9,7 @@ import static org.saturn.app.util.Cmd.DRRUDI;
 import static org.saturn.app.util.Cmd.FISH;
 import static org.saturn.app.util.Cmd.HELP;
 import static org.saturn.app.util.Cmd.LIST;
+import static org.saturn.app.util.Cmd.MAIL;
 import static org.saturn.app.util.Cmd.NOTE;
 import static org.saturn.app.util.Cmd.NOTES;
 import static org.saturn.app.util.Cmd.NOTES_PURGE;
@@ -45,6 +46,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import org.apache.commons.configuration2.Configuration;
@@ -53,15 +55,18 @@ import org.apache.commons.lang3.RandomUtils;
 import org.saturn.app.model.WebSocketFrame;
 import org.saturn.app.model.impl.ChatMessage;
 import org.saturn.app.model.impl.Connection;
+import org.saturn.app.model.impl.Mail;
 import org.saturn.app.model.impl.ReadDto;
 import org.saturn.app.model.impl.User;
 import org.saturn.app.model.impl.WebSocketExtendedFrameImpl;
 import org.saturn.app.model.impl.WebSocketStandardFrameImpl;
 import org.saturn.app.service.LogService;
+import org.saturn.app.service.MailService;
 import org.saturn.app.service.NoteService;
 import org.saturn.app.service.SCPService;
 import org.saturn.app.service.SearchService;
 import org.saturn.app.service.impl.LogServiceImpl;
+import org.saturn.app.service.impl.MailServiceImpl;
 import org.saturn.app.service.impl.NoteServiceImpl;
 import org.saturn.app.service.impl.SCPServiceImpl;
 import org.saturn.app.service.impl.SearchServiceImpl;
@@ -72,7 +77,7 @@ import org.saturn.app.util.OpCode;
 public class BotFacade {
     public final Gson gson = new Gson();    
 
-    private String prefix; /* TODO: Extract into config */
+    private String prefix;
     private String channel;
     private String nick;
     private String trip;
@@ -84,7 +89,8 @@ public class BotFacade {
     private final LogService logService;
     private final NoteService noteService;
     private final SearchService searchService;
-    
+    private final MailService mailService;
+
     public final BlockingQueue<WebSocketFrame> incomingFramesQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
@@ -106,7 +112,8 @@ public class BotFacade {
         this.scpService = new SCPServiceImpl();
         this.logService = new LogServiceImpl(dbConnection);
         this.noteService = new NoteServiceImpl(dbConnection);
-        this.searchService = new SearchServiceImpl(); /* TODO:  add logs */
+        this.searchService = new SearchServiceImpl();           /* TODO:  add logging */
+        this.mailService = new MailServiceImpl(dbConnection);
     }
 
     private Runnable websocketDispatcherRunnable;
@@ -238,61 +245,92 @@ public class BotFacade {
 
     private void messageDispatcher() {
         if (!incomingFramesQueue.isEmpty()) {
-        WebSocketFrame frame = incomingFramesQueue.poll();
-        String jsonText = new String(frame.getWebSocketReadTextBytes());
+            WebSocketFrame frame = incomingFramesQueue.poll();
+            String jsonText = new String(frame.getWebSocketReadTextBytes());
 
-        String cmd = getCmdFromJson(jsonText);
-        switch (cmd) {
-            case "join": {
-                break;
-            }
-            case "onlineSet": {
-                /*
-                 * {"cmd":"onlineSet", "nicks":["test","JavaBot"], "users": [
-                 * {"channel":"forge", "isme":false, "nick":"test",
-                 * "trip":"8Wotmg","uType":"user","hash":"Nn2jIz8w2Wk9qbo","level":100,"userid":
-                 * 3707326840729,"isBot":false,"color":false}, {"channel":"forge", "isme":true,
-                 * "nick":"JavaBot","trip":"XBotUU","uType":"user","hash":"Nn2jIz8w2Wk9qbo",
-                 * "level":100,"userid":6883928675253,"isBot":false,"color":false} ]
-                 * ,"channel":"forge","time":1624984540229}
-                 * 
-                 * 
-                 * channel,isme bool, nick, trip, uType, hash, level int , userId long, isBot
-                 * bool, color bool
-                 */
-                if (this.isMainThread) {
-                    setupActiveUsers(jsonText);
-                    logService.log("joined channel", "successfully", getTimestampNow());
-                    break;
-                } else {
-                    // 'list cmd users setter
-                    incomingSetOnlineMessageQueue.add(jsonText);
+            String cmd = getCmdFromJson(jsonText);
+            switch (cmd) {
+                case "join": {
                     break;
                 }
-            }
-            case "chat": {
-                ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
-
-                boolean isBotMessage = message.getNick().equals(this.nick);
-                if (isBotMessage) {
+                case "onlineSet": {
+                    /*
+                     * {"cmd":"onlineSet", "nicks":["test","JavaBot"], "users": [
+                     * {"channel":"forge", "isme":false, "nick":"test",
+                     * "trip":"8Wotmg","uType":"user","hash":"Nn2jIz8w2Wk9qbo","level":100,"userid":
+                     * 3707326840729,"isBot":false,"color":false}, {"channel":"forge", "isme":true,
+                     * "nick":"JavaBot","trip":"XBotUU","uType":"user","hash":"Nn2jIz8w2Wk9qbo",
+                     * "level":100,"userid":6883928675253,"isBot":false,"color":false} ]
+                     * ,"channel":"forge","time":1624984540229}
+                     * 
+                     * 
+                     * channel,isme bool, nick, trip, uType, hash, level int , userId long, isBot
+                     * bool, color bool
+                     */
+                    if (this.isMainThread) {
+                        setupActiveUsers(jsonText);
+                        logService.log("joined channel", "successfully", getTimestampNow());
+                        break;
+                    } else {
+                        // 'list cmd users setter
+                        incomingSetOnlineMessageQueue.add(jsonText);
+                        break;
+                    }
+                }
+                case "onlineAdd": {
+                    //{"cmd":"onlineAdd","nick":"test","trip":"UqqSDd","uType":"user","hash":"Nn2jIz8w2Wk9qbo","level":100,"userid":3734549386118,"isBot":false,"color":false,"channel":"programming","time":1629034304212}
+                    addActiveUser(jsonText);
+                    break;
+                }
+                case "onlineRemove": {
+                    //{"cmd":"onlineRemove","userid":3910366301486,"nick":"newuser2","channel":"programming","time":1629034916215}
+                    removeActiveUser(jsonText);
                     break;
                 }
 
-                incomingChatMessageQueue.add(message);
+                case "chat": {
+                    ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
 
-                String hcMessage = format("%-5d ", jsonText.length()) + message.getTime() + " "
-                        + format("%-6s ", message.getTrip()) + " " + format("%-15s ", message.getNick()) + ":" + " "
-                        + message.getText();
+                    boolean isBotMessage = message.getNick().equals(this.nick);
+                    if (isBotMessage) {
+                        break;
+                    }
 
-                logService.log("chat", hcMessage, getTimestampNow());
-                break;
+                    incomingChatMessageQueue.add(message);
 
+                    String hcMessage = format("%-5d ", jsonText.length()) + message.getTime() + " "
+                            + format("%-6s ", message.getTrip()) + " " + format("%-15s ", message.getNick()) + ":" + " "
+                            + message.getText();
+
+                    logService.log("chat", hcMessage, getTimestampNow());
+                    break;
+
+                }
+                default:
+                    System.out.printf("Text payload: %s \n", jsonText);
+                    break;
             }
-            default:
-                System.out.printf("Text payload: %s \n", jsonText);
-                break;
         }
     }
+
+    private synchronized void removeActiveUser(String jsonText) {
+        JsonElement element = new JsonParser().parse(jsonText);
+        JsonObject object = element.getAsJsonObject();
+        User leftUser = gson.fromJson(object, User.class);
+        
+        for (User user : currentChannelUsers) { 
+                if (user.getNick().equals(leftUser.getNick())) {
+                    currentChannelUsers.remove(user);
+                }
+        }
+    }
+
+    private synchronized void addActiveUser(String jsonText) {
+        JsonElement element = new JsonParser().parse(jsonText);
+        JsonObject object = element.getAsJsonObject();
+        User newUser = gson.fromJson(object, User.class);
+        
+        currentChannelUsers.add(newUser);
     }
 
     private void setupActiveUsers(String jsonText) {
@@ -311,6 +349,9 @@ public class BotFacade {
             String trip = message.getTrip();
 
             String cmd = message.getText().toLowerCase().trim();
+
+            /* Mail service check */
+            deliverMailIfPresent(author);
 
             if (!cmd.startsWith(prefix)) {
                 return;
@@ -344,7 +385,24 @@ public class BotFacade {
                 executueListNotes(author, trip);
             } else if (is(cmd, SEARCH)) {
                 // executeSearch(author, cmd);
+            } else if (is(cmd, MAIL)) {
+                executeMail(author, cmd);
             }
+        }
+    }
+
+    private void deliverMailIfPresent(String author) {
+        List<Mail> messages = mailService.getMailByNick(author.replace("@", ""));
+        if(!messages.isEmpty()) {
+            StringBuilder mailMessage = new StringBuilder();
+            
+            messages.forEach(mail -> {
+                String row = "date: [" + mail.createdDate + "] from: [" + mail.owner + "] message: [" + mail.message + "] \\n";
+                mailMessage.append(row);
+            });
+
+            enqueueMessageForSending("@" + author + " " + " incoming mail: \\n " + mailMessage);
+            mailService.updateMailStatus(author);
         }
     }
 
@@ -366,6 +424,19 @@ public class BotFacade {
 
         return true;
     }
+
+    private void executeMail(String owner, String cmd) {
+        String[] args = cmd.split(" ");
+        String receiver = args[1];
+        
+        StringBuilder message = new StringBuilder();
+        for (int i = 2; i < args.length; i++) {
+            message.append(" ").append(args[i]);
+        }
+        
+        mailService.orderMessageDelivery(message.toString(), owner, receiver);
+    }
+
 
     private void executeHelpCommand() {
         enqueueMessageForSending(HELP_RESPONSE);
