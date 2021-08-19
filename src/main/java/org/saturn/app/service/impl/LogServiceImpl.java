@@ -14,7 +14,7 @@ public class LogServiceImpl implements LogService {
     }
 
     @Override
-    public void log(String cmd, String status, long executedOn) {
+    public void logEvent(String cmd, String status, long executedOn) {
         try {
             PreparedStatement logEvent = connection.prepareStatement("INSERT INTO internal_events ('cmd', 'status', 'executed_on') VALUES (?, ?, ?);");
             logEvent.setString(1, cmd);
@@ -27,6 +27,27 @@ public class LogServiceImpl implements LogService {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void logMessage(String trip, String nick, String hash, String message, long timestamp) {
+        try {
+            PreparedStatement logEvent = 
+            connection.prepareStatement("INSERT INTO messages ('trip', 'nick', 'hash', 'message', 'created_on') VALUES (?, ?, ?, ?, ?);");
+            logEvent.setString(1, trip);
+            logEvent.setString(2, nick);
+            logEvent.setString(3, hash);
+            logEvent.setString(4, message);
+            logEvent.setLong(5, timestamp);
+            
+            logEvent.executeUpdate();
+
+            logEvent.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        
     }
 
 }

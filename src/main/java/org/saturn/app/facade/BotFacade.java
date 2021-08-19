@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -85,6 +84,7 @@ public class BotFacade {
 
     public boolean isMainThread;
     public int joinDelay;
+    public volatile long lastPingTimestamp = getTimestampNow();
 
     private final SCPService scpService;
     private final LogService logService;
@@ -99,8 +99,8 @@ public class BotFacade {
     public volatile List<String> incomingSetOnlineMessageQueue = new ArrayList<>();
     public volatile List<User> currentChannelUsers = new ArrayList<>();
 
-    private final ExecutorService appExecutor = Executors.newFixedThreadPool(THREAD_NUMBER);
-    private final ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
+    private ExecutorService appExecutor = Executors.newFixedThreadPool(THREAD_NUMBER);
+    private ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
 
     public BotFacade(java.sql.Connection dbConnection, Configuration config) {
         if (config != null) {
@@ -110,6 +110,7 @@ public class BotFacade {
             this.trip = config.getString("trip");
         }
         
+        initExecutors();
         this.scpService = new SCPServiceImpl();
         this.logService = new LogServiceImpl(dbConnection);
         this.noteService = new NoteServiceImpl(dbConnection);
@@ -117,8 +118,10 @@ public class BotFacade {
         this.mailService = new MailServiceImpl(dbConnection);
     }
 
-    private Runnable websocketDispatcherRunnable;
-    private Runnable pipeLineRunnable;
+    void initExecutors(){
+        appExecutor = Executors.newFixedThreadPool(THREAD_NUMBER);
+        executorScheduler = newScheduledThreadPool(THREAD_NUMBER);;
+    }
 
     private Connection hcConnection;
 
@@ -127,34 +130,35 @@ public class BotFacade {
     }
 
     private void enqueueMessageForSending(String message){
+        // logService.logEvent("botMessage", message, getTimestampNow());
+        System.out.println(getTimestampNow() + " sent: " + message);
         outgoingMessageQueue.add(message);
     }
 
     public void start() {
         setUpConnectionToHackChat();
         setupWorkers();
-
         sendUpgradeRequest();
-        sleep();
+
+        sleep(this.joinDelay);
         sendJoinMessage();
     }
 
     public void stop() {
-        this.executorScheduler.shutdownNow();
-        this.appExecutor.shutdownNow();
         try {
-            boolean awaitTermination = this.appExecutor.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
+            this.appExecutor.shutdownNow();
+            this.executorScheduler.shutdownNow();
+
+            this.hcConnection.close();
+            this.hcConnection = null;
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
-        this.hcConnection.close();
-        this.hcConnection = null;
     }
 
-    private void sleep() {
+    public void sleep(long ms) {
         try {
-            Thread.sleep(this.joinDelay);
+            Thread.sleep(ms);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -221,27 +225,20 @@ public class BotFacade {
     }
 
     private void setupWorkers() {
-        websocketDispatcherRunnable = () -> executorScheduler.scheduleWithFixedDelay(() -> websocketFrameDispatcher(),
-                0, 50, TimeUnit.MILLISECONDS);
+        initExecutors();
+        executorScheduler.scheduleWithFixedDelay(() -> websocketFrameDispatcher()
+        , 0, 50, TimeUnit.MILLISECONDS);
 
         // ADD CALLBACKS
-        pipeLineRunnable = () -> executorScheduler.scheduleWithFixedDelay(
-                () -> {
-                    /* Is executed only if there are messages */ 
-                        try {
-                            messageDispatcher();
-                            messageProcessor();
-                            shareMessages();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                }, 0, 50, TimeUnit.MILLISECONDS);
-
-        appExecutor.submit(pipeLineRunnable);
-        appExecutor.submit(websocketDispatcherRunnable);
-
-        pipeLineRunnable.run();
-        websocketDispatcherRunnable.run();
+        executorScheduler.scheduleWithFixedDelay(() -> {
+            try {
+                messageDispatcher();
+                messageProcessor();
+                shareMessages();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, 0, 50, TimeUnit.MILLISECONDS);
     }
 
     private void messageDispatcher() {
@@ -270,7 +267,7 @@ public class BotFacade {
                      */
                     if (this.isMainThread) {
                         setupActiveUsers(jsonText);
-                        logService.log("joined channel", "successfully", getTimestampNow());
+                        logService.logEvent("joined channel", "successfully", getTimestampNow());
                         break;
                     } else {
                         // 'list cmd users setter
@@ -289,7 +286,6 @@ public class BotFacade {
                     JsonObject object = element.getAsJsonObject();
                     User leftUser = gson.fromJson(object, User.class);
                     
-                    logService.log("user " + leftUser.getNick() + " left channel", "", getTimestampNow());
                     removeActiveUser(leftUser.getNick());
                     break;
                 }
@@ -297,18 +293,16 @@ public class BotFacade {
                 case "chat": {
                     ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
 
+                    logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
+                    getTimestampNow());
+
                     boolean isBotMessage = message.getNick().equals(this.nick);
                     if (isBotMessage) {
                         break;
                     }
 
                     incomingChatMessageQueue.add(message);
-
-                    String hcMessage = format("%-5d ", jsonText.length()) + message.getTime() + " "
-                            + format("%-6s ", message.getTrip()) + " " + format("%-15s ", message.getNick()) + ":" + " "
-                            + message.getText();
-
-                    logService.log("chat", hcMessage, getTimestampNow());
+                    
                     break;
 
                 }
@@ -323,15 +317,18 @@ public class BotFacade {
         for (User user : currentChannelUsers) { 
                 if (user.getNick().equals(leftUser)) {
                     currentChannelUsers.remove(user);
+                    logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", getTimestampNow());
+                    logService.logEvent("user " + leftUser + " left channel", "", getTimestampNow());
                 }
         }
     }
 
-    private synchronized void addActiveUser(String jsonText) {
+    private void addActiveUser(String jsonText) {
         JsonElement element = new JsonParser().parse(jsonText);
         JsonObject object = element.getAsJsonObject();
         User newUser = gson.fromJson(object, User.class);
-        
+        logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", getTimestampNow());
+        logService.logEvent("user " + newUser.getNick() + " joined channel", "sucessfully", getTimestampNow());
         currentChannelUsers.add(newUser);
     }
 
@@ -360,7 +357,9 @@ public class BotFacade {
             }
 
             cmd = cmd.substring(1, cmd.length());
-
+            if (cmd.contains("close connection")){
+                this.stop();
+            }
             if (is(cmd, HELP)) {
                 executeHelpCommand();
             } else if (is(cmd, FISH)) {
@@ -525,7 +524,7 @@ public class BotFacade {
                timeToRespond = (stop.getTime() - start.getTime());
             }
     
-            System.out.println("Response time: " + timeToRespond + " ms");
+            sc.close();
     
          } catch (IOException ex) {
             System.out.println(ex.getMessage());
@@ -617,9 +616,12 @@ public class BotFacade {
 
                     /* Ponging */
                     if (isWebSocketPing && isMainThread) {
+                        lastPingTimestamp = getTimestampNow();
                         sendPong(hcConnection);
                     }
                 }
+            } else {
+                System.out.println("wtf");
             }
         } catch (Exception e) {
             e.printStackTrace();

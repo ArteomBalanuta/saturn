@@ -60,4 +60,12 @@ public class ChatMessage {
     public void setText(String text) {
         this.text = text;
     }
+
+    public String getHash() {
+        return hash;
+    }
+
+    public void setHash(String hash) {
+        this.hash = hash;
+    }
 }

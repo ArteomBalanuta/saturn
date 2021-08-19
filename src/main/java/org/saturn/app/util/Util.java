@@ -2,7 +2,6 @@ package org.saturn.app.util;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
