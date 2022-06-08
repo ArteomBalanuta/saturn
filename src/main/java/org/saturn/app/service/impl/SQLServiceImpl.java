@@ -22,10 +22,9 @@ public class SQLServiceImpl extends OutService implements SQLService {
         this.connection = connection;
     }
     
-    public void executeSQLCmd(String cmd) {
+    public String executeSQLCmd(String cmd) {
         String[] cmdtext = cmd.split("sql ");
-        String result = this.execute(cmdtext[1]);
-        enqueueMessageForSending(result);
+        return this.execute(cmdtext[1]);
     }
     
     @Override

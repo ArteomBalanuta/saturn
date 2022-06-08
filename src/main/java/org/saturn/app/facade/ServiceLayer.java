@@ -36,6 +36,7 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -44,6 +45,7 @@ import static org.saturn.app.util.Cmd.BAN;
 import static org.saturn.app.util.Cmd.DRRUDI;
 import static org.saturn.app.util.Cmd.FISH;
 import static org.saturn.app.util.Cmd.HELP;
+import static org.saturn.app.util.Cmd.INFO;
 import static org.saturn.app.util.Cmd.LIST;
 import static org.saturn.app.util.Cmd.MAIL;
 import static org.saturn.app.util.Cmd.MSG_CHANNEL;
@@ -57,6 +59,8 @@ import static org.saturn.app.util.Cmd.SEARCH;
 import static org.saturn.app.util.Cmd.SENTRY;
 import static org.saturn.app.util.Cmd.SOLID;
 import static org.saturn.app.util.Cmd.SQL;
+import static org.saturn.app.util.Cmd.VOTE;
+import static org.saturn.app.util.Cmd.VOTE_KICK;
 import static org.saturn.app.util.Constants.HELP_RESPONSE;
 import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.Constants.UPGRADE_REQUEST;
@@ -200,7 +204,12 @@ public class ServiceLayer extends Base {
                     JsonElement element = new JsonParser().parse(jsonText);
                     JsonObject object = element.getAsJsonObject();
                     User user = gson.fromJson(object, User.class);
-                    
+                    System.out.println("Joined: " + user.toString());
+    
+                    //fix
+                    String joinedUserData =
+                            sqlService.executeSQLCmd(":sql Select distinct trip, nick, hash from messages where hash='" + user.getHash() + "' limit 20;");
+                    outService.enqueueMessageForSending("/whisper merc " + joinedUserData);
                     proceedBanned(user);
                     addActiveUser(user);
                     break;
@@ -297,8 +306,27 @@ public class ServiceLayer extends Base {
                 modService.ban(cmd.substring(4));
                 System.out.println("Banned " + cmd.substring(4));
             }
+            if (is(cmd, INFO) && ("8Wotmg".equals(trip) || "l6wwZ3".equals(trip))) {
+                String nick = cmd.substring(5);
+                Optional<User> users =
+                        currentChannelUsers.stream().filter(user -> user.getNick().equals(nick)).findFirst();
+        
+                outService.enqueueMessageForSending("@" + author +
+                        " User trip: " + users.get().getTrip() +
+                        " ,User hash: " + users.get().getHash());
+            }
+            if (is(cmd, VOTE_KICK)) {
+                String nick = cmd.substring(9);
+                modService.votekick(nick);
+                outService.enqueueMessageForSending(" Vote kick started, please type    :vote reason_here    to vote yes. Execution will proceed as 3 votes are reached.");
+            }
+            if (is(cmd, VOTE)) {
+                modService.vote(author);
+            }
+            
             if (is(cmd, SQL) && "8Wotmg".equals(trip)) {
-                sqlService.executeSQLCmd(cmd);
+                String result = sqlService.executeSQLCmd(cmd);
+                outService.enqueueMessageForSending(result);
             }
             if (is(cmd, HELP)) {
                 outService.enqueueMessageForSending(HELP_RESPONSE);

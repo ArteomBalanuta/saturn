@@ -17,6 +17,9 @@ public enum Cmd {
     SEARCH("s "),
     SQL("sql "),
     BAN("ban "),
+    INFO("info "),
+    VOTE_KICK("votekick "),
+    VOTE("vote"),
     SENTRY("antipest"),
     MAIL("mail ");
 

@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ModServiceImpl extends OutService implements ModService {
     private Connection connection;
@@ -23,6 +24,29 @@ public class ModServiceImpl extends OutService implements ModService {
     public void kick(String target) {
         System.out.println("kick request sent  ");
         enqueueMessageForSending("/whisper " + modBotName + " #!kick " + target);
+    }
+    
+    
+    public AtomicInteger numberOfvotes = new AtomicInteger();
+    public static String candidate;
+    public List<String> judge = new ArrayList<>();
+    
+    public void votekick(String target) {
+        candidate = target.trim();
+    }
+    
+    public void vote(String author) {
+        judge.add(author);
+        int i = numberOfvotes.incrementAndGet();
+        if (i == 4) {
+            StringBuilder s = new StringBuilder();
+            judge.forEach(j -> s.append(j + " "));
+            
+            enqueueMessageForSending("@" + candidate + " you have been sentenced to be executed by merc, judges: " + s + "  ");
+//            enqueueMessageForSending("/whisper " + merc + " #!kick " + candidate);
+            candidate = null;
+            numberOfvotes.set(0);
+        }
     }
     
     @Override
