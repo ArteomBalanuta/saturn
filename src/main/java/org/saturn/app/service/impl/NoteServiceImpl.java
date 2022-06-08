@@ -1,21 +1,44 @@
 package org.saturn.app.service.impl;
 
+import org.saturn.app.service.NoteService;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 
-import org.saturn.app.service.NoteService;
+import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 
-public class NoteServiceImpl implements NoteService {
+public class NoteServiceImpl extends OutService implements NoteService {
     private Connection connection;
 
-    public NoteServiceImpl(Connection connection) {
+    public NoteServiceImpl(Connection connection, BlockingQueue<String> queue) {
+        super(queue);
         this.connection = connection;
     }
-
+    
+    public void executeNotesPurge(String author, String trip) {
+        this.clearNotesByTrip(trip);
+        enqueueMessageForSending("@" + author + "'s notes are gone");
+    }
+    
+    public void executeListNotes(String author, String trip) {
+        List<String> notes = this.getNotesByTrip(trip);
+        enqueueMessageForSending("@" + author + "'s notes: \\n ```Text \\n" + notes.toString() + "\\n```");
+    }
+    
+    public void executeAddNote(String trip, String cmd) {
+        String[] args = cmd.split(" ");
+        StringBuilder note = new StringBuilder();
+        for (int i = 1; i < args.length; i++) {
+            note.append(" ").append(args[i]);
+        }
+        this.save(trip, note.toString());
+    }
+    
     @Override
     public void save(String trip, String note) {
         try {
@@ -41,7 +64,7 @@ public class NoteServiceImpl implements NoteService {
 
             ResultSet resultSet = notesByTrip.getResultSet();
             while (resultSet.next()) {
-                notes.add(resultSet.getString(3));
+                notes.add(escapeJson(resultSet.getString(3)));
             }
             notesByTrip.close();
             resultSet.close();

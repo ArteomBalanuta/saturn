@@ -43,7 +43,7 @@ public class Connection {
         try {
             readDto.nrOfBytesRead = inputStream.read(readDto.bytes, 0, readDto.bytes.length);
         } catch (IOException e) {
-            throw new RuntimeException("Connection is closed for " + (isMain ? " main thread " : " list thread "));
+            throw new RuntimeException("Connection is closed for " + (isMain ? " main thread " : "list thread "));
         }
 
         return readDto;

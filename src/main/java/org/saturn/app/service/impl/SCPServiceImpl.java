@@ -1,10 +1,9 @@
 package org.saturn.app.service.impl;
 
 
-import java.io.IOException;
-
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -14,7 +13,22 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.saturn.app.service.SCPService;
 
-public class SCPServiceImpl implements SCPService {
+import java.io.IOException;
+import java.util.concurrent.BlockingQueue;
+
+public class SCPServiceImpl extends OutService implements SCPService {
+    
+    public SCPServiceImpl(BlockingQueue<String> queue) {
+        super(queue);
+    }
+    
+    public void executeRandomSCP(String author) {
+        // http://www.scpwiki.com/scp-XXX
+        int randomScpId = RandomUtils.nextInt(1, 5500);
+        String scpDescription = this.getSCPDescription(randomScpId);
+        
+        enqueueMessageForSending("```Text \\n" + scpDescription.trim() + " \\n```\\n " + "@" + author);
+    }
     
     @Override
     public String getSCPDescription(int scpId) {

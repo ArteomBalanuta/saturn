@@ -1,23 +1,39 @@
 package org.saturn.app.service.impl;
 
+import org.saturn.app.model.impl.Mail;
+import org.saturn.app.service.MailService;
+import org.saturn.app.util.Util;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 
-import org.saturn.app.model.impl.Mail;
-import org.saturn.app.service.MailService;
-import org.saturn.app.util.Util;
-
-public class MailServiceImpl implements MailService {
+public class MailServiceImpl extends OutService implements MailService {
     private Connection connection;
-
-    public MailServiceImpl(Connection connection) {
+    
+    public MailServiceImpl(Connection connection, BlockingQueue<String> outQueue) {
+        super(outQueue);
         this.connection = connection;
     }
-
+    
+    @Override
+    public void executeMail(String owner, String cmd) {
+        String[] args = cmd.split(" ");
+        String receiver = args[1];
+        
+        StringBuilder message = new StringBuilder();
+        for (int i = 2; i < args.length; i++) {
+            message.append(args[i]).append(" ");
+        }
+        
+        this.orderMessageDelivery(message.toString(), owner, receiver);
+        enqueueMessageForSending("@" + owner + ",  " + receiver + " will receive your message as soon he chat");
+    }
+    
     @Override
     public void orderMessageDelivery(String message, String owner, String receiver) {
         try {
@@ -28,37 +44,38 @@ public class MailServiceImpl implements MailService {
             insertMessage.setString(3, message);
             insertMessage.setString(4, "PENDING");
             insertMessage.setLong(5, Util.getTimestampNow());
-
+            
             insertMessage.executeUpdate();
-
+            
             insertMessage.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
+        
         /*
          * parse :msg @receiver messagebodyhere
-         * 
+         *
          * on user message - if user has messages to receive bot enques the message and
          * removes the pendind status
          */
     }
-
+    
     @Override
     public List<Mail> getMailByNick(String nick) {
         List<Mail> messages = new ArrayList<>();
         try {
             PreparedStatement mail = connection.prepareStatement(
-                    "SELECT owner, receiver, message, status, created_date FROM mail WHERE receiver = ? AND status = 'PENDING'; ");
+                    "SELECT owner, receiver, message, status, created_date FROM mail WHERE receiver = ? AND status = " +
+                            "'PENDING'; ");
             mail.setString(1, nick);
             mail.execute();
-
+            
             ResultSet resultSet = mail.getResultSet();
             while (resultSet.next()) {
                 Mail message = new Mail(resultSet.getString("owner"), resultSet.getString("receiver"),
                         resultSet.getString("message"), resultSet.getString("status"),
                         resultSet.getLong("created_date"));
-
+                
                 messages.add(message);
             }
             mail.close();
@@ -66,10 +83,10 @@ public class MailServiceImpl implements MailService {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
+        
         return messages;
     }
-
+    
     @Override
     public void updateMailStatus(String nick) {
         try {
@@ -78,11 +95,10 @@ public class MailServiceImpl implements MailService {
             insertMessage.setString(1, nick);
             
             insertMessage.executeUpdate();
-
+            
             insertMessage.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-
 }

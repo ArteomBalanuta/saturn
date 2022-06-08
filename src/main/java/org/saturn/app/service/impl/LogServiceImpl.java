@@ -1,10 +1,10 @@
 package org.saturn.app.service.impl;
 
+import org.saturn.app.service.LogService;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-
-import org.saturn.app.service.LogService;
 
 public class LogServiceImpl implements LogService {
     private Connection connection;

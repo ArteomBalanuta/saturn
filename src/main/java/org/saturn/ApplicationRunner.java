@@ -1,22 +1,22 @@
 package org.saturn;
 
-import static java.util.concurrent.Executors.newScheduledThreadPool;
-
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.FileBasedConfiguration;
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.saturn.app.facade.BotFacade;
+import org.saturn.app.facade.Facade;
 import org.saturn.app.service.DataBaseConnection;
 import org.saturn.app.service.LogService;
 import org.saturn.app.service.impl.DataBaseConnectionImpl;
 import org.saturn.app.service.impl.LogServiceImpl;
 import org.saturn.app.util.Util;
+
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import static java.util.concurrent.Executors.newScheduledThreadPool;
 
 public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
@@ -54,8 +54,7 @@ public class ApplicationRunner {
     }
 
     private void runSaturnBot() {
-
-        BotFacade saturn = new BotFacade(dbConnection.getConnection(), config);
+        Facade saturn = new Facade(dbConnection.getConnection(), config);
         saturn.isMainThread = true;
         saturn.joinDelay = 1000;
 
@@ -64,7 +63,7 @@ public class ApplicationRunner {
         healthCheckScheduler.scheduleWithFixedDelay(() -> {
             boolean isOffline = (Util.getTimestampNow() - saturn.lastPingTimestamp) > 30_000;
             if (isOffline) {
-                System.out.println("Resurecting the bot..");
+                System.out.println("Resurrecting the bot..");
                 saturn.stop(); //npe here
                 saturn.sleep(15_000);
                 

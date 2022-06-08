@@ -1,8 +1,6 @@
 package org.saturn.app.service.impl;
 
-import java.io.IOException;
-
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -11,6 +9,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.saturn.app.service.SearchService;
+
+import java.io.IOException;
 
 public class SearchServiceImpl implements SearchService {
     public SearchServiceImpl() {

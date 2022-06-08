@@ -3,7 +3,8 @@ package org.saturn.app.util;
 public enum Cmd {
     HELP("help"), 
     FISH("fish"), 
-    LIST("list"), 
+    LIST("list"),
+    MSG_CHANNEL("msgchannel"),
     BABAKIUERIA("babakiueria"), 
     DRRUDI("drrudi"), 
     RUST("rust"), 
@@ -14,6 +15,9 @@ public enum Cmd {
     NOTES("notes"),
     NOTES_PURGE("notes purge"), 
     SEARCH("s "),
+    SQL("sql "),
+    BAN("ban "),
+    SENTRY("antipest"),
     MAIL("mail ");
 
     private final String cmdCode;
