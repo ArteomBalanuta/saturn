@@ -177,19 +177,6 @@ public class ServiceLayer extends Base {
                     break;
                 }
                 case "onlineSet": {
-                    /*
-                     * {"cmd":"onlineSet", "nicks":["test","JavaBot"], "users": [
-                     * {"channel":"forge", "isme":false, "nick":"test",
-                     * "trip":"8Wotmg","uType":"user","hash":"Nn2jIz8w2Wk9qbo","level":100,"userid":
-                     * 3707326840729,"isBot":false,"color":false}, {"channel":"forge", "isme":true,
-                     * "nick":"JavaBot","trip":"XBotUU","uType":"user","hash":"Nn2jIz8w2Wk9qbo",
-                     * "level":100,"userid":6883928675253,"isBot":false,"color":false} ]
-                     * ,"channel":"forge","time":1624984540229}
-                     *
-                     *
-                     * channel,isme bool, nick, trip, uType, hash, level int , userId long, isBot
-                     * bool, color bool
-                     */
                     if (this.isMainThread) {
                         setupActiveUsers(jsonText);
                         outService.enqueueMessageForSending("/color #06C22E");
@@ -202,14 +189,9 @@ public class ServiceLayer extends Base {
                     }
                 }
                 case "onlineAdd": {
-                    //{"cmd":"onlineAdd","nick":"test","trip":"UqqSDd","uType":"user","hash":"Nn2jIz8w2Wk9qbo",
-                    // "level":100,"userid":3734549386118,"isBot":false,"color":false,"channel":"programming",
-                    // "time":1629034304212}
-                    
                     User user = gson.fromJson(object, User.class);
                     System.out.println("Joined: " + user.toString());
                     
-                    //fix
                     String joinedUserData =
                             sqlService.executeSQLCmd(":sql Select distinct trip, nick, hash from messages where " +
                                     "hash='" + user.getHash() + "' limit 20;");
@@ -261,7 +243,7 @@ public class ServiceLayer extends Base {
         }
     }
     
-    private synchronized void removeActiveUser(String leftUser) {
+    private void removeActiveUser(String leftUser) {
         for (User user : currentChannelUsers) {
             if (user.getNick().equals(leftUser)) {
                 currentChannelUsers.remove(user);
@@ -278,7 +260,7 @@ public class ServiceLayer extends Base {
     }
     
     private void setupActiveUsers(String jsonText) {
-        JsonElement element = new JsonParser().parse(jsonText);
+        JsonElement element = JsonParser.parseString(jsonText);
         JsonElement listingElement = element.getAsJsonObject().get("users");
         User[] users = gson.fromJson(listingElement, User[].class);
         
