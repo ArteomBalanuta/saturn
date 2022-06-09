@@ -2,49 +2,54 @@ package org.saturn.app.service.impl;
 
 import org.saturn.app.model.impl.User;
 import org.saturn.app.service.ModService;
+import org.saturn.app.service.SQLService;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ModServiceImpl extends OutService implements ModService {
-    private Connection connection;
-    List<String> bannedTripsNnicksNhashes = new ArrayList<>();
+    private static final String MOD_BOT_NAME = "gohackbot";
     
-    public ModServiceImpl(Connection connection, BlockingQueue<String> queue) {
+    private final SQLService sqlService;
+    
+    public ModServiceImpl(SQLService sqlService, BlockingQueue<String> queue) {
         super(queue);
-        this.connection = connection;
+        this.sqlService = sqlService;
     }
-    
-    private String modBotName = "gohackbot";
     
     @Override
     public void kick(String target) {
         System.out.println("kick request sent  ");
-        enqueueMessageForSending("/whisper " + modBotName + " #!kick " + target);
+        enqueueMessageForSending("/whisper " + MOD_BOT_NAME + " #!kick " + target);
     }
     
     
     public AtomicInteger numberOfvotes = new AtomicInteger();
-    public static String candidate;
-    public List<String> judge = new ArrayList<>();
+    public static String pest;
+    public List<String> judges = new ArrayList<>();
     
     public void votekick(String target) {
-        candidate = target.trim();
+        pest = target.trim();
     }
     
     public void vote(String author) {
-        judge.add(author);
+        /* votes are counted only if trusted user started the vote */
+        if (pest == null) {
+            return;
+        }
+        
+        judges.add(author);
         int i = numberOfvotes.incrementAndGet();
         if (i == 4) {
             StringBuilder s = new StringBuilder();
-            judge.forEach(j -> s.append(j + " "));
+            judges.forEach(j -> s.append(j).append(" "));
             
-            enqueueMessageForSending("@" + candidate + " you have been sentenced to be executed by merc, judges: " + s + "  ");
-//            enqueueMessageForSending("/whisper " + merc + " #!kick " + candidate);
-            candidate = null;
+            enqueueMessageForSending("@" + pest + " you have been sentenced to be executed by merc, judges: "
+                    + s + "  ");
+            enqueueMessageForSending("/whisper " + MOD_BOT_NAME + " #!kick " + pest);
+            pest = null;
             numberOfvotes.set(0);
         }
     }
@@ -52,12 +57,27 @@ public class ModServiceImpl extends OutService implements ModService {
     @Override
     public void ban(String target) {
         if (target != null || !target.equals("") || !target.equals(" ")) {
-            this.bannedTripsNnicksNhashes.add(target);
+            String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", target);
+            sqlService.executeSQLCmd(sql);
         }
     }
     
     @Override
     public void unban(String target) {
+        if (target != null || !target.equals("") || !target.equals(" ")) {
+            String sql = ":sql DELETE FROM banned WHERE id='?';".replace("?", target);
+            sqlService.executeSQLCmd(sql);
+        }
+    }
+    
+    @Override
+    public void listBanned() {
+        List<String> bannedIds = sqlService.getBannedIds();
+        if (bannedIds.isEmpty()) {
+            enqueueMessageForSending("No users has been banned.");
+        } else {
+            enqueueMessageForSending("Banned hashes, trips, nicks: " + bannedIds);
+        }
     }
     
     @Override
@@ -65,17 +85,10 @@ public class ModServiceImpl extends OutService implements ModService {
         if (target == null) {
             return false;
         }
-        System.out.println("##### All Banned trips, nicks, hashes: ");
-        bannedTripsNnicksNhashes.forEach(System.out::println);
-        System.out.println("#####");
         
-        if (bannedTripsNnicksNhashes.contains(target.getTrip())
-                || bannedTripsNnicksNhashes.contains(target.getNick())
-                || bannedTripsNnicksNhashes.contains(target.getHash())) {
-            System.out.println("Banned: " + target.toString());
-            return true;
-        }
-        
-        return false;
+        List<String> bannedIds = sqlService.getBannedIds();
+        return bannedIds.contains(target.getTrip())
+                || bannedIds.contains(target.getNick())
+                || bannedIds.contains(target.getHash());
     }
 }

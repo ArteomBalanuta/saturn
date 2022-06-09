@@ -11,11 +11,9 @@ public class Util {
     static Gson gson = new Gson();
     
     public static String getCmdFromJson(String jsonText) {
-        JsonElement element = new JsonParser().parse(jsonText);
+        JsonElement element = JsonParser.parseString(jsonText);
         JsonElement listingElement = element.getAsJsonObject().get("cmd");
-        String cmd = gson.fromJson(listingElement, String.class);
-
-        return cmd;
+        return gson.fromJson(listingElement, String.class);
     }
 
     public static long getTimestampNow() {

@@ -12,10 +12,10 @@ import org.saturn.app.model.impl.WebSocketStandardFrameImpl;
 import org.saturn.app.util.OpCode;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,6 +38,8 @@ public abstract class Base {
     public String channel;
     public String nick;
     public String trip;
+    public String userTrips;
+    public String adminTrips;
     
     public boolean isMainThread;
     public int joinDelay;
@@ -47,8 +49,8 @@ public abstract class Base {
     protected final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
     protected final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
     
-    protected volatile List<String> incomingSetOnlineMessageQueue = new ArrayList<>();
-    protected volatile List<User> currentChannelUsers = new ArrayList<>();
+    protected CopyOnWriteArrayList<String> incomingSetOnlineMessageQueue = new CopyOnWriteArrayList<>();
+    protected CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
     
     protected ExecutorService appExecutor = Executors.newFixedThreadPool(THREAD_NUMBER);
     protected ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
@@ -56,9 +58,11 @@ public abstract class Base {
     public Base(java.sql.Connection dbConnection, Configuration config) {
         if (config != null) {
             this.prefix = config.getString("cmdPrefix");
-            this.channel = config.getString("chanel");
+            this.channel = config.getString("channel");
             this.nick = config.getString("nick");
             this.trip = config.getString("trip");
+            this.userTrips = config.getString("userTrips");
+            this.adminTrips = config.getString("adminTrips");
         }
         
         initExecutors();
@@ -66,7 +70,7 @@ public abstract class Base {
     
     void initExecutors(){
         appExecutor = Executors.newFixedThreadPool(THREAD_NUMBER);
-        executorScheduler = newScheduledThreadPool(THREAD_NUMBER);;
+        executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
     }
     
     

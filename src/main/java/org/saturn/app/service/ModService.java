@@ -7,6 +7,7 @@ public interface ModService {
     
     void ban(String target);
     void unban(String target);
+    void listBanned();
     void vote(String author);
     void votekick(String nick);
     boolean isBanned(User user);

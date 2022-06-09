@@ -10,13 +10,16 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
+import static org.apache.commons.text.StringEscapeUtils.escapeJson;
+
 public class SQLServiceImpl extends OutService implements SQLService {
-
+    
     private Connection connection;
-
+    
     public SQLServiceImpl(Connection connection, BlockingQueue<String> queue) {
         super(queue);
         this.connection = connection;
@@ -24,11 +27,11 @@ public class SQLServiceImpl extends OutService implements SQLService {
     
     public String executeSQLCmd(String cmd) {
         String[] cmdtext = cmd.split("sql ");
-        return this.execute(cmdtext[1]);
+        return this.executeFormatted(cmdtext[1]);
     }
     
     @Override
-    public String execute(String sql) {
+    public String executeFormatted(String sql) {
         StringBuilder string = new StringBuilder();
         string.append("```Text \\n");
         List<String> columnNames = new ArrayList<>();
@@ -38,40 +41,58 @@ public class SQLServiceImpl extends OutService implements SQLService {
             ResultSet result = cmd.executeQuery(sql);
             
             ResultSetMetaData metaData = result.getMetaData();
-
+            
             int numberOfColumns = metaData.getColumnCount();
             for (int i = 1; i <= numberOfColumns; i++) {
                 columnNames.add(metaData.getColumnName(i));
             }
             
-            while(result.next()) {
+            while (result.next()) {
                 List<String> row = new ArrayList<>();
-                for(int i = 1; i <= numberOfColumns; i++) {
-                    String cell =  result.getString(i) == null ? "null" : result.getString(i);
+                for (int i = 1; i <= numberOfColumns; i++) {
+                    String cell = result.getString(i) == null ? "null" : result.getString(i);
                     row.add(cell);
                 }
-
+                
                 listOfRows.add(row);
             }
-
+            
             cmd.close();
         } catch (SQLException e) {
             e.printStackTrace();
-
+            
             listOfRows.clear();
-
+            
         }
-
+        
         String table = StringEscapeUtils.escapeJson(generateTable(columnNames, listOfRows));
         string.append(table);
         string.append("\\n ```");
-
+        
         return string.toString();
     }
-
+    
+    @Override
+    public List<String> getBannedIds() {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("SELECT id from banned;");
+            
+            List<String> result = new ArrayList<>();
+            ResultSet resultSet = statement.getResultSet();
+            while (resultSet.next()) {
+                result.add(escapeJson(resultSet.getString(1)));
+            }
+            return result;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return Collections.emptyList();
+    }
+    
     private String generateTable(List<String> columnNames, List<List<String>> listOfRows) {
-        TableGenerator tableGenerator = new TableGenerator();    
-
+        TableGenerator tableGenerator = new TableGenerator();
+        
         return tableGenerator.generateTable(columnNames, listOfRows);
     }
 }

@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.saturn.app.util.Cmd.BABAKIUERIA;
 import static org.saturn.app.util.Cmd.BAN;
+import static org.saturn.app.util.Cmd.BANLIST;
 import static org.saturn.app.util.Cmd.DRRUDI;
 import static org.saturn.app.util.Cmd.FISH;
 import static org.saturn.app.util.Cmd.HELP;
@@ -59,6 +60,7 @@ import static org.saturn.app.util.Cmd.SEARCH;
 import static org.saturn.app.util.Cmd.SENTRY;
 import static org.saturn.app.util.Cmd.SOLID;
 import static org.saturn.app.util.Cmd.SQL;
+import static org.saturn.app.util.Cmd.UNBAN;
 import static org.saturn.app.util.Cmd.VOTE;
 import static org.saturn.app.util.Cmd.VOTE_KICK;
 import static org.saturn.app.util.Constants.HELP_RESPONSE;
@@ -90,8 +92,8 @@ public class ServiceLayer extends Base {
         this.sqlService = new SQLServiceImpl(dbConnection, outgoingMessageQueue);
         this.pingService = new PingServiceImpl(outgoingMessageQueue);
         this.logService = new LogServiceImpl(dbConnection);
-        this.searchService = new SearchServiceImpl();           /* TODO:  add logging */
-        this.modService = new ModServiceImpl(dbConnection, outgoingMessageQueue);
+        this.searchService = new SearchServiceImpl();                                       /* TODO:  add logging */
+        this.modService = new ModServiceImpl(this.sqlService, outgoingMessageQueue);
     }
     
     public void start() {
@@ -168,6 +170,8 @@ public class ServiceLayer extends Base {
             String jsonText = new String(frame.getWebSocketReadTextBytes());
             
             String cmd = getCmdFromJson(jsonText);
+            JsonElement element = JsonParser.parseString(jsonText);
+            JsonObject object = element.getAsJsonObject();
             switch (cmd) {
                 case "join": {
                     break;
@@ -188,6 +192,7 @@ public class ServiceLayer extends Base {
                      */
                     if (this.isMainThread) {
                         setupActiveUsers(jsonText);
+                        outService.enqueueMessageForSending("/color #06C22E");
                         logService.logEvent("joined channel", "successfully", getTimestampNow());
                         break;
                     } else {
@@ -201,14 +206,13 @@ public class ServiceLayer extends Base {
                     // "level":100,"userid":3734549386118,"isBot":false,"color":false,"channel":"programming",
                     // "time":1629034304212}
                     
-                    JsonElement element = new JsonParser().parse(jsonText);
-                    JsonObject object = element.getAsJsonObject();
                     User user = gson.fromJson(object, User.class);
                     System.out.println("Joined: " + user.toString());
-    
+                    
                     //fix
                     String joinedUserData =
-                            sqlService.executeSQLCmd(":sql Select distinct trip, nick, hash from messages where hash='" + user.getHash() + "' limit 20;");
+                            sqlService.executeSQLCmd(":sql Select distinct trip, nick, hash from messages where " +
+                                    "hash='" + user.getHash() + "' limit 20;");
                     outService.enqueueMessageForSending("/whisper merc " + joinedUserData);
                     proceedBanned(user);
                     addActiveUser(user);
@@ -217,16 +221,14 @@ public class ServiceLayer extends Base {
                 case "onlineRemove": {
                     //{"cmd":"onlineRemove","userid":3910366301486,"nick":"newuser2","channel":"programming",
                     // "time":1629034916215}
-                    JsonElement element = new JsonParser().parse(jsonText);
-                    JsonObject object = element.getAsJsonObject();
-                    User leftUser = gson.fromJson(object, User.class);
-                    
-                    removeActiveUser(leftUser.getNick());
+                    User user = gson.fromJson(object, User.class);
+                    removeActiveUser(user.getNick());
                     break;
                 }
                 
                 case "chat": {
                     ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
+                    System.out.println(message.getNick() + ": " + message.getText());
                     
                     logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
                             getTimestampNow());
@@ -237,9 +239,7 @@ public class ServiceLayer extends Base {
                     }
                     
                     incomingChatMessageQueue.add(message);
-                    
                     break;
-                    
                 }
                 default:
                     System.out.printf("Text payload: %s \n", jsonText);
@@ -286,81 +286,117 @@ public class ServiceLayer extends Base {
     }
     
     public void messageProcessor() {
-        if (!incomingChatMessageQueue.isEmpty()) {
-            ChatMessage message = incomingChatMessageQueue.poll();
-            
-            String author = message.getNick();
-            String trip = message.getTrip();
-            
-            String cmd = message.getText().trim();
-            
-            /* Mail service check */
-            deliverMailIfPresent(author);
-            
-            if (!cmd.startsWith(prefix)) {
-                return;
-            }
-            
-            cmd = cmd.substring(1);
-            if (is(cmd, BAN) && "8Wotmg".equals(trip)) {
-                modService.ban(cmd.substring(4));
-                System.out.println("Banned " + cmd.substring(4));
-            }
-            if (is(cmd, INFO) && ("8Wotmg".equals(trip) || "l6wwZ3".equals(trip))) {
-                String nick = cmd.substring(5);
-                Optional<User> users =
-                        currentChannelUsers.stream().filter(user -> user.getNick().equals(nick)).findFirst();
+        if (incomingChatMessageQueue.isEmpty()) {
+            return;
+        }
         
-                outService.enqueueMessageForSending("@" + author +
-                        " User trip: " + users.get().getTrip() +
-                        " ,User hash: " + users.get().getHash());
-            }
-            if (is(cmd, VOTE_KICK)) {
-                String nick = cmd.substring(9);
-                modService.votekick(nick);
-                outService.enqueueMessageForSending(" Vote kick started, please type    :vote reason_here    to vote yes. Execution will proceed as 3 votes are reached.");
-            }
-            if (is(cmd, VOTE)) {
-                modService.vote(author);
-            }
-            
-            if (is(cmd, SQL) && "8Wotmg".equals(trip)) {
-                String result = sqlService.executeSQLCmd(cmd);
-                outService.enqueueMessageForSending(result);
-            }
-            if (is(cmd, HELP)) {
-                outService.enqueueMessageForSending(HELP_RESPONSE);
-            } else if (is(cmd, SENTRY)) {
-                outService.enqueueMessageForSending("@" + author + " Sentry on!");
-            } else if (is(cmd, FISH)) {
-                outService.enqueueMessageForSending("@" + author + " Bloop bloop!");
-            } else if (is(cmd, LIST)) {
-                executeListCommand(cmd, author);
-            } else if (is(cmd, BABAKIUERIA)) {
-                outService.enqueueMessageForSending("@" + author + " https://www.youtube.com/watch?v=NqcFg4z6EYY");
-            } else if (is(cmd, DRRUDI)) {
-                outService.enqueueMessageForSending("@" + author + " https://www.youtube.com/watch?v=uPaZWM4bxrM");
-            } else if (is(cmd, RUST)) {
-                outService.enqueueMessageForSending("@" + author + " https://doc.rust-lang.org/book/title-page.html");
-            } else if (is(cmd, PING)) {
-                pingService.executePing(author);
-            } else if (is(cmd, SOLID)) {
-                outService.enqueueMessageForSending(Constants.SOLID + " @" + author);
-            } else if (is(cmd, SCP)) {
-                scpService.executeRandomSCP(author);
-            } else if (is(cmd, NOTES_PURGE)) {
-                noteService.executeNotesPurge(author, trip);
-            } else if (is(cmd, NOTE)) {
-                noteService.executeAddNote(trip, cmd);
-            } else if (is(cmd, NOTES)) {
-                noteService.executeListNotes(author, trip);
-            } else if (is(cmd, SEARCH)) {
-                // executeSearch(author, cmd);
-            } else if (is(cmd, MAIL)) {
-                mailService.executeMail(author, cmd);
-            } else if (is(cmd, MSG_CHANNEL)) {
-                executeMsgChannelCmd(author, cmd);
-            }
+        ChatMessage message = incomingChatMessageQueue.poll();
+        String author = message.getNick();
+        String trip = message.getTrip();
+        String cmd = message.getText().trim();
+        
+        /* Mail service check */
+        deliverMailIfPresent(author);
+        
+        if (!cmd.startsWith(prefix)) {
+            return;
+        }
+        
+        boolean isAdmin = false;
+        boolean isUser = false;
+        
+        List<String> admins = Arrays.asList(adminTrips.split(","));
+        List<String> trustedUsers = Arrays.asList(userTrips.split(","));
+        if (trustedUsers.contains(trip)) {
+            isUser = true;
+        }
+    
+        if (admins.contains(trip)) {
+            isAdmin = true;
+        }
+    
+        cmd = cmd.substring(1);
+    
+        if (is(cmd, BAN) && isAdmin) {
+            modService.ban(cmd.substring(4));
+            outService.enqueueMessageForSending("@" + author + " banned " + cmd.substring(4));
+        }
+        if (is(cmd, UNBAN) && isAdmin) {
+            modService.unban(cmd.substring(6));
+            outService.enqueueMessageForSending("@" + author + " unbanned " + cmd.substring(6));
+        }
+        if (is(cmd, BANLIST) && isAdmin) {
+            modService.listBanned();
+        }
+        if (is(cmd, INFO) && (isUser || isAdmin)) {
+            String nick = cmd.substring(5);
+            Optional<User> users =
+                    currentChannelUsers.stream().filter(user -> user.getNick().equals(nick)).findFirst();
+        
+            outService.enqueueMessageForSending("@" + author +
+                    "\\n User trip: " + users.get().getTrip() +
+                    "\\n User hash: " + users.get().getHash());
+        }
+        if (is(cmd, VOTE_KICK) && (isUser || isAdmin)) {
+            String nick = cmd.substring(9);
+            modService.votekick(nick);
+            outService.enqueueMessageForSending(" Vote kick started, please type    :vote reason_here    to vote " +
+                    "yes. Execution will proceed as 3 votes are reached.");
+        }
+        if (is(cmd, VOTE)) {
+            modService.vote(author);
+        }
+        if (is(cmd, SQL) && isAdmin) {
+            String result = sqlService.executeSQLCmd(cmd);
+            outService.enqueueMessageForSending(result);
+        }
+        if (is(cmd, HELP)) {
+            outService.enqueueMessageForSending(HELP_RESPONSE);
+        }
+        if (is(cmd, SENTRY)) {
+            outService.enqueueMessageForSending("@" + author + " Sentry on!");
+        }
+        if (is(cmd, FISH)) {
+            outService.enqueueMessageForSending("@" + author + " Bloop bloop!");
+        }
+        if (is(cmd, LIST)) {
+            executeListCommand(cmd, author);
+        }
+        if (is(cmd, BABAKIUERIA)) {
+            outService.enqueueMessageForSending("@" + author + " https://www.youtube.com/watch?v=NqcFg4z6EYY");
+        }
+        if (is(cmd, DRRUDI)) {
+            outService.enqueueMessageForSending("@" + author + " https://www.youtube.com/watch?v=uPaZWM4bxrM");
+        }
+        if (is(cmd, RUST)) {
+            outService.enqueueMessageForSending("@" + author + " https://doc.rust-lang.org/book/title-page.html");
+        }
+        if (is(cmd, PING)) {
+            pingService.executePing(author);
+        }
+        if (is(cmd, SOLID)) {
+            outService.enqueueMessageForSending(Constants.SOLID + " @" + author);
+        }
+        if (is(cmd, SCP)) {
+            scpService.executeRandomSCP(author);
+        }
+        if (is(cmd, NOTES_PURGE)) {
+            noteService.executeNotesPurge(author, trip);
+        }
+        if (is(cmd, NOTE)) {
+            noteService.executeAddNote(trip, cmd);
+        }
+        if (is(cmd, NOTES)) {
+            noteService.executeListNotes(author, trip);
+        }
+        if (is(cmd, SEARCH)) {
+            // executeSearch(author, cmd);
+        }
+        if (is(cmd, MAIL)) {
+            mailService.executeMail(author, cmd);
+        }
+        if (is(cmd, MSG_CHANNEL)) {
+            executeMsgChannelCmd(author, cmd);
         }
     }
     
