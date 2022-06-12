@@ -35,8 +35,10 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -60,6 +62,7 @@ import static org.saturn.app.util.Cmd.SEARCH;
 import static org.saturn.app.util.Cmd.SENTRY;
 import static org.saturn.app.util.Cmd.SOLID;
 import static org.saturn.app.util.Cmd.SQL;
+import static org.saturn.app.util.Cmd.SUB;
 import static org.saturn.app.util.Cmd.UNBAN;
 import static org.saturn.app.util.Cmd.VOTE;
 import static org.saturn.app.util.Cmd.VOTE_KICK;
@@ -82,8 +85,7 @@ public class ServiceLayer extends Base {
     protected final PingService pingService;
     protected final ModService modService;
     
-    public ServiceLayer(Connection dbConnection, Configuration config
-    ) {
+    public ServiceLayer(Connection dbConnection, Configuration config) {
         super(dbConnection, config);
         this.outService = new OutService(outgoingMessageQueue);
         this.scpService = new SCPServiceImpl(outgoingMessageQueue);
@@ -102,13 +104,16 @@ public class ServiceLayer extends Base {
         sendUpgradeRequest();
         
         sleep(this.joinDelay);
-        sendJoinMessage();
+//        sendJoinMessage();
     }
     
     public void setUpConnectionToHackChat() {
-        String uri = "hack.chat";
-        int port = 443;
-        hcConnection = new org.saturn.app.model.impl.Connection(uri, port, this.isMainThread);
+//        String uri = "hack.chat";
+//        int port = 443;
+        String uri = "localhost";
+        int port = 8087;
+        boolean isSSL = false;
+        hcConnection = new org.saturn.app.model.impl.Connection(uri, port, this.isMainThread, isSSL);
     }
     
     public void sendUpgradeRequest() {
@@ -191,13 +196,10 @@ public class ServiceLayer extends Base {
                 case "onlineAdd": {
                     User user = gson.fromJson(object, User.class);
                     System.out.println("Joined: " + user.toString());
-                    
-                    String joinedUserData =
-                            sqlService.executeSQLCmd(":sql Select distinct trip, nick, hash from messages where " +
-                                    "hash='" + user.getHash() + "' limit 20;");
-                    outService.enqueueMessageForSending("/whisper merc " + joinedUserData);
-                    proceedBanned(user);
+    
                     addActiveUser(user);
+                    shareUserInfo(user);
+                    proceedBanned(user);
                     break;
                 }
                 case "onlineRemove": {
@@ -228,6 +230,13 @@ public class ServiceLayer extends Base {
                     break;
             }
         }
+    }
+    
+    Set<String> subscribers = new HashSet<>();
+    
+    private void shareUserInfo(User user) {
+        String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
+        subscribers.forEach(mod -> outService.enqueueMessageForSending("/whisper " + mod + " -\\n\\n" + joinedUserData));
     }
     
     private void proceedBanned(User user) {
@@ -292,20 +301,20 @@ public class ServiceLayer extends Base {
         if (trustedUsers.contains(trip)) {
             isUser = true;
         }
-    
+        
         if (admins.contains(trip)) {
             isAdmin = true;
         }
-    
+        
         cmd = cmd.substring(1);
-    
+        
         if (is(cmd, BAN) && isAdmin) {
             modService.ban(cmd.substring(4));
-            outService.enqueueMessageForSending("@" + author + " banned " + cmd.substring(4));
+            outService.enqueueMessageForSending("/whisper @" + author + " banned " + cmd.substring(4));
         }
         if (is(cmd, UNBAN) && isAdmin) {
             modService.unban(cmd.substring(6));
-            outService.enqueueMessageForSending("@" + author + " unbanned " + cmd.substring(6));
+            outService.enqueueMessageForSending("/whisper @" + author + " unbanned " + cmd.substring(6));
         }
         if (is(cmd, BANLIST) && isAdmin) {
             modService.listBanned();
@@ -314,11 +323,16 @@ public class ServiceLayer extends Base {
             String nick = cmd.substring(5);
             Optional<User> users =
                     currentChannelUsers.stream().filter(user -> user.getNick().equals(nick)).findFirst();
-        
-            outService.enqueueMessageForSending("@" + author +
+            
+            outService.enqueueMessageForSending("/whisper @" + author + " " +
                     "\\n User trip: " + users.get().getTrip() +
                     "\\n User hash: " + users.get().getHash());
         }
+        if (is(cmd, SUB) && (isUser || isAdmin)) {
+            subscribers.add(author);
+            outService.enqueueMessageForSending("/whisper @" + author + " You will get related hashes, trips and nicks whispered for each joining user. You can use :votekick to kick.");
+        }
+        
         if (is(cmd, VOTE_KICK) && (isUser || isAdmin)) {
             String nick = cmd.substring(9);
             modService.votekick(nick);
@@ -399,7 +413,6 @@ public class ServiceLayer extends Base {
         }
     }
     
-    //
     private void executeMsgChannelCmd(String author, String cmd) {
         String[] args = cmd.split(" ");
         String list = args[0];
@@ -419,12 +432,13 @@ public class ServiceLayer extends Base {
         
         //:msgchannel ?your-channel hello faggots
         if (list.equals(Cmd.MSG_CHANNEL.getCmdCode())) {
-            if (channel != null && !channel.equals(this.channel)) {
+            //&& !channel.equals(this.channel)
+            if (channel != null ) {
                 
                 Facade listBot = new Facade(null, null); // no db connection, nor config for this one is needed
                 listBot.isMainThread = false;
                 listBot.setChannel(channel);
-                listBot.joinDelay = 1000;
+                listBot.joinDelay = 500;
                 
                 int length = 8;
                 boolean useLetters = true;
@@ -492,7 +506,7 @@ public class ServiceLayer extends Base {
         String jsonString = incomingSetOnlineMessageQueue.get(0);
         
         Gson gson = listBot.gson;
-        JsonElement element = new JsonParser().parse(jsonString); //parse to json tree
+        JsonElement element = JsonParser.parseString(jsonString); //parse to json tree
         JsonElement listingElement = element.getAsJsonObject().get("nicks"); // extract key
         String[] nicksArray = gson.fromJson(listingElement, String[].class);
         List<String> nickList = new ArrayList<>(List.of(nicksArray));

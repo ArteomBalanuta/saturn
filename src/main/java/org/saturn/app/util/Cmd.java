@@ -21,6 +21,7 @@ public enum Cmd {
     UNBAN("unban "),
     BANLIST("banlist"),
     INFO("info "),
+    SUB("sub"),
     VOTE_KICK("votekick "),
     VOTE("vote"),
     SENTRY("antipest"),

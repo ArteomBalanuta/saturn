@@ -8,4 +8,6 @@ public interface SQLService {
     String executeFormatted(String sql);
     List<String> getBannedIds();
     
+    String getBasicUserData(String hash, String trip);
+    
 }

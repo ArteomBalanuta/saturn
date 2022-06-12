@@ -16,30 +16,33 @@ public class Connection {
     private InputStream inputStream;
     private OutputStream outputStream;
 
-    public Connection(String uri, int port, boolean isMain) {
+    public Connection(String uri, int port, boolean isMain, boolean isSSL) {
         this.isMain = isMain;
         this.uri = uri;
         this.port = port;
 
         try {
             var socket = new Socket(uri, port);
-            var factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-            var sslSocket = (SSLSocket) factory.createSocket(socket, uri, port, false);
-
-            setUpConnectionStreams(sslSocket);
+            if (isSSL) {
+                var factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                var sslSocket = (SSLSocket) factory.createSocket(socket, uri, port, false);
+                setUpConnectionStreams(sslSocket);
+            } else {
+                setUpConnectionStreams(socket);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void setUpConnectionStreams(Socket sslSocket) throws IOException {
-        inputStream = sslSocket.getInputStream();
-        outputStream = sslSocket.getOutputStream();
+    private void setUpConnectionStreams(Socket socket) throws IOException {
+        inputStream = socket.getInputStream();
+        outputStream = socket.getOutputStream();
     }
 
     public ReadDto read() {
         ReadDto readDto = new ReadDto();
-        readDto.bytes = new byte[8192];
+        readDto.bytes = new byte[16384];
         try {
             readDto.nrOfBytesRead = inputStream.read(readDto.bytes, 0, readDto.bytes.length);
         } catch (IOException e) {

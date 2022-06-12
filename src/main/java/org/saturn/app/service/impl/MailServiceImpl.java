@@ -31,7 +31,7 @@ public class MailServiceImpl extends OutService implements MailService {
         }
         
         this.orderMessageDelivery(message.toString(), owner, receiver);
-        enqueueMessageForSending("@" + owner + ",  " + receiver + " will receive your message as soon he chat");
+        enqueueMessageForSending("@" + owner + ",  " + receiver + " will receive your message as soon they chats");
     }
     
     @Override
