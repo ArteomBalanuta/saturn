@@ -1,5 +1,6 @@
 package org.saturn.app.service;
 
+import java.sql.Connection;
 import java.util.List;
 
 public interface SQLService {
@@ -10,4 +11,5 @@ public interface SQLService {
     
     String getBasicUserData(String hash, String trip);
     
+    Connection getConnection();
 }

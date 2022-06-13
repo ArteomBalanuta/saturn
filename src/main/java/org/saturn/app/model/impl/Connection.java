@@ -42,7 +42,7 @@ public class Connection {
 
     public ReadDto read() {
         ReadDto readDto = new ReadDto();
-        readDto.bytes = new byte[16384];
+        readDto.bytes = new byte[32384];
         try {
             readDto.nrOfBytesRead = inputStream.read(readDto.bytes, 0, readDto.bytes.length);
         } catch (IOException e) {

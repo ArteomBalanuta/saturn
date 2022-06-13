@@ -26,7 +26,7 @@ public class Constants {
     public static final String HELP_RESPONSE = "\\n" +
             "Prefix char [ : ] \\n \\n" +
             "help, " +
-            "drRudi, " +
+            "drrudi, " +
             "babakiueria, " +
             "scp, " +
             "solid, " +

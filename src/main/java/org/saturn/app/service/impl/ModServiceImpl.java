@@ -3,6 +3,7 @@ package org.saturn.app.service.impl;
 import org.saturn.app.model.impl.User;
 import org.saturn.app.service.ModService;
 import org.saturn.app.service.SQLService;
+import org.saturn.app.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +58,8 @@ public class ModServiceImpl extends OutService implements ModService {
     @Override
     public void ban(String target) {
         if (target != null || !target.equals("") || !target.equals(" ")) {
-            String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", target);
+            String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", Util.getAuthor(target));
+            
             sqlService.executeSQLCmd(sql);
         }
     }

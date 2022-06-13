@@ -13,10 +13,15 @@ import org.saturn.app.service.impl.DataBaseConnectionImpl;
 import org.saturn.app.service.impl.LogServiceImpl;
 import org.saturn.app.util.Util;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.util.TimeZone;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newScheduledThreadPool;
+import static org.saturn.app.util.Util.getUTCnow;
 
 public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
@@ -52,7 +57,7 @@ public class ApplicationRunner {
     private void logStartBotEvent() {
         internalService.logEvent("appStart", "started", Util.getTimestampNow());
     }
-
+    
     private void runSaturnBot() {
         Facade saturn = new Facade(dbConnection.getConnection(), config);
         saturn.isMainThread = true;
@@ -63,13 +68,11 @@ public class ApplicationRunner {
         healthCheckScheduler.scheduleWithFixedDelay(() -> {
             boolean isOffline = (Util.getTimestampNow() - saturn.lastPingTimestamp) > 30_000;
             if (isOffline) {
-                System.out.println("Resurrecting the bot..");
+                System.out.println(getUTCnow() + "Resurrecting the bot..");
                 saturn.stop(); //npe here
                 saturn.sleep(15_000);
                 
                 saturn.start();
-            } else {
-                System.out.println(Util.getTimestampNow() + " Health check - online");
             }
         }, 0, 15, TimeUnit.SECONDS);
     }

@@ -13,7 +13,7 @@ public class WebSocketExtendedFrameImpl implements WebSocketFrame {
 
     byte[] textPayloadBytes;
     int[] textPayload;
-    int[] payload = new int[16384];
+    int[] payload = new int[32384];
 
     public WebSocketExtendedFrameImpl() {
     }

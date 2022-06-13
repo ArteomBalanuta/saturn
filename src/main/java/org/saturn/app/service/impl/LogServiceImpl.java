@@ -46,8 +46,6 @@ public class LogServiceImpl implements LogService {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-        
     }
 
 }

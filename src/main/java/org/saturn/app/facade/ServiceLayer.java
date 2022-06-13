@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.model.WebSocketFrame;
 import org.saturn.app.model.impl.ChatMessage;
 import org.saturn.app.model.impl.Mail;
@@ -33,6 +34,12 @@ import org.saturn.app.util.Constants;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -69,6 +76,7 @@ import static org.saturn.app.util.Cmd.VOTE_KICK;
 import static org.saturn.app.util.Constants.HELP_RESPONSE;
 import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.Constants.UPGRADE_REQUEST;
+import static org.saturn.app.util.Util.getAuthor;
 import static org.saturn.app.util.Util.getCmdFromJson;
 import static org.saturn.app.util.Util.getTimestampNow;
 import static org.saturn.app.util.Util.is;
@@ -104,15 +112,13 @@ public class ServiceLayer extends Base {
         sendUpgradeRequest();
         
         sleep(this.joinDelay);
-//        sendJoinMessage();
+        sendJoinMessage();
     }
     
     public void setUpConnectionToHackChat() {
-//        String uri = "hack.chat";
-//        int port = 443;
-        String uri = "localhost";
-        int port = 8087;
-        boolean isSSL = false;
+        String uri = "hack.chat";
+        int port = 443;
+        boolean isSSL = true;
         hcConnection = new org.saturn.app.model.impl.Connection(uri, port, this.isMainThread, isSSL);
     }
     
@@ -154,6 +160,27 @@ public class ServiceLayer extends Base {
         }
     }
     
+    private void shareDBmessages() throws SQLException {
+        Connection connection = this.sqlService.getConnection();
+        Statement statement = connection.createStatement();
+        
+        String sql = "select distinct message from mail where status = 'BOT_SAY' limit 1;";
+        statement.execute(sql);
+        
+        ResultSet resultSet = statement.getResultSet();
+        while (resultSet.next()) {
+            String message = resultSet.getString(1);
+            if (message != null && !message.isEmpty() && !message.isBlank()) {
+                
+                Statement s = connection.createStatement();
+                String update = "DELETE FROM MAIL where status = 'BOT_SAY';";
+                s.execute(update);
+    
+                sendChatMessage(StringEscapeUtils.escapeJson(message));
+            }
+        }
+    }
+    
     private void setupWorkers() {
         initExecutors();
         executorScheduler.scheduleWithFixedDelay(this::websocketFrameDispatcher, 0, 50, TimeUnit.MILLISECONDS);
@@ -163,6 +190,7 @@ public class ServiceLayer extends Base {
                 messageDispatcher();
                 messageProcessor();
                 shareMessages();
+                shareDBmessages();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -309,8 +337,18 @@ public class ServiceLayer extends Base {
         cmd = cmd.substring(1);
         
         if (is(cmd, BAN) && isAdmin) {
-            modService.ban(cmd.substring(4));
-            outService.enqueueMessageForSending("/whisper @" + author + " banned " + cmd.substring(4));
+            
+            String nick = cmd.substring(4).replace("@","");
+            String hash = currentChannelUsers.stream()
+                    .filter(user -> nick.equals(user.getNick()))
+                    .map(u -> u.getHash())
+                    .findFirst()
+                    .get();
+            
+            modService.ban(nick);
+            modService.ban(hash);
+            outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick + " hash: " + hash);
+            modService.kick(nick);
         }
         if (is(cmd, UNBAN) && isAdmin) {
             modService.unban(cmd.substring(6));
@@ -397,13 +435,13 @@ public class ServiceLayer extends Base {
     }
     
     private void deliverMailIfPresent(String author) {
-        List<Mail> messages = mailService.getMailByNick(author.replace("@", ""));
+        List<Mail> messages = mailService.getMailByNick(getAuthor(author));
         if (!messages.isEmpty()) {
             StringBuilder mailMessage = new StringBuilder();
             
             messages.forEach(mail -> {
                 String row =
-                        "date: [" + mail.createdDate + "] from: [" + mail.owner + "] message: [" + mail.message + "] " +
+                        "date: [" + Instant.ofEpochMilli(mail.createdDate).atZone(ZoneOffset.UTC) + "] from: [" + mail.owner + "] message: [" + mail.message + "] " +
                                 "\\n";
                 mailMessage.append(row);
             });
@@ -412,6 +450,7 @@ public class ServiceLayer extends Base {
             mailService.updateMailStatus(author);
         }
     }
+    
     
     private void executeMsgChannelCmd(String author, String cmd) {
         String[] args = cmd.split(" ");

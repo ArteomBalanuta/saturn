@@ -3,6 +3,8 @@ package org.saturn.app.service.impl;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.service.impl.util.TableGenerator;
+import org.saturn.app.util.SeparatorFormatter;
+import org.saturn.app.util.Util;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -13,10 +15,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
 import static org.apache.commons.text.StringEscapeUtils.escapeJson;
+import static org.saturn.app.util.SeparatorFormatter.addSeparator;
+import static org.saturn.app.util.Util.setToList;
 
 public class SQLServiceImpl extends OutService implements SQLService {
     
@@ -109,18 +114,20 @@ public class SQLServiceImpl extends OutService implements SQLService {
             
             StringBuilder result = new StringBuilder();
             while (resultSet.next()) {
-                hashes.add(escapeJson(resultSet.getString(1)).trim());
-                nicks.add(escapeJson(resultSet.getString(2)).trim());
+                Optional.ofNullable(resultSet.getString(1)).ifPresent(s_hash -> hashes.add(escapeJson(s_hash).trim()));
+                Optional.ofNullable(resultSet.getString(2)).ifPresent(s_nick -> nicks.add(escapeJson(s_nick)));
             }
             
+            List formattedHashes = addSeparator(setToList(hashes), ',');
+            List formattedNicks = addSeparator(setToList(nicks), ',');
+    
             result.append("Hashes: \\n");
-            hashes.forEach(h -> result.append(h).append(", "));
+            formattedHashes.forEach(result::append);
             result.append(" \\n");
             
             result.append("Nicks: \\n");
-            nicks.forEach(n -> result.append(n).append(", "));
+            formattedNicks.forEach(result::append);
             result.append(" \\n");
-            
             
             return result.toString();
         } catch (SQLException throwables) {
@@ -128,6 +135,11 @@ public class SQLServiceImpl extends OutService implements SQLService {
         }
         
         return null;
+    }
+    
+    @Override
+    public Connection getConnection() {
+        return this.connection;
     }
     
     //    @Override
