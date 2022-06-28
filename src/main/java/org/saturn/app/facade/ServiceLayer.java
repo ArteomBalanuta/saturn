@@ -337,16 +337,14 @@ public class ServiceLayer extends Base {
         cmd = cmd.substring(1);
         
         if (is(cmd, BAN) && isAdmin) {
-            
             String nick = cmd.substring(4).replace("@","");
             String hash = currentChannelUsers.stream()
                     .filter(user -> nick.equals(user.getNick()))
                     .map(u -> u.getHash())
                     .findFirst()
-                    .get();
+                    .orElse(null);
             
-            modService.ban(nick);
-            modService.ban(hash);
+            modService.ban(nick, hash);
             outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick + " hash: " + hash);
             modService.kick(nick);
         }

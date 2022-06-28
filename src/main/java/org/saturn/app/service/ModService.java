@@ -6,6 +6,12 @@ public interface ModService {
     void kick(String target);
     
     void ban(String target);
+    default void ban(String... args){
+        for (String arg : args) {
+            this.ban(arg);
+        }
+    }
+    
     void unban(String target);
     void listBanned();
     void vote(String author);
