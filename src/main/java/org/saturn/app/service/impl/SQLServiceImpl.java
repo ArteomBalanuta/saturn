@@ -3,8 +3,6 @@ package org.saturn.app.service.impl;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.service.impl.util.TableGenerator;
-import org.saturn.app.util.SeparatorFormatter;
-import org.saturn.app.util.Util;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -33,9 +31,19 @@ public class SQLServiceImpl extends OutService implements SQLService {
     }
     
     @Override
-    public String executeSQLCmd(String cmd) {
+    public String executeSql(String cmd, boolean withOutput) {
         String[] cmdParts = cmd.split("sql ");
-        return this.executeFormatted(cmdParts[1]);
+        if (withOutput) {
+            return this.executeFormatted(cmdParts[1]);
+        } else {
+            try {
+                Statement statement = connection.createStatement();
+                statement.executeUpdate(cmdParts[1]);
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+            return null;
+        }
     }
     
     @Override
@@ -68,9 +76,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
             cmd.close();
         } catch (SQLException e) {
             e.printStackTrace();
-            
             listOfRows.clear();
-            
         }
         
         String table = StringEscapeUtils.escapeJson(generateTable(columnNames, listOfRows));
@@ -120,7 +126,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
             
             List formattedHashes = addSeparator(setToList(hashes), ',');
             List formattedNicks = addSeparator(setToList(nicks), ',');
-    
+            
             result.append("Hashes: \\n");
             formattedHashes.forEach(result::append);
             result.append(" \\n");

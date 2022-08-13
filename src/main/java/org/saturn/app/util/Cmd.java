@@ -4,7 +4,7 @@ public enum Cmd {
     HELP("help"), 
     FISH("fish"), 
     LIST("list"),
-    MSG_CHANNEL("msgchannel"),
+    MSGCHANNEL("msgchannel"),
     BABAKIUERIA("babakiueria"), 
     DRRUDI("drrudi"), 
     RUST("rust"), 
@@ -13,7 +13,7 @@ public enum Cmd {
     SCP("scp"), 
     NOTE("note "), 
     NOTES("notes"),
-    NOTES_PURGE("notes purge"), 
+    NOTESPURGE("notes purge"),
     SEARCH("s "),
     DOG("dog"),
     SQL("sql "),
@@ -22,9 +22,10 @@ public enum Cmd {
     BANLIST("banlist"),
     INFO("info "),
     SUB("sub"),
-    VOTE_KICK("votekick "),
+    VOTEKICK("votekick "),
     VOTE("vote"),
     SENTRY("antipest"),
+    ECHO("echo "),
     MAIL("mail ");
 
     private final String cmdCode;

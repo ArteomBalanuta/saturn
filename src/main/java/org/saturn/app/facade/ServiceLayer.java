@@ -7,8 +7,10 @@ import com.google.gson.JsonParser;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.saturn.app.model.Command;
 import org.saturn.app.model.WebSocketFrame;
 import org.saturn.app.model.impl.ChatMessage;
+import org.saturn.app.model.impl.CommandImpl;
 import org.saturn.app.model.impl.Mail;
 import org.saturn.app.model.impl.User;
 import org.saturn.app.model.impl.WebSocketStandardFrameImpl;
@@ -39,12 +41,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -53,15 +53,16 @@ import static org.saturn.app.util.Cmd.BABAKIUERIA;
 import static org.saturn.app.util.Cmd.BAN;
 import static org.saturn.app.util.Cmd.BANLIST;
 import static org.saturn.app.util.Cmd.DRRUDI;
+import static org.saturn.app.util.Cmd.ECHO;
 import static org.saturn.app.util.Cmd.FISH;
 import static org.saturn.app.util.Cmd.HELP;
 import static org.saturn.app.util.Cmd.INFO;
 import static org.saturn.app.util.Cmd.LIST;
 import static org.saturn.app.util.Cmd.MAIL;
-import static org.saturn.app.util.Cmd.MSG_CHANNEL;
+import static org.saturn.app.util.Cmd.MSGCHANNEL;
 import static org.saturn.app.util.Cmd.NOTE;
 import static org.saturn.app.util.Cmd.NOTES;
-import static org.saturn.app.util.Cmd.NOTES_PURGE;
+import static org.saturn.app.util.Cmd.NOTESPURGE;
 import static org.saturn.app.util.Cmd.PING;
 import static org.saturn.app.util.Cmd.RUST;
 import static org.saturn.app.util.Cmd.SCP;
@@ -72,16 +73,16 @@ import static org.saturn.app.util.Cmd.SQL;
 import static org.saturn.app.util.Cmd.SUB;
 import static org.saturn.app.util.Cmd.UNBAN;
 import static org.saturn.app.util.Cmd.VOTE;
-import static org.saturn.app.util.Cmd.VOTE_KICK;
+import static org.saturn.app.util.Cmd.VOTEKICK;
 import static org.saturn.app.util.Constants.HELP_RESPONSE;
 import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.Constants.UPGRADE_REQUEST;
 import static org.saturn.app.util.Util.getAuthor;
 import static org.saturn.app.util.Util.getCmdFromJson;
 import static org.saturn.app.util.Util.getTimestampNow;
-import static org.saturn.app.util.Util.is;
 
 public class ServiceLayer extends Base {
+    public static final int FIRST = 0;
     protected final OutService outService;
     
     protected final LogService logService;
@@ -175,7 +176,7 @@ public class ServiceLayer extends Base {
                 Statement s = connection.createStatement();
                 String update = "DELETE FROM MAIL where status = 'BOT_SAY';";
                 s.execute(update);
-    
+                
                 sendChatMessage(StringEscapeUtils.escapeJson(message));
             }
         }
@@ -224,7 +225,7 @@ public class ServiceLayer extends Base {
                 case "onlineAdd": {
                     User user = gson.fromJson(object, User.class);
                     System.out.println("Joined: " + user.toString());
-    
+                    
                     addActiveUser(user);
                     shareUserInfo(user);
                     proceedBanned(user);
@@ -321,114 +322,126 @@ public class ServiceLayer extends Base {
             return;
         }
         
-        boolean isAdmin = false;
-        boolean isUser = false;
-        
         List<String> admins = Arrays.asList(adminTrips.split(","));
         List<String> trustedUsers = Arrays.asList(userTrips.split(","));
-        if (trustedUsers.contains(trip)) {
-            isUser = true;
+        
+        Command command = new CommandImpl(cmd.substring(1));
+        if (command.is(ECHO)) {
+            StringBuilder arguments = new StringBuilder();
+            command.getArguments().forEach(arg -> arguments.append(arg).append(" "));
+            outService.enqueueMessageForSending(command.getCommand() + " " + arguments);
         }
         
-        if (admins.contains(trip)) {
-            isAdmin = true;
-        }
-        
-        cmd = cmd.substring(1);
-        
-        if (is(cmd, BAN) && isAdmin) {
-            String nick = cmd.substring(4).replace("@","");
-            String hash = currentChannelUsers.stream()
-                    .filter(user -> nick.equals(user.getNick()))
-                    .map(u -> u.getHash())
+        if (command.is(BAN) && admins.contains(trip)) {
+            command.getArguments()
+                    .stream()
+                    .map(nick -> nick.replace("@", ""))
+                    .map(nick -> currentChannelUsers.stream()
+                            .filter(user -> nick.equals(user.getNick()))
+                            .map(User::getHash)
+                            .findFirst()
+                            .orElse(null))
                     .findFirst()
-                    .orElse(null);
-            
-            modService.ban(nick, hash);
-            outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick + " hash: " + hash);
-            modService.kick(nick);
+                    .ifPresentOrElse(hash -> {
+                        modService.ban(nick, hash);
+                        outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick + " hash: " + hash);
+                        modService.kick(nick);
+                    }, () -> {
+                        /* target isn't in the room */
+                        modService.ban(nick);
+                        outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick);
+                    });
         }
-        if (is(cmd, UNBAN) && isAdmin) {
-            modService.unban(cmd.substring(6));
-            outService.enqueueMessageForSending("/whisper @" + author + " unbanned " + cmd.substring(6));
+        
+        if (command.is(UNBAN) && admins.contains(trip)) {
+            command.getArguments().stream()
+                    .findFirst()
+                    .ifPresent(target -> {
+                        modService.unban(target);
+                        outService.enqueueMessageForSending("/whisper @" + author + " unbanned " + target);
+                    });
         }
-        if (is(cmd, BANLIST) && isAdmin) {
+        if (command.is(BANLIST) && admins.contains(trip)) {
             modService.listBanned();
         }
-        if (is(cmd, INFO) && (isUser || isAdmin)) {
-            String nick = cmd.substring(5);
-            Optional<User> users =
-                    currentChannelUsers.stream().filter(user -> user.getNick().equals(nick)).findFirst();
-            
-            outService.enqueueMessageForSending("/whisper @" + author + " " +
-                    "\\n User trip: " + users.get().getTrip() +
-                    "\\n User hash: " + users.get().getHash());
+        if (command.is(INFO) && (trustedUsers.contains(trip) || admins.contains(trip))) {
+            command.getArguments().stream()
+                    .findFirst()
+                    .ifPresent(nick -> currentChannelUsers.stream()
+                            .filter(user -> nick.equals(user.getNick()))
+                            .findFirst()
+                            .ifPresentOrElse(user -> outService.enqueueMessageForSending("/whisper @" + author + " " +
+                                            "\\n User trip: " + user.getTrip() +
+                                            "\\n User hash: " + user.getHash()),
+                                    () -> outService.enqueueMessageForSending("/whisper @" + author + " " +
+                                            "\\n User: " + nick + " not found!")));
         }
-        if (is(cmd, SUB) && (isUser || isAdmin)) {
+        if (command.is(SUB) && (trustedUsers.contains(trip) || admins.contains(trip))) {
             subscribers.add(author);
-            outService.enqueueMessageForSending("/whisper @" + author + " You will get related hashes, trips and nicks whispered for each joining user. You can use :votekick to kick.");
+            outService.enqueueMessageForSending("/whisper @" + author + " You will get related hashes, trips and " +
+                    "nicks whispered for each joining user. You can use :votekick to kick.");
         }
         
-        if (is(cmd, VOTE_KICK) && (isUser || isAdmin)) {
+        if (command.is(VOTEKICK) && (trustedUsers.contains(trip) || admins.contains(trip))) {
             String nick = cmd.substring(9);
             modService.votekick(nick);
             outService.enqueueMessageForSending(" Vote kick started, please type    :vote reason_here    to vote " +
                     "yes. Execution will proceed as 3 votes are reached.");
         }
-        if (is(cmd, VOTE)) {
+        if (command.is(VOTE)) {
             modService.vote(author);
         }
-        if (is(cmd, SQL) && isAdmin) {
-            String result = sqlService.executeSQLCmd(cmd);
+        if (command.is(SQL) && admins.contains(trip)) {
+            String result = sqlService.executeSql(cmd, true);
             outService.enqueueMessageForSending(result);
         }
-        if (is(cmd, HELP)) {
+        if (command.is(HELP)) {
             outService.enqueueMessageForSending(HELP_RESPONSE);
         }
-        if (is(cmd, SENTRY)) {
+        if (command.is(SENTRY)) {
             outService.enqueueMessageForSending("@" + author + " Sentry on!");
         }
-        if (is(cmd, FISH)) {
+        if (command.is(FISH)) {
             outService.enqueueMessageForSending("@" + author + " Bloop bloop!");
         }
-        if (is(cmd, LIST)) {
-            executeListCommand(cmd, author);
+        if (command.is(LIST)) {
+            executeListCommand(command, author);
         }
-        if (is(cmd, BABAKIUERIA)) {
+        if (command.is(BABAKIUERIA)) {
             outService.enqueueMessageForSending("@" + author + " https://www.youtube.com/watch?v=NqcFg4z6EYY");
         }
-        if (is(cmd, DRRUDI)) {
+        if (command.is(DRRUDI)) {
             outService.enqueueMessageForSending("@" + author + " https://www.youtube.com/watch?v=uPaZWM4bxrM");
         }
-        if (is(cmd, RUST)) {
+        if (command.is(RUST)) {
             outService.enqueueMessageForSending("@" + author + " https://doc.rust-lang.org/book/title-page.html");
         }
-        if (is(cmd, PING)) {
+        if (command.is(PING)) {
             pingService.executePing(author);
         }
-        if (is(cmd, SOLID)) {
+        if (command.is(SOLID)) {
             outService.enqueueMessageForSending(Constants.SOLID + " @" + author);
         }
-        if (is(cmd, SCP)) {
+        if (command.is(SCP)) {
             scpService.executeRandomSCP(author);
         }
-        if (is(cmd, NOTES_PURGE)) {
+        if (command.is(NOTESPURGE)) {
             noteService.executeNotesPurge(author, trip);
         }
-        if (is(cmd, NOTE)) {
-            noteService.executeAddNote(trip, cmd);
+        if (command.is(NOTE)) {
+            noteService.executeAddNote(trip, command.getCommand());
         }
-        if (is(cmd, NOTES)) {
+        if (command.is(NOTES)) {
             noteService.executeListNotes(author, trip);
         }
-        if (is(cmd, SEARCH)) {
+        if (command.is(SEARCH)) {
             // executeSearch(author, cmd);
         }
-        if (is(cmd, MAIL)) {
-            mailService.executeMail(author, cmd);
+        if (command.is(MAIL)) {
+            mailService.executeMail(author, command);
         }
-        if (is(cmd, MSG_CHANNEL)) {
-            executeMsgChannelCmd(author, cmd);
+        if (command.is(MSGCHANNEL)) {
+            executeMsgChannelCmd(trip, command);
         }
     }
     
@@ -450,55 +463,57 @@ public class ServiceLayer extends Base {
     }
     
     
-    private void executeMsgChannelCmd(String author, String cmd) {
-        String[] args = cmd.split(" ");
-        String list = args[0];
+    private void executeMsgChannelCmd(String author, Command cmd) {
+        String[] args = cmd.getArguments().toArray(new String[0]);
+        String list = cmd.getCommand();
         String channel = null;
         StringBuilder message = new StringBuilder();
-        if (args.length > 1) {
-            if (args[1].charAt(0) == '?') {
-                channel = args[1].substring(1);
+        if (args.length > 0) {
+            if (args[0].charAt(0) == '?') {
+                channel = args[0].substring(1);
             } else {
-                channel = args[1];
+                channel = args[0];
             }
             
-            for (int i = 2; i < args.length; i++) {
+            for (int i = 1; i < args.length; i++) {
                 message.append(' ').append(args[i]);
             }
         }
         
         //:msgchannel ?your-channel hello faggots
-        if (list.equals(Cmd.MSG_CHANNEL.getCmdCode())) {
+        if (list.equals(Cmd.MSGCHANNEL.getCmdCode())) {
             //&& !channel.equals(this.channel)
-            if (channel != null ) {
-                
-                Facade listBot = new Facade(null, null); // no db connection, nor config for this one is needed
-                listBot.isMainThread = false;
-                listBot.setChannel(channel);
-                listBot.joinDelay = 500;
-                
-                int length = 8;
-                boolean useLetters = true;
-                boolean useNumbers = true;
-                String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
-                listBot.setNick(generatedNick);
-                listBot.setTrip(trip);
-                
-                listBot.start();
-                listBot.sendChatMessage("Message from room: " + this.channel + ", author:" + author + ", for " + channel + ", message: " + message);
-                listBot.stop();
-                
-                outService.enqueueMessageForSending("@" + author + ", message for " + channel + " has been delivered!");
+            if (channel == null) {
+                return;
             }
+            
+            Facade listBot = new Facade(null, null); // no db connection, nor config for this one is needed
+            listBot.isMainThread = false;
+            listBot.setChannel(channel);
+            listBot.joinDelay = 500;
+            
+            int length = 8;
+            boolean useLetters = true;
+            boolean useNumbers = true;
+            String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
+            listBot.setNick(generatedNick);
+            listBot.setTrip(trip);
+            
+            listBot.start();
+            listBot.sendChatMessage("Message from room: " + this.channel + ", trip:" + author + ", for " + channel +
+                    ", message: " + message);
+            listBot.stop();
+            
+            outService.enqueueMessageForSending("@" + author + ", message for " + channel + " has been delivered!");
         }
     }
     
-    private void executeListCommand(String cmd, String author) {
-        String[] args = cmd.split(" ");
-        String list = args[0];
+    private void executeListCommand(Command cmd, String author) {
+        String[] args = cmd.getArguments().toArray(new String[0]);
+        String list = cmd.getCommand();
         String channel = null;
-        if (args.length > 1) {
-            channel = args[1];
+        if (args.length > 0) {
+            channel = args[0];
         }
         
         if (list.equals(Cmd.LIST.getCmdCode())) {
@@ -550,17 +565,4 @@ public class ServiceLayer extends Base {
         nickList.remove(generatedNick);
         return nickList;
     }
-    
-    
-    //    private void executeSearch(String author, String cmd) {
-    //        String[] args = cmd.split(" ");
-    //        StringBuilder searchString = new StringBuilder();
-    //        for (int i = 1; i < args.length; i++) {
-    //            searchString.append(" ").append(args[i]);
-    //        }
-    //        String resultJson = searchService.search(searchString.toString());
-    //        enqueueMessageForSending("@" + author + " \\n" + resultJson);
-    //    }
-    
-    
 }

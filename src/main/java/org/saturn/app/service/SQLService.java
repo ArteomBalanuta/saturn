@@ -1,11 +1,12 @@
 package org.saturn.app.service;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 
 public interface SQLService {
     
-    String executeSQLCmd(String cmd);
+    String executeSql(String cmd, boolean withOutput);
     String executeFormatted(String sql);
     List<String> getBannedIds();
     

@@ -57,19 +57,14 @@ public class ModServiceImpl extends OutService implements ModService {
     
     @Override
     public void ban(String target) {
-        if (target != null || !target.equals("") || !target.equals(" ")) {
-            String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", Util.getAuthor(target));
-            
-            sqlService.executeSQLCmd(sql);
-        }
+        String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", Util.getAuthor(target));
+        sqlService.executeSql(sql, false);
     }
     
     @Override
     public void unban(String target) {
-        if (target != null || !target.equals("") || !target.equals(" ")) {
-            String sql = ":sql DELETE FROM banned WHERE id='?';".replace("?", target);
-            sqlService.executeSQLCmd(sql);
-        }
+        String sql = ":sql DELETE FROM banned WHERE id='?';".replace("?", target);
+        sqlService.executeSql(sql, false);
     }
     
     @Override

@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import org.saturn.app.model.Command;
 import org.saturn.app.model.impl.Mail;
 import org.saturn.app.service.MailService;
 import org.saturn.app.util.Util;
@@ -21,12 +22,12 @@ public class MailServiceImpl extends OutService implements MailService {
     }
     
     @Override
-    public void executeMail(String owner, String cmd) {
-        String[] args = cmd.split(" ");
-        String receiver = args[1];
+    public void executeMail(String owner, Command cmd) {
+        String[] args = cmd.getArguments().toArray(new String[0]);
+        String receiver = args[0];
         
         StringBuilder message = new StringBuilder();
-        for (int i = 2; i < args.length; i++) {
+        for (int i = 1; i < args.length; i++) {
             message.append(args[i]).append(" ");
         }
         
