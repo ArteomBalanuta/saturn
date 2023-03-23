@@ -8,12 +8,10 @@ import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.model.Command;
-import org.saturn.app.model.WebSocketFrame;
 import org.saturn.app.model.impl.ChatMessage;
 import org.saturn.app.model.impl.CommandImpl;
 import org.saturn.app.model.impl.Mail;
 import org.saturn.app.model.impl.User;
-import org.saturn.app.model.impl.WebSocketStandardFrameImpl;
 import org.saturn.app.service.LogService;
 import org.saturn.app.service.MailService;
 import org.saturn.app.service.ModService;
@@ -35,6 +33,7 @@ import org.saturn.app.util.Cmd;
 import org.saturn.app.util.Constants;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -76,13 +75,11 @@ import static org.saturn.app.util.Cmd.VOTE;
 import static org.saturn.app.util.Cmd.VOTEKICK;
 import static org.saturn.app.util.Constants.HELP_RESPONSE;
 import static org.saturn.app.util.Constants.JOIN_JSON;
-import static org.saturn.app.util.Constants.UPGRADE_REQUEST;
 import static org.saturn.app.util.Util.getAuthor;
 import static org.saturn.app.util.Util.getCmdFromJson;
 import static org.saturn.app.util.Util.getTimestampNow;
 
 public class ServiceLayer extends Base {
-    public static final int FIRST = 0;
     protected final OutService outService;
     
     protected final LogService logService;
@@ -108,36 +105,27 @@ public class ServiceLayer extends Base {
     }
     
     public void start() {
-        setUpConnectionToHackChat();
-        setupWorkers();
-        sendUpgradeRequest();
-        
-        sleep(this.joinDelay);
-        sendJoinMessage();
-    }
-    
-    public void setUpConnectionToHackChat() {
-        String uri = "hack.chat";
-        int port = 443;
-        boolean isSSL = true;
-        hcConnection = new org.saturn.app.model.impl.Connection(uri, port, this.isMainThread, isSSL);
-    }
-    
-    public void sendUpgradeRequest() {
         try {
-            hcConnection.write(UPGRADE_REQUEST.getBytes(UTF_8));
-        } catch (IOException e) {
+            hcConnection = new org.saturn.app.model.impl.Connection("wss://hack.chat/chat-ws", incomingStringQueue);
+        } catch (URISyntaxException e) {
             e.printStackTrace();
+        }
+    
+        while(!hcConnection.isConnected()) {
+            sleep(50);
+        }
+
+        if (hcConnection.isConnected()) {
+            setupWorkers();
+            sendJoinMessage();
         }
     }
     
-    /*TODO: make sure join payload size always fits standard frame size */
     public void sendJoinMessage() {
         String joinPayload = String.format(JOIN_JSON, channel, nick, trip);
-        WebSocketFrame joinFrame = new WebSocketStandardFrameImpl(joinPayload);
         
         try {
-            hcConnection.write(joinFrame.getWebSocketWriteTextBytes());
+            hcConnection.write(joinPayload.getBytes(UTF_8));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -183,15 +171,12 @@ public class ServiceLayer extends Base {
     }
     
     private void setupWorkers() {
-        initExecutors();
-        executorScheduler.scheduleWithFixedDelay(this::websocketFrameDispatcher, 0, 50, TimeUnit.MILLISECONDS);
-        
         executorScheduler.scheduleWithFixedDelay(() -> {
             try {
                 messageDispatcher();
                 messageProcessor();
                 shareMessages();
-                shareDBmessages();
+//                shareDBmessages(); /* TODO: fix/remove */
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -199,9 +184,9 @@ public class ServiceLayer extends Base {
     }
     
     private void messageDispatcher() {
-        if (!incomingFramesQueue.isEmpty()) {
-            WebSocketFrame frame = incomingFramesQueue.poll();
-            String jsonText = new String(frame.getWebSocketReadTextBytes());
+        if (!incomingStringQueue.isEmpty()) {
+            System.out.println("not empty");
+            String jsonText = incomingStringQueue.poll();
             
             String cmd = getCmdFromJson(jsonText);
             JsonElement element = JsonParser.parseString(jsonText);
@@ -261,7 +246,7 @@ public class ServiceLayer extends Base {
         }
     }
     
-    Set<String> subscribers = new HashSet<>();
+    private final Set<String> subscribers = new HashSet<>();
     
     private void shareUserInfo(User user) {
         String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
@@ -462,7 +447,6 @@ public class ServiceLayer extends Base {
         }
     }
     
-    
     private void executeMsgChannelCmd(String author, Command cmd) {
         String[] args = cmd.getArguments().toArray(new String[0]);
         String list = cmd.getCommand();
@@ -490,7 +474,6 @@ public class ServiceLayer extends Base {
             Facade listBot = new Facade(null, null); // no db connection, nor config for this one is needed
             listBot.isMainThread = false;
             listBot.setChannel(channel);
-            listBot.joinDelay = 500;
             
             int length = 8;
             boolean useLetters = true;
@@ -538,7 +521,6 @@ public class ServiceLayer extends Base {
         Facade listBot = new Facade(null, null); // no db connection, nor config for this one is needed
         listBot.isMainThread = false;
         listBot.setChannel(channel);
-        listBot.joinDelay = 1000;
         
         int length = 8;
         boolean useLetters = true;

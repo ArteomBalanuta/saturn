@@ -1,68 +1,62 @@
 package org.saturn.app.model.impl;
 
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.BlockingQueue;
 
 public class Connection {
-    private boolean isMain;
-
     private final String uri;
-    private final int port;
-
-    private InputStream inputStream;
-    private OutputStream outputStream;
-
-    public Connection(String uri, int port, boolean isMain, boolean isSSL) {
-        this.isMain = isMain;
-        this.uri = uri;
-        this.port = port;
-
-        try {
-            var socket = new Socket(uri, port);
-            if (isSSL) {
-                var factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-                var sslSocket = (SSLSocket) factory.createSocket(socket, uri, port, false);
-                setUpConnectionStreams(sslSocket);
-            } else {
-                setUpConnectionStreams(socket);
+    private boolean isConnected;
+    
+    private final WebSocketClient client;
+    
+    public Connection(String address, BlockingQueue<String> incomingStringQueue) throws URISyntaxException {
+        this.uri = address;
+        
+        URI uri = new URI(address);
+        client = new WebSocketClient(uri) {
+            @Override
+            public void onOpen(ServerHandshake serverHandshake) {
+                client.sendPing();
+                System.out.println("Handshake Status: " + serverHandshake.getHttpStatus());
+                isConnected = true;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            
+            @Override
+            public void onMessage(String s) {
+                System.out.println("Message: " + s);
+                incomingStringQueue.add(s);
+            }
+            
+            @Override
+            public void onClose(int i, String s, boolean b) {
+                System.out.println("server closed the connection: " + i + " " + s );
+            }
+            
+            @Override
+            public void onError(Exception e) {
+                System.out.println("Error");
+                e.printStackTrace();
+            }
+        };
+        
+        client.connect();
     }
-
-    private void setUpConnectionStreams(Socket socket) throws IOException {
-        inputStream = socket.getInputStream();
-        outputStream = socket.getOutputStream();
-    }
-
-    public ReadDto read() {
-        ReadDto readDto = new ReadDto();
-        readDto.bytes = new byte[32384];
-        try {
-            readDto.nrOfBytesRead = inputStream.read(readDto.bytes, 0, readDto.bytes.length);
-        } catch (IOException e) {
-            throw new RuntimeException("Connection is closed for " + (isMain ? " main thread " : "list thread "));
-        }
-
-        return readDto;
-    }
-
+    
     public void write(byte[] bytes) throws IOException {
-        outputStream.write(bytes);
-        outputStream.flush();
+        client.send(new String(bytes, StandardCharsets.UTF_8));
     }
-
+    
     public void close() {
-        try {
-            inputStream.close();
-            outputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        client.close();
+    }
+    
+    public boolean isConnected() {
+        return isConnected;
     }
 }

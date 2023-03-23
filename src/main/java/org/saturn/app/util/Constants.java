@@ -24,7 +24,6 @@ public class Constants {
     public static String JOIN_JSON = "{ \"cmd\": \"join\", \"channel\": \"%s\", \"nick\": \"%s#%s\" }";
     
     public static final String HELP_RESPONSE = "\\n" +
-            "Prefix char [ : ] \\n \\n" +
             "help, " +
             "drrudi, " +
             "babakiueria, " +

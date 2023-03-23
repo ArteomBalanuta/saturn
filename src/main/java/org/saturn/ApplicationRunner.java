@@ -61,19 +61,18 @@ public class ApplicationRunner {
     private void runSaturnBot() {
         Facade saturn = new Facade(dbConnection.getConnection(), config);
         saturn.isMainThread = true;
-        saturn.joinDelay = 1000;
 
         saturn.start();
 
-        healthCheckScheduler.scheduleWithFixedDelay(() -> {
-            boolean isOffline = (Util.getTimestampNow() - saturn.lastPingTimestamp) > 30_000;
-            if (isOffline) {
-                System.out.println(getUTCnow() + "Resurrecting the bot..");
-                saturn.stop(); //npe here
-                saturn.sleep(15_000);
-                
-                saturn.start();
-            }
-        }, 0, 15, TimeUnit.SECONDS);
+//        healthCheckScheduler.scheduleWithFixedDelay(() -> {
+//            boolean isOffline = (Util.getTimestampNow() - saturn.lastPingTimestamp) > 30_000;
+//            if (isOffline) {
+//                System.out.println(getUTCnow() + "Resurrecting the bot..");
+//                saturn.stop(); //npe here
+//                saturn.sleep(15_000);
+//
+//                saturn.start();
+//            }
+//        }, 0, 15, TimeUnit.SECONDS);
     }
 }
