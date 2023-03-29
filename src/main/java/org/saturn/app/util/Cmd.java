@@ -26,6 +26,7 @@ public enum Cmd {
     VOTE("vote"),
     SENTRY("antipest"),
     ECHO("echo "),
+    WEATHER("weather "),
     MAIL("mail ");
 
     private final String cmdCode;

@@ -20,6 +20,7 @@ import org.saturn.app.service.PingService;
 import org.saturn.app.service.SCPService;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.service.SearchService;
+import org.saturn.app.service.WeatherService;
 import org.saturn.app.service.impl.LogServiceImpl;
 import org.saturn.app.service.impl.MailServiceImpl;
 import org.saturn.app.service.impl.ModServiceImpl;
@@ -29,10 +30,11 @@ import org.saturn.app.service.impl.PingServiceImpl;
 import org.saturn.app.service.impl.SCPServiceImpl;
 import org.saturn.app.service.impl.SQLServiceImpl;
 import org.saturn.app.service.impl.SearchServiceImpl;
+import org.saturn.app.service.impl.WeatherServiceImpl;
 import org.saturn.app.util.Cmd;
 import org.saturn.app.util.Constants;
+import org.saturn.app.util.Util;
 
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -47,7 +49,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.saturn.app.util.Cmd.BABAKIUERIA;
 import static org.saturn.app.util.Cmd.BAN;
 import static org.saturn.app.util.Cmd.BANLIST;
@@ -73,13 +74,15 @@ import static org.saturn.app.util.Cmd.SUB;
 import static org.saturn.app.util.Cmd.UNBAN;
 import static org.saturn.app.util.Cmd.VOTE;
 import static org.saturn.app.util.Cmd.VOTEKICK;
+import static org.saturn.app.util.Cmd.WEATHER;
 import static org.saturn.app.util.Constants.HELP_RESPONSE;
 import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.Util.getAuthor;
 import static org.saturn.app.util.Util.getCmdFromJson;
 import static org.saturn.app.util.Util.getTimestampNow;
 
-public class ServiceLayer extends Base {
+public class Bot extends Base {
+    private final static String BASE_URL = "wss://hack.chat/chat-ws";
     protected final OutService outService;
     
     protected final LogService logService;
@@ -90,8 +93,9 @@ public class ServiceLayer extends Base {
     protected final SQLService sqlService;
     protected final PingService pingService;
     protected final ModService modService;
+    protected final WeatherService weatherService;
     
-    public ServiceLayer(Connection dbConnection, Configuration config) {
+    public Bot(Connection dbConnection, Configuration config) {
         super(dbConnection, config);
         this.outService = new OutService(outgoingMessageQueue);
         this.scpService = new SCPServiceImpl(outgoingMessageQueue);
@@ -102,19 +106,20 @@ public class ServiceLayer extends Base {
         this.logService = new LogServiceImpl(dbConnection);
         this.searchService = new SearchServiceImpl();                                       /* TODO:  add logging */
         this.modService = new ModServiceImpl(this.sqlService, outgoingMessageQueue);
+        this.weatherService = new WeatherServiceImpl(outgoingMessageQueue);
     }
     
     public void start() {
         try {
-            hcConnection = new org.saturn.app.model.impl.Connection("wss://hack.chat/chat-ws", incomingStringQueue);
+            hcConnection = new org.saturn.app.model.impl.Connection(BASE_URL, incomingStringQueue);
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
-    
-        while(!hcConnection.isConnected()) {
-            sleep(50);
+        
+        while (!hcConnection.isConnected()) {
+            Util.sleep(50);
         }
-
+        
         if (hcConnection.isConnected()) {
             setupWorkers();
             sendJoinMessage();
@@ -123,12 +128,7 @@ public class ServiceLayer extends Base {
     
     public void sendJoinMessage() {
         String joinPayload = String.format(JOIN_JSON, channel, nick, trip);
-        
-        try {
-            hcConnection.write(joinPayload.getBytes(UTF_8));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        hcConnection.write(joinPayload);
     }
     
     public void shareMessages() {
@@ -176,7 +176,7 @@ public class ServiceLayer extends Base {
                 messageDispatcher();
                 messageProcessor();
                 shareMessages();
-//                shareDBmessages(); /* TODO: fix/remove */
+                //                shareDBmessages(); /* TODO: fix/remove */
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -184,65 +184,64 @@ public class ServiceLayer extends Base {
     }
     
     private void messageDispatcher() {
-        if (!incomingStringQueue.isEmpty()) {
-            System.out.println("not empty");
-            String jsonText = incomingStringQueue.poll();
+        if (incomingStringQueue.isEmpty()) {
+            return;
+        }
+        
+        String jsonText = incomingStringQueue.poll();
+        
+        String cmd = getCmdFromJson(jsonText);
+        JsonElement element = JsonParser.parseString(jsonText);
+        JsonObject object = element.getAsJsonObject();
+        switch (cmd) {
+            case "join": {
+                break;
+            }
+            case "onlineSet": {
+                if (this.isMainThread) {
+                    setupActiveUsers(jsonText);
+                    outService.enqueueMessageForSending("/color #06C22E");
+                    logService.logEvent("joined channel", "successfully", getTimestampNow());
+                    break;
+                } else {
+                    // 'list cmd users setter
+                    incomingSetOnlineMessageQueue.add(jsonText);
+                    break;
+                }
+            }
+            case "onlineAdd": {
+                User user = gson.fromJson(object, User.class);
+                System.out.println("Joined: " + user.toString());
+                
+                addActiveUser(user);
+                shareUserInfo(user);
+                proceedBanned(user);
+                break;
+            }
+            case "onlineRemove": {
+                User user = gson.fromJson(object, User.class);
+                removeActiveUser(user.getNick());
+                break;
+            }
             
-            String cmd = getCmdFromJson(jsonText);
-            JsonElement element = JsonParser.parseString(jsonText);
-            JsonObject object = element.getAsJsonObject();
-            switch (cmd) {
-                case "join": {
-                    break;
-                }
-                case "onlineSet": {
-                    if (this.isMainThread) {
-                        setupActiveUsers(jsonText);
-                        outService.enqueueMessageForSending("/color #06C22E");
-                        logService.logEvent("joined channel", "successfully", getTimestampNow());
-                        break;
-                    } else {
-                        // 'list cmd users setter
-                        incomingSetOnlineMessageQueue.add(jsonText);
-                        break;
-                    }
-                }
-                case "onlineAdd": {
-                    User user = gson.fromJson(object, User.class);
-                    System.out.println("Joined: " + user.toString());
-                    
-                    addActiveUser(user);
-                    shareUserInfo(user);
-                    proceedBanned(user);
-                    break;
-                }
-                case "onlineRemove": {
-                    //{"cmd":"onlineRemove","userid":3910366301486,"nick":"newuser2","channel":"programming",
-                    // "time":1629034916215}
-                    User user = gson.fromJson(object, User.class);
-                    removeActiveUser(user.getNick());
+            case "chat": {
+                ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
+                System.out.println(message.getNick() + ": " + message.getText());
+                
+                logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
+                        getTimestampNow());
+                
+                boolean isBotMessage = message.getNick().equals(this.nick);
+                if (isBotMessage) {
                     break;
                 }
                 
-                case "chat": {
-                    ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
-                    System.out.println(message.getNick() + ": " + message.getText());
-                    
-                    logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
-                            getTimestampNow());
-                    
-                    boolean isBotMessage = message.getNick().equals(this.nick);
-                    if (isBotMessage) {
-                        break;
-                    }
-                    
-                    incomingChatMessageQueue.add(message);
-                    break;
-                }
-                default:
-                    System.out.printf("Text payload: %s \n", jsonText);
-                    break;
+                incomingChatMessageQueue.add(message);
+                break;
             }
+            default:
+                System.out.printf("Text payload: %s \n", jsonText);
+                break;
         }
     }
     
@@ -253,7 +252,7 @@ public class ServiceLayer extends Base {
         subscribers.forEach(mod -> outService.enqueueMessageForSending("/whisper " + mod + " -\\n\\n" + joinedUserData));
     }
     
-    private void proceedBanned(User user) {
+    private void proceedBanned  (User user) {
         logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "JOINED", getTimestampNow());
         
         boolean isBanned = modService.isBanned(user);
@@ -425,6 +424,9 @@ public class ServiceLayer extends Base {
         if (command.is(MAIL)) {
             mailService.executeMail(author, command);
         }
+        if (command.is(WEATHER) || trustedUsers.contains(trip) ) {
+            weatherService.executeWeather(author, command);
+        }
         if (command.is(MSGCHANNEL)) {
             executeMsgChannelCmd(trip, command);
         }
@@ -471,7 +473,7 @@ public class ServiceLayer extends Base {
                 return;
             }
             
-            Facade listBot = new Facade(null, null); // no db connection, nor config for this one is needed
+            Bot listBot = new Bot(null, null); // no db connection, nor config for this one is needed
             listBot.isMainThread = false;
             listBot.setChannel(channel);
             
@@ -518,7 +520,7 @@ public class ServiceLayer extends Base {
     }
     
     private List<String> getNicksFromChannel(String channel) {
-        Facade listBot = new Facade(null, null); // no db connection, nor config for this one is needed
+        Bot listBot = new Bot(null, null); // no db connection, nor config for this one is needed
         listBot.isMainThread = false;
         listBot.setChannel(channel);
         

@@ -2,13 +2,10 @@ package org.saturn.app.facade;
 
 import com.google.gson.Gson;
 import org.apache.commons.configuration2.Configuration;
-import org.java_websocket.client.WebSocketClient;
-import org.saturn.app.model.WebSocketFrame;
 import org.saturn.app.model.impl.ChatMessage;
 import org.saturn.app.model.impl.Connection;
 import org.saturn.app.model.impl.User;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -21,7 +18,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.THREAD_NUMBER;
-import static org.saturn.app.util.Util.getTimestampNow;
 
 public abstract class Base {
     protected final Gson gson = new Gson();
@@ -58,28 +54,24 @@ public abstract class Base {
         }
     }
     
-    public void sleep(long ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-    
     public void sendChatMessage(String message) {
-        if (!hcConnection.isConnected()) {
-            throw new RuntimeException("Not Connected!");
-        }
         String chatPayload = String.format(CHAT_JSON, message);
-        try {
-            hcConnection.write(chatPayload.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        hcConnection.write(chatPayload);
     }
     
     public List<String> getIncomingSetOnlineMessageQueue() {
         return incomingSetOnlineMessageQueue;
     }
     
+    public void setChannel(String chanel) {
+        this.channel = chanel;
+    }
+    
+    public void setNick(String nick) {
+        this.nick = nick;
+    }
+    
+    public void setTrip(String trip) {
+        this.trip = trip;
+    }
 }

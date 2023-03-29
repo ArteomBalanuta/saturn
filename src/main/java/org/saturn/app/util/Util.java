@@ -5,12 +5,18 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
 import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
 
 public class Util {
     static Gson gson = new Gson();
@@ -32,6 +38,18 @@ public class Util {
     
     public static String getUTCnow() {
         return OffsetDateTime.now(ZoneOffset.UTC).toString();
+    }
+    
+    public static Long tsToSec8601(String timestamp) {
+        if (timestamp == null) return null;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
+            sdf.setTimeZone(TimeZone.getTimeZone(ZoneId.of("UTC")));
+            Date dt = sdf.parse(timestamp);
+            return dt.getTime() / 1000;
+        } catch (ParseException e) {
+            return null;
+        }
     }
     
     public static boolean is(String cmd, Cmd enumCmd) {
@@ -57,5 +75,13 @@ public class Util {
         List list = new ArrayList();
         list.addAll(set);
         return list;
+    }
+    
+    public static void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

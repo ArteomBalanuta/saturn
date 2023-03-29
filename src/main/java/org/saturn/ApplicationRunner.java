@@ -6,32 +6,26 @@ import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.saturn.app.facade.Facade;
-import org.saturn.app.service.DataBaseConnection;
+import org.saturn.app.facade.Bot;
+import org.saturn.app.service.DataBaseConnectionService;
 import org.saturn.app.service.LogService;
-import org.saturn.app.service.impl.DataBaseConnectionImpl;
+import org.saturn.app.service.impl.DataBaseConnectionServiceImpl;
 import org.saturn.app.service.impl.LogServiceImpl;
 import org.saturn.app.util.Util;
 
-import java.time.Clock;
-import java.time.LocalDate;
-import java.time.ZonedDateTime;
-import java.util.TimeZone;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newScheduledThreadPool;
-import static org.saturn.app.util.Util.getUTCnow;
 
 public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
 
     private Configuration config;
-    private final DataBaseConnection dbConnection;
+    private final DataBaseConnectionService dbConnection;
     private final LogService internalService;
 
     public ApplicationRunner() {
-        this.dbConnection = new DataBaseConnectionImpl();
+        this.dbConnection = new DataBaseConnectionServiceImpl();
         this.internalService = new LogServiceImpl(this.dbConnection.getConnection());
 
         Parameters params = new Parameters();
@@ -59,7 +53,7 @@ public class ApplicationRunner {
     }
     
     private void runSaturnBot() {
-        Facade saturn = new Facade(dbConnection.getConnection(), config);
+        Bot saturn = new Bot(dbConnection.getConnection(), config);
         saturn.isMainThread = true;
 
         saturn.start();

@@ -3,6 +3,6 @@ package org.saturn.app.service;
 
 import java.sql.Connection;
 
-public interface DataBaseConnection {
+public interface DataBaseConnectionService {
     Connection getConnection();
 }

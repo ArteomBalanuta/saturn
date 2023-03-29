@@ -35,7 +35,7 @@ public class Connection {
             
             @Override
             public void onClose(int i, String s, boolean b) {
-                System.out.println("server closed the connection: " + i + " " + s );
+                System.out.println("server closed the connection: " + i + " " + s);
             }
             
             @Override
@@ -48,8 +48,8 @@ public class Connection {
         client.connect();
     }
     
-    public void write(byte[] bytes) throws IOException {
-        client.send(new String(bytes, StandardCharsets.UTF_8));
+    public void write(String message)  {
+        client.send(message);
     }
     
     public void close() {

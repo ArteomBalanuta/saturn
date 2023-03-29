@@ -1,16 +1,16 @@
 package org.saturn.app.service.impl;
 
-import org.saturn.app.service.DataBaseConnection;
+import org.saturn.app.service.DataBaseConnectionService;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-public class DataBaseConnectionImpl implements DataBaseConnection {
+public class DataBaseConnectionServiceImpl implements DataBaseConnectionService {
     private String databasePath;
     private Connection connection;
 
-    public DataBaseConnectionImpl() {
+    public DataBaseConnectionServiceImpl() {
         try {
 //            this.databasePath = new File(
 //                    ApplicationRunner.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile()
