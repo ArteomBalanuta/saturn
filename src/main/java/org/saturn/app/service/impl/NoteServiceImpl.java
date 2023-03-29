@@ -13,7 +13,7 @@ import java.util.concurrent.BlockingQueue;
 import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 
 public class NoteServiceImpl extends OutService implements NoteService {
-    private Connection connection;
+    private final Connection connection;
 
     public NoteServiceImpl(Connection connection, BlockingQueue<String> queue) {
         super(queue);

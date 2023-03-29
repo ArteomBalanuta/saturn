@@ -1,4 +1,4 @@
-package org.saturn.app.model.impl;
+package org.saturn.app.model.dto;
 
 public class Time {
     public String timezone;

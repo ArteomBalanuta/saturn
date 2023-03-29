@@ -1,6 +1,6 @@
 package org.saturn.app.service.impl;
 
-import org.saturn.app.model.impl.User;
+import org.saturn.app.model.dto.User;
 import org.saturn.app.service.ModService;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.util.Util;

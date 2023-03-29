@@ -1,12 +1,10 @@
-package org.saturn.app.model.impl;
+package org.saturn.app.model.dto;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.BlockingQueue;
 
 public class Connection {

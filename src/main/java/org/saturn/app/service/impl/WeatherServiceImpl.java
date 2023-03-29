@@ -8,9 +8,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.saturn.app.model.Command;
-import org.saturn.app.model.impl.Time;
-import org.saturn.app.model.impl.Weather;
+import org.saturn.app.model.command.UserCommand;
+import org.saturn.app.model.dto.Time;
+import org.saturn.app.model.dto.Weather;
 import org.saturn.app.service.WeatherService;
 
 import java.io.IOException;
@@ -26,7 +26,8 @@ import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.saturn.app.model.impl.Weather.getTime;
+import static org.saturn.app.model.dto.Weather.getTime;
+import static org.saturn.app.util.Util.formatTime;
 import static org.saturn.app.util.Util.tsToSec8601;
 
 public class WeatherServiceImpl extends OutService implements WeatherService {
@@ -43,9 +44,9 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     username: mercury389
      */
     @Override
-    public void executeWeather(String owner, Command command) {
+    public void executeWeather(String owner, UserCommand userCommand) {
         AtomicReference<String> area = new AtomicReference<>();
-        command.getArguments().stream()
+        userCommand.getArguments().stream()
                 .findFirst()
                 .ifPresent(area::set);
         
@@ -121,10 +122,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
                 "Sun set     : " + sunsetTime;
     }
     
-    private String formatTime(ZonedDateTime zonedDateTime) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss z");
-        return zonedDateTime.format(formatter);
-    }
+
     
     private String epochSecondsToTime(long millis) {
         return String.format("%tT", millis * 1000);

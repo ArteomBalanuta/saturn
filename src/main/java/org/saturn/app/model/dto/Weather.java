@@ -1,4 +1,4 @@
-package org.saturn.app.model.impl;
+package org.saturn.app.model.dto;
 
 import com.google.gson.Gson;
 

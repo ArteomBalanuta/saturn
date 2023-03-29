@@ -1,4 +1,4 @@
-package org.saturn.app.model.impl;
+package org.saturn.app.model.dto;
 
 public class User {
     //    channel,isme bool, nick, trip, uType, hash, level int , userId long, isBot bool, color bool

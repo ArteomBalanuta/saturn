@@ -1,6 +1,6 @@
 package org.saturn.app.service;
 
-import org.saturn.app.model.impl.User;
+import org.saturn.app.model.dto.User;
 
 public interface ModService {
     void kick(String target);

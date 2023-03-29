@@ -5,18 +5,30 @@ import org.saturn.app.service.LogService;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
+
+import static org.saturn.app.util.Util.*;
 
 public class LogServiceImpl implements LogService {
-    private Connection connection;
+    private final boolean isSql;
 
-    public LogServiceImpl(Connection connection) {
+    private final Connection connection;
+
+    public LogServiceImpl(Connection connection, boolean isSql) {
         this.connection = connection;
+        this.isSql = isSql;
     }
 
     @Override
     public void logEvent(String cmd, String status, long executedOn) {
+        if (!isSql) {
+            return;
+        }
         try {
-            PreparedStatement logEvent = connection.prepareStatement("INSERT INTO internal_events ('cmd', 'status', 'executed_on') VALUES (?, ?, ?);");
+            PreparedStatement logEvent = connection.prepareStatement("INSERT INTO internal_events ('cmd', 'status', 'created_on') VALUES (?, ?, ?);");
             logEvent.setString(1, cmd);
             logEvent.setString(2, status);
             logEvent.setLong(3, executedOn);
@@ -31,6 +43,10 @@ public class LogServiceImpl implements LogService {
 
     @Override
     public void logMessage(String trip, String nick, String hash, String message, long timestamp) {
+        if (!isSql) {
+            System.out.println("[" + formatZoneUTC(timestamp) + "] " + hash + " " + trip + " " + nick + ": " + message);
+            return;
+        }
         try {
             PreparedStatement logEvent = 
             connection.prepareStatement("INSERT INTO messages ('trip', 'nick', 'hash', 'message', 'created_on') VALUES (?, ?, ?, ?, ?);");
@@ -47,5 +63,7 @@ public class LogServiceImpl implements LogService {
             e.printStackTrace();
         }
     }
+
+
 
 }

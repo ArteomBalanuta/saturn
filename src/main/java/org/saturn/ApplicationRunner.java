@@ -6,7 +6,8 @@ import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.saturn.app.facade.Bot;
+import org.saturn.app.facade.Engine;
+import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.service.DataBaseConnectionService;
 import org.saturn.app.service.LogService;
 import org.saturn.app.service.impl.DataBaseConnectionServiceImpl;
@@ -26,7 +27,7 @@ public class ApplicationRunner {
 
     public ApplicationRunner() {
         this.dbConnection = new DataBaseConnectionServiceImpl();
-        this.internalService = new LogServiceImpl(this.dbConnection.getConnection());
+        this.internalService = new LogServiceImpl(this.dbConnection.getConnection(), false);
 
         Parameters params = new Parameters();
         FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(
@@ -53,9 +54,7 @@ public class ApplicationRunner {
     }
     
     private void runSaturnBot() {
-        Bot saturn = new Bot(dbConnection.getConnection(), config);
-        saturn.isMainThread = true;
-
+        Engine saturn = new EngineImpl(dbConnection.getConnection(), config, true);
         saturn.start();
 
 //        healthCheckScheduler.scheduleWithFixedDelay(() -> {

@@ -12,6 +12,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -50,6 +51,16 @@ public class Util {
         } catch (ParseException e) {
             return null;
         }
+    }
+    public static String formatZoneUTC(long timestamp) {
+        ZonedDateTime zonedDateTime = Instant.ofEpochSecond(timestamp)
+                .atZone(ZoneId.of("UTC"));
+
+        return formatTime(zonedDateTime);
+    }
+    public static String formatTime(ZonedDateTime zonedDateTime) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss z");
+        return zonedDateTime.format(formatter);
     }
     
     public static boolean is(String cmd, Cmd enumCmd) {

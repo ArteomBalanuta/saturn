@@ -1,7 +1,7 @@
 package org.saturn.app.service.impl;
 
-import org.saturn.app.model.Command;
-import org.saturn.app.model.impl.Mail;
+import org.saturn.app.model.command.UserCommand;
+import org.saturn.app.model.dto.Mail;
 import org.saturn.app.service.MailService;
 import org.saturn.app.util.Util;
 
@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 public class MailServiceImpl extends OutService implements MailService {
-    private Connection connection;
+    private final Connection connection;
     
     public MailServiceImpl(Connection connection, BlockingQueue<String> outQueue) {
         super(outQueue);
@@ -22,7 +22,7 @@ public class MailServiceImpl extends OutService implements MailService {
     }
     
     @Override
-    public void executeMail(String owner, Command cmd) {
+    public void executeMail(String owner, UserCommand cmd) {
         String[] args = cmd.getArguments().toArray(new String[0]);
         String receiver = args[0];
         
@@ -54,10 +54,10 @@ public class MailServiceImpl extends OutService implements MailService {
         }
         
         /*
-         * parse :msg @receiver messagebodyhere
+         * parse :msg @receiver message
          *
          * on user message - if user has messages to receive bot enques the message and
-         * removes the pendind status
+         * removes the pending status
          */
     }
     
