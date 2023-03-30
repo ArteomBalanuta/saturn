@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.TimeZone;
 
 public class Util {
-    static Gson gson = new Gson();
+    public static Gson gson = new Gson();
     
     public static String getAuthor(String author) {
         return author.replace("@", "");

@@ -45,17 +45,10 @@ public class ApplicationRunner {
     }
 
     void start() {
-        logStartBotEvent();
-        runSaturnBot();
-    }
-
-    private void logStartBotEvent() {
         internalService.logEvent("appStart", "started", Util.getTimestampNow());
-    }
-    
-    private void runSaturnBot() {
         Engine saturn = new EngineImpl(dbConnection.getConnection(), config, true);
         saturn.start();
+    }
 
 //        healthCheckScheduler.scheduleWithFixedDelay(() -> {
 //            boolean isOffline = (Util.getTimestampNow() - saturn.lastPingTimestamp) > 30_000;
@@ -67,5 +60,4 @@ public class ApplicationRunner {
 //                saturn.start();
 //            }
 //        }, 0, 15, TimeUnit.SECONDS);
-    }
 }

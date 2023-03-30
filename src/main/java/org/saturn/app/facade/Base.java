@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 import static java.util.concurrent.Executors.newScheduledThreadPool;
@@ -24,10 +22,8 @@ import static org.saturn.app.util.Constants.THREAD_NUMBER;
 
 public abstract class Base {
     protected List<UserCommand> enabledUserCommands = new ArrayList<>();
-    protected static final Gson gson = new Gson();
     protected String baseWsURL = "wss://hack.chat/chat-ws";
-    protected Connection hcConnection;
-    protected boolean isMainThread;
+    public boolean isMain;
     public String prefix;
     public String channel;
     public String nick;
@@ -36,16 +32,16 @@ public abstract class Base {
     public String userTrips;
     public String adminTrips;
 
-    protected final OutService outService;
-    protected final LogService logService;
-    protected final SCPService scpService;
-    protected final NoteService noteService;
-    protected final SearchService searchService;
-    protected final MailService mailService;
-    protected final SQLService sqlService;
-    protected final PingService pingService;
-    protected final ModService modService;
-    protected final WeatherService weatherService;
+    public final OutService outService;
+    public final LogService logService;
+    public final SCPService scpService;
+    public final NoteService noteService;
+    public final SearchService searchService;
+    public final MailService mailService;
+    public final SQLService sqlService;
+    public final PingService pingService;
+    public final ModService modService;
+    public final WeatherService weatherService;
 
     public PingService getPingService() {
         return pingService;
@@ -63,16 +59,15 @@ public abstract class Base {
         return enabledUserCommands;
     }
 
-    protected final BlockingQueue<String> incomingStringQueue = new ArrayBlockingQueue<>(256);
-    protected final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
-    protected final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
-    protected CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
-    
-    protected ExecutorService appExecutor = Executors.newFixedThreadPool(THREAD_NUMBER);
-    protected ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
-    protected Configuration config;
+    public final BlockingQueue<String> incomingStringQueue = new ArrayBlockingQueue<>(256);
+    public final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
+    public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
+    public CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
 
-    public Base(java.sql.Connection dbConnection, Configuration config, Boolean isMainThread) {
+    public ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
+    public Configuration config;
+
+    public Base(java.sql.Connection dbConnection, Configuration config, Boolean isMain) {
         this.outService = new OutService(outgoingMessageQueue);
         this.scpService = new SCPServiceImpl(outgoingMessageQueue);
         this.noteService = new NoteServiceImpl(dbConnection, outgoingMessageQueue);
@@ -82,10 +77,10 @@ public abstract class Base {
         this.searchService = new SearchServiceImpl();                                       /* TODO:  add logging */
         this.modService = new ModServiceImpl(this.sqlService, outgoingMessageQueue);
         this.weatherService = new WeatherServiceImpl(outgoingMessageQueue);
-        this.isMainThread = isMainThread;
+        this.isMain = isMain;
         this.config = config;
 
-        if (isMainThread && config != null) {
+        if (isMain && config != null) {
             this.isSql = config.getString("isSql");
             this.prefix = config.getString("cmdPrefix");
             this.channel = config.getString("channel");
@@ -96,11 +91,6 @@ public abstract class Base {
         }
 
         this.logService = new LogServiceImpl(dbConnection, Boolean.parseBoolean(this.isSql));
-    }
-    
-    public void sendChatMessage(String message) {
-        String chatPayload = String.format(CHAT_JSON, message);
-        hcConnection.write(chatPayload);
     }
     
     public void setChannel(String chanel) {

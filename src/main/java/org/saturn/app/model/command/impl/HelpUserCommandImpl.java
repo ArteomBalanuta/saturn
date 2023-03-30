@@ -6,6 +6,8 @@ import org.saturn.app.model.command.UserCommandBaseImpl;
 import java.util.List;
 
 public class HelpUserCommandImpl extends UserCommandBaseImpl {
+
+    private String prefix;
     public HelpUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
         super(null, engine, whiteListedTrips);
         super.setCommandName(this.getCommandName());
@@ -27,16 +29,15 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public void execute() {
-        super.engine.getOutService().enqueueMessageForSending(help);
+        super.engine.getOutService().enqueueMessageForSending(String.format(help, prefix, prefix, prefix));
     }
 
-    private String prefix;
     public final String help = "\\n" +
-            "Prefix: " + prefix + "\\n" +
+            "Prefix: " + "%s" + "\\n" +
             " - " + "\\n" +
             "Examples: " + "\\n" +
-            prefix + "list programming" + "\\n" +
-            prefix + "mail mercury hi there" + "\\n" +
+            "%s" + "list programming" + "\\n" +
+            "%s" + "mail mercury hi there" + "\\n" +
             " - " + "\\n" +
             "Commands: " + "\\n" +
             "help" + "\\n" +

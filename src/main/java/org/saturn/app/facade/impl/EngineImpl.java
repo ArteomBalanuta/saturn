@@ -1,21 +1,19 @@
 package org.saturn.app.facade.impl;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.model.command.UserCommand;
-import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.command.impl.HelpUserCommandImpl;
 import org.saturn.app.model.command.impl.ListUserCommandImpl;
 import org.saturn.app.model.command.impl.SayUserCommandImpl;
 import org.saturn.app.model.dto.*;
+import org.saturn.app.service.ListCommandListener;
+import org.saturn.app.service.Listener;
+import org.saturn.app.service.listener.*;
 import org.saturn.app.util.Cmd;
-import org.saturn.app.util.Util;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
@@ -29,20 +27,32 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
+import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.Util.getAuthor;
 import static org.saturn.app.util.Util.getCmdFromJson;
 import static org.saturn.app.util.Util.getTimestampNow;
 
 public class EngineImpl extends Base implements Engine {
+    protected org.saturn.app.model.dto.Connection hcConnection;
     List<String> admins;
     List<String> trustedUsers;
-    List<String> tripsWhiteList = new ArrayList<>();
+    public List<String> tripsWhiteList = new ArrayList<>();
 
+    Listener onlineSetListener = new OnlineSetListenerImpl(this);
+    Listener userJoinedListener = new UserJoinedListenerImpl(this);
+    Listener userLeftListener = new UserLeftListenerImpl(this);
+    Listener userMessageListener = new UserMessageListenerImpl(this);
+    Listener connectionListener = new ConnectionListenerImpl(this);
+    Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
+
+    public ListCommandListener listCommandListener;
     boolean isJoined;
+
+    public void setListCommandListener(ListCommandListener listCommandListener) {
+        this.listCommandListener = listCommandListener;
+    }
 
     public EngineImpl(Connection dbConnection, Configuration config, Boolean isMain) {
         super(dbConnection, config, isMain);
@@ -87,8 +97,8 @@ public class EngineImpl extends Base implements Engine {
     }
 
     @Override
-    public boolean isJoined() {
-        return isJoined;
+    public void setActiveUsers(List<User> users) {
+        this.currentChannelUsers.addAll(users);
     }
 
     @Override
@@ -99,18 +109,9 @@ public class EngineImpl extends Base implements Engine {
     @Override
     public void start() {
         try {
-            hcConnection = new org.saturn.app.model.dto.Connection(baseWsURL, incomingStringQueue);
+            hcConnection = new org.saturn.app.model.dto.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener));
         } catch (URISyntaxException e) {
             e.printStackTrace();
-        }
-        
-        while (!hcConnection.isConnected()) {
-            Util.sleep(50);
-        }
-        
-        if (hcConnection.isConnected()) {
-            setupWorkers();
-            sendJoinMessage();
         }
     }
     
@@ -121,13 +122,20 @@ public class EngineImpl extends Base implements Engine {
     
     public void shareMessages() {
         if (!outgoingMessageQueue.isEmpty()) {
-            sendChatMessage(outgoingMessageQueue.poll());
+            flushMessage(outgoingMessageQueue.poll());
         }
+    }
+    public void flushMessage(String message) {
+        String chatPayload = String.format(CHAT_JSON, message);
+        if (hcConnection == null && message != null) {
+            System.out.println("Connection has been closed, couldn't deliver: " + chatPayload);
+            return;
+        }
+        hcConnection.write(chatPayload);
     }
     @Override
     public void stop() {
         try {
-            this.appExecutor.shutdownNow();
             this.executorScheduler.shutdownNow();
             
             this.hcConnection.close();
@@ -153,73 +161,45 @@ public class EngineImpl extends Base implements Engine {
                 String update = "DELETE FROM MAIL where status = 'BOT_SAY';";
                 s.execute(update);
                 
-                sendChatMessage(StringEscapeUtils.escapeJson(message));
+                flushMessage(StringEscapeUtils.escapeJson(message));
             }
         }
     }
     
-    private void setupWorkers() {
-        executorScheduler.scheduleWithFixedDelay(() -> {
-            try {
-                messageDispatcher();
-                messageProcessor();
-                shareMessages();
-                //                shareDBmessages(); /* TODO: fix/remove */
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }, 0, 50, TimeUnit.MILLISECONDS);
-    }
+//    private void setupWorkers() {
+//        executorScheduler.scheduleWithFixedDelay(() -> {
+//            try {
+//                dispatchMessage();
+//                processMessage();
+//                shareMessages();
+//                //                shareDBmessages(); /* TODO: fix/remove */
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }, 0, 50, TimeUnit.MILLISECONDS);
+//    }
     
-    private void messageDispatcher() {
-        if (incomingStringQueue.isEmpty()) {
-            return;
-        }
-        
-        String jsonText = incomingStringQueue.poll();
-        
+    public void dispatchMessage(String jsonText) {
         String cmd = getCmdFromJson(jsonText);
-        JsonElement element = JsonParser.parseString(jsonText);
-        JsonObject object = element.getAsJsonObject();
         switch (cmd) {
             case "join": {
                 break;
             }
             case "onlineSet": {
-                    setupActiveUsers(jsonText);
-                    outService.enqueueMessageForSending("/color #ff6200");
-                    logService.logEvent("listed channel", "successfully", getTimestampNow());
-                    this.isJoined = true;
-                    break;
+                onlineSetListener.notify(jsonText);
+                break;
             }
             case "onlineAdd": {
-                User user = gson.fromJson(object, User.class);
-                System.out.println("Joined: " + user.toString());
-                
-                addActiveUser(user);
-                shareUserInfo(user);
-                proceedBanned(user);
+                userJoinedListener.notify(jsonText);
                 break;
             }
             case "onlineRemove": {
-                User user = gson.fromJson(object, User.class);
-                removeActiveUser(user.getNick());
+                userLeftListener.notify(jsonText);
                 break;
             }
             
             case "chat": {
-                ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
-                System.out.println(message.getNick() + ": " + message.getText());
-                
-                logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
-                        getTimestampNow());
-                
-                boolean isBotMessage = message.getNick().equals(this.nick);
-                if (isBotMessage) {
-                    break;
-                }
-                
-                incomingChatMessageQueue.add(message);
+                userMessageListener.notify(jsonText);
                 break;
             }
             default:
@@ -227,15 +207,15 @@ public class EngineImpl extends Base implements Engine {
                 break;
         }
     }
-    
+
     private final Set<String> subscribers = new HashSet<>();
-    
-    private void shareUserInfo(User user) {
+
+    public void shareUserInfo(User user) {
         String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
         subscribers.forEach(mod -> outService.enqueueMessageForSending("/whisper " + mod + " -\\n\\n" + joinedUserData));
     }
-    
-    private void proceedBanned(User user) {
+
+    public void proceedBanned(User user) {
         logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "JOINED", getTimestampNow());
         
         boolean isBanned = modService.isBanned(user);
@@ -248,7 +228,7 @@ public class EngineImpl extends Base implements Engine {
         }
     }
     
-    private void removeActiveUser(String leftUser) {
+    public void removeActiveUser(String leftUser) {
         for (User user : currentChannelUsers) {
             if (user.getNick().equals(leftUser)) {
                 currentChannelUsers.remove(user);
@@ -258,39 +238,13 @@ public class EngineImpl extends Base implements Engine {
         }
     }
     
-    private void addActiveUser(User newUser) {
+    public void addActiveUser(User newUser) {
         logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", getTimestampNow());
         logService.logEvent("user " + newUser.getNick() + " joined channel", "successfully", getTimestampNow());
         currentChannelUsers.add(newUser);
     }
-    
-    private void setupActiveUsers(String jsonText) {
-        JsonElement element = JsonParser.parseString(jsonText);
-        JsonElement listingElement = element.getAsJsonObject().get("users");
-        User[] users = gson.fromJson(listingElement, User[].class);
-        
-        currentChannelUsers.addAll(Arrays.asList(users));
-    }
 
-    public void messageProcessor() {
-        if (incomingChatMessageQueue.isEmpty()) {
-            return;
-        }
-        
-        ChatMessage message = incomingChatMessageQueue.poll();
-        String author = message.getNick();
-        String trip = message.getTrip();
-        String cmd = message.getText().trim();
-        
-        /* Mail service check */
-        deliverMailIfPresent(author);
-        
-        if (!cmd.startsWith(prefix)) {
-            return;
-        }
 
-        UserCommand userCommand = new UserCommandBaseImpl(message, this, tripsWhiteList);
-        userCommand.execute();
 
 //        if (command.is(ECHO)) {
 //            StringBuilder arguments = new StringBuilder();
@@ -412,9 +366,8 @@ public class EngineImpl extends Base implements Engine {
 //        if (command.is(MSGCHANNEL)) {
 //            executeMsgChannelCmd(trip, command);
 //        }
-    }
-    
-    private void deliverMailIfPresent(String author) {
+
+    public void deliverMailIfPresent(String author) {
         List<Mail> messages = mailService.getMailByNick(getAuthor(author));
         if (messages.isEmpty()) {
             return;
@@ -472,8 +425,4 @@ public class EngineImpl extends Base implements Engine {
             outService.enqueueMessageForSending("@" + author + ", message for " + channel + " has been delivered!");
         }
     }
-    
-
-    
-
 }

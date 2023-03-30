@@ -1,22 +1,16 @@
 package org.saturn.app.model.command.impl;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.service.ListCommandListener;
 import org.saturn.app.service.impl.OutService;
-import org.saturn.app.util.Cmd;
+import org.saturn.app.service.listener.ListCommandListenerImpl;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.stream.Collectors;
-
-import static org.saturn.app.util.Util.sleep;
 
 public class ListUserCommandImpl extends UserCommandBaseImpl {
     private final OutService outService;
@@ -50,47 +44,55 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
             return;
         }
 
-        List<String> nickList;
         if (channel.equals(engine.channel)) {
             // parse nicks from current channel
-            String userNames = engine.getActiveUsers().stream()
-                    .map(user -> user.getTrip() + " " + user.getNick())
-                    .collect(Collectors.toList())
-                    .toString();
-
-            outService.enqueueMessageForSending("@" + author + "\\n```Text \\n Users online: " + userNames + "\\n" +
-                    " ```");
+            printUsersFromCurrentRoom(author);
         } else {
-            nickList = getNicksFromChannel(channel).stream().map(user -> user.getTrip() + " " + user.getNick()).collect(Collectors.toList());
-            if (nickList.isEmpty()) {
-                outService.enqueueMessageForSending("@" + author + " " + channel + " is empty");
-            } else {
-                outService.enqueueMessageForSending("@" + author + " " + nickList);
-            }
+            /* ListCommandListenerImpl will make sure to close the connection */
+            joinChannel(author, channel);
         }
     }
 
-    private List<User> getNicksFromChannel(String channel) {
-        Engine listBot = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
-        listBot.setChannel(channel);
+    private void joinChannel(String author, String channel) {
+        EngineImpl listBot = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
+        setupListBot(channel, listBot);
 
+        ListCommandListener listCommandListener = new ListCommandListenerImpl(new Dto(this.engine, author, channel));
+        listBot.setListCommandListener(listCommandListener);
+
+        listBot.start();
+    }
+
+    private void printUsersFromCurrentRoom(String author) {
+        String userNames = engine.getActiveUsers().stream()
+                .map(user -> user.getTrip() + " " + user.getNick())
+                .collect(Collectors.toList())
+                .toString();
+
+        outService.enqueueMessageForSending("@" + author + "\\n```Text \\n Users online: " + userNames + "\\n" +
+                " ```");
+    }
+
+    private void setupListBot(String channel, EngineImpl listBot) {
+        listBot.isMain = false;
+        listBot.setChannel(channel);
         int length = 8;
         boolean useLetters = true;
         boolean useNumbers = true;
         String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
         listBot.setNick(generatedNick);
         listBot.setPassword(engine.trip);
+    }
 
-        listBot.start();
+    public static class Dto {
+        public EngineImpl engine;
+        public String author;
+        public String channel;
 
-        while (!listBot.isJoined()) {
-            sleep(50);
+        public Dto(EngineImpl engine, String author, String channel) {
+            this.engine = engine;
+            this.author = author;
+            this.channel = channel;
         }
-
-        List<User> activeUsers = listBot.getActiveUsers();
-
-        listBot.stop();
-
-        return activeUsers;
     }
 }
