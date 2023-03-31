@@ -18,11 +18,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
@@ -61,7 +57,7 @@ public class EngineImpl extends Base implements Engine {
         List<String> everyone = List.of("x");
 
         super.enabledUserCommands.addAll(
-                List.of(new SayUserCommandImpl(this, whiteList),
+                List.of(new SayUserCommandImpl(this, everyone),
                         new HelpUserCommandImpl(this, everyone),
                         new ListUserCommandImpl(this, whiteList),
                         new KickUserCommandImpl(this, admins),

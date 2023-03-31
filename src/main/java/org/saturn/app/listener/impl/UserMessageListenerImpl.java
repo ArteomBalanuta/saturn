@@ -6,6 +6,9 @@ import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.ChatMessage;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 import static org.saturn.app.util.Util.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
 
@@ -25,13 +28,14 @@ public class UserMessageListenerImpl implements Listener {
     @Override
     public void notify(String jsonText) {
         ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
-        System.out.println(message.getNick() + ": " + message.getText());
+        System.out.println(message.getNick() + ": " + message.getText() + " | " + Arrays.toString(message.getText().getBytes(StandardCharsets.UTF_8)));
 
         engine.logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
                 getTimestampNow());
 
         boolean isBotMessage = message.getNick().equals(engine.nick);
         if (isBotMessage) {
+            System.out.println("returned cause bot message");
             return;
         }
 

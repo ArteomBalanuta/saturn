@@ -59,6 +59,7 @@ public class UserCommandBaseImpl implements UserCommand {
 
     @Override
     public void execute() {
+        System.out.println("looking for cmd: " + toLower(this.getCommandNames()));
         this.engine.getEnabledCommands()
                 .stream()
                 .filter(command -> new HashSet<>(toLower(command.getCommandNames())).containsAll(toLower(this.getCommandNames())))
