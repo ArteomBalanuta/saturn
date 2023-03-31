@@ -1,10 +1,10 @@
-package org.saturn.app.service.listener;
+package org.saturn.app.listener.impl;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.service.Listener;
 
 import java.util.Arrays;
 

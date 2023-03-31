@@ -1,22 +1,22 @@
-package org.saturn.app.service.listener;
+package org.saturn.app.listener.impl;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.service.Listener;
 
-import static org.saturn.app.util.Util.gson;
+import static org.saturn.app.util.Util.*;
 
-public class UserLeftListenerImpl implements Listener {
+public class UserJoinedListenerImpl implements Listener {
     @Override
     public String getListenerName() {
-        return "leftListener";
+        return "joinListener";
     }
     private final EngineImpl engine;
 
-    public UserLeftListenerImpl(EngineImpl engine) {
+    public UserJoinedListenerImpl(EngineImpl engine) {
         this.engine = engine;
     }
 
@@ -24,8 +24,11 @@ public class UserLeftListenerImpl implements Listener {
     public void notify(String jsonText) {
         JsonElement element = JsonParser.parseString(jsonText);
         JsonObject object = element.getAsJsonObject();
-
         User user = gson.fromJson(object, User.class);
-        engine.removeActiveUser(user.getNick());
+        System.out.println("Joined: " + user.toString());
+
+        engine.addActiveUser(user);
+        engine.shareUserInfo(user);
+        engine.proceedBanned(user);
     }
 }

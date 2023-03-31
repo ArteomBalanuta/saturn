@@ -1,4 +1,4 @@
-package org.saturn.app.service.listener;
+package org.saturn.app.listener.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.impl.ListUserCommandImpl;
@@ -8,6 +8,8 @@ import org.saturn.app.service.ListCommandListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static org.saturn.app.model.command.impl.ListUserCommandImpl.printUsers;
 
 public class ListCommandListenerImpl implements ListCommandListener {
     private final ListUserCommandImpl.Dto dto;
@@ -24,11 +26,10 @@ public class ListCommandListenerImpl implements ListCommandListener {
     @Override
     public void notify(List<User> users) {
         EngineImpl mainEngine = dto.engine;
-        List<String> nickList = users.stream().map(user -> user.getTrip() + " " + user.getNick()).collect(Collectors.toList());
         if (users.isEmpty()) {
             mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + dto.channel + " is empty");
         } else {
-            mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + nickList);
+            printUsers(dto.author, users,  mainEngine.outService);
         }
 
         mainEngine.shareMessages();

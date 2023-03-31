@@ -18,6 +18,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
+
+import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 
 public class Util {
     public static Gson gson = new Gson();
@@ -62,6 +65,17 @@ public class Util {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss z");
         return zonedDateTime.format(formatter);
     }
+
+    public static String formatZone(long timestamp, String zoneId) {
+        ZonedDateTime zonedDateTime = Instant.ofEpochMilli(timestamp)
+                .atZone(ZoneId.of(zoneId)); //"UTC"
+
+        return formatZoneDateTime(zonedDateTime);
+    }
+
+    public static String formatZoneDateTime(ZonedDateTime zonedDateTime) {
+        return zonedDateTime.format(RFC_1123_DATE_TIME);
+    }
     
     public static boolean is(String cmd, Cmd enumCmd) {
         String validCmd = enumCmd.getCmdCode();
@@ -86,6 +100,9 @@ public class Util {
         List list = new ArrayList();
         list.addAll(set);
         return list;
+    }
+    public static List<String> toLower(List<String> l) {
+        return l.stream().map(String::toLowerCase).collect(Collectors.toList());
     }
     
     public static void sleep(long ms) {

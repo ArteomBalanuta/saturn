@@ -11,22 +11,20 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ModServiceImpl extends OutService implements ModService {
-    private static final String MOD_BOT_NAME = "gohackbot";
     
     private final SQLService sqlService;
     
-    public ModServiceImpl(SQLService sqlService, BlockingQueue<String> queue) {
-        super(queue);
+    public ModServiceImpl(SQLService sqlService, BlockingQueue<String> queue, BlockingQueue<String> rawMessageQueue) {
+        super(queue, rawMessageQueue);
         this.sqlService = sqlService;
     }
     
     @Override
     public void kick(String target) {
-        System.out.println("kick request sent  ");
-        enqueueMessageForSending("/whisper " + MOD_BOT_NAME + " #!kick " + target);
+        enqueueMessageForSending("{ cmd: 'kick', nick: '" + target + "' }");
+        enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\"}", target));
     }
-    
-    
+
     public AtomicInteger numberOfvotes = new AtomicInteger();
     public static String pest;
     public List<String> judges = new ArrayList<>();
@@ -47,14 +45,17 @@ public class ModServiceImpl extends OutService implements ModService {
             StringBuilder s = new StringBuilder();
             judges.forEach(j -> s.append(j).append(" "));
             
-            enqueueMessageForSending("@" + pest + " you have been sentenced to be executed by merc, judges: "
-                    + s + "  ");
-            enqueueMessageForSending("/whisper " + MOD_BOT_NAME + " #!kick " + pest);
-            pest = null;
-            numberOfvotes.set(0);
+            enqueueMessageForSending("@" + pest + " “Long is the night to him who is awake; long is a mile to him who is tired; long is life to the foolish who do not know the true law.” ");
+            kick(pest);
+            resetVoteKick();
         }
     }
-    
+
+    private void resetVoteKick() {
+        pest = null;
+        numberOfvotes.set(0);
+    }
+
     @Override
     public void ban(String target) {
         String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", Util.getAuthor(target));

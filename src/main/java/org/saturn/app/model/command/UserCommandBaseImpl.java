@@ -5,13 +5,17 @@ import org.saturn.app.model.dto.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.saturn.app.util.Util.toLower;
 
 public class UserCommandBaseImpl implements UserCommand {
     protected final EngineImpl engine;
     protected ChatMessage chatMessage;
     protected final List<String> whiteListedTrips = new ArrayList<>();
-    private String commandName;
+    private List<String> commandName;
     private final List<String> arguments = new ArrayList<>();
 
     public UserCommandBaseImpl(ChatMessage chatMessage, EngineImpl engine, List<String> allowedTrips) {
@@ -25,37 +29,41 @@ public class UserCommandBaseImpl implements UserCommand {
             return;
         }
 
-        /* 1 trip length */
+        /* TODO: fix 1 prefix length */
         String message = chatMessage.getText().substring(1);
         if (message.contains(" ")) {
-            setCommandName(message.substring(0, message.indexOf(" ")).trim().toUpperCase());
-        } else {
-            setCommandName(message.trim().toUpperCase());
+            setCommandNames(List.of(message.substring(0, message.indexOf(" ")).trim().toUpperCase()));
+            parseArguments(message);
+            return;
         }
+
+        setCommandNames(List.of(message.trim().toUpperCase()));
+    }
+
+    private void parseArguments(String message) {
         String arguments = message.substring(message.indexOf(" ") + 1);
-        if (!arguments.equals("") && !arguments.equals(" ")) {
-            if (arguments.contains(" ")) {
-                this.arguments.addAll(Arrays.asList(arguments.split(" ")));
-            } else {
-                this.arguments.add(arguments);
-            }
+        if (arguments.contains(" ")) {
+            this.arguments.addAll(Arrays.asList(arguments.split(" ")));
+        } else {
+            this.arguments.add(arguments);
         }
     }
 
-    protected void setCommandName(String commandName) {
+    protected void setCommandNames(List<String> commandName) {
         this.commandName = commandName;
     }
 
     @Override
-    public String getCommandName() {
+    public List<String> getCommandNames() {
         return this.commandName;
     }
 
     @Override
     public void execute() {
+
         this.engine.getEnabledCommands()
                 .stream()
-                .filter(command -> this.commandName.equalsIgnoreCase(command.getCommandName()))
+                .filter(command -> new HashSet<>(toLower(command.getCommandNames())).containsAll(toLower(this.getCommandNames())))
                 .findFirst()
                 .ifPresentOrElse(cmd -> {
                             setupArguments(cmd);

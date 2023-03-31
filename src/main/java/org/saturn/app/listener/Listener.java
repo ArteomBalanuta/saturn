@@ -1,4 +1,4 @@
-package org.saturn.app.service;
+package org.saturn.app.listener;
 
 public interface Listener {
     String getListenerName();

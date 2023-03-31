@@ -1,11 +1,7 @@
-package org.saturn.app.service.listener;
+package org.saturn.app.listener.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.dto.ChatMessage;
-import org.saturn.app.service.Listener;
-
-import static org.saturn.app.util.Util.getTimestampNow;
-import static org.saturn.app.util.Util.gson;
+import org.saturn.app.listener.Listener;
 
 public class ConnectionListenerImpl implements Listener {
     @Override

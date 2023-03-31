@@ -2,7 +2,7 @@ package org.saturn.app.model.dto;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
-import org.saturn.app.service.Listener;
+import org.saturn.app.listener.Listener;
 
 import java.net.URI;
 import java.net.URISyntaxException;

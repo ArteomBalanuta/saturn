@@ -5,15 +5,15 @@ import org.saturn.app.model.command.UserCommandBaseImpl;
 
 import java.util.List;
 
-public class SayUserCommandImpl extends UserCommandBaseImpl {
-    public SayUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
+public class BlacklistUserCommandImpl extends UserCommandBaseImpl {
+    public BlacklistUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
         super(null, engine, whiteListedTrips);
         super.setCommandNames(this.getCommandNames());
     }
 
     @Override
     public List<String> getCommandNames() {
-        return List.of("say","echo");
+        return List.of("blacklist","banlist");
     }
 
     @Override
@@ -23,8 +23,6 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public void execute() {
-        StringBuilder sb  = new StringBuilder();
-        this.getArguments().forEach(sb::append);
-        super.engine.getOutService().enqueueMessageForSending(sb.toString());
+        engine.modService.listBanned();
     }
 }

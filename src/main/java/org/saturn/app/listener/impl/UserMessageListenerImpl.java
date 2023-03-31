@@ -1,10 +1,10 @@
-package org.saturn.app.service.listener;
+package org.saturn.app.listener.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.listener.Listener;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.ChatMessage;
-import org.saturn.app.service.Listener;
 
 import static org.saturn.app.util.Util.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
@@ -44,7 +44,7 @@ public class UserMessageListenerImpl implements Listener {
             return;
         }
 
-        UserCommand userCommand = new UserCommandBaseImpl(message, engine, engine.tripsWhiteList);
+        UserCommand userCommand = new UserCommandBaseImpl(message, engine, engine.whiteList);
         userCommand.execute();
     }
 }

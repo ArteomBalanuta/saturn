@@ -10,7 +10,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     private String prefix;
     public HelpUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
         super(null, engine, whiteListedTrips);
-        super.setCommandName(this.getCommandName());
+        super.setCommandNames(this.getCommandNames());
 
         if (super.engine.getConfig() != null) {
             prefix = super.engine.getConfig().getString("cmdPrefix");
@@ -18,8 +18,8 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public String getCommandName() {
-        return "help";
+    public List<String> getCommandNames() {
+        return List.of("help","h");
     }
 
     @Override

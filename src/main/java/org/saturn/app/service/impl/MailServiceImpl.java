@@ -1,6 +1,7 @@
 package org.saturn.app.service.impl;
 
 import org.saturn.app.model.command.UserCommand;
+import org.saturn.app.model.dto.ChatMessage;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.service.MailService;
 import org.saturn.app.util.Util;
@@ -22,19 +23,25 @@ public class MailServiceImpl extends OutService implements MailService {
     }
     
     @Override
-    public void executeMail(String owner, UserCommand cmd) {
-        String[] args = cmd.getArguments().toArray(new String[0]);
-        String receiver = args[0];
+    public void executeMail(ChatMessage chatMessage, UserCommand command) {
+        List<String> arguments = command.getArguments();
+        String receiver = arguments.get(0);
         
         StringBuilder message = new StringBuilder();
-        for (int i = 1; i < args.length; i++) {
-            message.append(args[i]).append(" ");
+        /* skipping fist argument as it is the receiver's nickname */
+        for (int i = 1; i < arguments.size(); i++) {
+            message.append(arguments.get(i)).append(" ");
         }
-        
-        this.orderMessageDelivery(message.toString(), owner, receiver);
-        enqueueMessageForSending("@" + owner + ",  " + receiver + " will receive your message as soon they chats");
+
+        this.orderMessageDelivery(message.toString(), chatMessage.getNick(), receiver);
+        enqueueMessageForSending("@" + chatMessage.getNick() + " " + receiver + " will receive your message as soon they chats");
     }
-    
+
+    /**
+     * parse :msg @receiver message
+     * on user message - if user has messages to read, enqueues the message and
+     * removes the pending status
+     */
     @Override
     public void orderMessageDelivery(String message, String owner, String receiver) {
         try {
@@ -52,13 +59,6 @@ public class MailServiceImpl extends OutService implements MailService {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        
-        /*
-         * parse :msg @receiver message
-         *
-         * on user message - if user has messages to receive bot enques the message and
-         * removes the pending status
-         */
     }
     
     @Override

@@ -1,29 +1,28 @@
 package org.saturn.app.model.command.impl;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.saturn.app.facade.Engine;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.ListCommandListener;
 import org.saturn.app.service.impl.OutService;
-import org.saturn.app.service.listener.ListCommandListenerImpl;
+import org.saturn.app.listener.impl.ListCommandListenerImpl;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 public class ListUserCommandImpl extends UserCommandBaseImpl {
     private final OutService outService;
 
     public ListUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
         super(null, engine, whiteListedTrips);
-        super.setCommandName(this.getCommandName());
+        super.setCommandNames(this.getCommandNames());
         this.outService = super.engine.getOutService();
     }
 
     @Override
-    public String getCommandName() {
-        return "list";
+    public List<String> getCommandNames() {
+        return List.of("list","l");
     }
 
     @Override
@@ -46,7 +45,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
 
         if (channel.equals(engine.channel)) {
             // parse nicks from current channel
-            printUsersFromCurrentRoom(author);
+            printUsers(author, engine.currentChannelUsers, engine.outService);
         } else {
             /* ListCommandListenerImpl will make sure to close the connection */
             joinChannel(author, channel);
@@ -63,14 +62,11 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         listBot.start();
     }
 
-    private void printUsersFromCurrentRoom(String author) {
-        String userNames = engine.getActiveUsers().stream()
-                .map(user -> user.getTrip() + " " + user.getNick())
-                .collect(Collectors.toList())
-                .toString();
+    public static void printUsers(String author, List<User> users, OutService outService) {
+        StringBuilder output = new StringBuilder();
+        users.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getNick()).append("\\n"));
 
-        outService.enqueueMessageForSending("@" + author + "\\n```Text \\n Users online: " + userNames + "\\n" +
-                " ```");
+        outService.enqueueMessageForSending("@" + author + "\\nUsers online: \\n" + output + "\\n");
     }
 
     private void setupListBot(String channel, EngineImpl listBot) {

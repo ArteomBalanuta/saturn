@@ -62,6 +62,7 @@ public abstract class Base {
     public final BlockingQueue<String> incomingStringQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
+    public final BlockingQueue<String> outgoingRawMessageQueue = new ArrayBlockingQueue<>(256);
     public CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
 
     public ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
@@ -75,7 +76,7 @@ public abstract class Base {
         this.sqlService = new SQLServiceImpl(dbConnection, outgoingMessageQueue);
         this.pingService = new PingServiceImpl(outgoingMessageQueue);
         this.searchService = new SearchServiceImpl();                                       /* TODO:  add logging */
-        this.modService = new ModServiceImpl(this.sqlService, outgoingMessageQueue);
+        this.modService = new ModServiceImpl(this.sqlService, outgoingMessageQueue, outgoingRawMessageQueue);
         this.weatherService = new WeatherServiceImpl(outgoingMessageQueue);
         this.isMain = isMain;
         this.config = config;
