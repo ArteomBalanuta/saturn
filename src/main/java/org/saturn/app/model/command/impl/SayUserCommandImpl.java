@@ -24,7 +24,7 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         StringBuilder sb  = new StringBuilder();
-        this.getArguments().forEach(sb::append);
+        this.getArguments().forEach(s -> sb.append(s.replace("/","").replace(engine.prefix,"")).append(" "));
         super.engine.getOutService().enqueueMessageForSending(sb.toString());
     }
 }

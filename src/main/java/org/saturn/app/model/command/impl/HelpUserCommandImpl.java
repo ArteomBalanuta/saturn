@@ -8,6 +8,7 @@ import java.util.List;
 public class HelpUserCommandImpl extends UserCommandBaseImpl {
 
     private String prefix;
+
     public HelpUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
         super(null, engine, whiteListedTrips);
         super.setCommandNames(this.getCommandNames());
@@ -19,7 +20,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public List<String> getCommandNames() {
-        return List.of("help","h");
+        return List.of("help", "h");
     }
 
     @Override
@@ -31,31 +32,31 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         super.engine.getOutService().enqueueMessageForSending(String.format(help, prefix, prefix, prefix));
     }
-
-    public final String help = "\\n" +
-            "Prefix: " + "%s" + "\\n" +
-            " - " + "\\n" +
-            "Examples: " + "\\n" +
-            "%s" + "list programming" + "\\n" +
-            "%s" + "mail mercury hi there" + "\\n" +
-            " - " + "\\n" +
-            "Commands: " + "\\n" +
-            "help" + "\\n" +
-            "say <text>" + "\\n" +
-            "note <text>, " + "\\n" +
-            "list <channel_name> \\n" +
-            " - " + "\\n" +
-            "drrudi" + "\\n" +
-            "babakiueria, " + "\\n" +
-            "scp, " + "\\n" +
-            "solid, " + "\\n" +
-            " - " + "\\n" +
-            "rust, " + "\\n" +
-            "notes, " + "\\n" +
-            "notes purge, " + "\\n" +
-            "ping, " + "\\n" +
-            "info, " + "\\n" ;
-
+    //.ddg   ​  
+    //    
+    //​
+    public final String help =
+                    "Prefix: %s \\n" +
+                    "Commands:\\n" +
+                    "\u200B help,h - prints this output \\n" +
+                    "\u200B say,echo <text> - echoes the input \\n" +
+                    "\u200B sub,subscribe - you will receive nicks, trips, hashes for each joining user \\n" +
+                    "\u200B note <text> - saves a note \\n" +
+                    "\u200B notes - lists your saved notes \\n" +
+                    "\u200B notes purge - removes all notes \\n" +
+                    "\u200B mail,msg <nick> <text> - sends a message to <nick> \\n" +
+                    "\u200B info,i <nick>, - whispers back user's trip, hash \\n" +
+                    "\u200B list <channel_name> - prints hash, trip, nicks of active users in the channel\\n" +
+                    "\u200B \\n" +
+                    "Whitelisted user commands:\\n" +
+                    "\u200B kick,k <nick> - kicks the user \\n" +
+                    "\u200B ban <nick|trip|hash> - bans the user by either nick,trip or hash \\n" +
+                    "\u200B sql <SQL> - executes the sql against bot\'s database\\n" +
+                    "\u200B \\n" +
+                    "Examples: \\n" +
+                    "\u200B %slist programming \\n" +
+                    "\u200B %smail santa Get me a native java compiler \\n" +
+                    "  \\n";
 
     public static final String SOLID =
             "```Text \\n" + "S - single responsibility principle \\n"

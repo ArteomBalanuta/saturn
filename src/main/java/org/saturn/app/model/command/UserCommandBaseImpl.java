@@ -29,8 +29,7 @@ public class UserCommandBaseImpl implements UserCommand {
             return;
         }
 
-        /* TODO: fix 1 prefix length */
-        String message = chatMessage.getText().substring(1);
+        String message = chatMessage.getText().substring(engine.prefix.length());
         if (message.contains(" ")) {
             setCommandNames(List.of(message.substring(0, message.indexOf(" ")).trim().toUpperCase()));
             parseArguments(message);
@@ -60,7 +59,6 @@ public class UserCommandBaseImpl implements UserCommand {
 
     @Override
     public void execute() {
-
         this.engine.getEnabledCommands()
                 .stream()
                 .filter(command -> new HashSet<>(toLower(command.getCommandNames())).containsAll(toLower(this.getCommandNames())))

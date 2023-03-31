@@ -15,7 +15,7 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public List<String> getCommandNames() {
-        return List.of("ban");
+        return List.of("ban,bb");
     }
 
     @Override
@@ -34,13 +34,12 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
                 .peek(target -> nick.set(target))
                 .map(target -> engine.currentChannelUsers.stream()
                         .filter(activeUser -> target.equals(activeUser.getNick()))
-                        .map(User::getHash)
                         .findFirst()
                         .orElse(null))
                 .findFirst()
-                .ifPresentOrElse(hash -> {
-                    engine.modService.ban(nick.get(), hash);
-                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick.get() + " hash: " + hash);
+                .ifPresentOrElse(user -> {
+                    engine.modService.ban(user.getNick(), user.getTrip(), user.getHash());
+                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick.get() + "trip: " + user.getTrip() +  " hash: " + user.getHash());
                     engine.modService.kick(nick.get());
                 }, () -> {
                     /* target isn't in the room */

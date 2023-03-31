@@ -44,7 +44,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         }
 
         if (channel.equals(engine.channel)) {
-            // parse nicks from current channel
+            /* parse nicks from current channel */
             printUsers(author, engine.currentChannelUsers, engine.outService);
         } else {
             /* ListCommandListenerImpl will make sure to close the connection */
