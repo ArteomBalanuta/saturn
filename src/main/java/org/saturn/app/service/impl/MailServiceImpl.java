@@ -25,7 +25,7 @@ public class MailServiceImpl extends OutService implements MailService {
     @Override
     public void executeMail(ChatMessage chatMessage, UserCommand command) {
         List<String> arguments = command.getArguments();
-        String receiver = arguments.get(0);
+        String receiver = arguments.get(0).replace("@", "");
         
         StringBuilder message = new StringBuilder();
         /* skipping fist argument as it is the receiver's nickname */
@@ -33,8 +33,13 @@ public class MailServiceImpl extends OutService implements MailService {
             message.append(arguments.get(i)).append(" ");
         }
 
-        this.orderMessageDelivery(message.toString(), chatMessage.getNick(), receiver);
+        this.orderMessageDelivery(message.toString(), chatMessage.getNick(), receiver, String.valueOf(chatMessage.isWhisper()));
+        if (chatMessage.isWhisper()) {
+            enqueueMessageForSending("/whisper @" + chatMessage.getNick() + " " + receiver + " will receive your message as soon they chat");
+            return;
+        }
         enqueueMessageForSending("@" + chatMessage.getNick() + " " + receiver + " will receive your message as soon they chat");
+
     }
 
     /**
@@ -43,15 +48,16 @@ public class MailServiceImpl extends OutService implements MailService {
      * removes the pending status
      */
     @Override
-    public void orderMessageDelivery(String message, String owner, String receiver) {
+    public void orderMessageDelivery(String message, String owner, String receiver, String isWhisper) {
         try {
             PreparedStatement insertMessage = connection.prepareStatement(
-                    "INSERT INTO mail ('owner','receiver','message','status','created_date') VALUES (?, ?, ?, ?, ?);");
+                    "INSERT INTO mail ('owner','receiver','message','status','is_whisper', 'created_date') VALUES (?, ?, ?, ?, ?, ?);");
             insertMessage.setString(1, owner);
             insertMessage.setString(2, receiver);
             insertMessage.setString(3, message);
             insertMessage.setString(4, "PENDING");
-            insertMessage.setLong(5, Util.getTimestampNow());
+            insertMessage.setString(5, isWhisper);
+            insertMessage.setLong(6, Util.getTimestampNow());
             
             insertMessage.executeUpdate();
             
@@ -62,19 +68,24 @@ public class MailServiceImpl extends OutService implements MailService {
     }
     
     @Override
-    public List<Mail> getMailByNick(String nick) {
+    public List<Mail> getMailByNickOrTrip(String nick, String trip) {
         List<Mail> messages = new ArrayList<>();
         try {
             PreparedStatement mail = connection.prepareStatement(
-                    "SELECT owner, receiver, message, status, created_date FROM mail WHERE receiver = ? AND status = " +
+                    "SELECT owner, receiver, message, status, is_whisper, created_date FROM mail WHERE receiver IN (?,?) AND status = " +
                             "'PENDING'; ");
             mail.setString(1, nick);
+            mail.setString(2, trip);
             mail.execute();
             
             ResultSet resultSet = mail.getResultSet();
             while (resultSet.next()) {
-                Mail message = new Mail(resultSet.getString("owner"), resultSet.getString("receiver"),
-                        resultSet.getString("message"), resultSet.getString("status"),
+                Mail message = new Mail(
+                        resultSet.getString("owner"),
+                        resultSet.getString("receiver"),
+                        resultSet.getString("message"),
+                        resultSet.getString("status"),
+                        resultSet.getString("is_whisper"),
                         resultSet.getLong("created_date"));
                 
                 messages.add(message);

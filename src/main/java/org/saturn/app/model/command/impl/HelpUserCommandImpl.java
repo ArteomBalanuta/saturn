@@ -53,6 +53,9 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u200B ban <nick|trip|hash> - bans the user by either nick,trip or hash \\n" +
                     "\u200B sql <SQL> - executes the sql against bot\'s database\\n" +
                     "\u200B \\n" +
+                    "Whisper supported commands (input, output is whispered):\\n" +
+                    "\u200B /whisper @orangesun mail,msg <nick> <text> - sends a message to <nick> \\n" +
+                    "\u200B \\n" +
                     "Examples: \\n" +
                     "\u200B %slist programming \\n" +
                     "\u200B %smail santa Get me a native java compiler \\n" +

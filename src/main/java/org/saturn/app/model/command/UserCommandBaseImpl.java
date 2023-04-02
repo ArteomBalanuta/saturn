@@ -59,17 +59,16 @@ public class UserCommandBaseImpl implements UserCommand {
 
     @Override
     public void execute() {
-        System.out.println("looking for cmd: " + toLower(this.getCommandNames()));
         this.engine.getEnabledCommands()
                 .stream()
                 .filter(command -> new HashSet<>(toLower(command.getCommandNames())).containsAll(toLower(this.getCommandNames())))
                 .findFirst()
                 .ifPresentOrElse(cmd -> {
-                            setupArguments(cmd);
-                            cmd.setChatMessage(chatMessage);
                             if (!isUserAuthorized(cmd, this.chatMessage)) {
                                 return;
                             }
+                            setupArguments(cmd);
+                            cmd.setChatMessage(chatMessage);
                             cmd.execute();
                         },
                         () -> System.out.println("Cant find command: " + this.commandName));

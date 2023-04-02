@@ -16,7 +16,6 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
     public List<String> getCommandNames() {
         return List.of("say","echo");
     }
-
     @Override
     public List<String> getArguments() {
         return super.getArguments();

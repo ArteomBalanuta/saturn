@@ -1,6 +1,9 @@
 package org.saturn.app.model.dto;
 
 public class ChatMessage {
+    private boolean isWhisper;
+    private String cmd;
+    private String from;
     private String size;
     private String nick;
     private String trip;
@@ -27,6 +30,30 @@ public class ChatMessage {
 
     public void setSize(String size) {
         this.size = size;
+    }
+
+    public String getFrom() {
+        return from;
+    }
+
+    public void setFrom(String from) {
+        this.from = from;
+    }
+
+    public boolean isWhisper() {
+        return isWhisper;
+    }
+
+    public void setWhisper(boolean whisper) {
+        isWhisper = whisper;
+    }
+
+    public String getCmd() {
+        return cmd;
+    }
+
+    public void setCmd(String cmd) {
+        this.cmd = cmd;
     }
 
     public String getNick() {

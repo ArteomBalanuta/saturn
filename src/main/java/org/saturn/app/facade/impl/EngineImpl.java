@@ -1,17 +1,15 @@
 package org.saturn.app.facade.impl;
 
 import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
-import org.saturn.app.listener.impl.*;
-import org.saturn.app.model.command.UserCommand;
-import org.saturn.app.model.command.impl.*;
-import org.saturn.app.model.dto.*;
-import org.saturn.app.service.ListCommandListener;
 import org.saturn.app.listener.Listener;
-import org.saturn.app.util.Cmd;
+import org.saturn.app.listener.impl.*;
+import org.saturn.app.model.command.impl.*;
+import org.saturn.app.model.dto.Mail;
+import org.saturn.app.model.dto.User;
+import org.saturn.app.service.ListCommandListener;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
@@ -19,6 +17,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
@@ -187,6 +186,10 @@ public class EngineImpl extends Base implements Engine {
                 userMessageListener.notify(jsonText);
                 break;
             }
+            case "info": {
+                userMessageListener.notify(jsonText);
+                break;
+            }
             default:
                 System.out.printf("Text payload: %s \n", jsonText);
                 break;
@@ -294,22 +297,43 @@ public class EngineImpl extends Base implements Engine {
 //            executeMsgChannelCmd(trip, command);
 //        }
 
-    public void deliverMailIfPresent(String author) {
-        List<Mail> messages = mailService.getMailByNick(getAuthor(author));
+    public void deliverMailIfPresent(String author, String trip) {
+        List<Mail> messages = mailService.getMailByNickOrTrip(getAuthor(author), getAuthor(trip));
         if (messages.isEmpty()) {
             return;
         }
-        StringBuilder mailMessage = new StringBuilder();
+
+        List<Mail> whisperMails = getMail(messages, true);
+        if (!whisperMails.isEmpty()) {
+            String whisperStrings = mailToStrings(whisperMails);
+            outService.enqueueMessageForSending("/whisper @" + author + " Incoming mail: \\n " + whisperStrings);
+        }
+
+        List<Mail> publicMessages = getMail(messages, false);
+        if (!publicMessages.isEmpty()) {
+            String publicStrings = mailToStrings(publicMessages);
+            outService.enqueueMessageForSending("@" + author + " Incoming mail: \\n " + publicStrings);
+        }
+
+        mailService.updateMailStatus(author);
+        mailService.updateMailStatus(trip);
+    }
+
+    private static List<Mail> getMail(List<Mail> messages, boolean isWhisper) {
+        return messages.stream().filter(m -> String.valueOf(isWhisper).equals(m.isWhisper)).collect(Collectors.toList());
+    }
+
+    private String mailToStrings(List<Mail> messages) {
+        StringBuilder whisperStrings = new StringBuilder();
         messages.forEach(mail -> {
             String row =
                     formatZone(mail.createdDate, "UTC") + " " + mail.owner + ": " + mail.message + "\\n";
-            mailMessage.append(row);
+            whisperStrings.append(row);
         });
 
-        outService.enqueueMessageForSending("@" + author + " Incoming mail: \\n " + mailMessage);
-        mailService.updateMailStatus(author);
+        return whisperStrings.toString();
     }
-    
+
 //    private void executeMsgChannelCmd(String author, UserCommand cmd) {
 //        String[] args = cmd.getArguments().toArray(new String[0]);
 //        String list = cmd.getCommandNames();
