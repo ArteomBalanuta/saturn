@@ -2,7 +2,6 @@ package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.UserCommandBaseImpl;
-import org.saturn.app.model.dto.User;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;

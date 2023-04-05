@@ -21,7 +21,6 @@ public class ModServiceImpl extends OutService implements ModService {
     
     @Override
     public void kick(String target) {
-        enqueueMessageForSending("{ cmd: 'kick', nick: '" + target + "' }");
         enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\"}", target));
     }
 

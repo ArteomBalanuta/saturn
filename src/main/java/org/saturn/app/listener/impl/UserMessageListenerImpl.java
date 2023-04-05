@@ -29,6 +29,10 @@ public class UserMessageListenerImpl implements Listener {
         ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
         System.out.println(message.getNick() + ": " + message.getText());
 
+        if (message.getCmd().equals("info")) {
+            message.setNick("");
+        }
+
         engine.logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
                 getTimestampNow());
 

@@ -26,7 +26,7 @@ public class Util {
     public static Gson gson = new Gson();
     
     public static String getAuthor(String author) {
-        return author.replace("@", "");
+        return author == null ? null : author.replace("@", "");
     }
     
     public static String getCmdFromJson(String jsonText) {

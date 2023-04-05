@@ -75,7 +75,7 @@ public class MailServiceImpl extends OutService implements MailService {
                     "SELECT owner, receiver, message, status, is_whisper, created_date FROM mail WHERE receiver IN (?,?) AND status = " +
                             "'PENDING'; ");
             mail.setString(1, nick);
-            mail.setString(2, trip);
+            mail.setString(2, trip == null ? nick : trip);
             mail.execute();
             
             ResultSet resultSet = mail.getResultSet();
