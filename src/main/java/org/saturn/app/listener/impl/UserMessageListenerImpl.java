@@ -6,6 +6,8 @@ import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.ChatMessage;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static org.saturn.app.util.Util.getTimestampNow;
@@ -51,7 +53,8 @@ public class UserMessageListenerImpl implements Listener {
             return;
         }
 
-        UserCommand userCommand = new UserCommandBaseImpl(message, engine, engine.whiteList);
+        /* empty whitelist */
+        UserCommand userCommand = new UserCommandBaseImpl(message, engine, List.of());
         userCommand.execute();
     }
 

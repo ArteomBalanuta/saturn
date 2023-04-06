@@ -2,27 +2,34 @@ package org.saturn.app.model.command.impl;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.listener.impl.ListCommandListenerImpl;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.ListCommandListener;
 import org.saturn.app.service.impl.OutService;
-import org.saturn.app.listener.impl.ListCommandListenerImpl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static org.saturn.app.util.Util.getWhiteListedTrips;
+
 public class ListUserCommandImpl extends UserCommandBaseImpl {
+
     private final OutService outService;
 
-    public ListUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
-        super(null, engine, whiteListedTrips);
+    private final List<String> aliases = new ArrayList<>();
+
+    public ListUserCommandImpl(EngineImpl engine, List<String> aliases) {
+        super(null, engine, getWhiteListedTrips(engine));
         super.setCommandNames(this.getCommandNames());
         this.outService = super.engine.getOutService();
+        this.aliases.addAll(aliases);
     }
 
     @Override
     public List<String> getCommandNames() {
-        return List.of("list","l");
+        return this.aliases;
     }
 
     @Override

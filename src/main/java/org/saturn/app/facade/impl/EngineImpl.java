@@ -6,6 +6,9 @@ import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.impl.*;
+import org.saturn.app.model.command.CommandAliases;
+import org.saturn.app.model.command.CommandFactory;
+import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.command.impl.*;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.User;
@@ -24,10 +27,9 @@ import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.Util.*;
 
 public class EngineImpl extends Base implements Engine {
+
+    public final CommandFactory commandFactory;
     protected org.saturn.app.model.dto.Connection hcConnection;
-    List<String> admins;
-    List<String> trustedUsers;
-    public final List<String> whiteList = new ArrayList<>();
     public final Set<String> subscribers = new HashSet<>();
     Listener onlineSetListener = new OnlineSetListenerImpl(this);
     Listener userJoinedListener = new UserJoinedListenerImpl(this);
@@ -45,28 +47,7 @@ public class EngineImpl extends Base implements Engine {
     public EngineImpl(Connection dbConnection, Configuration config, Boolean isMain) {
         super(dbConnection, config, isMain);
 
-        if (adminTrips != null && userTrips != null) {
-            admins = Arrays.asList(adminTrips.split(","));
-            trustedUsers = Arrays.asList(userTrips.split(","));
-
-            whiteList.addAll(admins);
-            whiteList.addAll(trustedUsers);
-        }
-
-        List<String> everyone = List.of("x");
-
-        super.enabledUserCommands.addAll(
-                List.of(new SayUserCommandImpl(this, everyone),
-                        new HelpUserCommandImpl(this, everyone),
-                        new ListUserCommandImpl(this, whiteList),
-                        new KickUserCommandImpl(this, admins),
-                        new BanUserCommandImpl(this, admins),
-                        new UnbanUserCommandImpl(this, admins),
-                        new SubscribeUserCommandImpl(this, whiteList),
-                        new InfoUserCommandImpl(this, everyone),
-                        new BlacklistUserCommandImpl(this, everyone),
-                        new MailUserCommandImpl(this, everyone),
-                        new SqlUserCommandImpl(this, admins)));
+        this.commandFactory = new CommandFactory(this, "org.saturn.app.model.command.impl", CommandAliases.class);
     }
 
     @Override

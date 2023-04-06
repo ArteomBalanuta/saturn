@@ -1,20 +1,26 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.command.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@CommandAliases(aliases = {"say", "echo"})
 public class SayUserCommandImpl extends UserCommandBaseImpl {
-    public SayUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
-        super(null, engine, whiteListedTrips);
+    private final List<String> aliases = new ArrayList<>();
+
+    public SayUserCommandImpl(EngineImpl engine, List<String> aliases) {
+        super(null, engine, List.of("x"));
         super.setCommandNames(this.getCommandNames());
+        this.aliases.addAll(aliases);
     }
 
     @Override
     public List<String> getCommandNames() {
-        return List.of("say","echo");
+        return this.aliases;
     }
     @Override
     public List<String> getArguments() {

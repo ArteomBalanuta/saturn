@@ -68,6 +68,11 @@
             <artifactId>Java-WebSocket</artifactId>
             <version>1.5.3</version>
         </dependency>
+        <dependency>
+            <groupId>io.github.classgraph</groupId>
+            <artifactId>classgraph</artifactId>
+            <version>LATEST</version>
+        </dependency>
 
     </dependencies>
 

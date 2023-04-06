@@ -1,19 +1,28 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.command.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import static org.saturn.app.util.Util.getWhiteListedTrips;
+
+@CommandAliases(aliases = {"sub", "subscribe"})
 public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
-    public SubscribeUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
-        super(null, engine, whiteListedTrips);
+
+    private final List<String> aliases = new ArrayList<>();
+
+    public SubscribeUserCommandImpl(EngineImpl engine, List<String> aliases) {
+        super(null, engine, getWhiteListedTrips(engine));
         super.setCommandNames(this.getCommandNames());
+        this.aliases.addAll(aliases);
     }
 
     @Override
     public List<String> getCommandNames() {
-        return List.of("sub","subscribe");
+        return this.aliases;
     }
 
     @Override

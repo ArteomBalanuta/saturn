@@ -1,17 +1,22 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.command.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 
+import java.util.ArrayList;
 import java.util.List;
 
+@CommandAliases(aliases = {"help", "h"})
 public class HelpUserCommandImpl extends UserCommandBaseImpl {
-
+    private final List<String> aliases = new ArrayList<>();
     private String prefix;
 
-    public HelpUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
-        super(null, engine, whiteListedTrips);
+    public HelpUserCommandImpl(EngineImpl engine,List<String> aliases) {
+        super(null, engine, List.of("x"));
         super.setCommandNames(this.getCommandNames());
+
+        this.aliases.addAll(aliases);
 
         if (super.engine.getConfig() != null) {
             prefix = super.engine.getConfig().getString("cmdPrefix");
@@ -20,7 +25,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public List<String> getCommandNames() {
-        return List.of("help", "h");
+        return this.aliases;
     }
 
     @Override

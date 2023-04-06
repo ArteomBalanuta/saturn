@@ -3,6 +3,7 @@ package org.saturn.app.util;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import org.saturn.app.facade.impl.EngineImpl;
 
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -13,11 +14,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
@@ -111,5 +108,16 @@ public class Util {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public static List<String> getWhiteListedTrips(EngineImpl engine) {
+        List<String> whiteListedTrips = new ArrayList<>();
+        whiteListedTrips.addAll(Arrays.asList(engine.adminTrips.split(",")));
+        whiteListedTrips.addAll(Arrays.asList(engine.userTrips.split(",")));
+        return whiteListedTrips;
+    }
+
+    public static List<String> getAdminTrips(EngineImpl engine) {
+        return new ArrayList<>(Arrays.asList(engine.adminTrips.split(",")));
     }
 }

@@ -3,17 +3,22 @@ package org.saturn.app.model.command.impl;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import static org.saturn.app.util.Util.getAdminTrips;
+
 public class KickUserCommandImpl extends UserCommandBaseImpl {
-    public KickUserCommandImpl(EngineImpl engine, List<String> whiteListedTrips) {
-        super(null, engine, whiteListedTrips);
+    private final List<String> aliases = new ArrayList<>();
+    public KickUserCommandImpl(EngineImpl engine,  List<String> aliases) {
+        super(null, engine, getAdminTrips(engine));
         super.setCommandNames(this.getCommandNames());
+        this.aliases.addAll(aliases);
     }
 
     @Override
     public List<String> getCommandNames() {
-        return List.of("kick","k","no","out","sir");
+        return aliases;
     }
 
     @Override
