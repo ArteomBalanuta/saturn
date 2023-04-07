@@ -5,9 +5,7 @@ import org.saturn.app.model.dto.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.toLower;
 
@@ -15,7 +13,7 @@ public class UserCommandBaseImpl implements UserCommand {
     protected final EngineImpl engine;
     protected ChatMessage chatMessage;
     protected final List<String> whiteListedTrips = new ArrayList<>();
-    private List<String> commandName;
+    private List<String> aliases;
     private final List<String> arguments = new ArrayList<>();
 
     public UserCommandBaseImpl(ChatMessage chatMessage, EngineImpl engine, List<String> allowedTrips) {
@@ -24,19 +22,14 @@ public class UserCommandBaseImpl implements UserCommand {
 
         this.whiteListedTrips.addAll(allowedTrips);
 
-        /* It is null for specific user commands */
-        if (chatMessage == null) {
-            return;
-        }
-
         String message = chatMessage.getText().substring(engine.prefix.length());
         if (message.contains(" ")) {
-            setCommandNames(List.of(message.substring(0, message.indexOf(" ")).trim().toUpperCase()));
+            setAliases(List.of(message.substring(0, message.indexOf(" ")).trim().toUpperCase()));
             parseArguments(message);
             return;
         }
 
-        setCommandNames(List.of(message.trim().toUpperCase()));
+        setAliases(List.of(message.trim().toUpperCase()));
     }
 
     private void parseArguments(String message) {
@@ -48,31 +41,26 @@ public class UserCommandBaseImpl implements UserCommand {
         }
     }
 
-    protected void setCommandNames(List<String> commandName) {
-        this.commandName = commandName;
+    protected void setAliases(List<String> aliases) {
+        this.aliases = aliases;
     }
 
     @Override
-    public List<String> getCommandNames() {
-        return this.commandName;
+    public List<String> getAliases() {
+        return this.aliases;
     }
 
     @Override
     public void execute() {
-        List<String> commands = toLower(this.getCommandNames());
-        UserCommand cmd = engine.commandFactory.getCommand(commands.get(0));
+        List<String> aliases = toLower(this.getAliases());
+        UserCommand cmd = engine.commandFactory.getCommand(this.chatMessage, aliases.get(0));
 
         if (!isUserAuthorized(cmd, this.chatMessage)) {
             return;
         }
         setupArguments(cmd);
-        cmd.setChatMessage(chatMessage);
-        cmd.execute();
-    }
 
-    private void setupArguments(UserCommand cmd) {
-        cmd.getArguments().clear();
-        cmd.getArguments().addAll(this.arguments);
+        cmd.execute();
     }
 
     private boolean isUserAuthorized(UserCommand userCommand, ChatMessage chatMessage) {
@@ -85,6 +73,11 @@ public class UserCommandBaseImpl implements UserCommand {
         return true;
     }
 
+    private void setupArguments(UserCommand cmd) {
+        cmd.getArguments().clear();
+        cmd.getArguments().addAll(this.arguments);
+    }
+
     @Override
     public List<String> getArguments() {
         return arguments;
@@ -93,11 +86,6 @@ public class UserCommandBaseImpl implements UserCommand {
     @Override
     public List<String> getWhiteTrips() {
         return whiteListedTrips;
-    }
-
-    @Override
-    public void setChatMessage(ChatMessage message) {
-        this.chatMessage = message;
     }
 }
 

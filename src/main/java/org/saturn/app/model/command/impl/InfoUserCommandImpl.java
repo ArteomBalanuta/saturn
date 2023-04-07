@@ -1,8 +1,9 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.command.CommandAliases;
+import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,14 +13,14 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
 
     private final List<String> aliases = new ArrayList<>();
 
-    public InfoUserCommandImpl(EngineImpl engine, List<String> aliases) {
-        super(null, engine, List.of("x"));
-        super.setCommandNames(this.getCommandNames());
+    public InfoUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+        super(message, engine, List.of("x"));
+        super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
     }
 
     @Override
-    public List<String> getCommandNames() {
+    public List<String> getAliases() {
         return this.aliases;
     }
 

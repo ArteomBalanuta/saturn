@@ -1,8 +1,9 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.command.CommandAliases;
+import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,14 +13,14 @@ import java.util.Optional;
 public class SayUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
 
-    public SayUserCommandImpl(EngineImpl engine, List<String> aliases) {
-        super(null, engine, List.of("x"));
-        super.setCommandNames(this.getCommandNames());
+    public SayUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+        super(message, engine, List.of("x"));
+        super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
     }
 
     @Override
-    public List<String> getCommandNames() {
+    public List<String> getAliases() {
         return this.aliases;
     }
     @Override
@@ -30,17 +31,16 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
-        StringBuilder sb  = new StringBuilder();
+        StringBuilder stringBuilder = new StringBuilder();
         if (trip.isPresent() && engine.adminTrips.contains(trip.get())) {
-            this.getArguments().forEach(s -> append(sb, s, false));
+            this.getArguments().forEach(argument -> stringBuilder.append(argument).append(" ")) ;
         } else {
-            this.getArguments().forEach(s -> append(sb, s, true));
+            this.getArguments().forEach(argument -> {
+                String sanitizedArgument = argument.replaceAll("[^A-Za-z0-9 ]", "");
+                stringBuilder.append(sanitizedArgument).append(" ");
+            });
         }
 
-        super.engine.getOutService().enqueueMessageForSending(sb.toString());
-    }
-
-    private StringBuilder append(StringBuilder sb, String value, boolean doReplace) {
-        return sb.append(value.replace(doReplace ? "/" : "", "").replace(doReplace ? engine.prefix : "", "")).append(" ");
+        super.engine.getOutService().enqueueMessageForSending(stringBuilder.toString());
     }
 }

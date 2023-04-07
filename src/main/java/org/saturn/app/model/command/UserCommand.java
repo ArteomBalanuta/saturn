@@ -5,11 +5,10 @@ import org.saturn.app.model.dto.ChatMessage;
 import java.util.List;
 
 public interface UserCommand {
-    List<String> getCommandNames();
+    List<String> getAliases();
     List<String> getArguments();
 
     List<String> getWhiteTrips();
 
-    void setChatMessage(ChatMessage message);
     void execute();
 }

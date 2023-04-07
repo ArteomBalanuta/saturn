@@ -6,10 +6,8 @@ import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.impl.*;
-import org.saturn.app.model.command.CommandAliases;
-import org.saturn.app.model.command.CommandFactory;
-import org.saturn.app.model.command.UserCommand;
-import org.saturn.app.model.command.impl.*;
+import org.saturn.app.model.annotation.CommandAliases;
+import org.saturn.app.model.command.factory.CommandFactory;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.ListCommandListener;
@@ -34,7 +32,8 @@ public class EngineImpl extends Base implements Engine {
     Listener onlineSetListener = new OnlineSetListenerImpl(this);
     Listener userJoinedListener = new UserJoinedListenerImpl(this);
     Listener userLeftListener = new UserLeftListenerImpl(this);
-    Listener userMessageListener = new UserMessageListenerImpl(this);
+    Listener chatMessageListener = new UserMessageListenerImpl(this);
+    Listener infoMessageListener = new InfoMessageListenerImpl(this);
     Listener connectionListener = new ConnectionListenerImpl(this);
     Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
@@ -162,13 +161,12 @@ public class EngineImpl extends Base implements Engine {
                 userLeftListener.notify(jsonText);
                 break;
             }
-            
             case "chat": {
-                userMessageListener.notify(jsonText);
+                chatMessageListener.notify(jsonText);
                 break;
             }
             case "info": {
-                userMessageListener.notify(jsonText);
+                infoMessageListener.notify(jsonText);
                 break;
             }
             default:
@@ -197,7 +195,7 @@ public class EngineImpl extends Base implements Engine {
     
     public void removeActiveUser(String leftUser) {
         for (User user : currentChannelUsers) {
-            if (user.getNick().equals(leftUser)) {
+            if (leftUser.equals(user.getNick())) {
                 currentChannelUsers.remove(user);
                 logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", getTimestampNow());
                 logService.logEvent("user " + leftUser + " left channel", "", getTimestampNow());
@@ -210,7 +208,6 @@ public class EngineImpl extends Base implements Engine {
         logService.logEvent("user " + newUser.getNick() + " joined channel", "successfully", getTimestampNow());
         currentChannelUsers.add(newUser);
     }
-
 
 //
 //        if (command.is(VOTEKICK) && (trustedUsers.contains(trip) || admins.contains(trip))) {

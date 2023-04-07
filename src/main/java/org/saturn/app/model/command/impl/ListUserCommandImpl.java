@@ -4,6 +4,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.impl.ListCommandListenerImpl;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.ChatMessage;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.ListCommandListener;
 import org.saturn.app.service.impl.OutService;
@@ -20,15 +21,15 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
 
     private final List<String> aliases = new ArrayList<>();
 
-    public ListUserCommandImpl(EngineImpl engine, List<String> aliases) {
-        super(null, engine, getWhiteListedTrips(engine));
-        super.setCommandNames(this.getCommandNames());
+    public ListUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+        super(message, engine, getWhiteListedTrips(engine));
+        super.setAliases(this.getAliases());
         this.outService = super.engine.getOutService();
         this.aliases.addAll(aliases);
     }
 
     @Override
-    public List<String> getCommandNames() {
+    public List<String> getAliases() {
         return this.aliases;
     }
 

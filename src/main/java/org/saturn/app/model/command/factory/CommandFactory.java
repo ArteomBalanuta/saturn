@@ -1,17 +1,22 @@
-package org.saturn.app.model.command;
+package org.saturn.app.model.command.factory;
 
 import io.github.classgraph.*;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.command.UserCommand;
+import org.saturn.app.model.dto.ChatMessage;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class CommandFactory {
-
     private final EngineImpl engine;
     private final Map<ClassInfo, String[]> aliasesMappedByClassInfo;
 
@@ -19,8 +24,7 @@ public class CommandFactory {
         this.engine = engine;
         this.aliasesMappedByClassInfo = getAliases(commandImplPackage, commandAnnotation);
     }
-
-    public UserCommand getCommand(String cmd) {
+    public UserCommand getCommand(ChatMessage message, String cmd) {
         AtomicReference<List<String>> aliases = new AtomicReference<>();
 
         Optional<Map.Entry<ClassInfo, String[]>> first = aliasesMappedByClassInfo.entrySet().stream()
@@ -37,8 +41,7 @@ public class CommandFactory {
             Class<?> cl = Class.forName(info.getName());
             Constructor<?> declaredConstructor = cl.getDeclaredConstructors()[0];
 
-            UserCommand userCommand = (UserCommand) declaredConstructor.newInstance(this.engine, aliases.get());
-            return userCommand;
+            return (UserCommand) declaredConstructor.newInstance(this.engine, message, aliases.get());
 
         } catch (ClassNotFoundException ex) {
             throw new RuntimeException(ex);

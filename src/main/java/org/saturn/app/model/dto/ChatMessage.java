@@ -11,10 +11,6 @@ public class ChatMessage {
     private String time;
     private String text;
 
-    public ChatMessage() {
-
-    }
-
     public ChatMessage(String size, String nick, String trip, String hash, String time, String text) {
         this.size = size;
         this.nick = nick;

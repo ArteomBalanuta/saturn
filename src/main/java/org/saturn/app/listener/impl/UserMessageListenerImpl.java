@@ -29,16 +29,9 @@ public class UserMessageListenerImpl implements Listener {
     @Override
     public void notify(String jsonText) {
         ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
-        System.out.println(message.getNick() + ": " + message.getText());
-
-        if (message.getCmd().equals("info")) {
-            message.setNick("");
-        }
 
         engine.logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
                 getTimestampNow());
-
-        processWhisperMessages(message);
 
         boolean isBotMessage = engine.nick.equals(message.getNick());
         if (isBotMessage) {
@@ -53,24 +46,7 @@ public class UserMessageListenerImpl implements Listener {
             return;
         }
 
-        /* empty whitelist */
         UserCommand userCommand = new UserCommandBaseImpl(message, engine, List.of());
         userCommand.execute();
-    }
-
-    private static void processWhisperMessages(ChatMessage message) {
-        if ("info".equals(message.getCmd())) {
-            Optional<String> author = Optional.ofNullable(message.getFrom());
-            if (author.isEmpty()) {
-                return;
-            }
-            String[] split = message.getText().split(author.get() + " whispered: ");
-            if (split.length > 0) {
-                String text = split[1];
-                message.setNick(author.get());
-                message.setText(text);
-                message.setWhisper(true);
-            }
-        }
     }
 }

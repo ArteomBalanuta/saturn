@@ -1,8 +1,9 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.command.CommandAliases;
+import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,14 +15,14 @@ public class SqlUserCommandImpl extends UserCommandBaseImpl {
 
     private final List<String> aliases = new ArrayList<>();
 
-    public SqlUserCommandImpl(EngineImpl engine, List<String> aliases) {
-        super(null, engine, getAdminTrips(engine));
-        super.setCommandNames(this.getCommandNames());
+    public SqlUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+        super(message, engine, getAdminTrips(engine));
+        super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
     }
 
     @Override
-    public List<String> getCommandNames() {
+    public List<String> getAliases() {
         return this.aliases;
     }
 

@@ -1,8 +1,9 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.command.CommandAliases;
+import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,14 +14,14 @@ import static org.saturn.app.util.Util.getAdminTrips;
 public class BlacklistUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
 
-    public BlacklistUserCommandImpl(EngineImpl engine, List<String> aliases) {
-        super(null, engine, getAdminTrips(engine));
-        super.setCommandNames(this.getCommandNames());
+    public BlacklistUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+        super(message, engine, getAdminTrips(engine));
+        super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
     }
 
     @Override
-    public List<String> getCommandNames() {
+    public List<String> getAliases() {
         return this.aliases;
     }
 
