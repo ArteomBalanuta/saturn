@@ -3,16 +3,12 @@ package org.saturn.app.model.command.factory;
 import io.github.classgraph.*;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.UserCommand;
-import org.saturn.app.model.dto.ChatMessage;
+import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 

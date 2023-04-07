@@ -1,6 +1,5 @@
 package org.saturn.app.facade;
 
-import org.saturn.app.model.dto.ChatMessage;
 import org.saturn.app.model.dto.User;
 
 import java.util.List;

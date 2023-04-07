@@ -17,7 +17,10 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Constants.CHAT_JSON;
@@ -27,7 +30,7 @@ import static org.saturn.app.util.Util.*;
 public class EngineImpl extends Base implements Engine {
 
     public final CommandFactory commandFactory;
-    protected org.saturn.app.model.dto.Connection hcConnection;
+    protected org.saturn.app.facade.impl.Connection hcConnection;
     public final Set<String> subscribers = new HashSet<>();
     Listener onlineSetListener = new OnlineSetListenerImpl(this);
     Listener userJoinedListener = new UserJoinedListenerImpl(this);
@@ -85,7 +88,7 @@ public class EngineImpl extends Base implements Engine {
     @Override
     public void start() {
         try {
-            hcConnection = new org.saturn.app.model.dto.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener));
+            hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener));
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }

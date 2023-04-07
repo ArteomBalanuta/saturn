@@ -5,12 +5,8 @@ import org.saturn.app.service.LogService;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Date;
 
-import static org.saturn.app.util.Util.*;
+import static org.saturn.app.util.Util.formatZoneUTC;
 
 public class LogServiceImpl implements LogService {
     private final boolean isSql;

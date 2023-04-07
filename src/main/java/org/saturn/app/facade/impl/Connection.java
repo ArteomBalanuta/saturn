@@ -1,4 +1,4 @@
-package org.saturn.app.model.dto;
+package org.saturn.app.facade.impl;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;

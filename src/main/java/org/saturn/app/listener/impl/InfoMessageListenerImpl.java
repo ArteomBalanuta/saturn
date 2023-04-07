@@ -4,8 +4,8 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.command.UserCommandBaseImpl;
-import org.saturn.app.model.dto.ChatMessage;
-import org.saturn.app.model.dto.InfoMessage;
+import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.model.dto.payload.InfoMessage;
 
 import java.util.List;
 import java.util.Optional;

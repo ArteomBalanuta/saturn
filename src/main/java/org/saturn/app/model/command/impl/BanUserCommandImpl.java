@@ -1,10 +1,9 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
-
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
-import org.saturn.app.model.dto.ChatMessage;
+import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;

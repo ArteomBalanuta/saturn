@@ -4,17 +4,8 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.service.impl.util.TableGenerator;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.sql.*;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 
 import static org.apache.commons.text.StringEscapeUtils.escapeJson;

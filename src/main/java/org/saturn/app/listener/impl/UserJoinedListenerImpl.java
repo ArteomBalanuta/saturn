@@ -7,7 +7,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 
-import static org.saturn.app.util.Util.*;
+import static org.saturn.app.util.Util.gson;
 
 public class UserJoinedListenerImpl implements Listener {
     @Override

@@ -5,9 +5,7 @@ import org.saturn.app.model.command.impl.ListUserCommandImpl;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.ListCommandListener;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.saturn.app.model.command.impl.ListUserCommandImpl.printUsers;
 

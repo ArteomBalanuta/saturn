@@ -1,11 +1,9 @@
 package org.saturn.app.facade;
 
-import com.google.gson.Gson;
 import org.apache.commons.configuration2.Configuration;
 import org.saturn.app.model.command.UserCommand;
-import org.saturn.app.model.dto.ChatMessage;
-import org.saturn.app.model.dto.Connection;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.*;
 import org.saturn.app.service.impl.*;
 
@@ -17,7 +15,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 
 import static java.util.concurrent.Executors.newScheduledThreadPool;
-import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.THREAD_NUMBER;
 
 public abstract class Base {

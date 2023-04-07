@@ -4,8 +4,8 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.impl.ListCommandListenerImpl;
 import org.saturn.app.model.command.UserCommandBaseImpl;
-import org.saturn.app.model.dto.ChatMessage;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.ListCommandListener;
 import org.saturn.app.service.impl.OutService;
 

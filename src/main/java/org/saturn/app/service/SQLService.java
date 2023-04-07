@@ -1,7 +1,6 @@
 package org.saturn.app.service;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 public interface SQLService {

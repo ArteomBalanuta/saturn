@@ -1,4 +1,4 @@
-package org.saturn.app.model.dto;
+package org.saturn.app.model.dto.payload;
 
 public class InfoMessage {
     /*
