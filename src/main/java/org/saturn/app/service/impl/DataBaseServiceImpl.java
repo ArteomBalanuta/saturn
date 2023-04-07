@@ -1,19 +1,20 @@
 package org.saturn.app.service.impl;
 
 import org.saturn.ApplicationRunner;
-import org.saturn.app.service.DataBaseConnectionService;
+import org.saturn.app.service.DataBaseService;
 
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-public class DataBaseConnectionServiceImpl implements DataBaseConnectionService {
+public class DataBaseServiceImpl implements DataBaseService {
     private String databasePath;
     private final Connection connection;
 
-    public DataBaseConnectionServiceImpl() {
+    public DataBaseServiceImpl() {
         try {
+            /* TODO: fix */
             this.databasePath = new File(
                     ApplicationRunner.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile()
                             .toPath().toString().concat("\\hackchat.db");
