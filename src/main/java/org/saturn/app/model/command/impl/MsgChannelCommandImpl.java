@@ -17,9 +17,7 @@ import static org.saturn.app.util.Util.getWhiteListedTrips;
 
 @CommandAliases(aliases = {"msgchannel", "msgroom"})
 public class MsgChannelCommandImpl extends UserCommandBaseImpl {
-
     private final OutService outService;
-
     private final List<String> aliases = new ArrayList<>();
 
     public MsgChannelCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
@@ -48,7 +46,7 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
         if (arguments.size() > 0) {
             channel = arguments.get(0).replace("?","");
         } else {
-            outService.enqueueMessageForSending("Example: " + engine.prefix + "msg programming <hello_world>");
+            outService.enqueueMessageForSending("Example: " + engine.prefix + "msgroom programming <hello_world>");
             return;
         }
 

@@ -34,10 +34,8 @@ public class MsgChannelCommandListenerImpl implements JoinChannelListener {
         if (users.isEmpty()) {
             mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + dto.channel + " is empty");
         } else {
-            if(this.operation != null) {
-                System.out.println("running operation");
+            if (this.operation != null) {
                 this.operation.run();
-                System.out.println("stopped running operation");
             }
         }
 

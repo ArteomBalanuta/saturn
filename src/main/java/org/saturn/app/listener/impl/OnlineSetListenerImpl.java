@@ -33,9 +33,7 @@ public class OnlineSetListenerImpl implements Listener {
         
         if (!engine.isMain) {
             engine.joinChannelListener.notify(Arrays.asList(users)); /* event that means that active users are set */
-            System.out.println("stopping bot");
             engine.stop();
-            System.out.println("stopped bot");
         }
     }
 }
