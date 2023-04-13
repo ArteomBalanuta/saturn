@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
+import static org.saturn.app.util.Util.is;
 
 @CommandAliases(aliases = {"msgchannel", "msgroom"})
 public class MsgChannelCommandImpl extends UserCommandBaseImpl {
@@ -37,6 +38,7 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
         return super.getArguments();
     }
 
+    /* ![](https://share.lyka.pro/xxxxx.png) */
     @Override
     public void execute() {
         String author = super.chatMessage.getNick();
@@ -59,15 +61,16 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
 
         if (channel.equals(engine.channel)) {
             /* msg current channel */
-            outService.enqueueMessageForSending("anonymous mail from: ?" + engine.channel + " message: " + message);
+            outService.enqueueMessageForSending(formatMessage(message.toString()));
         } else {
             /* JoinChannelListener will make sure to close the connection */
             EngineImpl listBot = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
             setupListBot(channel, listBot);
 
             JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, author, channel));
+
             joinChannelListener.setAction(() -> {
-                listBot.outService.enqueueMessageForSending("anonymous mail from: ?" + engine.channel + " ,message: \\n" + message);
+                listBot.outService.enqueueMessageForSending(formatMessage(message.toString()));
                 listBot.shareMessages();
                 outService.enqueueMessageForSending("@" + author + " package delivered.");
             });
@@ -75,6 +78,13 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
             listBot.setListCommandListener(joinChannelListener);
             listBot.start();
         }
+    }
+
+    private String formatMessage(String message) {
+        if (message.contains("![](")) {
+            return message +  "\\n anonymous mail from: ?" + engine.channel + "";
+        }
+        return "anonymous mail from: ?" + engine.channel + " message: " + message;
     }
 
     private void setupListBot(String channel, EngineImpl listBot) {
