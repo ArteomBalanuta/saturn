@@ -30,7 +30,7 @@ public class InfoMessageListenerImpl implements Listener {
     public void notify(String jsonText) {
         InfoMessage message = gson.fromJson(jsonText, InfoMessage.class);
 
-        if (message.getFrom().equals(engine.nick) || message.getText().contains("You whispered")) {
+        if (engine.nick.equals(message.getFrom()) || message.getText().contains("You whispered")) {
             return;
         }
 

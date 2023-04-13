@@ -57,6 +57,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "Whitelisted user commands:\\n" +
                     "\u200B kick,k <nick> - kicks the user \\n" +
                     "\u200B ban <nick|trip|hash> - bans the user by either nick,trip or hash \\n" +
+                    "\u200B msgroom <room> <text> - sends the mail to specified room \\n" +
                     "\u200B sql <SQL> - executes the sql against bot\'s database\\n" +
                     "\u200B \\n" +
                     "Whisper supported commands (input, output is whispered):\\n" +

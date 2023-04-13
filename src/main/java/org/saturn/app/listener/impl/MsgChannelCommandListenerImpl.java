@@ -10,25 +10,35 @@ import java.util.List;
 
 import static org.saturn.app.model.command.impl.ListUserCommandImpl.printUsers;
 
-public class ListCommandListenerImpl implements JoinChannelListener {
+public class MsgChannelCommandListenerImpl implements JoinChannelListener {
     private final JoinChannelListenerDto dto;
 
-    public ListCommandListenerImpl(JoinChannelListenerDto dto) {
+    private Runnable operation;
+
+    public MsgChannelCommandListenerImpl(JoinChannelListenerDto dto) {
         this.dto = dto;
     }
 
     @Override
     public String getListenerName() {
-        return "listcommand";
+        return "msgchannel";
     }
 
+    @Override
+    public void setAction(Runnable runnable) {
+        this.operation = runnable;
+    }
     @Override
     public void notify(List<User> users) {
         EngineImpl mainEngine = dto.engine;
         if (users.isEmpty()) {
             mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + dto.channel + " is empty");
         } else {
-            printUsers(dto.author, users,  mainEngine.outService);
+            if(this.operation != null) {
+                System.out.println("running operation");
+                this.operation.run();
+                System.out.println("stopped running operation");
+            }
         }
 
         mainEngine.shareMessages();

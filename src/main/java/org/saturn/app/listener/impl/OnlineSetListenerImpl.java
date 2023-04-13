@@ -17,11 +17,9 @@ public class OnlineSetListenerImpl implements Listener {
         return "onlineSetListener";
     }
     private final EngineImpl engine;
-
     public OnlineSetListenerImpl(EngineImpl engine) {
         this.engine = engine;
     }
-
     @Override
     public void notify(String jsonText) {
         JsonElement e = JsonParser.parseString(jsonText);
@@ -32,11 +30,12 @@ public class OnlineSetListenerImpl implements Listener {
             engine.outService.enqueueMessageForSending("/color #ff6200");
         }
         engine.logService.logEvent("listed channel", "successfully", getTimestampNow());
-
-
+        
         if (!engine.isMain) {
-            engine.listCommandListener.notify(Arrays.asList(users)); /* event that means that active users are set */
+            engine.joinChannelListener.notify(Arrays.asList(users)); /* event that means that active users are set */
+            System.out.println("stopping bot");
             engine.stop();
+            System.out.println("stopped bot");
         }
     }
 }

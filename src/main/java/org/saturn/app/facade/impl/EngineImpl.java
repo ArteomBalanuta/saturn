@@ -1,7 +1,6 @@
 package org.saturn.app.facade.impl;
 
 import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.listener.Listener;
@@ -10,13 +9,10 @@ import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.factory.CommandFactory;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.service.ListCommandListener;
+import org.saturn.app.service.JoinChannelListener;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -40,10 +36,10 @@ public class EngineImpl extends Base implements Engine {
     Listener connectionListener = new ConnectionListenerImpl(this);
     Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
-    public ListCommandListener listCommandListener;
+    public JoinChannelListener joinChannelListener;
 
-    public void setListCommandListener(ListCommandListener listCommandListener) {
-        this.listCommandListener = listCommandListener;
+    public void setListCommandListener(JoinChannelListener joinChannelListener) {
+        this.joinChannelListener = joinChannelListener;
     }
 
     public EngineImpl(Connection dbConnection, Configuration config, Boolean isMain) {
@@ -53,13 +49,15 @@ public class EngineImpl extends Base implements Engine {
     }
 
     @Override
-    public void setBaseWsUrl(String address){
+    public void setBaseWsUrl(String address) {
         this.baseWsURL = address;
     }
+
     @Override
     public void setChannel(String channel) {
         super.setChannel(channel);
     }
+
     @Override
     public void setPassword(String password) {
         super.setTrip(password);
@@ -124,28 +122,7 @@ public class EngineImpl extends Base implements Engine {
             e.printStackTrace();
         }
     }
-    
-    private void shareDBmessages() throws SQLException {
-        Connection connection = this.sqlService.getConnection();
-        Statement statement = connection.createStatement();
-        
-        String sql = "select distinct message from mail where status = 'BOT_SAY' limit 1;";
-        statement.execute(sql);
-        
-        ResultSet resultSet = statement.getResultSet();
-        while (resultSet.next()) {
-            String message = resultSet.getString(1);
-            if (message != null && !message.isEmpty() && !message.isBlank()) {
-                
-                Statement s = connection.createStatement();
-                String update = "DELETE FROM MAIL where status = 'BOT_SAY';";
-                s.execute(update);
-                
-                flushMessage(StringEscapeUtils.escapeJson(message));
-            }
-        }
-    }
-    
+
     public void dispatchMessage(String jsonText) {
         String cmd = getCmdFromJson(jsonText);
         switch (cmd) {
@@ -314,46 +291,4 @@ public class EngineImpl extends Base implements Engine {
 
         return whisperStrings.toString();
     }
-
-//    private void executeMsgChannelCmd(String author, UserCommand cmd) {
-//        String[] args = cmd.getArguments().toArray(new String[0]);
-//        String list = cmd.getCommandNames();
-//        String channel = null;
-//        StringBuilder message = new StringBuilder();
-//        if (args.length > 0) {
-//            if (args[0].charAt(0) == '?') {
-//                channel = args[0].substring(1);
-//            } else {
-//                channel = args[0];
-//            }
-//
-//            for (int i = 1; i < args.length; i++) {
-//                message.append(' ').append(args[i]);
-//            }
-//        }
-        
-        //:msgchannel ?your-channel hello faggots
-//        if (list.equals(Cmd.MSGCHANNEL.getCmdCode())) {
-//            //&& !channel.equals(this.channel)
-//            if (channel == null) {
-//                return;
-//            }
-//
-//            Engine listBot = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
-//
-//            int length = 8;
-//            boolean useLetters = true;
-//            boolean useNumbers = true;
-//            String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
-//            listBot.setNick(generatedNick);
-//            listBot.setPassword(trip);
-//
-//            listBot.start();
-//            listBot.say("Message from room: " + this.channel + ", trip:" + author + ", for " + channel +
-//                    ", message: " + message);
-//            listBot.stop();
-//
-//            outService.enqueueMessageForSending("@" + author + ", message for " + channel + " has been delivered!");
-//        }
-//    }
 }
