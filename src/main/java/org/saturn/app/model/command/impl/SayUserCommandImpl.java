@@ -9,12 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static org.saturn.app.util.Util.getWhiteListedTrips;
+
 @CommandAliases(aliases = {"say", "echo"})
 public class SayUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
 
     public SayUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-        super(message, engine, List.of("x"));
+        super(message, engine, getWhiteListedTrips(engine));
         super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
     }

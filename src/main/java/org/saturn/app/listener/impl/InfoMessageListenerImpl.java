@@ -51,7 +51,6 @@ public class InfoMessageListenerImpl implements Listener {
         /* empty whitelist */
         UserCommand userCommand = new UserCommandBaseImpl(chatMessage, engine, List.of());
         userCommand.execute();
-
     }
 
     private void processRename(InfoMessage message) {

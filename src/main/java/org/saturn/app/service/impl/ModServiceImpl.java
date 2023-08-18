@@ -7,6 +7,7 @@ import org.saturn.app.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -82,9 +83,11 @@ public class ModServiceImpl extends OutService implements ModService {
         if (target == null) {
             return false;
         }
-        
+
         List<String> bannedIds = sqlService.getBannedIds();
-        return bannedIds.contains(target.getTrip())
+
+        boolean isTripPresent = target.getTrip().length() > 3;
+        return (isTripPresent && bannedIds.contains(target.getTrip()))
                 || bannedIds.contains(target.getNick())
                 || bannedIds.contains(target.getHash());
     }
