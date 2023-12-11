@@ -7,7 +7,6 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
@@ -32,26 +31,29 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public void execute() {
-        String author = super.chatMessage.getNick();
-
         List<String> arguments = getArguments();
-        AtomicReference<String> nick = new AtomicReference<>();
-        arguments.stream()
-                .map(target -> target.replace("@", ""))
-                .peek(target -> nick.set(target))
-                .map(target -> engine.currentChannelUsers.stream()
-                        .filter(activeUser -> target.equals(activeUser.getNick()))
-                        .findFirst()
-                        .orElse(null))
+
+        String author = super.chatMessage.getNick();
+        String target = getBanningUser(arguments);
+
+        engine.currentChannelUsers.stream()
+                .filter(activeUser -> target.equals(activeUser.getNick()))
                 .findFirst()
                 .ifPresentOrElse(user -> {
                     engine.modService.ban(user.getNick(), user.getTrip(), user.getHash());
-                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick.get() + "trip: " + user.getTrip() +  " hash: " + user.getHash());
-                    engine.modService.kick(nick.get());
+                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + target + "trip: " + user.getTrip() +  " hash: " + user.getHash());
+                    engine.modService.kick(target);
                 }, () -> {
                     /* target isn't in the room */
-                    engine.modService.ban(nick.get());
-                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + nick.get());
+                    engine.modService.ban(target);
+                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + target);
                 });
+    }
+
+    private static String getBanningUser(List<String> arguments) {
+        return arguments.stream()
+                .map(target -> target.replace("@", ""))
+                .findAny()
+                .get();
     }
 }

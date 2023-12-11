@@ -44,21 +44,21 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     public final String help =
                     "Prefix: %s \\n" +
                     "Commands:\\n" +
-                    "\u200B help,h - prints this output \\n" +
-                    "\u200B say,echo <text> - echoes the input \\n" +
-                    "\u200B sub,subscribe - you will receive nicks, trips, hashes for each joining user \\n" +
-                    "\u200B note <text> - saves a note \\n" +
-                    "\u200B notes - lists your saved notes \\n" +
-                    "\u200B notes purge - removes all notes \\n" +
-                    "\u200B mail,msg <nick> <text> - sends a message to <nick> \\n" +
-                    "\u200B info,i <nick>, - whispers back user's trip, hash \\n" +
-                    "\u200B list <channel_name> - prints hash, trip, nicks of active users in the channel\\n" +
+                    "\u200B help,h \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - prints this output \\n" +
+                    "\u200B say,echo <text>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - echoes the input \\n" +
+                    "\u200B sub,subscribe\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - subscribe on nicks,trips,hashes on joining users \\n" +
+                    "\u200B note <text>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - saves a note \\n" +
+                    "\u200B notes\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - lists your saved notes \\n" +
+                    "\u200B notes purge\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - removes all notes \\n" +
+                    "\u200B mail,msg <nick> <text>\u200B - sends a message to <nick> \\n" +
+                    "\u200B info,i <nick>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - whispers back user's trip, hash \\n" +
+                    "\u200B list <channel_name>\u200B \u200B \u200B \u200B - prints hash,trip,nicks of users in the channel\\n" +
                     "\u200B \\n" +
                     "Whitelisted user commands:\\n" +
-                    "\u200B kick,k <nick> - kicks the user \\n" +
-                    "\u200B ban <nick|trip|hash> - bans the user by either nick,trip or hash \\n" +
-                    "\u200B msgroom <room> <text> - sends the mail to specified room \\n" +
-                    "\u200B sql <SQL> - executes the sql against bot\'s database\\n" +
+                    "\u200B kick,k <nick>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - kicks the user \\n" +
+                    "\u200B ban <nick|trip|hash>\u200B \u200B \u200B - bans the user by either nick,trip or hash \\n" +
+                    "\u200B msgroom <room> <text>\u200B \u200B - sends the mail to specified room \\n" +
+                    "\u200B sql <SQL>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - executes the sql against bot\'s database\\n" +
                     "\u200B \\n" +
                     "Whisper supported commands (input, output is whispered):\\n" +
                     "\u200B /whisper @orangesun mail,msg <nick> <text> - sends a message to <nick> \\n" +
