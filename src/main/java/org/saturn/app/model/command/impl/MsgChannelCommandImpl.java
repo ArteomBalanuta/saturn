@@ -7,14 +7,13 @@ import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.service.JoinChannelListener;
+import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.service.impl.OutService;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
-import static org.saturn.app.util.Util.is;
 
 @CommandAliases(aliases = {"msgchannel", "msgroom"})
 public class MsgChannelCommandImpl extends UserCommandBaseImpl {
@@ -64,19 +63,19 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
             outService.enqueueMessageForSending(formatMessage(message.toString()));
         } else {
             /* JoinChannelListener will make sure to close the connection */
-            EngineImpl listBot = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
-            setupListBot(channel, listBot);
+            EngineImpl slaveEngine = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
+            setupListBot(channel, slaveEngine);
 
-            JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, author, channel));
+            JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
 
             joinChannelListener.setAction(() -> {
-                listBot.outService.enqueueMessageForSending(formatMessage(message.toString()));
-                listBot.shareMessages();
+                slaveEngine.outService.enqueueMessageForSending(formatMessage(message.toString()));
+                slaveEngine.shareMessages();
                 outService.enqueueMessageForSending("@" + author + " package delivered.");
             });
 
-            listBot.setListCommandListener(joinChannelListener);
-            listBot.start();
+            slaveEngine.setOnlineSetListener(joinChannelListener);
+            slaveEngine.start();
         }
     }
 
@@ -95,6 +94,6 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
         boolean useNumbers = true;
         String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
         listBot.setNick(generatedNick);
-        listBot.setPassword(engine.trip);
+        listBot.setPassword(engine.password);
     }
 }

@@ -7,6 +7,7 @@ import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.saturn.app.util.Util.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
@@ -30,10 +31,5 @@ public class OnlineSetListenerImpl implements Listener {
             engine.outService.enqueueMessageForSending("/color #ff6200");
         }
         engine.logService.logEvent("listed channel", "successfully", getTimestampNow());
-        
-        if (!engine.isMain) {
-            engine.joinChannelListener.notify(Arrays.asList(users)); /* event that means that active users are set */
-            engine.stop();
-        }
     }
 }

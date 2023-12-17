@@ -1,14 +1,12 @@
 package org.saturn.app.listener.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.command.impl.ListUserCommandImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.service.JoinChannelListener;
+import org.saturn.app.listener.JoinChannelListener;
+import org.saturn.app.util.Util;
 
 import java.util.List;
-
-import static org.saturn.app.model.command.impl.ListUserCommandImpl.printUsers;
 
 public class MsgChannelCommandListenerImpl implements JoinChannelListener {
     private final JoinChannelListenerDto dto;
@@ -21,17 +19,15 @@ public class MsgChannelCommandListenerImpl implements JoinChannelListener {
 
     @Override
     public String getListenerName() {
-        return "msgchannel";
+        return "msgChannelListener";
     }
 
     @Override
-    public void setAction(Runnable runnable) {
-        this.operation = runnable;
-    }
-    @Override
-    public void notify(List<User> users) {
-        EngineImpl mainEngine = dto.engine;
-        if (users.isEmpty()) {
+    public void notify(String jsonText) {
+        List<User> users = Util.getUsers(jsonText);
+        EngineImpl mainEngine = dto.mainEngine;
+        boolean onlyMeOnline = users.stream().allMatch(User::isIsMe);
+        if (onlyMeOnline) {
             mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + dto.channel + " is empty");
         } else {
             if (this.operation != null) {
@@ -39,6 +35,13 @@ public class MsgChannelCommandListenerImpl implements JoinChannelListener {
             }
         }
 
+        dto.slaveEngine.stop();
+
         mainEngine.shareMessages();
+    }
+
+    @Override
+    public void setAction(Runnable runnable) {
+        this.operation = runnable;
     }
 }

@@ -9,14 +9,10 @@ import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.factory.CommandFactory;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.service.JoinChannelListener;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Constants.CHAT_JSON;
@@ -36,10 +32,8 @@ public class EngineImpl extends Base implements Engine {
     Listener connectionListener = new ConnectionListenerImpl(this);
     Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
-    public JoinChannelListener joinChannelListener;
-
-    public void setListCommandListener(JoinChannelListener joinChannelListener) {
-        this.joinChannelListener = joinChannelListener;
+    public void setOnlineSetListener(Listener listener) {
+        this.onlineSetListener = listener;
     }
 
     public EngineImpl(Connection dbConnection, Configuration config, Boolean isMain) {
@@ -83,6 +77,8 @@ public class EngineImpl extends Base implements Engine {
         super.setNick(nick);
     }
 
+
+
     @Override
     public void start() {
         try {
@@ -93,7 +89,7 @@ public class EngineImpl extends Base implements Engine {
     }
     
     public void sendJoinMessage() {
-        String joinPayload = String.format(JOIN_JSON, channel, nick, trip);
+        String joinPayload = String.format(JOIN_JSON, channel, nick, password);
         hcConnection.write(joinPayload);
     }
     
@@ -284,8 +280,7 @@ public class EngineImpl extends Base implements Engine {
     private String mailToStrings(List<Mail> messages) {
         StringBuilder whisperStrings = new StringBuilder();
         messages.forEach(mail -> {
-            String row =
-                    formatZone(mail.createdDate, "UTC") + " " + mail.owner + ": " + mail.message + "\\n";
+            String row = formatZone(mail.createdDate, "UTC") + " " + mail.owner + ": " + mail.message + "\\n";
             whisperStrings.append(row);
         });
 

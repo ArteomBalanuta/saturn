@@ -21,7 +21,7 @@ public class User {
         this.channel = channel;
     }
     
-    public boolean isIsme() {
+    public boolean isIsMe() {
         return isme;
     }
     

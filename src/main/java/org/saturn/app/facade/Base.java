@@ -24,7 +24,7 @@ public abstract class Base {
     public String prefix;
     public String channel;
     public String nick;
-    public String trip;
+    public String password;
     public String isSql;
     public String userTrips;
     public String adminTrips;
@@ -83,7 +83,7 @@ public abstract class Base {
             this.prefix = config.getString("cmdPrefix");
             this.channel = config.getString("channel");
             this.nick = config.getString("nick");
-            this.trip = config.getString("trip");
+            this.password = config.getString("trip");
             this.userTrips = config.getString("userTrips");
             this.adminTrips = config.getString("adminTrips");
         }
@@ -99,8 +99,8 @@ public abstract class Base {
         this.nick = nick;
     }
     
-    public void setTrip(String trip) {
-        this.trip = trip;
+    public void setTrip(String password) {
+        this.password = password;
     }
 
     public OutService getOutService() {

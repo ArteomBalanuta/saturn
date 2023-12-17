@@ -8,7 +8,7 @@ import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.service.JoinChannelListener;
+import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.service.impl.OutService;
 
 import java.util.ArrayList;
@@ -46,15 +46,14 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         String author = super.chatMessage.getNick();
 
         List<String> arguments = this.getArguments();
-        String channel;
-        if (arguments.size() > 0) {
-            channel = arguments.get(0);
-        } else {
+        if (arguments.size() == 0) {
+            printUsers(author, engine.currentChannelUsers, engine.outService);
             outService.enqueueMessageForSending("Example: " + engine.prefix + "list programming");
             return;
         }
 
-        if (channel.equals(engine.channel)) {
+        String channel = arguments.get(0).trim();
+        if (channel.isBlank() || channel.equals(engine.channel)) {
             /* parse nicks from current channel */
             printUsers(author, engine.currentChannelUsers, engine.outService);
         } else {
@@ -64,13 +63,13 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
     }
 
     private void joinChannel(String author, String channel) {
-        EngineImpl listBot = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
-        setupListBot(channel, listBot);
+        EngineImpl slaveEngine = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
+        setupEngine(channel, slaveEngine);
 
-        JoinChannelListener joinChannelListener = new ListCommandListenerImpl(new JoinChannelListenerDto(this.engine, author, channel));
-        listBot.setListCommandListener(joinChannelListener);
+        JoinChannelListener onlineSetListener = new ListCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
+        slaveEngine.setOnlineSetListener(onlineSetListener);
 
-        listBot.start();
+        slaveEngine.start();
     }
 
     public static void printUsers(String author, List<User> users, OutService outService) {
@@ -80,7 +79,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         outService.enqueueMessageForSending("@" + author + "\\nUsers online: \\n" + output + "\\n");
     }
 
-    private void setupListBot(String channel, EngineImpl listBot) {
+    private void setupEngine(String channel, EngineImpl listBot) {
         listBot.isMain = false;
         listBot.setChannel(channel);
         int length = 8;
@@ -88,6 +87,6 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         boolean useNumbers = true;
         String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
         listBot.setNick(generatedNick);
-        listBot.setPassword(engine.trip);
+        listBot.setPassword(engine.password);
     }
 }

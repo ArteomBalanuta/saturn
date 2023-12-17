@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.dto.User;
 
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -115,5 +116,12 @@ public class Util {
 
     public static List<String> getAdminTrips(EngineImpl engine) {
         return new ArrayList<>(Arrays.asList(engine.adminTrips.split(",")));
+    }
+
+    public static List<User> getUsers(String jsonText){
+        JsonElement e = JsonParser.parseString(jsonText);
+        JsonElement listingElement = e.getAsJsonObject().get("users");
+        User[] users = gson.fromJson(listingElement, User[].class);
+        return Arrays.asList(users);
     }
 }

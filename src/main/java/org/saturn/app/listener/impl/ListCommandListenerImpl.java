@@ -1,10 +1,9 @@
 package org.saturn.app.listener.impl;
 
-import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.command.impl.ListUserCommandImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.service.JoinChannelListener;
+import org.saturn.app.listener.JoinChannelListener;
+import org.saturn.app.util.Util;
 
 import java.util.List;
 
@@ -19,18 +18,20 @@ public class ListCommandListenerImpl implements JoinChannelListener {
 
     @Override
     public String getListenerName() {
-        return "listcommand";
+        return "listCommandListener";
     }
 
     @Override
-    public void notify(List<User> users) {
-        EngineImpl mainEngine = dto.engine;
-        if (users.isEmpty()) {
-            mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + dto.channel + " is empty");
+    public void notify(String jsonText) {
+        List<User> users = Util.getUsers(jsonText);
+        boolean onlyMeOnline = users.stream().allMatch(User::isIsMe);
+        if (onlyMeOnline) {
+            dto.mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + dto.channel + " is empty");
         } else {
-            printUsers(dto.author, users,  mainEngine.outService);
+            printUsers(dto.author, users,  dto.mainEngine.outService);
         }
+        dto.slaveEngine.stop();
 
-        mainEngine.shareMessages();
+        dto.mainEngine.shareMessages();
     }
 }
