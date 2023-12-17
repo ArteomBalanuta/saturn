@@ -10,11 +10,16 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
+import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.saturn.app.util.Util.getAdminTrips;
 
 @CommandAliases(aliases = {"mine"})
 public class MineTripCommandImpl extends UserCommandBaseImpl {
+    private static final ScheduledExecutorService executorService = newScheduledThreadPool(1);
+    private static boolean isMining = false;
     private final List<String> aliases = new ArrayList<>();
 
     public MineTripCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
@@ -36,8 +41,8 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         List<String> arguments = this.getArguments();
-        if (arguments.size() == 0) {
-            super.engine.outService.enqueueMessageForSending("Example: " + engine.prefix + "mine lab");
+        if (arguments.size() < 2) {
+            super.engine.outService.enqueueMessageForSending("Example: " + engine.prefix + "mine <room> <start|stop>");
             return;
         }
 
@@ -46,12 +51,19 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
             return;
         }
 
-        /* Use `ScheduledExecutorService` */
-        joinChannel(channel);
-        try {
-            Thread.sleep(10_000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+        String cmd = arguments.get(1);
+        if (cmd == null || cmd.isBlank()) {
+            return;
+        }
+
+        if ("start".equals(cmd) && !isMining) {
+            isMining = true;
+            executorService.scheduleWithFixedDelay(() -> joinChannel(channel), 5, 15, TimeUnit.SECONDS);
+            System.out.println("Started mining, room: " + channel);
+        } else if ("stop".equals(cmd)) {
+            isMining = false;
+            executorService.shutdown();
+            System.out.println("Stopped mining, room: " + channel);
         }
 
     }
@@ -61,14 +73,15 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
 
         mineBot.isMain = false;
         mineBot.setChannel(channel);
-        int length = 8;
+        int nickLength = 8;
         boolean useLetters = true;
         boolean useNumbers = true;
-        String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
 
-        mineBot.setNick(generatedNick);
+        String nick = RandomStringUtils.random(nickLength, useLetters, useNumbers);
+        String password = RandomStringUtils.random(32, useLetters, useNumbers);
 
-        mineBot.setPassword(generatedNick);
+        mineBot.setNick(nick);
+        mineBot.setPassword(password);
 
         Listener listener = new MinerListenerImpl(mineBot);
         mineBot.setOnlineSetListener(listener);
