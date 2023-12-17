@@ -13,12 +13,18 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class CommandFactory {
+    private static final ScanResult scanResult = new ClassGraph()
+            .verbose(false)
+            .disableNestedJarScanning()
+            .enableAllInfo()         // Scan classes, methods, fields, annotations
+            .acceptPackages("org.saturn.app.model.command.impl")     // Scan `pkg` and subpackages (omit to scan all packages)
+            .scan();
     private final EngineImpl engine;
     private final Map<ClassInfo, String[]> aliasesMappedByClassInfo;
 
     public CommandFactory(EngineImpl engine, String commandImplPackage, Class<? extends Annotation> commandAnnotation) {
         this.engine = engine;
-        this.aliasesMappedByClassInfo = getAliases(commandImplPackage, commandAnnotation);
+        this.aliasesMappedByClassInfo = getAliases(commandAnnotation);
     }
     public UserCommand getCommand(ChatMessage message, String cmd) {
         AtomicReference<List<String>> aliases = new AtomicReference<>();
@@ -50,31 +56,26 @@ public class CommandFactory {
         }
     }
 
-    protected Map<ClassInfo, String[]> getAliases(String pkg, Class<? extends Annotation> annotation) {
-        try (ScanResult scanResult =
-                     new ClassGraph()
-                             .verbose(false)          // Log to stderr
-                             .enableAllInfo()         // Scan classes, methods, fields, annotations
-                             .acceptPackages(pkg)     // Scan `pkg` and subpackages (omit to scan all packages)
-                             .scan()) {               // Start the scan
-            Map<ClassInfo, String[]> aliasesMappedByClassInfo = new HashMap<>();
-            for (ClassInfo routeClassInfo : scanResult.getClassesWithAnnotation(annotation)) {
-                AnnotationInfo routeAnnotationInfo = routeClassInfo.getAnnotationInfo(annotation);
-                List<AnnotationParameterValue> parameterValues = routeAnnotationInfo.getParameterValues();
-                List<String[]> collect = parameterValues.stream()
-                        .filter(s -> "aliases".equals(s.getName()))
-                        .map(v -> (String[]) v.getValue())
-                        .collect(Collectors.toList());
+    protected Map<ClassInfo, String[]> getAliases(Class<? extends Annotation> annotation) {
+        Map<ClassInfo, String[]> aliasesMappedByClassInfo = new HashMap<>();
+        ClassInfoList classesWithAnnotation = scanResult.getClassesWithAnnotation(annotation);
 
-                String[] aliases = collect.get(0);
-                aliasesMappedByClassInfo.put(routeClassInfo, aliases);
+        classesWithAnnotation.forEach(routeClassInfo -> {
+            AnnotationInfo routeAnnotationInfo = routeClassInfo.getAnnotationInfo(annotation);
+            List<AnnotationParameterValue> parameterValues = routeAnnotationInfo.getParameterValues();
+            List<String[]> collect = parameterValues.stream()
+                    .filter(s -> "aliases".equals(s.getName()))
+                    .map(v -> (String[]) v.getValue())
+                    .collect(Collectors.toList());
 
-                if (engine.isMain) {
-                    System.out.println(routeClassInfo.getName() + " is annotated with aliases: " + Arrays.toString(aliases));
-                }
+            String[] aliases = collect.get(0);
+            aliasesMappedByClassInfo.put(routeClassInfo, aliases);
+
+            if (engine.isMain) {
+                System.out.println(routeClassInfo.getName() + " is annotated with aliases: " + Arrays.toString(aliases));
             }
+        });
 
-            return aliasesMappedByClassInfo;
-        }
+        return aliasesMappedByClassInfo;
     }
 }

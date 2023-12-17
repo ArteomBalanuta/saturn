@@ -10,19 +10,20 @@ import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.Map;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.saturn.app.util.Util.getAdminTrips;
 
 @CommandAliases(aliases = {"mine"})
 public class MineTripCommandImpl extends UserCommandBaseImpl {
-    private final ScheduledExecutorService executorService = newScheduledThreadPool(4);
+    private static final ScheduledThreadPoolExecutor executorService = new ScheduledThreadPoolExecutor(32);
     private final List<String> aliases = new ArrayList<>();
-    private  List<Proxy> proxyList = new ArrayList<>();
+
+    private final HashMap<String,Proxy> portMappedByIp = new HashMap<>();
 
     public MineTripCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
         super(message, engine, getAdminTrips(engine));
@@ -30,9 +31,9 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
         this.aliases.addAll(aliases);
 
         if (this.engine.proxies != null && this.engine.proxies.size() > 0) {
-                    this.proxyList = this.engine.proxies.stream()
+                    this.engine.proxies.stream()
                             .map(proxy -> new Proxy(false, proxy.split(":")[0], proxy.split(":")[1]))
-                            .collect(Collectors.toList());
+                            .forEach(p -> portMappedByIp.put(p.getIp(), p));
         }
     }
 
@@ -49,10 +50,10 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         List<String> arguments = this.getArguments();
-        if (arguments.size() < 2) {
-            super.engine.outService.enqueueMessageForSending("Example: " + engine.prefix + "mine <room> <start|stop>");
-            return;
-        }
+//        if (arguments.size() < 2) {
+//            super.engine.outService.enqueueMessageForSending("Example: " + engine.prefix + "mine <room> <start|stop>");
+//            return;
+//        }
 
         String channel = arguments.get(0);
         if (channel.equals(engine.channel)) {
@@ -64,22 +65,25 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
             return;
         }
 
+        if ("count".equals(cmd)){
+            int activeCount = executorService.getActiveCount();
+            long completedTaskCount = executorService.getCompletedTaskCount();
+            long taskCount = executorService.getTaskCount();
+            super.engine.outService.enqueueMessageForSending("TaskCount: " + taskCount + ", Completed: " + completedTaskCount + ", Active: " + activeCount);
+            return;
+        }
+
         if ("start".equals(cmd)) {
-            long initialDelay = 40;
+            long initialDelay = 5;
             String delay = arguments.get(2);
             if (delay == null || delay.isBlank()) {
-                delay = String.valueOf(40);
+                delay = String.valueOf(35);
             }
 
-            List<Proxy> proxies = proxyList.stream().filter(p -> !p.isUsed())
-                    .collect(Collectors.toList());
-
-            if (!proxies.isEmpty()) {
-                for (Proxy proxy : proxies) {
-                    proxy.setUsed(true);
-                    executorService.scheduleWithFixedDelay(() -> joinChannel(channel, proxy), initialDelay, Long.parseLong(delay), TimeUnit.SECONDS);
-                    System.out.println("Started miner, initial delay: " + initialDelay + ", room: " + channel + ", delay: " + delay + ", proxy: " + proxy.getIp() + ":" + proxy.getPort());
-
+            if (!portMappedByIp.isEmpty()) {
+                for (Map.Entry<String, Proxy> ipnProxy : portMappedByIp.entrySet()) {
+                    executorService.scheduleWithFixedDelay(() -> joinChannel(channel, ipnProxy.getValue()), initialDelay, Long.parseLong(delay), TimeUnit.SECONDS);
+                    System.out.println("Started miner, initial delay: " + initialDelay + ", room: " + channel + ", delay: " + delay + ", proxy: " + ipnProxy.getValue().getIp() + ":" + ipnProxy.getValue().getPort());
                 }
             } else {
                 executorService.scheduleWithFixedDelay(() -> joinChannel(channel, null), initialDelay, Long.parseLong(delay), TimeUnit.SECONDS);
@@ -111,7 +115,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
         boolean useNumbers = true;
 
         String nick = RandomStringUtils.random(nickLength, useLetters, useNumbers);
-        String password = RandomStringUtils.random(32, useLetters, useNumbers);
+        String password = RandomStringUtils.random(128, useLetters, useNumbers);
 
         mineBot.setNick(nick);
         mineBot.setPassword(password);
@@ -121,4 +125,5 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
 
         mineBot.start(proxyDto);
     }
+
 }
