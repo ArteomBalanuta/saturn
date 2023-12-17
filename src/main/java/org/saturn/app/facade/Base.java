@@ -20,6 +20,7 @@ import static org.saturn.app.util.Constants.THREAD_NUMBER;
 public abstract class Base {
     protected List<UserCommand> enabledUserCommands = new ArrayList<>();
     protected String baseWsURL = "wss://hack.chat/chat-ws";
+    public String proxies;
     public boolean isMain;
     public String prefix;
     public String channel;
@@ -86,6 +87,10 @@ public abstract class Base {
             this.password = config.getString("trip");
             this.userTrips = config.getString("userTrips");
             this.adminTrips = config.getString("adminTrips");
+        }
+
+        if (config != null) {
+            this.proxies = config.getString("proxies");
         }
 
         this.logService = new LogServiceImpl(dbConnection, Boolean.parseBoolean(this.isSql));

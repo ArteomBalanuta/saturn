@@ -8,6 +8,7 @@ import org.saturn.app.listener.impl.*;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.factory.CommandFactory;
 import org.saturn.app.model.dto.Mail;
+import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.User;
 
 import java.net.URISyntaxException;
@@ -21,6 +22,7 @@ import static org.saturn.app.util.Util.*;
 
 public class EngineImpl extends Base implements Engine {
 
+    public List<String> proxies;
     public final CommandFactory commandFactory;
     protected org.saturn.app.facade.impl.Connection hcConnection;
     public final Set<String> subscribers = new HashSet<>();
@@ -38,6 +40,12 @@ public class EngineImpl extends Base implements Engine {
 
     public EngineImpl(Connection dbConnection, Configuration config, Boolean isMain) {
         super(dbConnection, config, isMain);
+
+        if (super.proxies != null) {
+            if (!super.proxies.isEmpty() || !super.proxies.isBlank()) {
+                this.proxies = Arrays.asList(super.proxies.split(","));
+            }
+        }
 
         this.commandFactory = new CommandFactory(this, "org.saturn.app.model.command.impl", CommandAliases.class);
     }
@@ -78,11 +86,19 @@ public class EngineImpl extends Base implements Engine {
     }
 
 
-
     @Override
     public void start() {
         try {
-            hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener));
+            hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), null, this);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void start(Proxy proxy) {
+        try {
+            hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), proxy, this);
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -112,8 +128,9 @@ public class EngineImpl extends Base implements Engine {
     @Override
     public void stop() {
         try {
-            this.hcConnection.close();
-            this.hcConnection = null;
+            if (hcConnection != null) {
+                this.hcConnection.close();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

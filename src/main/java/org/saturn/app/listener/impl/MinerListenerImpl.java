@@ -5,10 +5,16 @@ import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.util.Util;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class MinerListenerImpl implements Listener {
+
+    public String fileName = "D:\\workspace\\projects\\saturn\\trips.txt";
     @Override
     public String getListenerName() {
         return "minerChannelListener";
@@ -37,7 +43,14 @@ public class MinerListenerImpl implements Listener {
             throw new RuntimeException("Didn't join");
         }
 
-        System.out.println("Password: " + engine.password + " trip: " + first.get().getTrip());
+        String raw = "Password: " + engine.password + " trip: " + first.get().getTrip() + " \r\n";
+        try {
+            Files.write(Paths.get(fileName),
+                    raw.getBytes(),
+                    StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         engine.stop();
     }
