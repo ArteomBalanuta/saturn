@@ -24,7 +24,6 @@ public class Connection {
             
             @Override
             public void onMessage(String s) {
-                System.out.println("Message: " + s);
                 listeners.stream().filter(listener -> "incomingMessageListener".equals(listener.getListenerName()))
                         .forEach(listener -> listener.notify(s));
             }

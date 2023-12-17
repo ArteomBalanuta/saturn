@@ -58,14 +58,13 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
 
         if ("start".equals(cmd) && !isMining) {
             isMining = true;
-            executorService.scheduleWithFixedDelay(() -> joinChannel(channel), 5, 15, TimeUnit.SECONDS);
+            executorService.scheduleWithFixedDelay(() -> joinChannel(channel), 30, 10, TimeUnit.SECONDS);
             System.out.println("Started mining, room: " + channel);
         } else if ("stop".equals(cmd)) {
             isMining = false;
             executorService.shutdown();
             System.out.println("Stopped mining, room: " + channel);
         }
-
     }
 
     private void joinChannel(String channel) {

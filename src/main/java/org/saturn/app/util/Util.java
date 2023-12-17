@@ -24,7 +24,6 @@ public class Util {
     }
     
     public static String getCmdFromJson(String jsonText) {
-        System.out.println(jsonText);
         JsonElement element = JsonParser.parseString(jsonText);
         JsonElement listingElement = element.getAsJsonObject().get("cmd");
         return gson.fromJson(listingElement, String.class);
