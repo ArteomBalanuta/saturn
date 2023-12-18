@@ -35,4 +35,9 @@ public class Proxy {
     public void setPort(String port) {
         this.port = port;
     }
+
+    @Override
+    public String toString() {
+        return ip + ":" + port;
+    }
 }

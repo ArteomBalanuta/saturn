@@ -13,17 +13,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
 @CommandAliases(aliases = {"mine"})
 public class MineTripCommandImpl extends UserCommandBaseImpl {
     private static final ScheduledThreadPoolExecutor executorService = new ScheduledThreadPoolExecutor(32);
+    private static final List<Future<?>> tasks = new ArrayList<>();
     private final List<String> aliases = new ArrayList<>();
 
-    private final HashMap<String,Proxy> portMappedByIp = new HashMap<>();
+    private final HashMap<String, Proxy> portMappedByIp = new HashMap<>();
+
+    private static final ScheduledThreadPoolExecutor executorServiceTaskChecker = new ScheduledThreadPoolExecutor(1);
 
     public MineTripCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
         super(message, engine, getAdminTrips(engine));
@@ -31,11 +33,12 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
         this.aliases.addAll(aliases);
 
         if (this.engine.proxies != null && this.engine.proxies.size() > 0) {
-                    this.engine.proxies.stream()
-                            .map(proxy -> new Proxy(false, proxy.split(":")[0], proxy.split(":")[1]))
-                            .forEach(p -> portMappedByIp.put(p.getIp(), p));
+            this.engine.proxies.stream()
+                    .map(proxy -> new Proxy(false, proxy.split(":")[0], proxy.split(":")[1]))
+                    .forEach(p -> portMappedByIp.put(p.getIp(), p));
         }
     }
+
 
     @Override
     public List<String> getAliases() {
@@ -50,10 +53,10 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         List<String> arguments = this.getArguments();
-//        if (arguments.size() < 2) {
-//            super.engine.outService.enqueueMessageForSending("Example: " + engine.prefix + "mine <room> <start|stop>");
-//            return;
-//        }
+        if (arguments.size() < 2) {
+            super.engine.outService.enqueueMessageForSending("Example: " + engine.prefix + "mine <room> <start|stop>");
+            return;
+        }
 
         String channel = arguments.get(0);
         if (channel.equals(engine.channel)) {
@@ -65,7 +68,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
             return;
         }
 
-        if ("count".equals(cmd)){
+        if ("count".equals(cmd)) {
             int activeCount = executorService.getActiveCount();
             long completedTaskCount = executorService.getCompletedTaskCount();
             long taskCount = executorService.getTaskCount();
@@ -89,8 +92,6 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
                 executorService.scheduleWithFixedDelay(() -> joinChannel(channel, null), initialDelay, Long.parseLong(delay), TimeUnit.SECONDS);
                 System.out.println("Started miner, initial delay: " + initialDelay + ", room: " + channel + ", delay: " + delay);
             }
-
-
         } else if ("stop".equals(cmd)) {
             executorService.shutdownNow();
             System.out.println("Stopped mining, room: " + channel);
@@ -101,7 +102,23 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+        }
 
+        executorServiceTaskChecker.scheduleWithFixedDelay(MineTripCommandImpl::check, 1, 5, TimeUnit.SECONDS);
+    }
+
+    private static void check() {
+        try {
+            for (Future<?> task : tasks) {
+                if (task.isDone()) {
+                    Object o = task.get();
+                    System.out.println("mined successfully: " + o);
+                }
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            System.out.println("Caught: " + e);
         }
     }
 
@@ -123,7 +140,12 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
         Listener listener = new MinerListenerImpl(mineBot);
         mineBot.setOnlineSetListener(listener);
 
-        mineBot.start(proxyDto);
+        try {
+            mineBot.start(proxyDto);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
 }

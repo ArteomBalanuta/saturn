@@ -34,14 +34,14 @@ public class Connection {
             
             @Override
             public void onClose(int i, String s, boolean b) {
-                System.out.println("Server closed the connection: " + i + " " + s);
+                if (i != 1000) {
+                    System.out.println("Server closed the connection: " + i + " " + s);
+                }
             }
             
             @Override
             public void onError(Exception e) {
-                System.out.println("Error");
-                e.printStackTrace();
-                engine.stop();
+//                e.printStackTrace();
             }
         };
 
@@ -75,7 +75,6 @@ public class Connection {
                 throw new RuntimeException(e);
             }
         }
-        client.connect();
     }
     
     public void write(String message)  {
@@ -84,5 +83,9 @@ public class Connection {
     
     public void close() {
         client.close();
+    }
+
+    public void start() throws InterruptedException {
+        client.connectBlocking();
     }
 }

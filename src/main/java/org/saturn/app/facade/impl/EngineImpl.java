@@ -85,13 +85,15 @@ public class EngineImpl extends Base implements Engine {
         super.setNick(nick);
     }
 
-
     @Override
     public void start() {
         try {
             hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), null, this);
+            hcConnection.start();
         } catch (URISyntaxException e) {
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -99,16 +101,19 @@ public class EngineImpl extends Base implements Engine {
     public void start(Proxy proxy) {
         try {
             hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), proxy, this);
+            hcConnection.start();
         } catch (URISyntaxException e) {
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
-    
+
     public void sendJoinMessage() {
         String joinPayload = String.format(JOIN_JSON, channel, nick, password);
         hcConnection.write(joinPayload);
     }
-    
+
     public void shareMessages() {
         if (!outgoingMessageQueue.isEmpty()) {
             String chatPayload = String.format(CHAT_JSON, outgoingMessageQueue.poll());
@@ -118,6 +123,7 @@ public class EngineImpl extends Base implements Engine {
             flushMessage(outgoingRawMessageQueue.poll());
         }
     }
+
     public void flushMessage(String message) {
         if (hcConnection == null && message != null) {
             System.out.println("Connection has been closed, couldn't deliver: " + message);
@@ -125,6 +131,7 @@ public class EngineImpl extends Base implements Engine {
         }
         hcConnection.write(message);
     }
+
     @Override
     public void stop() {
         try {
@@ -137,34 +144,38 @@ public class EngineImpl extends Base implements Engine {
     }
 
     public void dispatchMessage(String jsonText) {
-        String cmd = getCmdFromJson(jsonText);
-        switch (cmd) {
-            case "join": {
-                break;
+        try {
+            String cmd = getCmdFromJson(jsonText);
+            switch (cmd) {
+                case "join": {
+                    break;
+                }
+                case "onlineSet": {
+                    onlineSetListener.notify(jsonText);
+                    break;
+                }
+                case "onlineAdd": {
+                    userJoinedListener.notify(jsonText);
+                    break;
+                }
+                case "onlineRemove": {
+                    userLeftListener.notify(jsonText);
+                    break;
+                }
+                case "chat": {
+                    chatMessageListener.notify(jsonText);
+                    break;
+                }
+                case "info": {
+                    infoMessageListener.notify(jsonText);
+                    break;
+                }
+                default:
+                    System.out.printf("Text payload: %s \n", jsonText);
+                    break;
             }
-            case "onlineSet": {
-                onlineSetListener.notify(jsonText);
-                break;
-            }
-            case "onlineAdd": {
-                userJoinedListener.notify(jsonText);
-                break;
-            }
-            case "onlineRemove": {
-                userLeftListener.notify(jsonText);
-                break;
-            }
-            case "chat": {
-                chatMessageListener.notify(jsonText);
-                break;
-            }
-            case "info": {
-                infoMessageListener.notify(jsonText);
-                break;
-            }
-            default:
-                System.out.printf("Text payload: %s \n", jsonText);
-                break;
+        } catch (Exception e) {
+            System.out.println("Something went wrong: " + e);
         }
     }
 
@@ -175,9 +186,9 @@ public class EngineImpl extends Base implements Engine {
 
     public void proceedBanned(User user) {
         logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "JOINED", getTimestampNow());
-        
+
         boolean isBanned = modService.isBanned(user);
-        
+
         System.out.println("isBanned: " + isBanned);
         if (isBanned) {
             logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "is banned", getTimestampNow());
@@ -185,7 +196,7 @@ public class EngineImpl extends Base implements Engine {
             this.removeActiveUser(user.getNick());
         }
     }
-    
+
     public void removeActiveUser(String leftUser) {
         for (User user : currentChannelUsers) {
             if (leftUser.equals(user.getNick())) {
@@ -195,7 +206,7 @@ public class EngineImpl extends Base implements Engine {
             }
         }
     }
-    
+
     public void addActiveUser(User newUser) {
         logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", getTimestampNow());
         logService.logEvent("user " + newUser.getNick() + " joined channel", "successfully", getTimestampNow());
