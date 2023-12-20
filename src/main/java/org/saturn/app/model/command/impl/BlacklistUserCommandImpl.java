@@ -29,8 +29,6 @@ public class BlacklistUserCommandImpl extends UserCommandBaseImpl {
     public List<String> getArguments() {
         return super.getArguments();
     }
-
-    @Override
     public void execute() {
         engine.modService.listBanned();
     }

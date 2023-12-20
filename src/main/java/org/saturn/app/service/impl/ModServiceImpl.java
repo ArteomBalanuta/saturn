@@ -7,7 +7,6 @@ import org.saturn.app.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -18,11 +17,6 @@ public class ModServiceImpl extends OutService implements ModService {
     public ModServiceImpl(SQLService sqlService, BlockingQueue<String> queue, BlockingQueue<String> rawMessageQueue) {
         super(queue, rawMessageQueue);
         this.sqlService = sqlService;
-    }
-    
-    @Override
-    public void kick(String target) {
-        enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\"}", target));
     }
 
     public AtomicInteger numberOfvotes = new AtomicInteger();
@@ -61,7 +55,29 @@ public class ModServiceImpl extends OutService implements ModService {
         String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", Util.getAuthor(target));
         sqlService.executeSql(sql, false);
     }
-    
+
+    @Override
+    public void lock() {
+        enqueueRawMessageForSending("{ \"cmd\": \"lockroom\"}");
+    }
+
+    @Override
+    public void unlock() {
+        enqueueRawMessageForSending("{ \"cmd\": \"unlockroom\"}");
+    }
+
+
+    @Override
+    public void enableCaptcha() {
+        enqueueRawMessageForSending("{ \"cmd\": \"enablecaptcha\"}");
+    }
+
+    @Override
+    public void disableCaptcha() {
+        enqueueRawMessageForSending("{ \"cmd\": \"disablecaptcha\"}");
+    }
+
+
     @Override
     public void unban(String target) {
         String sql = ":sql DELETE FROM banned WHERE id='?';".replace("?", target);
@@ -77,7 +93,28 @@ public class ModServiceImpl extends OutService implements ModService {
             enqueueMessageForSending("Banned hashes, trips, nicks: " + bannedIds);
         }
     }
-    
+
+    @Override
+    public void unbanAll() {
+        List<String> bannedIds = sqlService.getBannedIds();
+        if (bannedIds.isEmpty()) {
+            enqueueMessageForSending("No users has been banned.");
+        } else {
+            bannedIds.forEach(this::unban);
+            enqueueMessageForSending("Unbanned hashes, trips, nicks: " + bannedIds);
+        }
+    }
+
+    @Override
+    public void kick(String target) {
+        enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\"}", target));
+    }
+
+    @Override
+    public void overflow(String target) {
+        enqueueRawMessageForSending(String.format("{ \"cmd\": \"overflow\", \"nick\": \"%s\"}", target));
+    }
+
     @Override
     public boolean isBanned(User target) {
         if (target == null) {

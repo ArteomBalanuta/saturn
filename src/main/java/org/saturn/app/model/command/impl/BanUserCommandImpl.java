@@ -10,9 +10,10 @@ import java.util.List;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
-@CommandAliases(aliases = {"ban","bb"})
+@CommandAliases(aliases = {"ban", "bb"})
 public class BanUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
+
     public BanUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
         super(message, engine, getAdminTrips(engine));
         super.setAliases(this.getAliases());
@@ -34,6 +35,18 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
         List<String> arguments = getArguments();
 
         String author = super.chatMessage.getNick();
+
+        if (arguments.stream().anyMatch(arg -> arg.equals("-c"))) {
+            String pattern = arguments.get(1);
+            super.engine.getActiveUsers().stream()
+                    .filter(user -> user.getNick().contains(pattern))
+                    .forEach(user -> {
+                        super.engine.getModService().ban(user.getNick(), user.getHash(), user.getTrip());
+                        engine.modService.kick(user.getNick());
+                    });
+            return;
+        }
+
         String target = getBanningUser(arguments);
 
         engine.currentChannelUsers.stream()
@@ -41,7 +54,7 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
                 .findFirst()
                 .ifPresentOrElse(user -> {
                     engine.modService.ban(user.getNick(), user.getTrip(), user.getHash());
-                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + target + "trip: " + user.getTrip() +  " hash: " + user.getHash());
+                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + target + "trip: " + user.getTrip() + " hash: " + user.getHash());
                     engine.modService.kick(target);
                 }, () -> {
                     /* target isn't in the room */
