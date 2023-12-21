@@ -24,21 +24,12 @@ public class NoteServiceImpl extends OutService implements NoteService {
         this.clearNotesByTrip(trip);
         enqueueMessageForSending("@" + author + "'s notes are gone");
     }
-    
+
     public void executeListNotes(String author, String trip) {
         List<String> notes = this.getNotesByTrip(trip);
         enqueueMessageForSending("@" + author + "'s notes: \\n ```Text \\n" + notes.toString() + "\\n```");
     }
-    
-    public void executeAddNote(String trip, String cmd) {
-        String[] args = cmd.split(" ");
-        StringBuilder note = new StringBuilder();
-        for (int i = 1; i < args.length; i++) {
-            note.append(" ").append(args[i]);
-        }
-        this.save(trip, note.toString());
-    }
-    
+
     @Override
     public void save(String trip, String note) {
         try {
