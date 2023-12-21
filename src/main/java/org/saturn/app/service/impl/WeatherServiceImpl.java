@@ -8,7 +8,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.Time;
 import org.saturn.app.model.dto.Weather;
 import org.saturn.app.service.WeatherService;
@@ -19,10 +18,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -44,9 +41,9 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     username: mercury389
      */
     @Override
-    public void executeWeather(String owner, UserCommand userCommand) {
+    public void executeWeather(String owner, List<String> arguments) {
         AtomicReference<String> area = new AtomicReference<>();
-        userCommand.getArguments().stream()
+        arguments.stream()
                 .findFirst()
                 .ifPresent(area::set);
         
@@ -84,13 +81,15 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         Weather.CurrentWeather currentWeather = weather.getCurrent_weather();
         
         String timeZoneUri = String.format("https://timeapi.io/api/Time/current/coordinate?latitude=%s&longitude=%s", lat, lng);
-        String timeZoneResponse = getResponseByURL(timeZoneUri);
-        List<String> timeZones = Arrays.asList(timeZoneResponse.replace("[\"", "").replace("\"]", "").split("\",\""));
-        Optional<String> timeZone = timeZones.stream().filter(z -> z.contains(zone)).findFirst();
-        Time time = null;
-        if (timeZone.isPresent()) {
-            time = getTime(getResponseByURL(timeZoneUri.concat(timeZone.get())));
-        }
+//        String timeZoneResponse = getResponseByURL(timeZoneUri);
+//        List<String> timeZones = Arrays.asList(timeZoneResponse.replace("[\"", "").replace("\"]", "").split("\",\""));
+//        Optional<String> timeZone = timeZones.stream().filter(z -> z.toLowerCase().contains(zone)).findFirst();
+//        Time time = null;
+//        if (timeZone.isPresent()) {
+//
+
+          Time time = getTime(getResponseByURL(timeZoneUri));
+//        }
         
         String message = formatWeather(area.get(), daily, currentWeather, dailyUnits, time);
         
@@ -99,13 +98,13 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     
     private String formatWeather(String area, Weather.Daily daily, Weather.CurrentWeather currentWeather,
                                  Weather.DailyUnits dailyUnits, Time time) {
-        
-        ZonedDateTime zonedDateTime = Instant.ofEpochSecond(tsToSec8601(time.utc_datetime))
-                .atZone(ZoneId.of(time.timezone));
-        ZonedDateTime sunriseDateTime = Instant.ofEpochSecond(tsToSec8601(daily.sunrise.get(0)))
-                .atZone(ZoneId.of(time.timezone));
-        ZonedDateTime sunsetDateTime = Instant.ofEpochSecond(tsToSec8601(daily.sunset.get(0)))
-                .atZone(ZoneId.of(time.timezone));
+
+        ZonedDateTime zonedDateTime = Instant.ofEpochSecond(tsToSec8601(time.dateTime, time.timeZone)).atZone(ZoneId.of(time.timeZone));
+
+        ZonedDateTime sunriseDateTime = Instant.ofEpochSecond(tsToSec8601(daily.sunrise.get(0), null))
+                .atZone(ZoneId.of(time.timeZone));
+        ZonedDateTime sunsetDateTime = Instant.ofEpochSecond(tsToSec8601(daily.sunset.get(0), null))
+                .atZone(ZoneId.of(time.timeZone));
     
         String currentTime = formatTime(zonedDateTime);
         String sunriseTime = formatTime(sunriseDateTime);

@@ -175,6 +175,7 @@ public class EngineImpl extends Base implements Engine {
                     break;
             }
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("Something went wrong: " + e);
         }
     }

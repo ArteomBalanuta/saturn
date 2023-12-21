@@ -37,11 +37,16 @@ public class Util {
         return OffsetDateTime.now(ZoneOffset.UTC).toString();
     }
     
-    public static Long tsToSec8601(String timestamp) {
+    public static Long tsToSec8601(String timestamp, String zoneId) {
         if (timestamp == null) return null;
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
-            sdf.setTimeZone(TimeZone.getTimeZone(ZoneId.of("UTC")));
+            if (zoneId == null) {
+                sdf.setTimeZone(TimeZone.getTimeZone(ZoneId.of("UTC")));
+            } else {
+                sdf.setTimeZone(TimeZone.getTimeZone(ZoneId.of(zoneId)));
+            }
+
             Date dt = sdf.parse(timestamp);
             return dt.getTime() / 1000;
         } catch (ParseException e) {
