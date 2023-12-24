@@ -45,7 +45,7 @@ public class CaptchaCommandImpl extends UserCommandBaseImpl {
             engine.modService.enableCaptcha();
             super.engine.outService.enqueueMessageForSending("Captcha enabled!");
         } else if ("off".equals(argument.get())) {
-            engine.modService.unlock();
+            engine.modService.disableCaptcha();
             super.engine.outService.enqueueMessageForSending("Captcha disabled!");
         }
     }
