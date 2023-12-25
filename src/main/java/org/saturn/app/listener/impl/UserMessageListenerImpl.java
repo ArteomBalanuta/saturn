@@ -4,7 +4,6 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.command.UserCommandBaseImpl;
-import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.List;
@@ -39,6 +38,12 @@ public class UserMessageListenerImpl implements Listener {
 
         /* Mail service check */
         engine.deliverMailIfPresent(message.getNick(), message.getTrip());
+
+        /* Check if user is afk */
+        engine.notifyUserNotAfkAnymore(message.getNick());
+
+        /* notify mentioned user is afk currently */
+        engine.notifyIsAfkIfUserIsMentioned(message.getNick(), message.getText());
 
         String cmd = message.getText().trim();
         if (!cmd.startsWith(engine.prefix)) {

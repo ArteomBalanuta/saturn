@@ -21,7 +21,6 @@ import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.Util.*;
 
 public class EngineImpl extends Base implements Engine {
-
     public List<String> proxies;
     public final CommandFactory commandFactory;
     protected org.saturn.app.facade.impl.Connection hcConnection;
@@ -33,6 +32,8 @@ public class EngineImpl extends Base implements Engine {
     Listener infoMessageListener = new InfoMessageListenerImpl(this);
     Listener connectionListener = new ConnectionListenerImpl(this);
     Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
+
+    public final Set<String> afkUsers = new HashSet<>();
 
     public void setOnlineSetListener(Listener listener) {
         this.onlineSetListener = listener;
@@ -279,6 +280,21 @@ public class EngineImpl extends Base implements Engine {
 //        if (command.is(MSGCHANNEL)) {
 //            executeMsgChannelCmd(trip, command);
 //        }
+
+    public void notifyUserNotAfkAnymore(String author) {
+        if (this.afkUsers.contains(author)) {
+            afkUsers.remove(author);
+            outService.enqueueMessageForSending("@" + author + " isn't afk anymore ");
+        }
+    }
+
+    public void notifyIsAfkIfUserIsMentioned(String author, String messageText) {
+        afkUsers.forEach(user -> {
+            if (messageText.contains(user)) {
+                outService.enqueueMessageForSending("@" + author + ", user: " + user + " is currently away from keyboard!");
+            }
+        });
+    }
 
     public void deliverMailIfPresent(String author, String trip) {
         List<Mail> messages = mailService.getMailByNickOrTrip(getAuthor(author), getAuthor(trip));
