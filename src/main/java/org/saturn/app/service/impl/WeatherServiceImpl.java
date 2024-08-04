@@ -83,7 +83,9 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         Weather.Daily daily = weather.getDaily();
         Weather.DailyUnits dailyUnits = weather.getDaily_units();
         Weather.Hourly hourly = weather.getHourly();
+        Weather.HourlyUnits hourlyUnits = weather.getHourly_units();
         Weather.CurrentWeather currentWeather = weather.getCurrent_weather();
+        Weather.CurrentWeatherUnits currentWeatherUnits = weather.getCurrent_weather_units();
         
         String timeZoneUri = String.format("https://timeapi.io/api/Time/current/coordinate?latitude=%s&longitude=%s", lat, lng);
 //        String timeZoneResponse = getResponseByURL(timeZoneUri);
@@ -96,13 +98,13 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
           Time time = getTime(getResponseByURL(timeZoneUri));
 //        }
         
-        String message = formatWeather(zone + " ," + country, daily, currentWeather, dailyUnits, time, hourly);
+        String message = formatWeather(zone + " ," + country, daily, currentWeather, dailyUnits, time, hourly, hourlyUnits, currentWeatherUnits);
         
         enqueueMessageForSending(message);
     }
     
     private String formatWeather(String area, Weather.Daily daily, Weather.CurrentWeather currentWeather,
-                                 Weather.DailyUnits dailyUnits, Time time, Weather.Hourly hourly) {
+                                 Weather.DailyUnits dailyUnits, Time time, Weather.Hourly hourly, Weather.HourlyUnits hourlyUnits, Weather.CurrentWeatherUnits currentWeatherUnits) {
 
         ZonedDateTime zonedDateTime = Instant.ofEpochSecond(tsToSec8601(time.dateTime, time.timeZone)).atZone(ZoneId.of(time.timeZone));
 
@@ -116,23 +118,23 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         String sunsetTime = formatTime(sunsetDateTime);
     
         return "Weather forecast for today: **" + area + "**\\n\\n" +
-                ">Temperature: " + currentWeather.temperature + " " + dailyUnits.temperature_2m_max + "\\n" +
-                ">Feels temp: " + hourly.apparent_temperature.get(zonedDateTime.getHour()) + "\\n" +
-                ">Wind speed  : " + currentWeather.windspeed + " m/s" + "\\n" +
-                ">Pressure surface: " + hourly.surface_pressure.get(zonedDateTime.getHour()) + "\\n" +
-                ">Pressure sea level: " + hourly.pressure_msl.get(zonedDateTime.getHour()) + " \\r\\n " +
+                ">Temperature: " + currentWeather.temperature + " " + currentWeatherUnits.temperature + "\\n" +
+                ">Feels temp: " + hourly.apparent_temperature.get(zonedDateTime.getHour())  + " " +  hourlyUnits.apparent_temperature + "\\n" +
+                ">Wind speed  : " + currentWeather.windspeed  + " " + currentWeatherUnits.windspeed + "\\n" +
+                ">Pressure surface: " + hourly.surface_pressure.get(zonedDateTime.getHour())  + " " + hourlyUnits.surface_pressure + "\\n" +
+                ">Pressure sea level: " + hourly.pressure_msl.get(zonedDateTime.getHour())  + " " + hourlyUnits.pressure_msl + " \\r\\n " +
                 "\u200B\u200B\u200B \\r\\n" +
-                "UV day max index    : " + daily.uv_index_max.get(0) + "\\n" +
-                "Short wave radiation day sum: " + daily.shortwave_radiation_sum.get(0) + "\\n" +
-                "ShortWave rad: " + hourly.shortwave_radiation.get(zonedDateTime.getHour()) + "\\n" +
-                "Diffuse rad: " + hourly.diffuse_radiation.get(zonedDateTime.getHour()) + "\\n" +
+                "UV day max index    : " + daily.uv_index_max.get(0)  + " " + dailyUnits.uv_index_max + "\\n" +
+                "Short wave radiation day sum: " + daily.shortwave_radiation_sum.get(0)  + " " + dailyUnits.shortwave_radiation_sum + "\\n" +
+                "ShortWave rad: " + hourly.shortwave_radiation.get(zonedDateTime.getHour())  + " " + hourlyUnits.shortwave_radiation + "\\n" +
+                "Diffuse rad: " + hourly.diffuse_radiation.get(zonedDateTime.getHour())  + " " + hourlyUnits.diffuse_radiation + "\\n" +
                 "\u200B\u200B\u200B \\n" +
                 "Time        : " + currentTime + "\\n" +
                 "Sun rise    : " + sunriseTime + "\\n" +
                 "Sun set     : " + sunsetTime + "\\n" +
                 "\u200B\u200B\u200B \\n" +
-                "Soil temp 18cm: " + hourly.soil_temperature_18cm.get(zonedDateTime.getHour()) + "\\n" +
-                "Soil moist 3-9cm: " + hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour()) + "\\n";
+                "Soil temp 18cm: " + hourly.soil_temperature_18cm.get(zonedDateTime.getHour())  + " " + hourlyUnits.soil_temperature_18cm + "\\n" +
+                "Soil moist 3-9cm: " + hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour())  + " " + hourlyUnits.soil_moisture_3_to_9cm + "\\n";
     }
     
 
