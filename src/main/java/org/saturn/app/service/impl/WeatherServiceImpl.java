@@ -48,7 +48,9 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         String zone = zoneB.toString().trim();
 
         String uri = String.format("http://api.geonames.org/search?q=%s&maxRows=1&username=dev1", zone.trim().replace(" ", "%20"));
-        String coordinates = extractCoordinates(getResponseByURL(uri));
+        String body = getResponseByURL(uri);
+        String coordinates = extractCoordinates(body);
+        String country = extractCountryName(body);
         
         String lat = coordinates.split(",")[0];
         String lng = coordinates.split(",")[1];
@@ -94,7 +96,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
           Time time = getTime(getResponseByURL(timeZoneUri));
 //        }
         
-        String message = formatWeather(zone, daily, currentWeather, dailyUnits, time, hourly);
+        String message = formatWeather(zone + " ," + country, daily, currentWeather, dailyUnits, time, hourly);
         
         enqueueMessageForSending(message);
     }
@@ -144,6 +146,10 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         String lng = StringUtils.substringBetween(body, "<lng>", "</lng>");
         
         return lat + "," + lng;
+    }
+
+    private String extractCountryName(String body) {
+        return StringUtils.substringBetween(body, "<countryName>","</countryName>");
     }
     
     private String getResponseByURL(String uri) {
