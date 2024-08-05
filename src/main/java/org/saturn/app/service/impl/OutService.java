@@ -2,7 +2,7 @@ package org.saturn.app.service.impl;
 
 import java.util.concurrent.BlockingQueue;
 
-import static org.saturn.app.util.Util.getTimestampNow;
+import static org.saturn.app.util.DateUtil.getTimestampNow;
 
 public class OutService {
     protected BlockingQueue<String> queue;

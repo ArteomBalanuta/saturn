@@ -12,14 +12,14 @@ import org.saturn.app.service.DataBaseService;
 import org.saturn.app.service.LogService;
 import org.saturn.app.service.impl.DataBaseServiceImpl;
 import org.saturn.app.service.impl.LogServiceImpl;
-import org.saturn.app.util.Util;
+import org.saturn.app.util.DateUtil;
 
 import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newScheduledThreadPool;
-import static org.saturn.app.util.Util.getUTCnow;
+import static org.saturn.app.util.DateUtil.getUtcNow;
 
 public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
@@ -49,7 +49,7 @@ public class ApplicationRunner {
     }
 
     void start() {
-        internalService.logEvent("appStart", "started", Util.getTimestampNow());
+        internalService.logEvent("appStart", "started", DateUtil.getTimestampNow());
         Engine saturn = new EngineImpl(dbConnection.getConnection(), config, true);
         saturn.start();
 
@@ -59,7 +59,7 @@ public class ApplicationRunner {
                     return;
                 }
 
-                System.out.println(getUTCnow() + "Connection is closed.. Restarting the bot in 15 seconds.");
+                System.out.println(getUtcNow() + "Connection is closed.. Restarting the bot in 15 seconds.");
                 saturn.stop();
                 try {
                     Thread.sleep(15_000);

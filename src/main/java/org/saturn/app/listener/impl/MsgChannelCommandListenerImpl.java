@@ -24,7 +24,7 @@ public class MsgChannelCommandListenerImpl implements JoinChannelListener {
 
     @Override
     public void notify(String jsonText) {
-        List<User> users = Util.getUsers(jsonText);
+        List<User> users = Util.extractUsersFromJson(jsonText);
         EngineImpl mainEngine = dto.mainEngine;
         boolean onlyMeOnline = users.stream().allMatch(User::isIsMe);
         if (onlyMeOnline) {

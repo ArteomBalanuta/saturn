@@ -8,7 +8,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.List;
 
-import static org.saturn.app.util.Util.getTimestampNow;
+import static org.saturn.app.util.DateUtil.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
 
 public class UserMessageListenerImpl implements Listener {

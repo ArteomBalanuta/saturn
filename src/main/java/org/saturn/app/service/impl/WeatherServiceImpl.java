@@ -21,11 +21,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.saturn.app.model.dto.Weather.getTime;
-import static org.saturn.app.util.Util.formatTime;
-import static org.saturn.app.util.Util.tsToSec8601;
+import static org.saturn.app.util.DateUtil.formatTime;
+import static org.saturn.app.util.DateUtil.tsToSec8601;
 
 public class WeatherServiceImpl extends OutService implements WeatherService {
     private final Calendar calendar = Calendar.getInstance();

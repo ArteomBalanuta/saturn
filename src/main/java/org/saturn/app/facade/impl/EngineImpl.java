@@ -10,6 +10,7 @@ import org.saturn.app.model.command.factory.CommandFactory;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.util.DateUtil;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
@@ -25,13 +26,13 @@ public class EngineImpl extends Base implements Engine {
     public final CommandFactory commandFactory;
     protected org.saturn.app.facade.impl.Connection hcConnection;
     public final Set<String> subscribers = new HashSet<>();
-    Listener onlineSetListener = new OnlineSetListenerImpl(this);
-    Listener userJoinedListener = new UserJoinedListenerImpl(this);
-    Listener userLeftListener = new UserLeftListenerImpl(this);
-    Listener chatMessageListener = new UserMessageListenerImpl(this);
-    Listener infoMessageListener = new InfoMessageListenerImpl(this);
-    Listener connectionListener = new ConnectionListenerImpl(this);
-    Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
+    private Listener onlineSetListener = new OnlineSetListenerImpl(this);
+    private final Listener userJoinedListener = new UserJoinedListenerImpl(this);
+    private final Listener userLeftListener = new UserLeftListenerImpl(this);
+    private final Listener chatMessageListener = new UserMessageListenerImpl(this);
+    private final Listener infoMessageListener = new InfoMessageListenerImpl(this);
+    private final Listener connectionListener = new ConnectionListenerImpl(this);
+    private final Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
     public final Set<String> afkUsers = new HashSet<>();
 
@@ -146,7 +147,7 @@ public class EngineImpl extends Base implements Engine {
 
     public void dispatchMessage(String jsonText) {
         try {
-            String cmd = getCmdFromJson(jsonText);
+            String cmd = extractCmdFromJson(jsonText);
             switch (cmd) {
                 case "join": {
                     break;
@@ -187,13 +188,13 @@ public class EngineImpl extends Base implements Engine {
     }
 
     public void proceedBanned(User user) {
-        logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "JOINED", getTimestampNow());
+        logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "JOINED", DateUtil.getTimestampNow());
 
         boolean isBanned = modService.isBanned(user);
 
         System.out.println("isBanned: " + isBanned);
         if (isBanned) {
-            logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "is banned", getTimestampNow());
+            logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "is banned", DateUtil.getTimestampNow());
             modService.kick(user.getNick());
             this.removeActiveUser(user.getNick());
         }
@@ -203,15 +204,15 @@ public class EngineImpl extends Base implements Engine {
         for (User user : currentChannelUsers) {
             if (leftUser.equals(user.getNick())) {
                 currentChannelUsers.remove(user);
-                logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", getTimestampNow());
-                logService.logEvent("user " + leftUser + " left channel", "", getTimestampNow());
+                logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", DateUtil.getTimestampNow());
+                logService.logEvent("user " + leftUser + " left channel", "", DateUtil.getTimestampNow());
             }
         }
     }
 
     public void addActiveUser(User newUser) {
-        logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", getTimestampNow());
-        logService.logEvent("user " + newUser.getNick() + " joined channel", "successfully", getTimestampNow());
+        logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", DateUtil.getTimestampNow());
+        logService.logEvent("user " + newUser.getNick() + " joined channel", "successfully", DateUtil.getTimestampNow());
         currentChannelUsers.add(newUser);
     }
 
@@ -325,7 +326,7 @@ public class EngineImpl extends Base implements Engine {
     private String mailToStrings(List<Mail> messages) {
         StringBuilder whisperStrings = new StringBuilder();
         messages.forEach(mail -> {
-            String row = formatZone(mail.createdDate, "UTC") + " " + mail.owner + ": " + mail.message + "\\n";
+            String row = DateUtil.formatZone(mail.createdDate, "UTC") + " " + mail.owner + ": " + mail.message + "\\n";
             whisperStrings.append(row);
         });
 

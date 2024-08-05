@@ -6,7 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-import static org.saturn.app.util.Util.formatZoneUTC;
+import static org.saturn.app.util.DateUtil.formatZoneUTC;
 
 public class LogServiceImpl implements LogService {
     private final boolean isSql;
