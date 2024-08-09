@@ -12,6 +12,8 @@ public interface Engine {
 
     void stop();
 
+    boolean isConnected();
+
     void setBaseWsUrl(String address);
 
     void setChannel(String channel);

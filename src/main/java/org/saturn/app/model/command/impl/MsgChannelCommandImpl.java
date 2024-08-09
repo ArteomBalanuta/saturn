@@ -63,7 +63,7 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
             outService.enqueueMessageForSending(formatMessage(message.toString()));
         } else {
             /* JoinChannelListener will make sure to close the connection */
-            EngineImpl slaveEngine = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
+            EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), false); // no db connection, nor config for this one is required
             setupListBot(channel, slaveEngine);
 
             JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));

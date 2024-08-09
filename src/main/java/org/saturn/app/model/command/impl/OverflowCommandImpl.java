@@ -36,15 +36,11 @@ public class OverflowCommandImpl extends UserCommandBaseImpl {
         List<String> arguments = getArguments();
 
         if (arguments.isEmpty()) {
-            engine.modService.lock();
-        }
-
-        Optional<String> argument = arguments.stream().findFirst();
-        if (argument.isEmpty()) {
             super.engine.outService.enqueueMessageForSending("Victim nick isn't set! Example: shoot @_");
             return;
         }
 
+        Optional<String> argument = arguments.stream().findFirst();
         String target = argument.get().replace("@", "");
         engine.modService.overflow(target);
     }

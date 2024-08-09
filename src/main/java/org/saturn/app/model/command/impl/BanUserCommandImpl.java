@@ -7,6 +7,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
@@ -33,7 +34,6 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         List<String> arguments = getArguments();
-
         String author = super.chatMessage.getNick();
 
         if (arguments.stream().anyMatch(arg -> arg.equals("-c"))) {

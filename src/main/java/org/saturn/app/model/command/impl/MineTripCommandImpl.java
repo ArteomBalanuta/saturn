@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
@@ -23,7 +24,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
     private static final List<Future<?>> tasks = new ArrayList<>();
     private final List<String> aliases = new ArrayList<>();
 
-    private final HashMap<String, Proxy> portMappedByIp = new HashMap<>();
+    private static final HashMap<String, Proxy> portMappedByIp = new HashMap<>();
 
     private static final ScheduledThreadPoolExecutor executorServiceTaskChecker = new ScheduledThreadPoolExecutor(1);
 
@@ -32,7 +33,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
         super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
 
-        if (this.engine.proxies != null && this.engine.proxies.size() > 0) {
+        if (this.engine.proxies != null && !this.engine.proxies.isEmpty()) {
             this.engine.proxies.stream()
                     .map(proxy -> new Proxy(false, proxy.split(":")[0], proxy.split(":")[1]))
                     .forEach(p -> portMappedByIp.put(p.getIp(), p));
@@ -123,7 +124,8 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
     }
 
     private void joinChannel(String channel, Proxy proxyDto) {
-        EngineImpl mineBot = new EngineImpl(null, null, false);
+        Configuration config = super.engine.getConfig();
+        EngineImpl mineBot = new EngineImpl(null, config, false);
 
         mineBot.isMain = false;
         mineBot.setChannel(channel);

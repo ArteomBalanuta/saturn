@@ -23,7 +23,7 @@ public class ListCommandListenerImpl implements JoinChannelListener {
 
     @Override
     public void notify(String jsonText) {
-        List<User> users = Util.getUsers(jsonText);
+        List<User> users = Util.extractUsersFromJson(jsonText);
         boolean onlyMeOnline = users.stream().allMatch(User::isIsMe);
         if (onlyMeOnline) {
             dto.mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + dto.channel + " is empty");

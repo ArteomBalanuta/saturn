@@ -88,4 +88,12 @@ public class Connection {
     public void start() throws InterruptedException {
         client.connectBlocking();
     }
+
+    public void startNonBlocking() throws InterruptedException {
+        client.connect();
+    }
+
+    public boolean isConnected() {
+        return client.isOpen();
+    }
 }

@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 public class MinerListenerImpl implements Listener {
 
-    public String fileName = "D:\\workspace\\projects\\saturn\\trips.txt";
+    public String fileName = "trips.txt";
     @Override
     public String getListenerName() {
         return "minerChannelListener";
@@ -28,7 +28,7 @@ public class MinerListenerImpl implements Listener {
 
     @Override
     public void notify(String jsonText) {
-        List<User> users = Util.getUsers(jsonText);
+        List<User> users = Util.extractUsersFromJson(jsonText);
         if (engine.isMain) {
             engine.stop();
             throw new RuntimeException("Shouldn't be used with main threat!");

@@ -7,9 +7,8 @@ import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 
 import java.util.Arrays;
-import java.util.List;
 
-import static org.saturn.app.util.Util.getTimestampNow;
+import static org.saturn.app.util.DateUtil.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
 
 public class OnlineSetListenerImpl implements Listener {

@@ -19,7 +19,7 @@ import static org.saturn.app.util.Constants.THREAD_NUMBER;
 
 public abstract class Base {
     protected List<UserCommand> enabledUserCommands = new ArrayList<>();
-    protected String baseWsURL = "wss://hack.chat/chat-ws";
+    protected String baseWsURL;
     public String proxies;
     public boolean isMain;
     public String prefix;
@@ -29,6 +29,7 @@ public abstract class Base {
     public String isSql;
     public String userTrips;
     public String adminTrips;
+    public String dbPath;
 
     public final OutService outService;
     public final LogService logService;
@@ -79,17 +80,27 @@ public abstract class Base {
         this.isMain = isMain;
         this.config = config;
 
-        if (isMain && config != null) {
-            this.isSql = config.getString("isSql");
+        if (isMain && config == null) {
+            throw new RuntimeException("Configuration isn't set for main thread.");
+        }
+
+        /* master */
+        if (isMain) {
+            this.isSql = config.getString("isSqlEnabled");
             this.prefix = config.getString("cmdPrefix");
             this.channel = config.getString("channel");
             this.nick = config.getString("nick");
             this.password = config.getString("trip");
             this.userTrips = config.getString("userTrips");
             this.adminTrips = config.getString("adminTrips");
+            this.dbPath = config.getString("dbPath");
+            this.baseWsURL = config.getString("wsUrl");
+            this.proxies = config.getString("proxies");
         }
 
-        if (config != null) {
+        /* slave */
+        if (!isMain && config != null) {
+            this.baseWsURL = config.getString("wsUrl");
             this.proxies = config.getString("proxies");
         }
 

@@ -4,7 +4,7 @@ import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.MailService;
-import org.saturn.app.util.Util;
+import org.saturn.app.util.DateUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -57,7 +57,7 @@ public class MailServiceImpl extends OutService implements MailService {
             insertMessage.setString(3, message);
             insertMessage.setString(4, "PENDING");
             insertMessage.setString(5, isWhisper);
-            insertMessage.setLong(6, Util.getTimestampNow());
+            insertMessage.setLong(6, DateUtil.getTimestampNow());
             
             insertMessage.executeUpdate();
             

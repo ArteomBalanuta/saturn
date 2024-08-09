@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.impl.ListCommandListenerImpl;
@@ -63,7 +64,8 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
     }
 
     private void joinChannel(String author, String channel) {
-        EngineImpl slaveEngine = new EngineImpl(null, null, false); // no db connection, nor config for this one is needed
+        Configuration main = super.engine.getConfig();
+        EngineImpl slaveEngine = new EngineImpl(null, main, false); // no db connection, nor config for this one is needed
         setupEngine(channel, slaveEngine);
 
         JoinChannelListener onlineSetListener = new ListCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));

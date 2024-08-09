@@ -7,6 +7,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
@@ -33,7 +34,10 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         List<String> arguments = getArguments();
+        arguments = arguments.stream().map(arg -> arg.replace("@","")).collect(Collectors.toList());
+
         String firstArg = arguments.get(0);
+
         if ("-m".equals(firstArg)) {
             for (int i = 1; i < arguments.size(); i++) {
                 super.engine.getModService().kick(arguments.get(i));

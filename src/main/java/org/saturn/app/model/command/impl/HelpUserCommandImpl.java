@@ -53,6 +53,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u200B mail,msg <nick> <text>\u200B - sends a message to <nick> \\n" +
                     "\u200B info,i <nick>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - whispers back user's trip, hash \\n" +
                     "\u200B list <channel_name>\u200B \u200B \u200B \u200B - prints hash,trip,nicks of users in the channel\\n" +
+                    "\u200B weather <city>\u200B \u200B \u200B \u200B - some weather data\\n" +
                     "\u200B \\n" +
                     "Whitelisted user commands:\\n" +
                     "\u200B kick,k <nick>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - kicks the user \\n" +
@@ -61,7 +62,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u200B sql <SQL>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - executes the sql against bot\'s database\\n" +
                     "\u200B \\n" +
                     "Whisper supported commands (input, output is whispered):\\n" +
-                    "\u200B /whisper @orangesun mail,msg <nick> <text> - sends a message to <nick> \\n" +
+                    "\u200B /whisper @orangesun [mail,msg] <nick> <text> - sends a message to <nick> \\n" +
                     "\u200B \\n" +
                     "Examples: \\n" +
                     "\u200B %slist programming \\n" +

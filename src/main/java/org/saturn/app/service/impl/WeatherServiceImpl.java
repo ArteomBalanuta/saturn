@@ -21,11 +21,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.saturn.app.model.dto.Weather.getTime;
-import static org.saturn.app.util.Util.formatTime;
-import static org.saturn.app.util.Util.tsToSec8601;
+import static org.saturn.app.util.DateUtil.formatTime;
+import static org.saturn.app.util.DateUtil.tsToSec8601;
 
 public class WeatherServiceImpl extends OutService implements WeatherService {
     private final Calendar calendar = Calendar.getInstance();
@@ -42,15 +41,15 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
      */
     @Override
     public void executeWeather(String owner, List<String> arguments) {
-        AtomicReference<String> area = new AtomicReference<>();
-        arguments.stream()
-                .findFirst()
-                .ifPresent(area::set);
-        
-        String zone = area.toString().trim();
-        
-        String uri = String.format("http://api.geonames.org/search?q=%s&maxRows=1&username=dev1", zone);
-        String coordinates = extractCoordinates(getResponseByURL(uri));
+        StringBuilder zoneB = new StringBuilder();
+        arguments.forEach(a -> zoneB.append(" ").append(a));
+
+        String zone = zoneB.toString().trim();
+
+        String uri = String.format("http://api.geonames.org/search?q=%s&maxRows=1&username=dev1", zone.trim().replace(" ", "%20"));
+        String body = getResponseByURL(uri);
+        String coordinates = extractCoordinates(body);
+        String country = extractCountryName(body);
         
         String lat = coordinates.split(",")[0];
         String lng = coordinates.split(",")[1];
@@ -63,10 +62,14 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
                 "&longitude=%s" +
                 "&current_weather=true" +
                 "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset," +
-                "winddirection_10m_dominant,shortwave_radiation_sum,uv_index_max,uv_index_clear_sky_max" +
+                "winddirection_10m_dominant,shortwave_radiation_sum,uv_index_max,uv_index_clear_sky_max,weather_code" +
+                "&hourly=pressure_msl,surface_pressure,soil_temperature_18cm,soil_moisture_3_to_9cm,visibility,diffuse_radiation,shortwave_radiation,apparent_temperature" +
                 "&timezone=GMT" +
                 "&start_date=%s" +
-                "&end_date=%s", lat, lng, curr_date, curr_date);
+                "&end_date=%s"
+                , lat, lng, curr_date, curr_date);
+
+        System.out.println("Curling: " + weatherApi);
         
         String response = getResponseByURL(weatherApi);
         
@@ -78,7 +81,10 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
          */
         Weather.Daily daily = weather.getDaily();
         Weather.DailyUnits dailyUnits = weather.getDaily_units();
+        Weather.Hourly hourly = weather.getHourly();
+        Weather.HourlyUnits hourlyUnits = weather.getHourly_units();
         Weather.CurrentWeather currentWeather = weather.getCurrent_weather();
+        Weather.CurrentWeatherUnits currentWeatherUnits = weather.getCurrent_weather_units();
         
         String timeZoneUri = String.format("https://timeapi.io/api/Time/current/coordinate?latitude=%s&longitude=%s", lat, lng);
 //        String timeZoneResponse = getResponseByURL(timeZoneUri);
@@ -91,13 +97,13 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
           Time time = getTime(getResponseByURL(timeZoneUri));
 //        }
         
-        String message = formatWeather(area.get(), daily, currentWeather, dailyUnits, time);
+        String message = formatWeather(zone + " ," + country, daily, currentWeather, dailyUnits, time, hourly, hourlyUnits, currentWeatherUnits);
         
         enqueueMessageForSending(message);
     }
     
     private String formatWeather(String area, Weather.Daily daily, Weather.CurrentWeather currentWeather,
-                                 Weather.DailyUnits dailyUnits, Time time) {
+                                 Weather.DailyUnits dailyUnits, Time time, Weather.Hourly hourly, Weather.HourlyUnits hourlyUnits, Weather.CurrentWeatherUnits currentWeatherUnits) {
 
         ZonedDateTime zonedDateTime = Instant.ofEpochSecond(tsToSec8601(time.dateTime, time.timeZone)).atZone(ZoneId.of(time.timeZone));
 
@@ -111,14 +117,23 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         String sunsetTime = formatTime(sunsetDateTime);
     
         return "Weather forecast for today: **" + area + "**\\n\\n" +
-                ">Temperature: " + currentWeather.temperature + " " + dailyUnits.temperature_2m_max + "\\n" +
-                "Wind speed  : " + currentWeather.windspeed + " m/s" + "\\n" +
-                "UV index    : " + daily.uv_index_max.get(0) + "\\n" +
-                "Short wave radiation sum: " + daily.shortwave_radiation_sum.get(0) + "\\n" +
-                " \\n" +
+                ">Temperature: " + currentWeather.temperature + " " + currentWeatherUnits.temperature + "\\n" +
+                ">Feels temp: " + hourly.apparent_temperature.get(zonedDateTime.getHour())  + " " +  hourlyUnits.apparent_temperature + "\\n" +
+                ">Wind speed  : " + currentWeather.windspeed  + " " + currentWeatherUnits.windspeed + "\\n" +
+                ">Pressure surface: " + hourly.surface_pressure.get(zonedDateTime.getHour())  + " " + hourlyUnits.surface_pressure + "\\n" +
+                ">Pressure sea level: " + hourly.pressure_msl.get(zonedDateTime.getHour())  + " " + hourlyUnits.pressure_msl + " \\r\\n " +
+                "\u200B\u200B\u200B \\r\\n" +
+                "UV day max index    : " + daily.uv_index_max.get(0)  + " " + dailyUnits.uv_index_max + "\\n" +
+                "Short wave radiation day sum: " + daily.shortwave_radiation_sum.get(0)  + " " + dailyUnits.shortwave_radiation_sum + "\\n" +
+                "ShortWave rad: " + hourly.shortwave_radiation.get(zonedDateTime.getHour())  + " " + hourlyUnits.shortwave_radiation + "\\n" +
+                "Diffuse rad: " + hourly.diffuse_radiation.get(zonedDateTime.getHour())  + " " + hourlyUnits.diffuse_radiation + "\\n" +
+                "\u200B\u200B\u200B \\n" +
                 "Time        : " + currentTime + "\\n" +
-                "Sun rise    : " + sunriseTime + " \\n" +
-                "Sun set     : " + sunsetTime;
+                "Sun rise    : " + sunriseTime + "\\n" +
+                "Sun set     : " + sunsetTime + "\\n" +
+                "\u200B\u200B\u200B \\n" +
+                "Soil temp 18cm: " + hourly.soil_temperature_18cm.get(zonedDateTime.getHour())  + " " + hourlyUnits.soil_temperature_18cm + "\\n" +
+                "Soil moist 3-9cm: " + hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour())  + " " + hourlyUnits.soil_moisture_3_to_9cm + "\\n";
     }
     
 
@@ -132,6 +147,10 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         String lng = StringUtils.substringBetween(body, "<lng>", "</lng>");
         
         return lat + "," + lng;
+    }
+
+    private String extractCountryName(String body) {
+        return StringUtils.substringBetween(body, "<countryName>","</countryName>");
     }
     
     private String getResponseByURL(String uri) {

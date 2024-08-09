@@ -10,36 +10,33 @@ import java.sql.SQLException;
 
 public class DataBaseServiceImpl implements DataBaseService {
     private String databasePath;
-    private final Connection connection;
+    private Connection connection;
 
-    public DataBaseServiceImpl() {
+    public DataBaseServiceImpl(String path) {
         try {
-            /* TODO: fix */
-            this.databasePath = new File(
-                    ApplicationRunner.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile()
-                            .toPath().toString().concat("\\hackchat.db");
-//             this.databasePath = "/home/ab/workspace/projects/saturn/hackchat.db";
+            validateDbPath(path);
+            this.databasePath = path;
+            this.connection = setUpConnection();
         } catch (Exception e) {
             e.printStackTrace();
+            System.exit(1);
         }
+    }
 
-        this.connection = setUpConnection();
+    protected void validateDbPath(String path) {
+        File file = new File(path);
+        if (!file.exists()) {
+            throw new RuntimeException("Can't find database file: " + path);
+        }
+    }
+
+    private Connection setUpConnection() throws SQLException {
+        return DriverManager.getConnection("jdbc:sqlite:" + databasePath);
     }
 
     @Override
     public Connection getConnection() {
         return this.connection;
-    }
-
-    private Connection setUpConnection() {
-        Connection connection = null;
-        try {
-            connection = DriverManager.getConnection("jdbc:sqlite:" + databasePath);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-        return connection;
     }
 
 }
