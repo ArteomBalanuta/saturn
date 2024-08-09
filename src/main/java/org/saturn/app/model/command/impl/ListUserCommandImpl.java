@@ -63,7 +63,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         }
     }
 
-    private void joinChannel(String author, String channel) {
+    public void joinChannel(String author, String channel) {
         Configuration main = super.engine.getConfig();
         EngineImpl slaveEngine = new EngineImpl(null, main, false); // no db connection, nor config for this one is needed
         setupEngine(channel, slaveEngine);
@@ -81,7 +81,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         outService.enqueueMessageForSending("@" + author + "\\nUsers online: \\n" + output + "\\n");
     }
 
-    private void setupEngine(String channel, EngineImpl listBot) {
+    public void setupEngine(String channel, EngineImpl listBot) {
         listBot.isMain = false;
         listBot.setChannel(channel);
         int length = 8;

@@ -7,6 +7,8 @@ public class JoinChannelListenerDto {
     public EngineImpl slaveEngine;
     public String author;
     public String channel;
+    public String target;
+    public String destinationRoom;
 
     public JoinChannelListenerDto(EngineImpl engine, EngineImpl slaveEngine, String author, String channel) {
         this.mainEngine = engine;
