@@ -12,38 +12,41 @@ import org.saturn.app.service.SearchService;
 
 import java.io.IOException;
 
+/* TODO: impl the cmd */
 public class SearchServiceImpl implements SearchService {
-    public SearchServiceImpl() {
+  public SearchServiceImpl() {}
+
+  // https://api.duckduckgo.com/?q=aloha%20wiki&format=json&pretty=1
+
+  @Override
+  public String search(String string) {
+    CloseableHttpClient httpClient = HttpClients.createDefault();
+
+    String uri =
+        String.format(
+            "https://api.duckduckgo.com/?q=%s&format=json&pretty=1", string.replace(" ", "%20"));
+    HttpGet request = new HttpGet(uri);
+
+    // add request headers
+    request.addHeader(HttpHeaders.USER_AGENT, "Firefox 59.9.0, HC");
+
+    try (CloseableHttpResponse response = httpClient.execute(request)) {
+      String result = null;
+      HttpEntity entity = response.getEntity();
+      if (entity != null) {
+        // return it as a String
+        result = EntityUtils.toString(entity);
+      }
+
+      if (response.getStatusLine().getStatusCode() != 200) {
+        result = "Please pay for the service requested.";
+      }
+
+      return StringEscapeUtils.escapeJson(result);
+    } catch (IOException e) {
+      e.printStackTrace();
     }
-    // https://api.duckduckgo.com/?q=aloha%20wiki&format=json&pretty=1
 
-    @Override
-    public String search(String string) {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-
-        String uri = String.format("https://api.duckduckgo.com/?q=%s&format=json&pretty=1", string.replace(" ", "%20"));
-        HttpGet request = new HttpGet(uri);
-
-        // add request headers
-        request.addHeader(HttpHeaders.USER_AGENT, "Firefox 59.9.0, HC");
-
-        try (CloseableHttpResponse response = httpClient.execute(request)) {
-            String result = null;
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                // return it as a String
-                result = EntityUtils.toString(entity);
-            }
-
-            if (response.getStatusLine().getStatusCode() != 200) {
-                result = "Please pay for the service requested.";
-            }
-
-            return StringEscapeUtils.escapeJson(result).toString();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
+    return null;
+  }
 }

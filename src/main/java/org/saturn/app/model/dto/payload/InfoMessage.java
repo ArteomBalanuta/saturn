@@ -1,65 +1,74 @@
 package org.saturn.app.model.dto.payload;
 
 public class InfoMessage {
-    /*
-        {"cmd":"info","text":"mercury is now test","channel":"programming","time":1680860867786}
-    */
-    private String info;
-    private String text;
-    private String channel;
-    private String from;
-    private String trip;
+  /*
+      {"cmd":"info","text":"mercury is now test","channel":"programming","time":1680860867786}
+  */
+  private String info;
+  private String text;
+  private String channel;
+  private String from;
+  private String trip;
+  private String json;
 
-    public String getTrip() {
-        return trip;
-    }
+  public String getJson() {
+    return json;
+  }
 
-    public void setTrip(String trip) {
-        this.trip = trip;
-    }
+  public void setJson(String json) {
+    this.json = json;
+  }
 
-    public String getFrom() {
-        return from;
-    }
+  public String getTrip() {
+    return trip;
+  }
 
-    public void setFrom(String from) {
-        this.from = from;
-    }
+  public void setTrip(String trip) {
+    this.trip = trip;
+  }
 
-    public InfoMessage(String info, String text, String channel, String from) {
-        this.info = info;
-        this.text = text;
-        this.channel = channel;
-        this.from = from;
-    }
+  public String getFrom() {
+    return from;
+  }
 
-    public String getInfo() {
-        return info;
-    }
+  public void setFrom(String from) {
+    this.from = from;
+  }
 
-    public void setInfo(String info) {
-        this.info = info;
-    }
+  public InfoMessage(String info, String text, String channel, String from) {
+    this.info = info;
+    this.text = text;
+    this.channel = channel;
+    this.from = from;
+  }
 
-    public String getText() {
-        return text;
-    }
+  public String getInfo() {
+    return info;
+  }
 
-    public void setText(String text) {
-        this.text = text;
-    }
+  public void setInfo(String info) {
+    this.info = info;
+  }
 
-    public String getChannel() {
-        return channel;
-    }
+  public String getText() {
+    return text.replace("\n", "\\n");
+  }
 
-    public void setChannel(String channel) {
-        this.channel = channel;
-    }
+  public void setText(String text) {
+    this.text = text;
+  }
 
-    public InfoMessage(String info, String text, String channel) {
-        this.info = info;
-        this.text = text;
-        this.channel = channel;
-    }
+  public String getChannel() {
+    return channel;
+  }
+
+  public void setChannel(String channel) {
+    this.channel = channel;
+  }
+
+  public InfoMessage(String info, String text, String channel) {
+    this.info = info;
+    this.text = text;
+    this.channel = channel;
+  }
 }

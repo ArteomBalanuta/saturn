@@ -1,73 +1,160 @@
 package org.saturn;
 
-import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.configuration2.FileBasedConfiguration;
-import org.apache.commons.configuration2.PropertiesConfiguration;
-import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
-import org.apache.commons.configuration2.builder.fluent.Parameters;
-import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.saturn.app.facade.Engine;
+import com.moandjiezana.toml.Toml;
+import lombok.extern.slf4j.Slf4j;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.service.DataBaseService;
-import org.saturn.app.service.LogService;
 import org.saturn.app.service.impl.DataBaseServiceImpl;
-import org.saturn.app.service.impl.LogServiceImpl;
-import org.saturn.app.util.DateUtil;
 
-import java.util.Objects;
+import java.io.File;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newScheduledThreadPool;
-import static org.saturn.app.util.DateUtil.getUtcNow;
 
+@Slf4j
 public class ApplicationRunner {
-    private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
+  public static ApplicationRunner applicationRunner;
+  private static ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
+  private final DataBaseService dbService;
+  private final Toml config;
+  private static EngineImpl host;
+  private boolean autoReconnectEnabled;
+  private long healthCheckInterval;
 
-    private Configuration config;
-    private final DataBaseService dbConnection;
-    private final LogService internalService;
+  public ApplicationRunner() {
+    File tomlFile = new File("config.toml");
+    this.config = new Toml().read(tomlFile);
 
-    public ApplicationRunner() {
-        Parameters params = new Parameters();
-        FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(PropertiesConfiguration.class)
-                        .configure(params.properties()
-                        .setFileName("application.properties"));
-        try {
-            this.config = builder.getConfiguration();
-        } catch (ConfigurationException e) {
-            e.printStackTrace();
+    try {
+      this.autoReconnectEnabled = config.getBoolean("autoReconnect");
+      this.healthCheckInterval = config.getLong("healthCheckInterval");
+    } catch (Exception e) {
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace", e);
+
+      System.exit(1);
+    }
+
+    this.dbService = new DataBaseServiceImpl(this.config.getString("dbPath"));
+  }
+
+  public static void main(String[] args) {
+    applicationRunner = new ApplicationRunner();
+    log.warn("Running at user dir: {}", System.getProperty("user.dir"));
+    applicationRunner.start();
+
+    // Register a shutdown hook for graceful shutdown
+    Runtime.getRuntime()
+        .addShutdownHook(
+            new Thread(
+                () -> {
+                  log.info("Shutdown initiated... Stopping services.");
+                  applicationRunner.stopApplication();
+                  log.info("Shutdown complete.");
+                }));
+  }
+
+  public void start() {
+    if (autoReconnectEnabled) {
+      log.info("Scheduling health check every: {} minutes", healthCheckInterval);
+      if (healthCheckScheduler.isShutdown()) {
+        healthCheckScheduler = newScheduledThreadPool(1);
+        log.info("Set new scheduler");
+      }
+
+      healthCheckScheduler.scheduleAtFixedRate(
+          this::healthCheck, 0, healthCheckInterval, TimeUnit.MINUTES);
+    } else {
+      log.warn("AutoReconnect is disabled..");
+      log.info("Starting application manually");
+      host = new EngineImpl(dbService.getConnection(), config, EngineType.HOST);
+      /* setting host reference, so each replica can access it through static reference */
+      host.setHostRef(host);
+      host.start();
+    }
+  }
+
+  private void healthCheck() {
+    log.info("Health: performing health check...");
+    try {
+      if (host != null) {
+        if (host.isConnected()) {
+          log.info("Health: Connected");
+          return;
+        } else {
+          log.info("Health: Connection is closed... Restarting the bot.");
         }
 
-        this.dbConnection = new DataBaseServiceImpl(this.config.getString("dbPath"));
-        this.internalService = new LogServiceImpl(this.dbConnection.getConnection(), false);
+        /* try gracefully */
+        host.stop();
+        Thread.sleep(1_000);
+
+        /* nullify the bot */
+        host = null;
+        Thread.sleep(1_000);
+        Runtime.getRuntime().gc();
+      } else {
+        log.warn("Health: Bot is not set");
+      }
+
+      /* reset */
+      host = new EngineImpl(dbService.getConnection(), config, EngineType.HOST);
+      /* setting host reference, so each replica can access it through static reference */
+      host.setHostRef(host);
+      host.start();
+      log.warn("Health: Bot has been restarted");
+    } catch (Exception e) {
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace", e);
+      host = null;
+      Runtime.getRuntime().gc();
+    } finally {
+      log.info("Health: finished checking");
     }
+  }
 
-    public static void main(String[] args) {
-        ApplicationRunner applicationRunner = new ApplicationRunner();
-        applicationRunner.start();
+  // Stop method to gracefully shut down the application
+  public void stopBot() {
+    log.info("Stop: Disconnecting the bot");
+
+    // Stop the host
+    if (host != null) {
+      try {
+        host.stop();
+        Thread.sleep(1_000);
+        host = null;
+        Runtime.getRuntime().gc();
+
+        log.info("Stop: Stopped the bot");
+      } catch (Exception e) {
+        log.error("Error while stopping the bot: ", e);
+      }
+    } else {
+      log.warn("Stop: Engine reference is nullified.");
     }
+  }
 
-    void start() {
-        internalService.logEvent("appStart", "started", DateUtil.getTimestampNow());
-        Engine saturn = new EngineImpl(dbConnection.getConnection(), config, true);
-        saturn.start();
+  public void stopApplication() {
+    log.info("Stop: Stopping the health check scheduler and application..");
 
-        if (Objects.equals(this.config.getString("autoReconnect"), "true")) {
-            healthCheckScheduler.scheduleWithFixedDelay(() -> {
-                if (saturn.isConnected()) {
-                    return;
-                }
+    // Shut down the scheduler
+    healthCheckScheduler.shutdown();
+    try {
+      if (!healthCheckScheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+        log.warn("Stop: Scheduler did not terminate in the specified time. Forcing shutdown...");
+        healthCheckScheduler.shutdownNow();
+      }
+      log.info("Stop: Scheduler stopped.");
 
-                System.out.println(getUtcNow() + "Connection is closed.. Restarting the bot in 15 seconds.");
-                saturn.stop();
-                try {
-                    Thread.sleep(15_000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                saturn.start();
-            }, 0, 15, TimeUnit.SECONDS);
-        }
+      stopBot();
+
+    } catch (InterruptedException e) {
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace", e);
+      Thread.currentThread().interrupt(); // Preserve interrupt status
+      healthCheckScheduler.shutdownNow();
     }
+  }
 }

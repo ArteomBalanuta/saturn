@@ -1,6 +1,6 @@
 package org.saturn.app.service.impl;
 
-import org.saturn.ApplicationRunner;
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.service.DataBaseService;
 
 import java.io.File;
@@ -8,35 +8,39 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+@Slf4j
 public class DataBaseServiceImpl implements DataBaseService {
-    private String databasePath;
-    private Connection connection;
+  private String databasePath;
+  private Connection connection;
 
-    public DataBaseServiceImpl(String path) {
-        try {
-            validateDbPath(path);
-            this.databasePath = path;
-            this.connection = setUpConnection();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
+  public DataBaseServiceImpl(String path) {
+    try {
+      validateDbPath(path);
+      this.databasePath = path;
+      this.connection = setUpConnection();
+    } catch (Exception e) {
+      log.error("Error: {}", e.getMessage());
+      log.error("Stack trace:", e);
+      System.exit(1);
     }
+  }
 
-    protected void validateDbPath(String path) {
-        File file = new File(path);
-        if (!file.exists()) {
-            throw new RuntimeException("Can't find database file: " + path);
-        }
+  protected void validateDbPath(String path) {
+    File file = new File(path);
+    if (!file.exists()) {
+      log.error("Can't find database file, path: {}", path);
+      throw new RuntimeException("No database file present, path: " + path);
     }
+  }
 
-    private Connection setUpConnection() throws SQLException {
-        return DriverManager.getConnection("jdbc:sqlite:" + databasePath);
-    }
+  private Connection setUpConnection() throws SQLException {
+    String jdbcUrl = "jdbc:sqlite:" + databasePath;
+    log.debug("Using JDBC connection string: {}", jdbcUrl);
+    return DriverManager.getConnection(jdbcUrl);
+  }
 
-    @Override
-    public Connection getConnection() {
-        return this.connection;
-    }
-
+  @Override
+  public Connection getConnection() {
+    return this.connection;
+  }
 }

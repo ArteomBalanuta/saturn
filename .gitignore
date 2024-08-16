@@ -9,3 +9,8 @@
 /.vscode/
 hackchat.db
 *.txt
+/saturn.iml
+/hc.log
+/dependency-reduced-pom.xml
+/logs/
+/database/database.db

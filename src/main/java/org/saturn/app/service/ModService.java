@@ -1,32 +1,32 @@
 package org.saturn.app.service;
 
+import org.saturn.app.model.dto.BanRecord;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.model.dto.payload.ChatMessage;
+
+import java.util.Optional;
 
 public interface ModService {
-    void kick(String target);
+  void kick(String target);
+  void kickTo(String target, String channel);
+  void overflow(String target);
+  void shadowBan(BanRecord banDto);
+  void unshadowBan(String target);
+  void unshadowbanAll(String author);
+  void listShadowBanned(ChatMessage chatMessage);
+  void ban(String target);
+  void unban(String target);
+  void unbanAll();
+  void lock();
+  void unlock();
+  void enableCaptcha();
+  void disableCaptcha();
+  void auth(String trip);
+  void deauth(String trip);
+  void mute(String target);
+  void unmute(String hash);
+  void forceFlair(String target, String flair);
+  void forceColor(String target, String hexcolor);
 
-    void overflow(String target);
-    void ban(String target);
-
-    void lock();
-    void unlock();
-
-    default void ban(String... args){
-        for (String arg : args) {
-            this.ban(arg);
-        }
-    }
-
-    void enableCaptcha();
-
-    void disableCaptcha();
-
-    void unban(String target);
-    void listBanned();
-    void vote(String author);
-    void votekick(String nick);
-
-    void unbanAll();
-
-    boolean isBanned(User user);
+  Optional<BanRecord> isShadowBanned(User user);
 }

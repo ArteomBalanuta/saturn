@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO" monitorInterval="5">
+    <Appenders>
+        <RandomAccessFile name="org.saturn" fileName="logs/hc.log" immediateFlush="true">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{instanceType}]  %-5level %logger{36} - %msg%n"/>
+        </RandomAccessFile>
+        <Async name="AsyncFile">
+            <AppenderRef ref="org.saturn"/>
+        </Async>
+
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%X{instanceType}] %-5level %logger{36} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="all">
+            <AppenderRef ref="AsyncFile" level="info"/>
+            <AppenderRef ref="Console" level="info"/>
+        </Root>
+    </Loggers>
+</Configuration>
