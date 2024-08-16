@@ -49,8 +49,10 @@ public class InfoMessageListenerImpl implements Listener {
         engine.logService.logMessage(chatMessage.getTrip(), chatMessage.getNick(), chatMessage.getHash(), chatMessage.getText(), getTimestampNow());
 
         /* empty whitelist */
-        UserCommand userCommand = new UserCommandBaseImpl(chatMessage, engine, List.of());
-        userCommand.execute();
+        chatMessage.setWhisper(true);
+        UserCommandBaseImpl userCommandBase = new UserCommandBaseImpl(chatMessage, engine, List.of());
+
+        ((UserCommand) userCommandBase).execute();
     }
 
     private void processRename(InfoMessage message) {

@@ -22,12 +22,12 @@ public class NoteServiceImpl extends OutService implements NoteService {
     
     public void executeNotesPurge(String author, String trip) {
         this.clearNotesByTrip(trip);
-        enqueueMessageForSending("@" + author + "'s notes are gone");
+        enqueueMessageForSending(author, "'s notes are gone", false);
     }
 
     public void executeListNotes(String author, String trip) {
         List<String> notes = this.getNotesByTrip(trip);
-        enqueueMessageForSending("@" + author + "'s notes: \\n ```Text \\n" + notes.toString() + "\\n```");
+        enqueueMessageForSending(author, "'s notes: \\n ```Text \\n" + notes.toString() + "\\n```", false);
     }
 
     @Override

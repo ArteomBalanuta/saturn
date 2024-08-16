@@ -7,7 +7,6 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
@@ -54,12 +53,12 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
                 .findFirst()
                 .ifPresentOrElse(user -> {
                     engine.modService.ban(user.getNick(), user.getTrip(), user.getHash());
-                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + target + "trip: " + user.getTrip() + " hash: " + user.getHash());
+                    engine.outService.enqueueMessageForSending("","/whisper @" + author + " banned: " + target + "trip: " + user.getTrip() + " hash: " + user.getHash(), false);
                     engine.modService.kick(target);
                 }, () -> {
                     /* target isn't in the room */
                     engine.modService.ban(target);
-                    engine.outService.enqueueMessageForSending("/whisper @" + author + " banned: " + target);
+                    engine.outService.enqueueMessageForSending("","/whisper @" + author + " banned: " + target, false);
                 });
     }
 

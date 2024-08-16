@@ -36,13 +36,13 @@ public class NoteUserCommandImpl extends UserCommandBaseImpl {
         Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
         boolean empty = getArguments().stream().findFirst().isEmpty();
         if (empty) {
-            engine.getOutService().enqueueMessageForSending("note Jedi am I?!");
+            engine.getOutService().enqueueMessageForSending(chatMessage.getNick() + " ", engine.prefix + "note Jedi am I?!", isWhisper());
             return;
         }
 
         trip.ifPresent(s -> engine.noteService.save(s, stringsToString(getArguments())));
 
-        engine.getOutService().enqueueMessageForSending("@" + chatMessage.getNick() + " saved!");
+        engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), " note saved!", isWhisper());
     }
 
     public String stringsToString(List<String> strings) {

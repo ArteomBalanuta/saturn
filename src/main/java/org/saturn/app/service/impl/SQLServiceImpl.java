@@ -103,7 +103,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
             Statement statement = connection.createStatement();
             
             String sql = "select distinct hash,nick from messages where trip = '" + trip + "' limit 15;";
-            if (trip == null || "".equals(trip.trim())) {
+            if (trip == null || trip.trim().isEmpty()) {
                 sql = "select distinct hash, nick from messages where hash = '" + hash + "' limit 15;";
             }
             statement.execute(sql);

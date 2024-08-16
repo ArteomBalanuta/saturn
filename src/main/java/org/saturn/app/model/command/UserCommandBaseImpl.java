@@ -9,7 +9,7 @@ import java.util.List;
 
 import static org.saturn.app.util.Util.toLower;
 
-public class UserCommandBaseImpl implements UserCommand {
+public class UserCommandBaseImpl implements UserCommand  {
     protected final EngineImpl engine;
     protected ChatMessage chatMessage;
     protected final List<String> whiteListedTrips = new ArrayList<>();
@@ -67,7 +67,7 @@ public class UserCommandBaseImpl implements UserCommand {
         List<String> whiteTrips = userCommand.getWhiteTrips();
         boolean isWhitelisted = whiteTrips.contains(chatMessage.getTrip()) || whiteTrips.contains("x");
         if (!isWhitelisted) {
-            this.engine.getOutService().enqueueMessageForSending("Access denied.");
+            this.engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), " Access denied.", isWhisper());
             return false;
         }
         return true;
@@ -86,6 +86,11 @@ public class UserCommandBaseImpl implements UserCommand {
     @Override
     public List<String> getWhiteTrips() {
         return whiteListedTrips;
+    }
+
+    @Override
+    public boolean isWhisper() {
+        return chatMessage.isWhisper();
     }
 }
 

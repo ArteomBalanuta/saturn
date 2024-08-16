@@ -20,8 +20,6 @@ public interface Engine {
     void setNick(String nick);
     void setPassword(String password);
 
-    void say(String message);
-
     List<User> getActiveUsers();
 
     void setActiveUsers(List<User> users);

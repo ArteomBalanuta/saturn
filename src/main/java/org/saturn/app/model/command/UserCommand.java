@@ -7,6 +7,6 @@ public interface UserCommand {
     List<String> getArguments();
 
     List<String> getWhiteTrips();
-
+    boolean isWhisper();
     void execute();
 }

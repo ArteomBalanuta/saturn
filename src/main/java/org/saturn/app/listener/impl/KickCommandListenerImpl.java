@@ -3,14 +3,19 @@ package org.saturn.app.listener.impl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.Util;
 
 import java.util.List;
 
-import static org.saturn.app.model.command.impl.ListUserCommandImpl.printUsers;
-
 public class KickCommandListenerImpl implements JoinChannelListener {
     private final JoinChannelListenerDto dto;
+
+    private ChatMessage chatMessage;
+
+    public void setChatMessage(ChatMessage chatMessage) {
+        this.chatMessage = chatMessage;
+    }
 
     private Runnable operation;
 
@@ -34,9 +39,8 @@ public class KickCommandListenerImpl implements JoinChannelListener {
                 this.operation.run();
                 System.out.println("Done executing runnable..");
             }
-
         } else {
-            dto.mainEngine.outService.enqueueMessageForSending("@" + dto.target + " isn't in the room ?" + dto.destinationRoom);
+            dto.mainEngine.outService.enqueueMessageForSending(chatMessage.getNick()," @" + dto.target + " isn't in the room ?" + dto.destinationRoom, chatMessage.isWhisper());
         }
 
         dto.slaveEngine.stop();

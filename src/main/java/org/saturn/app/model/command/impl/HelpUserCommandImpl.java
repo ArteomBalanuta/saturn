@@ -36,7 +36,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public void execute() {
-        super.engine.getOutService().enqueueMessageForSending(String.format(help, prefix, prefix, prefix));
+        super.engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), String.format(help, prefix, prefix, prefix), isWhisper());
     }
     //.ddg   ​  
     //    

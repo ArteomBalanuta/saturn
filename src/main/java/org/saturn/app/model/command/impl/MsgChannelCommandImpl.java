@@ -47,7 +47,7 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
         if (arguments.size() > 0) {
             channel = arguments.get(0).replace("?","");
         } else {
-            outService.enqueueMessageForSending("Example: " + engine.prefix + "msgroom programming <hello_world>");
+            outService.enqueueMessageForSending(author, " Example: " + engine.prefix + "msgroom programming <hello_world>", isWhisper());
             return;
         }
 
@@ -60,7 +60,7 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
 
         if (channel.equals(engine.channel)) {
             /* msg current channel */
-            outService.enqueueMessageForSending(formatMessage(message.toString()));
+            outService.enqueueMessageForSending(author + " ", formatMessage(message.toString()), isWhisper());
         } else {
             /* JoinChannelListener will make sure to close the connection */
             EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), false); // no db connection, nor config for this one is required
@@ -69,9 +69,9 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
             JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
 
             joinChannelListener.setAction(() -> {
-                slaveEngine.outService.enqueueMessageForSending(formatMessage(message.toString()));
+                slaveEngine.outService.enqueueMessageForSending("", formatMessage(message.toString()), isWhisper());
                 slaveEngine.shareMessages();
-                outService.enqueueMessageForSending("@" + author + " package delivered.");
+                outService.enqueueMessageForSending(author, " package delivered.", isWhisper());
             });
 
             slaveEngine.setOnlineSetListener(joinChannelListener);
