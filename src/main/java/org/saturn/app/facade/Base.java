@@ -42,6 +42,8 @@ public abstract class Base {
     public final ModService modService;
     public final WeatherService weatherService;
 
+    public final UserService userService;
+
     public PingService getPingService() {
         return pingService;
     }
@@ -76,6 +78,7 @@ public abstract class Base {
         this.pingService = new PingServiceImpl(outgoingMessageQueue);
         this.searchService = new SearchServiceImpl();                                       /* TODO:  add logging */
         this.modService = new ModServiceImpl(this.sqlService, outgoingMessageQueue, outgoingRawMessageQueue);
+        this.userService = new UserServiceImpl(dbConnection, outgoingMessageQueue);
         this.weatherService = new WeatherServiceImpl(outgoingMessageQueue);
         this.isMain = isMain;
         this.config = config;
