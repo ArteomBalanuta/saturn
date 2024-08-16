@@ -36,7 +36,7 @@ public class OverflowCommandImpl extends UserCommandBaseImpl {
         List<String> arguments = getArguments();
 
         if (arguments.isEmpty()) {
-            super.engine.outService.enqueueMessageForSending("Victim nick isn't set! Example: shoot @_");
+            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " victim's nick isn't set! Example: "+ engine.prefix + "shoot @_", isWhisper());
             return;
         }
 

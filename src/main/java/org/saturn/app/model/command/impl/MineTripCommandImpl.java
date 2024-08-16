@@ -55,7 +55,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         List<String> arguments = this.getArguments();
         if (arguments.size() < 2) {
-            super.engine.outService.enqueueMessageForSending("Example: " + engine.prefix + "mine <room> <start|stop>");
+            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " Example: " + engine.prefix + "mine <room> <start|stop>", isWhisper());
             return;
         }
 
@@ -73,7 +73,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
             int activeCount = executorService.getActiveCount();
             long completedTaskCount = executorService.getCompletedTaskCount();
             long taskCount = executorService.getTaskCount();
-            super.engine.outService.enqueueMessageForSending("TaskCount: " + taskCount + ", Completed: " + completedTaskCount + ", Active: " + activeCount);
+            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " TaskCount: " + taskCount + ", Completed: " + completedTaskCount + ", Active: " + activeCount, isWhisper());
             return;
         }
 

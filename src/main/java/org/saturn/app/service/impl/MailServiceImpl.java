@@ -21,6 +21,8 @@ public class MailServiceImpl extends OutService implements MailService {
         super(outQueue);
         this.connection = connection;
     }
+
+    /* fix whisper support */
     
     @Override
     public void executeMail(ChatMessage chatMessage, UserCommand command) {
@@ -35,10 +37,10 @@ public class MailServiceImpl extends OutService implements MailService {
 
         this.orderMessageDelivery(message.toString(), chatMessage.getNick(), receiver, String.valueOf(chatMessage.isWhisper()));
         if (chatMessage.isWhisper()) {
-            enqueueMessageForSending("/whisper @" + chatMessage.getNick() + " " + receiver + " will receive your message as soon they chat");
+            enqueueMessageForSending("","/whisper @" + chatMessage.getNick() + " " + receiver + " will receive your message as soon they chat", false);
             return;
         }
-        enqueueMessageForSending("@" + chatMessage.getNick() + " " + receiver + " will receive your message as soon they chat");
+        enqueueMessageForSending(chatMessage.getNick(), " " + receiver + " will receive your message as soon they chat", false);
 
     }
 

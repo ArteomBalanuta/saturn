@@ -5,7 +5,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.KickCommandListenerImpl;
-import org.saturn.app.listener.impl.ListCommandListenerImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
@@ -13,7 +12,6 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
@@ -41,7 +39,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         List<String> arguments = getArguments();
         if (arguments.size() != 3) {
-            super.engine.outService.enqueueMessageForSending("*move <nick> <from> <to>");
+            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " " + engine.prefix + "move <nick> <from> <to>", isWhisper());
         }
 
         String from = arguments.get(1);
@@ -61,6 +59,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         dto.destinationRoom = targetChannel;
 
         JoinChannelListener onlineSetListener = new KickCommandListenerImpl(dto);
+        onlineSetListener.setChatMessage(chatMessage);
 
         onlineSetListener.setAction(() -> {
             slaveEngine.outService.enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", nick, targetChannel));

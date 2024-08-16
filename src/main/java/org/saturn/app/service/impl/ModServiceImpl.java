@@ -39,7 +39,7 @@ public class ModServiceImpl extends OutService implements ModService {
             StringBuilder s = new StringBuilder();
             judges.forEach(j -> s.append(j).append(" "));
             
-            enqueueMessageForSending("@" + pest + " “Long is the night to him who is awake; long is a mile to him who is tired; long is life to the foolish who do not know the true law.” ");
+            enqueueMessageForSending(author, " @" + pest + " “Long is the night to him who is awake; long is a mile to him who is tired; long is life to the foolish who do not know the true law.” ", false);
             kick(pest);
             resetVoteKick();
         }
@@ -88,9 +88,9 @@ public class ModServiceImpl extends OutService implements ModService {
     public void listBanned() {
         List<String> bannedIds = sqlService.getBannedIds();
         if (bannedIds.isEmpty()) {
-            enqueueMessageForSending("No users has been banned.");
+            enqueueMessageForSending("","No users has been banned.", false);
         } else {
-            enqueueMessageForSending("Banned hashes, trips, nicks: " + bannedIds);
+            enqueueMessageForSending("","Banned hashes, trips, nicks: " + bannedIds, false);
         }
     }
 
@@ -98,10 +98,10 @@ public class ModServiceImpl extends OutService implements ModService {
     public void unbanAll() {
         List<String> bannedIds = sqlService.getBannedIds();
         if (bannedIds.isEmpty()) {
-            enqueueMessageForSending("No users has been banned.");
+            enqueueMessageForSending("", "No users has been banned.", false);
         } else {
             bannedIds.forEach(this::unban);
-            enqueueMessageForSending("Unbanned hashes, trips, nicks: " + bannedIds);
+            enqueueMessageForSending("", "Unbanned hashes, trips, nicks: " + bannedIds, false);
         }
     }
 

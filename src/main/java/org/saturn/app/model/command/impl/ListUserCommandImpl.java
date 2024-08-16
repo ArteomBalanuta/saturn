@@ -47,16 +47,16 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         String author = super.chatMessage.getNick();
 
         List<String> arguments = this.getArguments();
-        if (arguments.size() == 0) {
-            printUsers(author, engine.currentChannelUsers, engine.outService);
-            outService.enqueueMessageForSending("Example: " + engine.prefix + "list programming");
+        if (arguments.isEmpty()) {
+            printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
+            outService.enqueueMessageForSending(author, " Example: " + engine.prefix + "list programming", isWhisper());
             return;
         }
 
         String channel = arguments.get(0).trim();
         if (channel.isBlank() || channel.equals(engine.channel)) {
             /* parse nicks from current channel */
-            printUsers(author, engine.currentChannelUsers, engine.outService);
+            printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
         } else {
             /* ListCommandListenerImpl will make sure to close the connection */
             joinChannel(author, channel);
@@ -69,16 +69,18 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         setupEngine(channel, slaveEngine);
 
         JoinChannelListener onlineSetListener = new ListCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
+        onlineSetListener.setChatMessage(chatMessage);
+
         slaveEngine.setOnlineSetListener(onlineSetListener);
 
         slaveEngine.start();
     }
 
-    public static void printUsers(String author, List<User> users, OutService outService) {
+    public void printUsers(String author, List<User> users, OutService outService, boolean isWhisper) {
         StringBuilder output = new StringBuilder();
         users.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getNick()).append("\\n"));
 
-        outService.enqueueMessageForSending("@" + author + "\\nUsers online: \\n" + output + "\\n");
+        outService.enqueueMessageForSending(author, "\\nUsers online: \\n" + output + "\\n", isWhisper);
     }
 
     public void setupEngine(String channel, EngineImpl listBot) {

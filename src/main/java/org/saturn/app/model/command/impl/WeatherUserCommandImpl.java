@@ -32,6 +32,6 @@ public class WeatherUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public void execute() {
-        engine.weatherService.executeWeather(chatMessage.getTrip(),getArguments());
+        engine.weatherService.executeWeather(chatMessage.getTrip(), getArguments());
     }
 }

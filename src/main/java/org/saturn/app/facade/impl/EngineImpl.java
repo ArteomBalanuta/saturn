@@ -68,11 +68,6 @@ public class EngineImpl extends Base implements Engine {
     }
 
     @Override
-    public void say(String message) {
-        outService.enqueueMessageForSending(message);
-    }
-
-    @Override
     public List<User> getActiveUsers() {
         return new ArrayList<>(currentChannelUsers);
     }
@@ -184,7 +179,8 @@ public class EngineImpl extends Base implements Engine {
 
     public void shareUserInfo(User user) {
         String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
-        subscribers.forEach(mod -> outService.enqueueMessageForSending("/whisper " + mod + " -\\n\\n" + joinedUserData));
+        /* possible bug if called through whisper */
+        subscribers.forEach(mod -> outService.enqueueMessageForSending("", "/whisper " + mod + " -\\n\\n" + joinedUserData, false));
     }
 
     public void proceedBanned(User user) {
@@ -285,14 +281,14 @@ public class EngineImpl extends Base implements Engine {
     public void notifyUserNotAfkAnymore(String author) {
         if (this.afkUsers.contains(author)) {
             afkUsers.remove(author);
-            outService.enqueueMessageForSending("@" + author + " isn't afk anymore ");
+            outService.enqueueMessageForSending(author," isn't afk anymore ", false);
         }
     }
 
     public void notifyIsAfkIfUserIsMentioned(String author, String messageText) {
         afkUsers.forEach(user -> {
             if (messageText.contains(user)) {
-                outService.enqueueMessageForSending("@" + author + ", user: " + user + " is currently away from keyboard!");
+                outService.enqueueMessageForSending(author,", user: " + user + " is currently away from keyboard!", false);
             }
         });
     }
@@ -306,13 +302,13 @@ public class EngineImpl extends Base implements Engine {
         List<Mail> whisperMails = getMail(messages, true);
         if (!whisperMails.isEmpty()) {
             String whisperStrings = mailToStrings(whisperMails);
-            outService.enqueueMessageForSending("/whisper @" + author + " Incoming mail: \\n " + whisperStrings);
+            outService.enqueueMessageForSending("","/whisper @" + author + " Incoming mail: \\n " + whisperStrings, false);
         }
 
         List<Mail> publicMessages = getMail(messages, false);
         if (!publicMessages.isEmpty()) {
             String publicStrings = mailToStrings(publicMessages);
-            outService.enqueueMessageForSending("@" + author + " Incoming mail: \\n " + publicStrings);
+            outService.enqueueMessageForSending(author,"@" + author + " Incoming mail: \\n " + publicStrings, false);
         }
 
         mailService.updateMailStatus(author);

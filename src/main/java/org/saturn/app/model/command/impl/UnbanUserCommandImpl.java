@@ -43,7 +43,7 @@ public class UnbanUserCommandImpl extends UserCommandBaseImpl {
                     .findFirst()
                     .ifPresent(target -> {
                         engine.modService.unban(target);
-                        engine.outService.enqueueMessageForSending("/whisper @" + author + " unbanned " + target);
+                        engine.outService.enqueueMessageForSending("","/whisper @" + author + " unbanned " + target, isWhisper());
                     });
         }
     }
