@@ -8,7 +8,9 @@ import java.util.concurrent.BlockingQueue;
 import static org.mockito.Mockito.mock;
 
 
-/* ban pest - 2UvIfa CMDISSB */
+/* ban pest - 2UvIfa CMDISSB
+              XalBBq EntertainmentOne
+*/
 
 class OutServiceTest {
     BlockingQueue<String> queue = mock(BlockingQueue.class);

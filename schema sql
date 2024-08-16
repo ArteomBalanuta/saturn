@@ -54,3 +54,6 @@ CREATE TABLE "notes" (
 	"note"	TEXT,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
+
+## to build the jar
+## mvn clean compile assembly:single
