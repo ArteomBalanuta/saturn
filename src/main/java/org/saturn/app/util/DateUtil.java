@@ -16,6 +16,8 @@ import java.util.TimeZone;
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 
 public class DateUtil {
+
+    /* mills */
     public static long getTimestampNow() {
         return Timestamp.from(Instant.now()).getTime();
     }
@@ -38,14 +40,14 @@ public class DateUtil {
     }
 
     public static String formatZoneUTC(long timestamp) {
-        ZonedDateTime zonedDateTime = Instant.ofEpochSecond(timestamp)
+        ZonedDateTime zonedDateTime = Instant.ofEpochMilli(timestamp)
                 .atZone(ZoneId.of("UTC"));
 
         return formatTime(zonedDateTime);
     }
 
     public static String formatTime(ZonedDateTime zonedDateTime) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss z");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss z");
         return zonedDateTime.format(formatter);
     }
 
