@@ -43,10 +43,10 @@ public class LockRoomUserCommandImpl extends UserCommandBaseImpl {
 
         if ("on".equals(argument.get())) {
             engine.modService.lock();
-            super.engine.outService.enqueueMessageForSending("Room locked!");
+            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " Room locked!", isWhisper());
         } else if ("off".equals(argument.get())) {
             engine.modService.unlock();
-            super.engine.outService.enqueueMessageForSending("Room unlocked!");
+            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " Room unlocked!", isWhisper());
         }
     }
 }

@@ -27,7 +27,7 @@ public class SCPServiceImpl extends OutService implements SCPService {
         int randomScpId = RandomUtils.nextInt(1, 5500);
         String scpDescription = this.getSCPDescription(randomScpId);
         
-        enqueueMessageForSending("```Text \\n" + scpDescription.trim() + " \\n```\\n " + "@" + author);
+        enqueueMessageForSending("","```Text \\n" + scpDescription.trim() + " \\n```\\n " + "@" + author, false);
     }
     
     @Override

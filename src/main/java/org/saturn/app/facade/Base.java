@@ -68,7 +68,7 @@ public abstract class Base {
     public Configuration config;
 
     public Base(java.sql.Connection dbConnection, Configuration config, Boolean isMain) {
-        this.outService = new OutService(outgoingMessageQueue);
+        this.outService = new OutService(outgoingMessageQueue, outgoingRawMessageQueue);
         this.scpService = new SCPServiceImpl(outgoingMessageQueue);
         this.noteService = new NoteServiceImpl(dbConnection, outgoingMessageQueue);
         this.mailService = new MailServiceImpl(dbConnection, outgoingMessageQueue);
@@ -102,6 +102,7 @@ public abstract class Base {
         if (!isMain && config != null) {
             this.baseWsURL = config.getString("wsUrl");
             this.proxies = config.getString("proxies");
+            this.password = config.getString("trip");
         }
 
         this.logService = new LogServiceImpl(dbConnection, Boolean.parseBoolean(this.isSql));

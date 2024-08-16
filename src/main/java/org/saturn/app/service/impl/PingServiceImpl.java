@@ -39,7 +39,7 @@ public class PingServiceImpl extends OutService implements PingService {
             System.out.println(ex.getMessage());
         }
         
-        enqueueMessageForSending("@" + author + " response time: " + timeToRespond + " milliseconds");
+        enqueueMessageForSending(author, " response time: " + timeToRespond + " milliseconds", false);
     }
     
     

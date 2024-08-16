@@ -42,7 +42,7 @@ import java.util.List;
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⡇⢾⣿⢼⣷⣳⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠓⠚⠙⠛⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
  */
-@CommandAliases(aliases = {"ape"})
+@CommandAliases(aliases = {"ape", "harambe"})
 public class ApeUserCommandImpl extends UserCommandBaseImpl {
 
     private static  final String ape = "\n" +
@@ -99,6 +99,6 @@ public class ApeUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         String author = chatMessage.getNick();
-        engine.outService.enqueueMessageForSending("@" + author + " " + ape.replace("\n","\\n"));
+        engine.outService.enqueueMessageForSending(author," " + ape.replace("\n","\\n"), isWhisper());
     }
 }

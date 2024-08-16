@@ -4,6 +4,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.listener.JoinChannelListener;
+import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.Util;
 
 import java.util.List;
@@ -11,6 +12,11 @@ import java.util.List;
 public class MsgChannelCommandListenerImpl implements JoinChannelListener {
     private final JoinChannelListenerDto dto;
 
+    private ChatMessage chatMessage;
+
+    public void setChatMessage(ChatMessage chatMessage){
+        this.chatMessage = chatMessage;
+    }
     private Runnable operation;
 
     public MsgChannelCommandListenerImpl(JoinChannelListenerDto dto) {
@@ -28,7 +34,7 @@ public class MsgChannelCommandListenerImpl implements JoinChannelListener {
         EngineImpl mainEngine = dto.mainEngine;
         boolean onlyMeOnline = users.stream().allMatch(User::isIsMe);
         if (onlyMeOnline) {
-            mainEngine.outService.enqueueMessageForSending("@" + dto.author + " " + dto.channel + " is empty");
+            mainEngine.outService.enqueueMessageForSending(chatMessage.getNick()," " + dto.channel + " is empty", chatMessage.isWhisper());
         } else {
             if (this.operation != null) {
                 this.operation.run();

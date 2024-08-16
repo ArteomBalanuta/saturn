@@ -67,6 +67,6 @@ public class AfkUserCommandImpl extends UserCommandBaseImpl {
         String author = chatMessage.getNick();
         engine.afkUsers.add(author);
 
-        engine.outService.enqueueMessageForSending("@" + author + " is afk");
+        engine.outService.enqueueMessageForSending(author," is afk", isWhisper());
     }
 }

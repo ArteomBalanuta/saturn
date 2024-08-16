@@ -1,17 +1,13 @@
 package org.saturn;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.saturn.app.util.SeparatorFormatter;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Unit test for simple App.
- */
 public class SeparatorFormatterTest {
     // Arrange
     List<String> list = new ArrayList<>();

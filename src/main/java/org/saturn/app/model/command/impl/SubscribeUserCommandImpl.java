@@ -35,7 +35,7 @@ public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         String author = chatMessage.getNick();
         engine.subscribers.add(author);
-        engine.outService.enqueueMessageForSending("/whisper @" + author + " You will get related hashes, trips and " +
-                "nicks whispered for each joining user. You can use :votekick to kick.");
+        engine.outService.enqueueMessageForSending("","/whisper @" + author + " You will get related hashes, trips and " +
+                "nicks whispered for each joining user. You can use :votekick to kick.", isWhisper());
     }
 }

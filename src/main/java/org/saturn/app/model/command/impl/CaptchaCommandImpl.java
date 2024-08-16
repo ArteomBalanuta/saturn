@@ -43,10 +43,10 @@ public class CaptchaCommandImpl extends UserCommandBaseImpl {
 
         if ("on".equals(argument.get())) {
             engine.modService.enableCaptcha();
-            super.engine.outService.enqueueMessageForSending("Captcha enabled!");
+            super.engine.outService.enqueueMessageForSending(chatMessage.getNick()," Captcha enabled!", isWhisper());
         } else if ("off".equals(argument.get())) {
             engine.modService.disableCaptcha();
-            super.engine.outService.enqueueMessageForSending("Captcha disabled!");
+            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " Captcha disabled!", isWhisper());
         }
     }
 }

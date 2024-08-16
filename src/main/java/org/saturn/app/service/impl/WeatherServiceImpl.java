@@ -99,7 +99,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         
         String message = formatWeather(zone + " ," + country, daily, currentWeather, dailyUnits, time, hourly, hourlyUnits, currentWeatherUnits);
         
-        enqueueMessageForSending(message);
+        enqueueMessageForSending("", message, false);
     }
     
     private String formatWeather(String area, Weather.Daily daily, Weather.CurrentWeather currentWeather,

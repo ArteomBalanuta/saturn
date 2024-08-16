@@ -43,6 +43,6 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
             });
         }
 
-        super.engine.getOutService().enqueueMessageForSending(stringBuilder.toString());
+        super.engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), " " + stringBuilder, isWhisper());
     }
 }
