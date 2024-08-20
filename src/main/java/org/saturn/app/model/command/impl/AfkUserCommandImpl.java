@@ -5,6 +5,8 @@ import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,7 +67,7 @@ public class AfkUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         String author = chatMessage.getNick();
-        engine.afkUsers.add(author);
+        engine.afkUsers.put(author, ZonedDateTime.now(ZoneId.of("UTC")));
 
         engine.outService.enqueueMessageForSending(author," is afk", isWhisper());
     }

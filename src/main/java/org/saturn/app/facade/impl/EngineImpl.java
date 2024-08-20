@@ -14,11 +14,14 @@ import org.saturn.app.util.DateUtil;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
+import static org.saturn.app.util.DateUtil.getDifference;
 import static org.saturn.app.util.Util.*;
 
 public class EngineImpl extends Base implements Engine {
@@ -34,7 +37,7 @@ public class EngineImpl extends Base implements Engine {
     private final Listener connectionListener = new ConnectionListenerImpl(this);
     private final Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
-    public final Set<String> afkUsers = new HashSet<>();
+    public final Map<String, ZonedDateTime> afkUsers = new HashMap<>();
 
     public void setOnlineSetListener(Listener listener) {
         this.onlineSetListener = listener;
@@ -279,14 +282,14 @@ public class EngineImpl extends Base implements Engine {
 //        }
 
     public void notifyUserNotAfkAnymore(String author) {
-        if (this.afkUsers.contains(author)) {
+        if (this.afkUsers.containsKey(author)) {
+            outService.enqueueMessageForSending(author, getDifference(ZonedDateTime.now(), afkUsers.get(author)), false);
             afkUsers.remove(author);
-            outService.enqueueMessageForSending(author," isn't afk anymore ", false);
         }
     }
 
     public void notifyIsAfkIfUserIsMentioned(String author, String messageText) {
-        afkUsers.forEach(user -> {
+        afkUsers.keySet().forEach(user -> {
             if (messageText.contains(user)) {
                 outService.enqueueMessageForSending(author,", user: " + user + " is currently away from keyboard!", false);
             }

@@ -35,6 +35,19 @@ public class DateUtil {
         }
     }
 
+    public static String getDifference(ZonedDateTime first, ZonedDateTime second) {
+        Duration duration = Duration.between(second, first);
+
+        // Extract days, hours, minutes, and seconds
+        long days = duration.toDays();
+        long hours = duration.minusDays(days).toHours();
+        long minutes = duration.minusDays(days).minusHours(hours).toMinutes();
+        long seconds = duration.minusDays(days).minusHours(hours).minusMinutes(minutes).getSeconds();
+
+        // Display the output
+        return  "was Afk for " + days + " days, " + hours + " hours, " + minutes + " minutes, " + seconds + " seconds";
+    }
+
     public static String formatZoneUTC(long timestamp) {
         ZonedDateTime zonedDateTime = Instant.ofEpochMilli(timestamp)
                 .atZone(ZoneId.of("UTC"));
