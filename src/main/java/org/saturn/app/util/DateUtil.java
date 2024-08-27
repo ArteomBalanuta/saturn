@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Objects;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 
@@ -60,14 +61,16 @@ public class DateUtil {
         return zonedDateTime.format(formatter);
     }
 
-    public static String formatZone(long timestamp, String zoneId) {
-        ZonedDateTime zonedDateTime = Instant.ofEpochMilli(timestamp)
-                .atZone(ZoneId.of(zoneId)); //"UTC"
+    public static String formatRfc1123(long epochTimestamp, TimeUnit timeUnit, String zoneId) {
+        ZonedDateTime zonedDateTime;
+       switch (timeUnit) {
+           case SECONDS -> zonedDateTime = Instant.ofEpochSecond(epochTimestamp)
+                   .atZone(ZoneId.of(zoneId));
+           case MILLISECONDS -> zonedDateTime = Instant.ofEpochMilli(epochTimestamp)
+                   .atZone(ZoneId.of(zoneId));
+           default -> throw new RuntimeException("Timestamp should be in seconds or milliseconds.");
+       }
 
-        return formatZoneDateTime(zonedDateTime);
-    }
-
-    public static String formatZoneDateTime(ZonedDateTime zonedDateTime) {
         return zonedDateTime.format(RFC_1123_DATE_TIME);
     }
 }

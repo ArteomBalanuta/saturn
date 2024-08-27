@@ -5,8 +5,9 @@ import org.saturn.app.service.LogService;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
 
-import static org.saturn.app.util.DateUtil.formatZone;
+import static org.saturn.app.util.DateUtil.formatRfc1123;
 
 public class LogServiceImpl implements LogService {
     private final boolean isSql;
@@ -40,7 +41,7 @@ public class LogServiceImpl implements LogService {
     @Override
     public void logMessage(String trip, String nick, String hash, String message, long timestamp) {
         if (!isSql) {
-            System.out.println("[" + formatZone(timestamp, "UTC") + "] " + hash + " " + trip + " " + nick + ": " + message);
+            System.out.println("[" + formatRfc1123(timestamp, TimeUnit.SECONDS, "UTC") + "] " + hash + " " + trip + " " + nick + ": " + message);
             return;
         }
         try {

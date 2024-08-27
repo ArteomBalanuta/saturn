@@ -7,9 +7,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.text.StringEscapeUtils.escapeJson;
-import static org.saturn.app.util.DateUtil.formatZone;
+import static org.saturn.app.util.DateUtil.formatRfc1123;
 
 public class UserServiceImpl extends OutService implements UserService {
     private final Connection connection;
@@ -44,7 +45,7 @@ public class UserServiceImpl extends OutService implements UserService {
         if (sendAt == null) {
             sendAt = "never";
         } else {
-            sendAt = formatZone(Long.parseLong(sendAt), "UTC");
+            sendAt = formatRfc1123(Long.parseLong(sendAt), TimeUnit.SECONDS, "UTC");
         }
 
         if (lastMessage == null) {

@@ -29,9 +29,9 @@ public class WeatherUserCommandImpl extends UserCommandBaseImpl {
     public List<String> getArguments() {
         return super.getArguments();
     }
-
     @Override
     public void execute() {
-        engine.weatherService.executeWeather(chatMessage.getTrip(), getArguments());
+        String weather = engine.weatherService.getWeather(getArguments());
+        engine.outService.enqueueMessageForSending(chatMessage.getNick(), weather, isWhisper());
     }
 }

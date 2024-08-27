@@ -19,19 +19,20 @@ public class OutService {
     }
 
     public String enqueueMessageForSending(String author, String message, boolean isWhisper) {
+        if (StringUtils.isBlank(author)) {
+            throw new RuntimeException("Author should not be blank!");
+        }
         if (isWhisper) {
-            if (!StringUtils.isBlank(author)) {
-                message = StringUtils.prependIfMissingIgnoreCase(message, "/whisper @" + author + " ");
-            } else {
-                /* should not happen */
-            }
+            message = StringUtils.prependIfMissingIgnoreCase(message, "/whisper @" + author + " ");
         } else {
-            if (!StringUtils.isBlank(author)) {
-                message = "@" + author + " " + message;
-            }
+            message = "@" + author + " " + message;
         }
         queue.add(message);
-        System.out.println(getTimestampNow() + " sent: " + message);
+        return message;
+    }
+
+    public String enqueueMessageForSending(String message) {
+        queue.add(message);
         return message;
     }
 

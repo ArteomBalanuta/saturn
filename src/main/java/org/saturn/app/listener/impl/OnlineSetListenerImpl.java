@@ -27,7 +27,7 @@ public class OnlineSetListenerImpl implements Listener {
         User[] users = gson.fromJson(listingElement, User[].class);
         engine.setActiveUsers(Arrays.asList(users));
         if (engine.isMain) {
-            engine.outService.enqueueMessageForSending("","/color #ff6200", false);
+            engine.outService.enqueueMessageForSending("/color #ff6200");
         }
         engine.logService.logEvent("listed channel", "successfully", getTimestampNow());
     }

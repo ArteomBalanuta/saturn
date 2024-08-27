@@ -4,6 +4,7 @@ import io.github.classgraph.*;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.Util;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -31,7 +32,7 @@ public class CommandFactory {
 
         Optional<Map.Entry<ClassInfo, String[]>> first = aliasesMappedByClassInfo.entrySet().stream()
                 .peek(e -> aliases.set(Arrays.asList(e.getValue())))
-                .filter(e -> Arrays.asList(e.getValue()).contains(cmd))
+                .filter(e ->  Util.checkAnagrams(cmd, Arrays.asList(e.getValue()))) // anagram check.
                 .findFirst();
 
         if (first.isEmpty()) {

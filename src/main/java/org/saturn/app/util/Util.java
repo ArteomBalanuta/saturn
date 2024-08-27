@@ -46,4 +46,32 @@ public class Util {
         User[] users = gson.fromJson(listingElement, User[].class);
         return Arrays.asList(users);
     }
+
+    public static boolean checkAnagrams(String target, List<String> words) {
+        for (String word : words) {
+            if (areAnagrams(target, word)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Function to check if two strings are anagrams
+    public static boolean areAnagrams(String input, String validCmd) {
+        // If lengths are not equal, they cannot be anagrams
+        if (input.length() != validCmd.length()) {
+            return false;
+        }
+
+        // Convert strings to char arrays
+        char[] array1 = input.toCharArray();
+        char[] array2 = validCmd.toCharArray();
+
+        // Sort the char arrays
+        Arrays.sort(array1);
+        Arrays.sort(array2);
+
+        // Compare sorted arrays
+        return Arrays.equals(array1, array2);
+    }
 }

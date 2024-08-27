@@ -14,9 +14,9 @@ import org.saturn.app.util.DateUtil;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Constants.CHAT_JSON;
@@ -325,7 +325,7 @@ public class EngineImpl extends Base implements Engine {
     private String mailToStrings(List<Mail> messages) {
         StringBuilder whisperStrings = new StringBuilder();
         messages.forEach(mail -> {
-            String row = DateUtil.formatZone(mail.createdDate, "UTC") + " " + mail.owner + ": " + mail.message + "\\n";
+            String row = DateUtil.formatRfc1123(mail.createdDate, TimeUnit.MILLISECONDS, "UTC") + " " + mail.owner + ": " + mail.message + "\\n";
             whisperStrings.append(row);
         });
 
