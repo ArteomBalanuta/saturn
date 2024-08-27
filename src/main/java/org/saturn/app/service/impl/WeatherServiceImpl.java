@@ -97,7 +97,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
           Time time = getTime(getResponseByURL(timeZoneUri));
 //        }
         
-        String message = formatWeather(zone + " ," + country, daily, currentWeather, dailyUnits, time, hourly, hourlyUnits, currentWeatherUnits);
+        String message = formatWeather(zone + ", " + country + " ", daily, currentWeather, dailyUnits, time, hourly, hourlyUnits, currentWeatherUnits);
         
         enqueueMessageForSending("", message, false);
     }
@@ -117,11 +117,11 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         String sunsetTime = formatTime(sunsetDateTime);
     
         return "Weather forecast for today: **" + area + "**\\n\\n" +
-                ">Temperature: " + currentWeather.temperature + " " + currentWeatherUnits.temperature + "\\n" +
-                ">Feels temp: " + hourly.apparent_temperature.get(zonedDateTime.getHour())  + " " +  hourlyUnits.apparent_temperature + "\\n" +
-                ">Wind speed  : " + currentWeather.windspeed  + " " + currentWeatherUnits.windspeed + "\\n" +
-                ">Pressure surface: " + hourly.surface_pressure.get(zonedDateTime.getHour())  + " " + hourlyUnits.surface_pressure + "\\n" +
-                ">Pressure sea level: " + hourly.pressure_msl.get(zonedDateTime.getHour())  + " " + hourlyUnits.pressure_msl + " \\r\\n " +
+                "Temperature: " + currentWeather.temperature + " " + currentWeatherUnits.temperature + "\\n" +
+                "Feels temp: " + hourly.apparent_temperature.get(zonedDateTime.getHour())  + " " +  hourlyUnits.apparent_temperature + "\\n" +
+                "Wind speed  : " + currentWeather.windspeed  + " " + currentWeatherUnits.windspeed + "\\n" +
+                "Pressure surface: " + hourly.surface_pressure.get(zonedDateTime.getHour())  + " " + hourlyUnits.surface_pressure + "\\n" +
+                "Pressure sea level: " + hourly.pressure_msl.get(zonedDateTime.getHour())  + " " + hourlyUnits.pressure_msl + " \\r\\n " +
                 "\u200B\u200B\u200B \\r\\n" +
                 "UV day max index    : " + daily.uv_index_max.get(0)  + " " + dailyUnits.uv_index_max + "\\n" +
                 "Short wave radiation day sum: " + daily.shortwave_radiation_sum.get(0)  + " " + dailyUnits.shortwave_radiation_sum + "\\n" +

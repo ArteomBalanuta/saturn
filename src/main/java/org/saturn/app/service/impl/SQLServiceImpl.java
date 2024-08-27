@@ -40,7 +40,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
     @Override
     public String executeFormatted(String sql) {
         StringBuilder string = new StringBuilder();
-        string.append("```Text \\n");
+        string.append("\\n ```Text \\n");
         List<String> columnNames = new ArrayList<>();
         List<List<String>> listOfRows = new ArrayList<>();
         try {
@@ -70,7 +70,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
             listOfRows.clear();
         }
         
-        String table = StringEscapeUtils.escapeJson(generateTable(columnNames, listOfRows));
+        String table = StringEscapeUtils.escapeXml11(StringEscapeUtils.escapeJson(generateTable(columnNames, listOfRows))).replace("`","");
         string.append(table);
         string.append("\\n ```");
         

@@ -35,6 +35,6 @@ public class SqlUserCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         String cmd = chatMessage.getText();
         String result = engine.sqlService.executeSql(cmd, true);
-        engine.outService.enqueueMessageForSending(chatMessage.getNick(),  " " + result, isWhisper());
+        engine.outService.enqueueMessageForSending(chatMessage.getNick(),  " \\n" + result, isWhisper());
     }
 }

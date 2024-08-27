@@ -43,7 +43,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         }
 
         String from = arguments.get(1);
-        String target = arguments.get(0);
+        String target = arguments.get(0).replace("@","");
         String to = arguments.get(2);
 
         resurrect(from, target, to);

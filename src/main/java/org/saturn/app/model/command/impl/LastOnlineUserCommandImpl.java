@@ -8,7 +8,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import java.util.ArrayList;
 import java.util.List;
 
-@CommandAliases(aliases = {"lastonline", "seen", "last", "online"})
+@CommandAliases(aliases = {"lastonline", "seen", "last", "online", "lastseen"})
 public class LastOnlineUserCommandImpl extends UserCommandBaseImpl {
 
     private final List<String> aliases = new ArrayList<>();
