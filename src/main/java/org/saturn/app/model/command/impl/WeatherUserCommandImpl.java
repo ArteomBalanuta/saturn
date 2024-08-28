@@ -4,6 +4,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ public class WeatherUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         String weather = engine.weatherService.getWeather(getArguments());
-        engine.outService.enqueueMessageForSending(chatMessage.getNick(), weather, isWhisper());
+        String weatherAligned = Util.alignWithWhiteSpace(weather);
+        engine.outService.enqueueMessageForSending(chatMessage.getNick(), weatherAligned, isWhisper());
     }
 }

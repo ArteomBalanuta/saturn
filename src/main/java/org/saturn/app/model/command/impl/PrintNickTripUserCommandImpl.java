@@ -8,6 +8,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @CommandAliases(aliases = {"users", "whitelist","blacklist","offenders","knownoffenders"})
