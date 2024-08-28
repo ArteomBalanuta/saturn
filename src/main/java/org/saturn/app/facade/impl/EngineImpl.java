@@ -283,7 +283,8 @@ public class EngineImpl extends Base implements Engine {
 
     public void notifyUserNotAfkAnymore(String author) {
         if (this.afkUsers.containsKey(author)) {
-            outService.enqueueMessageForSending(author, getDifference(ZonedDateTime.now(), afkUsers.get(author)), false);
+            String ago = "was Afk for " + getDifference(ZonedDateTime.now(), afkUsers.get(author));
+            outService.enqueueMessageForSending(author, ago, false);
             afkUsers.remove(author);
         }
     }

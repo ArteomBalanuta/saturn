@@ -45,8 +45,7 @@ public class DateUtil {
         long minutes = duration.minusDays(days).minusHours(hours).toMinutes();
         long seconds = duration.minusDays(days).minusHours(hours).minusMinutes(minutes).getSeconds();
 
-        // Display the output
-        return  "was Afk for " + days + " days, " + hours + " hours, " + minutes + " minutes, " + seconds + " seconds";
+        return  days + " days, " + hours + " hours, " + minutes + " minutes, " + seconds + " seconds";
     }
 
     public static String formatZoneUTC(long timestamp) {
