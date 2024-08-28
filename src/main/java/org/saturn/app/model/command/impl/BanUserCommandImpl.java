@@ -53,12 +53,12 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
                 .findFirst()
                 .ifPresentOrElse(user -> {
                     engine.modService.ban(user.getNick(), user.getTrip(), user.getHash());
-                    engine.outService.enqueueMessageForSending("","/whisper @" + author + " banned: " + target + "trip: " + user.getTrip() + " hash: " + user.getHash(), false);
+                    engine.outService.enqueueMessageForSending(author," banned: " + target + "trip: " + user.getTrip() + " hash: " + user.getHash(), isWhisper());
                     engine.modService.kick(target);
                 }, () -> {
                     /* target isn't in the room */
                     engine.modService.ban(target);
-                    engine.outService.enqueueMessageForSending("","/whisper @" + author + " banned: " + target, false);
+                    engine.outService.enqueueMessageForSending(author," banned: " + target, isWhisper());
                 });
     }
 

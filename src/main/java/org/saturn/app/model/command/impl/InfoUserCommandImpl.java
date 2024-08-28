@@ -37,10 +37,9 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
                 .ifPresent(nick -> engine.currentChannelUsers.stream()
                         .filter(user -> nick.equals(user.getNick()))
                         .findFirst()
-                        .ifPresentOrElse(user -> engine.outService.enqueueMessageForSending("", "/whisper @" + author + " - " +
+                        .ifPresentOrElse(user -> engine.outService.enqueueMessageForSending(author,
                                         "\\n User trip: " + user.getTrip() +
-                                        "\\n User hash: " + user.getHash(), false),
-                                () -> engine.outService.enqueueMessageForSending("","/whisper @" + author + " " +
-                                        "\\n User: " + nick + " not found!", false)));
+                                                "\\n User hash: " + user.getHash(), isWhisper()),
+                                () -> engine.outService.enqueueMessageForSending(author, "\\n User: " + nick + " not found!", isWhisper())));
     }
 }
