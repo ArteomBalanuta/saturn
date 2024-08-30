@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
-@CommandAliases(aliases = {"overflow", "shoot", "sex", "gay"})
+@CommandAliases(aliases = {"overflow", "shoot", "love", "hug", "kiss"})
 public class OverflowCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
 

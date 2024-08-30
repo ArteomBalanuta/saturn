@@ -55,6 +55,11 @@ public class DateUtil {
         return formatTime(zonedDateTime);
     }
 
+    public static ZonedDateTime toZoneDateTimeUTC(long timestamp) {
+        return Instant.ofEpochMilli(timestamp)
+                .atZone(ZoneId.of("UTC"));
+    }
+
     public static String formatTime(ZonedDateTime zonedDateTime) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss z");
         return zonedDateTime.format(formatter);

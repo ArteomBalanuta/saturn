@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.DateUtil.getDifference;
+import static org.saturn.app.util.DateUtil.toZoneDateTimeUTC;
 import static org.saturn.app.util.Util.*;
 
 public class EngineImpl extends Base implements Engine {
@@ -283,7 +284,7 @@ public class EngineImpl extends Base implements Engine {
 
     public void notifyUserNotAfkAnymore(String author) {
         if (this.afkUsers.containsKey(author)) {
-            String ago = "was Afk for " + getDifference(ZonedDateTime.now(), afkUsers.get(author));
+            String ago = "was afk for " + getDifference(ZonedDateTime.now(), afkUsers.get(author));
             outService.enqueueMessageForSending(author, ago, false);
             afkUsers.remove(author);
         }
@@ -306,13 +307,13 @@ public class EngineImpl extends Base implements Engine {
         List<Mail> whisperMails = getMail(messages, true);
         if (!whisperMails.isEmpty()) {
             String whisperStrings = mailToStrings(whisperMails);
-            outService.enqueueMessageForSending("","/whisper @" + author + " Incoming mail: \\n " + whisperStrings, false);
+            outService.enqueueMessageForSending(author," new mail: \\n " + whisperStrings, true);
         }
 
         List<Mail> publicMessages = getMail(messages, false);
         if (!publicMessages.isEmpty()) {
             String publicStrings = mailToStrings(publicMessages);
-            outService.enqueueMessageForSending(author,"@" + author + " Incoming mail: \\n " + publicStrings, false);
+            outService.enqueueMessageForSending(author," new mail: \\n " + publicStrings, false);
         }
 
         mailService.updateMailStatus(author);
@@ -326,8 +327,9 @@ public class EngineImpl extends Base implements Engine {
     private String mailToStrings(List<Mail> messages) {
         StringBuilder whisperStrings = new StringBuilder();
         messages.forEach(mail -> {
-            String row = DateUtil.formatRfc1123(mail.createdDate, TimeUnit.MILLISECONDS, "UTC") + " " + mail.owner + ": " + mail.message + "\\n";
-            whisperStrings.append(row);
+            String header = DateUtil.formatRfc1123(mail.createdDate, TimeUnit.MILLISECONDS, "UTC") + ". " + getDifference(ZonedDateTime.now(), toZoneDateTimeUTC(mail.createdDate)) + " ago.";
+            String body =  mail.owner + ": " + mail.message;
+            whisperStrings.append(header).append("\\n").append(body).append("\\n &nbsp; \\n");
         });
 
         return whisperStrings.toString();

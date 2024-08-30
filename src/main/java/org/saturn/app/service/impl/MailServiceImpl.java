@@ -35,13 +35,9 @@ public class MailServiceImpl extends OutService implements MailService {
             message.append(arguments.get(i)).append(" ");
         }
 
-        this.orderMessageDelivery(message.toString(), chatMessage.getNick(), receiver, String.valueOf(chatMessage.isWhisper()));
-        if (chatMessage.isWhisper()) {
-            enqueueMessageForSending("","/whisper @" + chatMessage.getNick() + " " + receiver + " will receive your message as soon they chat", false);
-            return;
-        }
-        enqueueMessageForSending(chatMessage.getNick(), " " + receiver + " will receive your message as soon they chat", false);
-
+        String author = chatMessage.getNick();
+        this.orderMessageDelivery(message.toString(), author, receiver, String.valueOf(chatMessage.isWhisper()));
+        enqueueMessageForSending(author, " " + receiver + " will receive your message as soon they chat", chatMessage.isWhisper());
     }
 
     /**
