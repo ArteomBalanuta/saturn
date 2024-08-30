@@ -69,7 +69,7 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
             JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
 
             joinChannelListener.setAction(() -> {
-                slaveEngine.outService.enqueueMessageForSending("", formatMessage(message.toString()), isWhisper());
+                slaveEngine.outService.enqueueMessageForSending("*", formatMessage(message.toString()), false);
                 slaveEngine.shareMessages();
                 outService.enqueueMessageForSending(author, " package delivered.", isWhisper());
             });
