@@ -10,3 +10,5 @@
 hackchat.db
 *.txt
 /saturn.iml
+/deploy/deploy.bash
+/deploy/rerun.bash
