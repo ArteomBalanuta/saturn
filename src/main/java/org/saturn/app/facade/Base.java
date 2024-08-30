@@ -108,7 +108,7 @@ public abstract class Base {
             this.password = config.getString("trip");
         }
 
-        this.logService = new LogServiceImpl(dbConnection, Boolean.parseBoolean(this.isSql));
+        this.logService = new DataBaseLogServiceImpl(dbConnection, Boolean.parseBoolean(this.isSql));
     }
     
     public void setChannel(String chanel) {

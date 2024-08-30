@@ -2,6 +2,7 @@ package org.saturn.app.listener.impl;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
@@ -11,6 +12,8 @@ import java.util.Arrays;
 import static org.saturn.app.util.DateUtil.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
 
+
+@Slf4j
 public class OnlineSetListenerImpl implements Listener {
     @Override
     public String getListenerName() {
@@ -29,6 +32,5 @@ public class OnlineSetListenerImpl implements Listener {
         if (engine.isMain) {
             engine.outService.enqueueMessageForSending("/color #ff6200");
         }
-        engine.logService.logEvent("listed channel", "successfully", getTimestampNow());
     }
 }

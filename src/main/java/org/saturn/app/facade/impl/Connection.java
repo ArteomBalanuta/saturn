@@ -1,5 +1,6 @@
 package org.saturn.app.facade.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft_6455;
 import org.java_websocket.handshake.ServerHandshake;
@@ -12,6 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+@Slf4j
 public class Connection {
     private final WebSocketClient client;
 
@@ -21,7 +23,7 @@ public class Connection {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 client.sendPing();
-                System.out.println("Handshake Status: " + serverHandshake.getHttpStatus());
+                log.debug("Handshake Status: " + serverHandshake.getHttpStatus());
                 listeners.stream().filter(listener -> "connectionListener".equals(listener.getListenerName()))
                         .forEach(listener -> listener.notify("connected"));
             }
@@ -31,16 +33,15 @@ public class Connection {
                 listeners.stream().filter(listener -> "incomingMessageListener".equals(listener.getListenerName()))
                         .forEach(listener -> listener.notify(s));
             }
-            
+
             @Override
             public void onClose(int i, String s, boolean b) {
-                if (i != 1000) {
-                    System.out.println("Server closed the connection: " + i + " " + s);
-                }
+                log.warn("Server closed the connection: " + i + " " + s);
             }
             
             @Override
             public void onError(Exception e) {
+                log.error("Exception:", e);
                 throw new RuntimeException(e);
             }
         };
