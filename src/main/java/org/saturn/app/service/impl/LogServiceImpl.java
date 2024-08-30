@@ -41,7 +41,7 @@ public class LogServiceImpl implements LogService {
     @Override
     public void logMessage(String trip, String nick, String hash, String message, long timestamp) {
         if (!isSql) {
-            System.out.println("[" + formatRfc1123(timestamp, TimeUnit.SECONDS, "UTC") + "] " + hash + " " + trip + " " + nick + ": " + message);
+            System.out.println("[" + formatRfc1123(timestamp, TimeUnit.MILLISECONDS, "UTC") + "] " + hash + " " + trip + " " + nick + ": " + message);
             return;
         }
         try {
