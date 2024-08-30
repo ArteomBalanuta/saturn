@@ -42,7 +42,7 @@ public class InfoMessage {
     }
 
     public String getText() {
-        return text;
+        return text.replace("\n","\\n");
     }
 
     public void setText(String text) {

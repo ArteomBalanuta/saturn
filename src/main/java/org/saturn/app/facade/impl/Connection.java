@@ -41,7 +41,7 @@ public class Connection {
             
             @Override
             public void onError(Exception e) {
-//                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         };
 
