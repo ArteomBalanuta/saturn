@@ -45,6 +45,7 @@ public class ApplicationRunner {
 
     public static void main(String[] args) {
         ApplicationRunner applicationRunner = new ApplicationRunner();
+        log.warn("Running at user dir: {}", System.getProperty("user.dir"));
         applicationRunner.start();
     }
 

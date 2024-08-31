@@ -5,9 +5,9 @@
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </Console>
 
-        <File name="FileLogger" fileName="hc.log" append="true">
+        <RandomAccessFile name="FileLogger" fileName="/Users/ab/workspace/projects/saturn/hc.log" append="true" immediateFlush="true">
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </File>
+        </RandomAccessFile>
     </Appenders>
 
     <Loggers>
@@ -15,11 +15,5 @@
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileLogger"/>
         </Root>
-
-        <!-- Example of a custom logger configuration -->
-        <Logger name="org.saturn" level="debug" additivity="false">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="FileLogger"/>
-        </Logger>
     </Loggers>
 </Configuration>
