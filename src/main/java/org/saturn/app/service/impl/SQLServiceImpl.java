@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.service.impl.util.TableGenerator;
@@ -12,6 +13,7 @@ import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 import static org.saturn.app.util.SeparatorFormatter.addSeparator;
 import static org.saturn.app.util.Util.setToList;
 
+@Slf4j
 public class SQLServiceImpl extends OutService implements SQLService {
     
     private Connection connection;
@@ -25,22 +27,26 @@ public class SQLServiceImpl extends OutService implements SQLService {
     public String executeSql(String cmd, boolean withOutput) {
         String[] cmdParts = cmd.split("sql ");
         if (withOutput) {
+            log.info("Executing SQL query, expecting output");
             return this.executeFormatted(cmdParts[1]);
-        } else {
-            try {
-                Statement statement = connection.createStatement();
-                statement.executeUpdate(cmdParts[1]);
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
-            }
-            return null;
+        }
+        try {
+            Statement statement = connection.createStatement();
+            int updatedRows  = statement.executeUpdate(cmdParts[1]);
+            log.info("Executed SQL query: {} rows updated", updatedRows);
+            return String.valueOf(updatedRows);
+        } catch (SQLException e) {
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace", e);
+
+            return e.getMessage();
         }
     }
     
     @Override
     public String executeFormatted(String sql) {
         StringBuilder string = new StringBuilder();
-        string.append("\\n ```Text \\n");
+        string.append("\\n```Text\\n");
         List<String> columnNames = new ArrayList<>();
         List<List<String>> listOfRows = new ArrayList<>();
         try {
@@ -66,8 +72,11 @@ public class SQLServiceImpl extends OutService implements SQLService {
             
             cmd.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace", e);
+
             listOfRows.clear();
+            return e.getMessage();
         }
         
         String table = StringEscapeUtils.escapeXml11(StringEscapeUtils.escapeJson(generateTable(columnNames, listOfRows))).replace("`","");
@@ -89,7 +98,8 @@ public class SQLServiceImpl extends OutService implements SQLService {
             }
             return result;
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace", e);
         }
         
         return Collections.emptyList();
@@ -127,10 +137,11 @@ public class SQLServiceImpl extends OutService implements SQLService {
             result.append(" \\n");
             
             return result.toString();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException e) {
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace", e);
         }
-        
+
         return null;
     }
     
@@ -138,39 +149,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
     public Connection getConnection() {
         return this.connection;
     }
-    
-    //    @Override
-    //    public String getBasicUserData(String hash, String trip) {
-    //        try {
-    //            Statement statement = connection.createStatement();
-    //
-    //            String tripCondition = "";
-    //            if (trip != null && !trip.trim().equals("")) {
-    //                tripCondition = "OR trip = '" + trip + "'";
-    //            }
-    //            statement.execute("SELECT distinct hash, trip, nick from messages where hash='" + hash + "'" +
-    //            tripCondition + "  limit 20;");
-    //            ResultSet resultSet = statement.getResultSet();
-    //
-    //            StringBuilder result = new StringBuilder();
-    //            while (resultSet.next()) {
-    //                result.append(escapeJson(resultSet.getString(1)));
-    //                result.append("  ");
-    //                result.append(escapeJson(resultSet.getString(2)));
-    //                result.append("  ");
-    //                result.append(escapeJson(resultSet.getString(3)));
-    //                result.append("\\n");
-    //            }
-    //
-    //            return result.toString();
-    //        } catch (SQLException throwables) {
-    //            throwables.printStackTrace();
-    //        }
-    //
-    //        return null;
-    //    }
-    //
-    //
+
     private String generateTable(List<String> columnNames, List<List<String>> listOfRows) {
         TableGenerator tableGenerator = new TableGenerator();
         

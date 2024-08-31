@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -15,6 +16,7 @@ import java.util.List;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"move", "recover", "heal", "resurrect"})
 public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
@@ -38,15 +40,21 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         List<String> arguments = getArguments();
+        String author = chatMessage.getNick();
+
         if (arguments.size() != 3) {
-            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " " + engine.prefix + "move <nick> <from> <to>", isWhisper());
+            super.engine.outService.enqueueMessageForSending(author, " " + engine.prefix + "move <nick> <from> <to>", isWhisper());
+            log.info("Executed [move] command by user: {} - missing required parameters", author);
         }
 
         String from = arguments.get(1);
         String target = arguments.get(0).replace("@","");
         String to = arguments.get(2);
 
+        log.info("Moving user: {}, from: {}, to: {}", target, from, to);
         resurrect(from, target, to);
+
+        log.info("Executed [move] command by user: {}, target: {}", author, target);
     }
 
     public void resurrect(String channel, String nick, String targetChannel) {
@@ -64,6 +72,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         onlineSetListener.setAction(() -> {
             slaveEngine.outService.enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", nick, targetChannel));
             slaveEngine.shareMessages();
+            log.info("user: {}, has been moved to: {}", nick, targetChannel);
         });
 
         slaveEngine.setOnlineSetListener(onlineSetListener);

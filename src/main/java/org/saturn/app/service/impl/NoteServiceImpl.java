@@ -22,7 +22,7 @@ public class NoteServiceImpl extends OutService implements NoteService {
     
     public void executeNotesPurge(String author, String trip) {
         this.clearNotesByTrip(trip);
-        enqueueMessageForSending(author, "'s notes are gone", false);
+        enqueueMessageForSending(author, "'s notes hsa been deleted", false);
     }
 
     public void executeListNotes(String author, String trip) {

@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.service.PingService;
 
 import java.io.IOException;
@@ -9,6 +10,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Date;
 import java.util.concurrent.BlockingQueue;
 
+@Slf4j
 public class PingServiceImpl extends OutService implements PingService {
    
     public PingServiceImpl(BlockingQueue<String> outgoingMessageQueue) {
@@ -34,11 +36,12 @@ public class PingServiceImpl extends OutService implements PingService {
             }
             
             sc.close();
-            
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
+        } catch (IOException e) {
+           log.info("Error: {}", e.getMessage());
+           log.debug("Stack trace: ", e);
         }
-        
+
+        log.info("response latency: {}", timeToRespond);
         enqueueMessageForSending(author, " response time: " + timeToRespond + " milliseconds", false);
     }
     

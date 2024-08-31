@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
@@ -28,11 +29,13 @@ import static org.saturn.app.util.DateUtil.formatRfc1123;
 import static org.saturn.app.util.DateUtil.formatTime;
 import static org.saturn.app.util.DateUtil.tsToSec8601;
 
+@Slf4j
 public class WeatherServiceImpl extends OutService implements WeatherService {
     public WeatherServiceImpl(BlockingQueue<String> queue) {
         super(queue);
     }
 
+    private final String apiGeoNames = "http://api.geonames.org/search?q=%s&maxRows=1&username=dev1";
     private final Calendar calendar = Calendar.getInstance();
 
     /*
@@ -47,7 +50,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
 
         String zone = zoneB.toString().trim();
 
-        String uri = String.format("http://api.geonames.org/search?q=%s&maxRows=1&username=dev1", zone.trim().replace(" ", "%20"));
+        String uri = String.format(apiGeoNames, zone.trim().replace(" ", "%20"));
         String body = getResponseByURL(uri);
         String coordinates = extractCoordinates(body);
         String country = extractCountryName(body);
@@ -70,10 +73,13 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
                         "&end_date=%s"
                 , lat, lng, curr_date, curr_date);
 
-        System.out.println("Curling: " + weatherApi);
+        log.debug("Getting: " + weatherApi);
 
         String response = getResponseByURL(weatherApi);
 
+        if (response == null) {
+            return null;
+        }
         Weather weather = Weather.getWeather(response.trim());
 
         Weather.Daily daily = weather.getDaily();
@@ -140,24 +146,20 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         request.addHeader(HttpHeaders.USER_AGENT, "Firefox 59.9.0-MDA-Universe");
 
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            // Get HttpResponse Status
-            System.out.println(response.getProtocolVersion());              // HTTP/1.1
-            System.out.println(response.getStatusLine().getStatusCode());   // 200
-            System.out.println(response.getStatusLine().getReasonPhrase()); // OK
-            System.out.println(response.getStatusLine().toString());        // HTTP/1.1 200 OK
+           log.debug("Protocol: {}, StatusCode: {}, ", response.getProtocolVersion(), response.getStatusLine().getStatusCode());              // HTTP/1.1
 
             String result = null;
             HttpEntity entity = response.getEntity();
             if (entity != null) {
-                // return it as a String
                 result = EntityUtils.toString(entity);
             }
             if (response.getStatusLine().getStatusCode() != 200) {
-                result = "API Response status code: " + response.getStatusLine().getStatusCode();
+                log.info("API Response status code: {}", response.getStatusLine().getStatusCode());
             }
             return result;
         } catch (IOException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace: ", e);
             return null;
         }
     }

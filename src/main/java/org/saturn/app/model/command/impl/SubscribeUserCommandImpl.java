@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -10,6 +11,7 @@ import java.util.List;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"sub", "subscribe"})
 public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
 
@@ -35,7 +37,10 @@ public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         String author = chatMessage.getNick();
         engine.subscribers.add(author);
-        engine.outService.enqueueMessageForSending("","/whisper @" + author + " You will get related hashes, trips and " +
-                "nicks whispered for each joining user. You can use :votekick to kick.", isWhisper());
+        log.info("User: {} subscribed for joining users data - hashes, trips, nicks", author);
+        engine.outService.enqueueMessageForSending(author,"you will be whispered hashes, trips and " +
+                "nicks for each new joining user. ", true);
+
+        log.info("Executed [subscribe] command by user: {}", author);
     }
 }

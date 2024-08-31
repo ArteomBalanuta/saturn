@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -11,6 +12,7 @@ import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"say", "echo"})
 public class SayUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
@@ -32,7 +34,9 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public void execute() {
+        String author = chatMessage.getNick();
         Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
+
         StringBuilder stringBuilder = new StringBuilder();
         if (trip.isPresent() && engine.adminTrips.contains(trip.get())) {
             this.getArguments().forEach(argument -> stringBuilder.append(argument).append(" ")) ;
@@ -43,6 +47,9 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
             });
         }
 
-        super.engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), " " + stringBuilder, isWhisper());
+        String message = String.valueOf(stringBuilder);
+
+        super.engine.getOutService().enqueueMessageForSending(author, message, isWhisper());
+        log.info("Executed [say] command by user: {}, argument: {}", author, message);
     }
 }

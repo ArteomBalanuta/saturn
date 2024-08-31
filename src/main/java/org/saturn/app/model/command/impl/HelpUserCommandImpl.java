@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -8,6 +9,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @CommandAliases(aliases = {"help", "h"})
 public class HelpUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
@@ -36,7 +38,9 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public void execute() {
-        super.engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), String.format(help, prefix, prefix, prefix), isWhisper());
+        String author = chatMessage.getNick();
+        super.engine.getOutService().enqueueMessageForSending(author, String.format(help, prefix, prefix, prefix), isWhisper());
+        log.info("Executed [help] command by user: {}", author);
     }
     //.ddg   ​  
     //    

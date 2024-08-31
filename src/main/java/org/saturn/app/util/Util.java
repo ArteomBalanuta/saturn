@@ -135,6 +135,7 @@ public class Util {
             result.append(aligned).append(":").append(values.get(i)).append("\\n");
         }
 
+        log.debug("Utils: returning aligned with white spaces output: \\n {}", result.toString());
         return result.toString();
     }
 }

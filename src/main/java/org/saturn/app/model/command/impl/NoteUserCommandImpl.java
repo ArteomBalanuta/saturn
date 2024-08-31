@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -11,6 +12,7 @@ import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"note", "save"})
 public class NoteUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
@@ -34,21 +36,22 @@ public class NoteUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
-        boolean empty = getArguments().stream().findFirst().isEmpty();
-        if (empty) {
-            engine.getOutService().enqueueMessageForSending(chatMessage.getNick() + " ", engine.prefix + "note Jedi am I?!", isWhisper());
+        boolean isEmpty = getArguments().stream().findFirst().isEmpty();
+        if (isEmpty) {
+            engine.outService.enqueueMessageForSending(chatMessage.getNick(), engine.prefix + "note Jedi am I?!", isWhisper());
+            log.info("Executed [note] command by user: {}", chatMessage.getNick());
             return;
         }
 
-        trip.ifPresent(s -> engine.noteService.save(s, stringsToString(getArguments())));
+        trip.ifPresent(s -> engine.noteService.save(s, listToString(getArguments())));
 
-        engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), " note saved!", isWhisper());
+        engine.outService.enqueueMessageForSending(chatMessage.getNick(), "note successfully saved!", isWhisper());
+        log.info("Executed [note] command by user: {}", chatMessage.getNick());
     }
 
-    public String stringsToString(List<String> strings) {
+    public String listToString (List<String> strings) {
         StringBuilder b = new StringBuilder();
         strings.forEach(string -> b.append(string).append(" "));
         return b.toString();
     }
-
 }

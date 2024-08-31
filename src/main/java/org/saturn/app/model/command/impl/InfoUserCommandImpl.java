@@ -1,14 +1,18 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-@CommandAliases(aliases = {"info", "i"})
+@Slf4j
+@CommandAliases(aliases = {"info", "i", "whois", "who"})
 public class InfoUserCommandImpl extends UserCommandBaseImpl {
 
     private final List<String> aliases = new ArrayList<>();
@@ -32,14 +36,29 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         String author = chatMessage.getNick();
-        getArguments().stream()
-                .findFirst()
-                .ifPresent(nick -> engine.currentChannelUsers.stream()
-                        .filter(user -> nick.equals(user.getNick()))
-                        .findFirst()
-                        .ifPresentOrElse(user -> engine.outService.enqueueMessageForSending(author,
-                                        "\\n User trip: " + user.getTrip() +
-                                                "\\n User hash: " + user.getHash(), isWhisper()),
-                                () -> engine.outService.enqueueMessageForSending(author, "\\n User: " + nick + " not found!", isWhisper())));
+        Optional<String> nick = getArguments().stream()
+                .findFirst();
+
+        if (nick.isEmpty()) {
+            log.info("Executed [info] command by user: {}, target: not set", author);
+            engine.outService.enqueueMessageForSending(author, "\\n Example: " + engine.prefix + "info merc", isWhisper());
+            return;
+        }
+
+        Optional<User> user = engine.currentChannelUsers.stream()
+                .filter(u -> nick.get().equals(u.getNick()))
+                .findFirst();
+
+        if (user.isEmpty()) {
+            engine.outService.enqueueMessageForSending(author, "\\n target with nick:  " + nick + " not found!", isWhisper());
+            log.info("Executed [info] command by user: {}, target: {} is not in the room", author, nick);
+            return;
+        }
+
+        engine.outService.enqueueMessageForSending(author,
+                "\\n User trip: " + user.get().getTrip() +
+                        "\\n User hash: " + user.get().getHash(), isWhisper());
+
+        log.info("Executed [info] command by user: {}, target: {}", author, nick);
     }
 }

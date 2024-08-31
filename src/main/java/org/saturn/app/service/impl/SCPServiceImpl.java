@@ -16,6 +16,7 @@ import org.saturn.app.service.SCPService;
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 
+/* TODO: impl the cmd */
 public class SCPServiceImpl extends OutService implements SCPService {
     
     public SCPServiceImpl(BlockingQueue<String> queue) {

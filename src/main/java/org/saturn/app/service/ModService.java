@@ -2,6 +2,7 @@ package org.saturn.app.service;
 
 import org.saturn.app.model.dto.User;
 
+
 public interface ModService {
     void kick(String target);
 
@@ -22,7 +23,7 @@ public interface ModService {
     void disableCaptcha();
 
     void unban(String target);
-    void listBanned();
+    void listBanned(String author);
     void vote(String author);
     void votekick(String nick);
 
