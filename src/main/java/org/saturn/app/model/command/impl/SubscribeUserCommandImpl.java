@@ -36,11 +36,17 @@ public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         String author = chatMessage.getNick();
-        engine.subscribers.add(author);
-        log.info("User: {} subscribed for joining users data - hashes, trips, nicks", author);
-        engine.outService.enqueueMessageForSending(author,"you will be whispered hashes, trips and " +
+        String trip = chatMessage.getTrip();
+        if (trip == null) {
+            engine.outService.enqueueMessageForSending(author,"you have to set your trip to use this command.", false);
+            log.info("User: {} failed subscription - trip is not set", author);
+            return;
+        }
+        engine.subscribers.add(trip);
+        log.info("User: {}, trip: {}, subscribed for joining users data - hashes, trips, nicks", author, trip);
+        engine.outService.enqueueMessageForSending(author,"your trip will be whispered hashes, trips and " +
                 "nicks for each new joining user. ", true);
 
-        log.info("Executed [subscribe] command by user: {}", author);
+        log.info("Executed [subscribe] command by user: {}, trip: {}", author, trip);
     }
 }

@@ -192,10 +192,13 @@ public class EngineImpl extends Base implements Engine {
 
     public void shareUserInfo(User user) {
         String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
-        subscribers.forEach(mod -> {
-            log.warn("Sharing hash, nick lists with subscriber: {} ", mod);
-            outService.enqueueMessageForSending(mod, " -\\n\\n" + joinedUserData, true);
-        });
+        for (String subTrip : subscribers) {
+            List<User> tripUsers = currentChannelUsers.stream().filter(u -> u.getTrip().equalsIgnoreCase(subTrip)).collect(Collectors.toList());
+            tripUsers.forEach(u -> {
+                log.warn("Sharing hash, nick lists with subscriber: {}, trip: {} ", u.getNick(), u.getTrip());
+                outService.enqueueMessageForSending(u.getNick(), " -\\n\\n" + joinedUserData, true);
+            });
+        }
     }
 
     public void proceedBanned(User user) {

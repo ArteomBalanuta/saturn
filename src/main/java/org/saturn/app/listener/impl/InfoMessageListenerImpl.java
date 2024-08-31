@@ -9,8 +9,10 @@ import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.model.dto.payload.InfoMessage;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.saturn.app.util.DateUtil.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
@@ -32,6 +34,7 @@ public class InfoMessageListenerImpl implements Listener {
     @Override
     public void notify(String jsonText) {
         InfoMessage message = gson.fromJson(jsonText, InfoMessage.class);
+        message.setJson(jsonText);
 
         if (engine.nick.equals(message.getFrom()) || message.getText().contains("You whispered")) {
             return;
@@ -77,7 +80,7 @@ public class InfoMessageListenerImpl implements Listener {
     private ChatMessage infoToChatMessages(InfoMessage message) {
         Optional<String> author = Optional.ofNullable(message.getFrom());
         if (author.isEmpty()) {
-            log.warn("Received info message: {}, from server ", message);
+            log.warn("Received info message: {}, from server", message.getJson());
             return null;
         }
         String[] split = message.getText().split(author.get() + " whispered: ");

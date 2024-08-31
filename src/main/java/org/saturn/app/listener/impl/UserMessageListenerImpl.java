@@ -32,7 +32,8 @@ public class UserMessageListenerImpl implements Listener {
         log.debug("Full message payload: {}", jsonText);
 
         ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
-
+        String hash = engine.getActiveUsers().stream().filter(u -> u.getNick().equals(message.getNick())).findFirst().get().getHash();
+        message.setHash(hash);
 
         engine.logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
                 getTimestampNow());

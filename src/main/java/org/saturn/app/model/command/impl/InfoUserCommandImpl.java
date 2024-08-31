@@ -50,8 +50,8 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
                 .findFirst();
 
         if (user.isEmpty()) {
-            engine.outService.enqueueMessageForSending(author, "\\n target with nick:  " + nick + " not found!", isWhisper());
-            log.info("Executed [info] command by user: {}, target: {} is not in the room", author, nick);
+            engine.outService.enqueueMessageForSending(author, "\\n target with nick:  " + nick.get() + " not found!", isWhisper());
+            log.info("Executed [info] command by user: {}, target: {} is not in the room", author, nick.get());
             return;
         }
 
@@ -59,6 +59,6 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
                 "\\n User trip: " + user.get().getTrip() +
                         "\\n User hash: " + user.get().getHash(), isWhisper());
 
-        log.info("Executed [info] command by user: {}, target: {}", author, nick);
+        log.info("Executed [info] command by user: {}, target: {}", author, nick.get());
     }
 }
