@@ -1,21 +1,23 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.saturn.app.util.Util.getAdminTrips;
-
-@CommandAliases(aliases = {"blacklist", "banlist"})
-public class BlacklistUserCommandImpl extends UserCommandBaseImpl {
+@Slf4j
+@CommandAliases(aliases = {"ping", "p"})
+public class PingUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
 
-    public BlacklistUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-        super(message, engine, getAdminTrips(engine));
+    public PingUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+        super(message, engine, List.of("x"));
         super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
     }
@@ -29,7 +31,12 @@ public class BlacklistUserCommandImpl extends UserCommandBaseImpl {
     public List<String> getArguments() {
         return super.getArguments();
     }
+
+    @Override
     public void execute() {
-        engine.modService.listBanned();
+        String author = chatMessage.getNick();
+        engine.pingService.executePing(author);
+
+        log.info("Executed [ping] command by user: {}, value", author);
     }
 }

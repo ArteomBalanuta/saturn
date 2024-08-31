@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -11,6 +12,7 @@ import java.util.Optional;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"lock", "lockroom"})
 public class LockRoomUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
@@ -35,18 +37,21 @@ public class LockRoomUserCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         List<String> arguments = getArguments();
 
+        String author = chatMessage.getNick();
         if (arguments.isEmpty()) {
-            engine.modService.lock();
+            log.info("Executed [lock] command by user: {}, flag: not set", author);
+            super.engine.outService.enqueueMessageForSending(author,engine.prefix + "lock on", isWhisper());
+            return;
         }
 
         Optional<String> argument = arguments.stream().findFirst();
 
         if ("on".equals(argument.get())) {
             engine.modService.lock();
-            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " Room locked!", isWhisper());
+            super.engine.outService.enqueueMessageForSending(author, " Room locked!", isWhisper());
         } else if ("off".equals(argument.get())) {
             engine.modService.unlock();
-            super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " Room unlocked!", isWhisper());
+            super.engine.outService.enqueueMessageForSending(author, " Room unlocked!", isWhisper());
         }
     }
 }

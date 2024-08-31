@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.impl.MsgChannelCommandListenerImpl;
@@ -15,6 +16,7 @@ import java.util.List;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"msgchannel", "msgroom"})
 public class MsgChannelCommandImpl extends UserCommandBaseImpl {
     private final OutService outService;
@@ -43,11 +45,9 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
         String author = super.chatMessage.getNick();
 
         List<String> arguments = this.getArguments();
-        String channel;
-        if (arguments.size() > 0) {
-            channel = arguments.get(0).replace("?","");
-        } else {
-            outService.enqueueMessageForSending(author, " Example: " + engine.prefix + "msgroom programming <hello_world>", isWhisper());
+        if (arguments.isEmpty()) {
+            outService.enqueueMessageForSending(author, " Example: " + engine.prefix + "msgroom your-room 1984", isWhisper());
+            log.info("Executed [msgchannel] command buy user: {}", author);
             return;
         }
 
@@ -56,22 +56,25 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
             message.append(' ').append(arguments.get(i));
         }
 
-        System.out.println("Message to be delivered: " + message);
+        String room = arguments.get(0).replace("?","");
+        log.info("Delivering Message: {}, Room: {}", message, room);
 
-        if (channel.equals(engine.channel)) {
-            /* msg current channel */
+        if (room.equals(engine.channel)) {
+            /* msg current room */
             outService.enqueueMessageForSending(author + " ", formatMessage(message.toString()), isWhisper());
+            log.info("Messaging current room: {}", room);
         } else {
             /* JoinChannelListener will make sure to close the connection */
             EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), false); // no db connection, nor config for this one is required
-            setupListBot(channel, slaveEngine);
+            setupListBot(room, slaveEngine);
 
-            JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
+            JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, room));
 
             joinChannelListener.setAction(() -> {
                 slaveEngine.outService.enqueueMessageForSending("*", formatMessage(message.toString()), false);
                 slaveEngine.shareMessages();
-                outService.enqueueMessageForSending(author, " package delivered.", isWhisper());
+                outService.enqueueMessageForSending(author, "sent successfully.", isWhisper());
+                log.info("Executed [msgchannel] command by user: {}, room: {}, message: {}", author, room, message);
             });
 
             slaveEngine.setOnlineSetListener(joinChannelListener);

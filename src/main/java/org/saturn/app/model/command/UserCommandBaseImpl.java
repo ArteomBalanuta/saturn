@@ -1,14 +1,17 @@
 package org.saturn.app.model.command;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.saturn.app.util.Util.toLower;
 
+@Slf4j
 public class UserCommandBaseImpl implements UserCommand  {
     protected final EngineImpl engine;
     protected ChatMessage chatMessage;
@@ -53,23 +56,24 @@ public class UserCommandBaseImpl implements UserCommand  {
     @Override
     public void execute() {
         List<String> aliases = toLower(this.getAliases());
-        UserCommand cmd = engine.commandFactory.getCommand(this.chatMessage, aliases.get(0));
+        Optional<UserCommand> cmd = engine.commandFactory.getCommand(this.chatMessage, aliases.get(0));
 
-        if (!isUserAuthorized(cmd, this.chatMessage)) {
-            return;
+        if (cmd.isPresent() && isUserAuthorized(cmd.get(), this.chatMessage)) {
+            setupArguments(cmd.get());
+            cmd.get().execute();
         }
-        setupArguments(cmd);
-
-        cmd.execute();
     }
 
     private boolean isUserAuthorized(UserCommand userCommand, ChatMessage chatMessage) {
         List<String> whiteTrips = userCommand.getWhiteTrips();
         boolean isWhitelisted = whiteTrips.contains(chatMessage.getTrip()) || whiteTrips.contains("x");
         if (!isWhitelisted) {
-            this.engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), " Access denied.", isWhisper());
+            log.warn("user: {}, trip: {}, [is not] whitelisted", chatMessage.getNick(), chatMessage.getTrip());
+            this.engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), " msg mercury for access.", isWhisper());
             return false;
         }
+
+        log.warn("user: {}, trip: {}, [is] whitelisted", chatMessage.getNick(), chatMessage.getTrip());
         return true;
     }
 

@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -10,6 +11,7 @@ import java.util.List;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"unban", "mercy"})
 public class UnbanUserCommandImpl extends UserCommandBaseImpl {
 
@@ -32,19 +34,30 @@ public class UnbanUserCommandImpl extends UserCommandBaseImpl {
     }
 
 
-    // fix the bag where unbanall does unban hashes with escape characters..
+    // TODO: fix the bag where unbanall doesnt unban hashes with escape characters..
     @Override
     public void execute() {
-        if (getArguments().stream().anyMatch("-all"::equals)) {
-            engine.modService.unbanAll();
-        } else {
-            String author = chatMessage.getNick();
-            getArguments().stream()
-                    .findFirst()
-                    .ifPresent(target -> {
-                        engine.modService.unban(target);
-                        engine.outService.enqueueMessageForSending("","/whisper @" + author + " unbanned " + target, isWhisper());
-                    });
+        List<String> arguments = getArguments();
+        String author = chatMessage.getNick();
+
+        if (arguments.isEmpty()) {
+            engine.outService.enqueueMessageForSending(author, "Example: " + engine.prefix + "unban merc", isWhisper());
+            log.info("Executed [unban] command by user: {} - target: not set", author);
+            return;
         }
+
+        if (arguments.stream().anyMatch("-all"::equals)) {
+            engine.modService.unbanAll();
+            log.info("Executed [unban all] command by user: {}", author);
+            return;
+        }
+        arguments.stream()
+                .findFirst()
+                .ifPresent(target -> {
+                    engine.modService.unban(target);
+                    engine.outService.enqueueMessageForSending(author," unbanned " + target, isWhisper());
+
+                    log.info("Executed [unban] command by user: {}, target: {}", author, target);
+                });
     }
 }

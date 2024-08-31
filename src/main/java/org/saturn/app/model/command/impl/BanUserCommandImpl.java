@@ -1,15 +1,19 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"ban", "bb"})
 public class BanUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
@@ -35,14 +39,24 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
         List<String> arguments = getArguments();
         String author = super.chatMessage.getNick();
 
+        log.info("Executing ban command by user: {}", author);
+
         if (arguments.stream().anyMatch(arg -> arg.equals("-c"))) {
             String pattern = arguments.get(1);
-            super.engine.getActiveUsers().stream()
+            log.info("Banning usernames containing following string: {}", pattern);
+            List<User> users = super.engine.getActiveUsers().stream()
                     .filter(user -> user.getNick().contains(pattern))
-                    .forEach(user -> {
-                        super.engine.getModService().ban(user.getNick(), user.getHash(), user.getTrip());
-                        engine.modService.kick(user.getNick());
-                    });
+                    .collect(Collectors.toList());
+
+            List<String> userNames = users.stream().map(User::getNick).collect(Collectors.toList());
+            log.info("Matching users: {}", userNames);
+
+            users.forEach(user -> {
+                super.engine.getModService().ban(user.getNick(), user.getHash(), user.getTrip());
+                log.info("Banned nick: {}, hash: {}, trip: {}", user.getNick(), user.getHash(), user.getTrip());
+                engine.modService.kick(user.getNick());
+                log.info("User: {}, has been kicked", user.getNick());
+            });
             return;
         }
 
@@ -53,13 +67,18 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
                 .findFirst()
                 .ifPresentOrElse(user -> {
                     engine.modService.ban(user.getNick(), user.getTrip(), user.getHash());
+                    log.warn("Banned nick: {}, hash: {}, trip: {}", user.getNick(), user.getHash(), user.getTrip());
                     engine.outService.enqueueMessageForSending(author," banned: " + target + "trip: " + user.getTrip() + " hash: " + user.getHash(), isWhisper());
                     engine.modService.kick(target);
+                    log.info("User: {}, has been kicked", target);
                 }, () -> {
                     /* target isn't in the room */
                     engine.modService.ban(target);
+                    log.info("Target isn't in the room, banned username: {}", target);
                     engine.outService.enqueueMessageForSending(author," banned: " + target, isWhisper());
                 });
+
+        log.info("Executed [ban] command by user: {}", author);
     }
 
     private static String getBanningUser(List<String> arguments) {

@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -11,7 +12,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@CommandAliases(aliases = {"users", "whitelist","blacklist","offenders","knownoffenders"})
+@Slf4j
+@CommandAliases(aliases = {"users","whitelist","blacklist","offenders","knownoffenders"})
 public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
 
@@ -51,6 +53,7 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
                 "Cereals | TeaJjh\\n" +
                 "jill | Zvoxsl\\n" +
                 "Regret_ | cmdTV+\\n" +
+                "AnnikaV9 | hACkeR\\n" +
                 "usv2 | hACkeR\\n" +
                 "Meth | Methjw\\n" +
                 "xyz | XYZ+bX\\n" +
@@ -59,5 +62,6 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
                 "lol | xhvbdp";
 
         engine.outService.enqueueMessageForSending(author,users, isWhisper());
+        log.info("Executed [users] command by user: {}", author);
     }
 }

@@ -9,13 +9,15 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.saturn.app.util.Util.getAdminTrips;
+
 @Slf4j
-@CommandAliases(aliases = {"mail", "msg", "send"})
-public class MailUserCommandImpl extends UserCommandBaseImpl {
+@CommandAliases(aliases = {"banlist", "bannedusers"})
+public class BanList extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
 
-    public MailUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-        super(message, engine, List.of("x")); /* everyone */
+    public BanList(EngineImpl engine, ChatMessage message, List<String> aliases) {
+        super(message, engine, getAdminTrips(engine));
         super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
     }
@@ -29,10 +31,9 @@ public class MailUserCommandImpl extends UserCommandBaseImpl {
     public List<String> getArguments() {
         return super.getArguments();
     }
-
-    @Override
     public void execute() {
-        engine.mailService.executeMail(chatMessage, this);
-        log.info("Executed [msg] command by user: {}", chatMessage.getNick());
+        String author = chatMessage.getNick();
+        engine.modService.listBanned(author);
+        log.info("Executed [banlist] command by user: {}", author);
     }
 }

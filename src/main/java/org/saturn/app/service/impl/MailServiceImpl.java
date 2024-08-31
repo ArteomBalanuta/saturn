@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
+@Slf4j
 public class MailServiceImpl extends OutService implements MailService {
     private final Connection connection;
     
@@ -37,7 +39,7 @@ public class MailServiceImpl extends OutService implements MailService {
 
         String author = chatMessage.getNick();
         this.orderMessageDelivery(message.toString(), author, receiver, String.valueOf(chatMessage.isWhisper()));
-        enqueueMessageForSending(author, " " + receiver + " will receive your message as soon they chat", chatMessage.isWhisper());
+        enqueueMessageForSending(author, receiver + " will receive your message as soon they chat", chatMessage.isWhisper());
     }
 
     /**
@@ -61,7 +63,8 @@ public class MailServiceImpl extends OutService implements MailService {
             
             insertMessage.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace", e);
         }
     }
     
@@ -91,7 +94,8 @@ public class MailServiceImpl extends OutService implements MailService {
             mail.close();
             resultSet.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace", e);
         }
         
         return messages;
@@ -108,7 +112,8 @@ public class MailServiceImpl extends OutService implements MailService {
             
             insertMessage.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace", e);
         }
     }
 }

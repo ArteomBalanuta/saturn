@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -18,6 +19,7 @@ import java.util.Objects;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"list", "l"})
 public class ListUserCommandImpl extends UserCommandBaseImpl {
 
@@ -49,7 +51,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         List<String> arguments = this.getArguments();
         if (arguments.isEmpty()) {
             printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
-            outService.enqueueMessageForSending(author, " Example: " + engine.prefix + "list programming", isWhisper());
+            outService.enqueueMessageForSending(author, "Example: " + engine.prefix + "list programming", isWhisper());
             return;
         }
 

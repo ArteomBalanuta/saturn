@@ -1,5 +1,6 @@
 package org.saturn.app.facade.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
@@ -25,6 +26,7 @@ import static org.saturn.app.util.DateUtil.getDifference;
 import static org.saturn.app.util.DateUtil.toZoneDateTimeUTC;
 import static org.saturn.app.util.Util.*;
 
+@Slf4j
 public class EngineImpl extends Base implements Engine {
     public List<String> proxies;
     public final CommandFactory commandFactory;
@@ -91,6 +93,7 @@ public class EngineImpl extends Base implements Engine {
         try {
             hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), null, this);
             hcConnection.start();
+            log.debug("Started blocking connection");
         } catch (URISyntaxException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -103,6 +106,7 @@ public class EngineImpl extends Base implements Engine {
         try {
             hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), proxy, this);
             hcConnection.startNonBlocking();
+            log.debug("Started non-blocking connection");
         } catch (URISyntaxException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -113,6 +117,7 @@ public class EngineImpl extends Base implements Engine {
     public void sendJoinMessage() {
         String joinPayload = String.format(JOIN_JSON, channel, nick, password);
         hcConnection.write(joinPayload);
+        log.debug("Sent join payload: {}", joinPayload);
     }
 
     public void shareMessages() {
@@ -126,76 +131,82 @@ public class EngineImpl extends Base implements Engine {
     }
 
     public void flushMessage(String message) {
-        if (hcConnection == null && message != null) {
-            System.out.println("Connection has been closed, couldn't deliver: " + message);
+        if (hcConnection == null) {
+            log.error("Can't flush the message - Connection is closed");
             return;
         }
-        hcConnection.write(message);
+
+        if (message != null) {
+            log.debug("Flushing message: {}", message);
+            hcConnection.write(message);
+        } else {
+            log.debug("Message can't be null");
+        }
     }
 
     @Override
     public void stop() {
+        log.debug("Closing the connection...");
         try {
             if (hcConnection != null) {
                 this.hcConnection.close();
+                log.debug("Closed the connection...");
+            } else {
+                log.debug("Connection is already closed");
             }
         } catch (Exception e) {
+            log.error("Exception: ", e);
             e.printStackTrace();
         }
     }
 
     public void dispatchMessage(String jsonText) {
         try {
+            log.debug("Dispatching message: {}", jsonText);
             String cmd = extractCmdFromJson(jsonText);
             switch (cmd) {
-                case "join": {
-                    break;
+                case "join" -> {
                 }
-                case "onlineSet": {
+                case "onlineSet" -> {
                     onlineSetListener.notify(jsonText);
-                    break;
                 }
-                case "onlineAdd": {
+                case "onlineAdd" -> {
                     userJoinedListener.notify(jsonText);
-                    break;
                 }
-                case "onlineRemove": {
+                case "onlineRemove" -> {
                     userLeftListener.notify(jsonText);
-                    break;
                 }
-                case "chat": {
+                case "chat" -> {
                     chatMessageListener.notify(jsonText);
-                    break;
                 }
-                case "info": {
+                case "info" -> {
                     infoMessageListener.notify(jsonText);
-                    break;
                 }
-                default:
-                    System.out.printf("Incoming payload: %s \n", jsonText);
-                    break;
+                default -> log.warn("Non functional payload: {}", jsonText);
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Something went wrong: " + e);
+            log.error("Warning: {}", e.getMessage());
+            log.debug("Stack trace:", e);
         }
     }
 
     public void shareUserInfo(User user) {
         String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
-        /* possible bug if called through whisper */
-        subscribers.forEach(mod -> outService.enqueueMessageForSending("", "/whisper " + mod + " -\\n\\n" + joinedUserData, false));
+        for (String subTrip : subscribers) {
+            List<User> tripUsers = currentChannelUsers.stream().filter(u -> u.getTrip().equalsIgnoreCase(subTrip)).collect(Collectors.toList());
+            tripUsers.forEach(u -> {
+                log.warn("Sharing hash, nick lists with subscriber: {}, trip: {} ", u.getNick(), u.getTrip());
+                outService.enqueueMessageForSending(u.getNick(), " -\\n\\n" + joinedUserData, true);
+            });
+        }
     }
 
     public void proceedBanned(User user) {
-        logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "JOINED", DateUtil.getTimestampNow());
-
         boolean isBanned = modService.isBanned(user);
-
-        System.out.println("isBanned: " + isBanned);
         if (isBanned) {
-            logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "is banned", DateUtil.getTimestampNow());
+            log.info("User is banned: {}", user.getNick());
             modService.kick(user.getNick());
+            log.warn("User: {} has been kicked", user.getNick());
             this.removeActiveUser(user.getNick());
         }
     }
@@ -204,16 +215,16 @@ public class EngineImpl extends Base implements Engine {
         for (User user : currentChannelUsers) {
             if (leftUser.equals(user.getNick())) {
                 currentChannelUsers.remove(user);
+                log.info("User left: {}", user.getNick());
                 logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", DateUtil.getTimestampNow());
-                logService.logEvent("user " + leftUser + " left channel", "", DateUtil.getTimestampNow());
             }
         }
     }
 
     public void addActiveUser(User newUser) {
-        logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", DateUtil.getTimestampNow());
-        logService.logEvent("user " + newUser.getNick() + " joined channel", "successfully", DateUtil.getTimestampNow());
         currentChannelUsers.add(newUser);
+        log.info("Added user: {}, to list of active users", newUser.getNick());
+        logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", DateUtil.getTimestampNow());
     }
 
 //
@@ -287,13 +298,14 @@ public class EngineImpl extends Base implements Engine {
             String ago = "was afk for " + getDifference(ZonedDateTime.now(), afkUsers.get(author));
             outService.enqueueMessageForSending(author, ago, false);
             afkUsers.remove(author);
+            log.debug("Removed user: {}, from afk list", author);
         }
     }
 
     public void notifyIsAfkIfUserIsMentioned(String author, String messageText) {
         afkUsers.keySet().forEach(user -> {
             if (messageText.contains(user)) {
-                outService.enqueueMessageForSending(author,", user: " + user + " is currently away from keyboard!", false);
+                outService.enqueueMessageForSending(author,user + " is currently away from keyboard!", false);
             }
         });
     }
@@ -306,25 +318,28 @@ public class EngineImpl extends Base implements Engine {
 
         List<Mail> whisperMails = getMail(messages, true);
         if (!whisperMails.isEmpty()) {
-            String whisperStrings = mailToStrings(whisperMails);
-            outService.enqueueMessageForSending(author," new mail: \\n " + whisperStrings, true);
+            log.info("User: {}, got pending whisper messages", author);
+            String whisperMailPayload = formatMail(whisperMails);
+            outService.enqueueMessageForSending(author," new mail: \\n " + whisperMailPayload, true);
         }
 
         List<Mail> publicMessages = getMail(messages, false);
         if (!publicMessages.isEmpty()) {
-            String publicStrings = mailToStrings(publicMessages);
-            outService.enqueueMessageForSending(author," new mail: \\n " + publicStrings, false);
+            log.info("User: {}, got pending messages", author);
+            String publicMailPayload = formatMail(publicMessages);
+            outService.enqueueMessageForSending(author," new mail: \\n " + publicMailPayload, false);
         }
 
         mailService.updateMailStatus(author);
         mailService.updateMailStatus(trip);
+        log.debug("Updated message status to 'DELIVERED' for: {}, {}", author, trip);
     }
 
     private static List<Mail> getMail(List<Mail> messages, boolean isWhisper) {
         return messages.stream().filter(m -> String.valueOf(isWhisper).equals(m.isWhisper)).collect(Collectors.toList());
     }
 
-    private String mailToStrings(List<Mail> messages) {
+    private String formatMail(List<Mail> messages) {
         StringBuilder whisperStrings = new StringBuilder();
         messages.forEach(mail -> {
             String header = DateUtil.formatRfc1123(mail.createdDate, TimeUnit.MILLISECONDS, "UTC") + ". " + getDifference(ZonedDateTime.now(), toZoneDateTimeUTC(mail.createdDate)) + " ago.";

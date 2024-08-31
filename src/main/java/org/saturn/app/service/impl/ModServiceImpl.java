@@ -5,7 +5,9 @@ import org.saturn.app.service.ModService;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.util.Util;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,17 +82,19 @@ public class ModServiceImpl extends OutService implements ModService {
 
     @Override
     public void unban(String target) {
-        String sql = ":sql DELETE FROM banned WHERE id='?';".replace("?", target);
+        /* TODO: hash it so special chars are safe */
+//        String hash = Base64.getEncoder().encodeToString(target.getBytes(StandardCharsets.UTF_8));
+        String sql = ":sql DELETE FROM banned WHERE id='" + target + "';";
         sqlService.executeSql(sql, false);
     }
     
     @Override
-    public void listBanned() {
+    public void listBanned(String author) {
         List<String> bannedIds = sqlService.getBannedIds();
         if (bannedIds.isEmpty()) {
-            enqueueMessageForSending("","No users has been banned.", false);
+            enqueueMessageForSending(author,"No users has been banned.", false);
         } else {
-            enqueueMessageForSending("","Banned hashes, trips, nicks: " + bannedIds, false);
+            enqueueMessageForSending(author,"Banned hashes, trips, nicks: " + bannedIds, false);
         }
     }
 

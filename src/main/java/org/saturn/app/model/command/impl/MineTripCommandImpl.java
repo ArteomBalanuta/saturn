@@ -18,6 +18,7 @@ import java.util.concurrent.*;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
+/* TODO: implement logging separately too not flood the main logging output */
 @CommandAliases(aliases = {"mine"})
 public class MineTripCommandImpl extends UserCommandBaseImpl {
     private static final ScheduledThreadPoolExecutor executorService = new ScheduledThreadPoolExecutor(32);

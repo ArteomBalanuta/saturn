@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -42,6 +43,7 @@ import java.util.List;
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⡇⢾⣿⢼⣷⣳⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠓⠚⠙⠛⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
  */
+@Slf4j
 @CommandAliases(aliases = {"ape", "harambe"})
 public class ApeUserCommandImpl extends UserCommandBaseImpl {
 
@@ -100,5 +102,6 @@ public class ApeUserCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         String author = chatMessage.getNick();
         engine.outService.enqueueMessageForSending(author," " + ape.replace("\n","\\n"), isWhisper());
+        log.info("Executed [harambe] command by user: {}", author);
     }
 }

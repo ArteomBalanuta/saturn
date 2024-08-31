@@ -1,5 +1,6 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
@@ -11,6 +12,7 @@ import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"notes"})
 public class NotesUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
@@ -34,11 +36,24 @@ public class NotesUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
+        String author = chatMessage.getNick();
 
-        if (getArguments().isEmpty()) {
-            engine.noteService.executeListNotes(chatMessage.getNick(), trip.get());
-        } else if (getArguments().stream().findFirst().get().equals("purge") || getArguments().stream().findFirst().get().equals("clear"))  {
-            engine.getNoteService().executeNotesPurge(chatMessage.getNick(), chatMessage.getTrip());
+        if (getArguments().isEmpty() && trip.isEmpty()) {
+            engine.outService.enqueueMessageForSending(author, "\\n Set your trip first. Example: " + engine.prefix + "notes", isWhisper());
+            log.info("Executed [notes] command by user: {}, trip is present", author);
+            return;
+        }
+
+        if (getArguments().isEmpty() && trip.isPresent()) {
+            engine.noteService.executeListNotes(author, trip.get());
+            log.info("Executed [notes] command by user: {}", author);
+            return;
+        }
+
+        String argument = getArguments().stream().findFirst().get();
+        if (argument.equals("purge") || argument.equals("clear")) {
+            engine.noteService.executeNotesPurge(author, chatMessage.getTrip());
+            log.info("Executed [notes purge] command by user: {}", author);
         }
     }
 }

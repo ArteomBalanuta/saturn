@@ -1,6 +1,7 @@
 package org.saturn.app.model.command.factory;
 
 import io.github.classgraph.*;
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -13,6 +14,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class CommandFactory {
     private static final ScanResult scanResult = new ClassGraph()
             .verbose(false)
@@ -27,7 +29,7 @@ public class CommandFactory {
         this.engine = engine;
         this.aliasesMappedByClassInfo = getAliases(commandAnnotation);
     }
-    public UserCommand getCommand(ChatMessage message, String cmd) {
+    public Optional<UserCommand> getCommand(ChatMessage message, String cmd) {
         AtomicReference<List<String>> aliases = new AtomicReference<>();
 
         Optional<Map.Entry<ClassInfo, String[]>> first = aliasesMappedByClassInfo.entrySet().stream()
@@ -36,7 +38,8 @@ public class CommandFactory {
                 .findFirst();
 
         if (first.isEmpty()) {
-            throw new RuntimeException("Cant find command implementation for command: " + cmd);
+            log.warn("No implementation found for: {}", cmd);
+            return Optional.empty();
         }
 
         ClassInfo info = first.get().getKey();
@@ -44,7 +47,8 @@ public class CommandFactory {
             Class<?> cl = Class.forName(info.getName());
             Constructor<?> declaredConstructor = cl.getDeclaredConstructors()[0];
 
-            return (UserCommand) declaredConstructor.newInstance(this.engine, message, aliases.get());
+            log.debug("Using implementation class, aliases: {}, [{}]",  info.getName(), aliases.get());
+            return Optional.of((UserCommand) declaredConstructor.newInstance(this.engine, message, aliases.get()));
 
         } catch (ClassNotFoundException ex) {
             throw new RuntimeException(ex);

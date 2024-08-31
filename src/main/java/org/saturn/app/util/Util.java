@@ -3,13 +3,18 @@ package org.saturn.app.util;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.dto.User;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class Util {
     public static Gson gson = new Gson();
 
@@ -49,9 +54,10 @@ public class Util {
         return Arrays.asList(users);
     }
 
-    public static boolean checkAnagrams(String target, List<String> words) {
-        for (String word : words) {
-            if (areAnagrams(target, word)) {
+    public static boolean checkAnagrams(String target, List<String> cmdAliases) {
+        for (String alias : cmdAliases) {
+            if (areAnagrams(target, alias)) {
+                log.info("Command is anagram for: {}, alias", alias);
                 return true;
             }
         }
@@ -129,6 +135,7 @@ public class Util {
             result.append(aligned).append(":").append(values.get(i)).append("\\n");
         }
 
+        log.debug("Utils: returning aligned with white spaces output: \\n {}", result.toString());
         return result.toString();
     }
 }

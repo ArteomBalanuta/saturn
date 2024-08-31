@@ -12,3 +12,5 @@ hackchat.db
 /saturn.iml
 /deploy/deploy.bash
 /deploy/rerun.bash
+/hc.log
+/dependency-reduced-pom.xml

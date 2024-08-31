@@ -1,9 +1,12 @@
 package org.saturn.app.model.command.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.service.ModService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +14,7 @@ import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
+@Slf4j
 @CommandAliases(aliases = {"kick", "k", "out"})
 public class KickUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
@@ -34,21 +38,51 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         List<String> arguments = getArguments();
-        arguments = arguments.stream().map(arg -> arg.replace("@","")).collect(Collectors.toList());
+        arguments = arguments.stream().map(arg -> arg.replace("@", "")).collect(Collectors.toList());
 
-        String firstArg = arguments.get(0);
+        String author = chatMessage.getNick();
+        if (arguments.isEmpty()) {
+            log.info("Executed [kick] command by user: {}, no username parameter specified", author);
+            engine.outService.enqueueMessageForSending(author, "\\n Example: " + engine.prefix + "kick merc", isWhisper());
+            return;
+        }
 
-        if ("-m".equals(firstArg)) {
-            for (int i = 1; i < arguments.size(); i++) {
-                super.engine.getModService().kick(arguments.get(i));
+        String flag = arguments.get(0);
+
+        List<String> activeUsers = engine.getActiveUsers().stream().map(User::getNick).collect(Collectors.toList());
+
+        switch (flag) {
+            case "-m" -> {
+                List<String> usernames = arguments.stream().skip(1).collect(Collectors.toList());
+                for (String target : usernames) {
+                    kickUserIfPresent(target, activeUsers);
+                }
             }
-        } else if ("-c".equals(firstArg)) {
-            String firstChars = arguments.get(1);
-            super.engine.getActiveUsers().stream()
-                    .filter(user -> user.getNick().contains(firstChars))
-                    .forEach(user -> super.engine.getModService().kick(user.getNick()));
+            case "-c" -> {
+                String value = arguments.get(1);
+                List<String> usernames = activeUsers.stream()
+                        .filter(username -> username.contains(value))
+                        .collect(Collectors.toList());
+
+                log.info("Kicking users: {}", usernames);
+
+                for (String target : usernames) {
+                    engine.modService.kick(target);
+                    log.info("Kicked: {}", target);
+                }
+            }
+            default -> kickUserIfPresent(flag, activeUsers);
+        }
+
+        log.info("Executed kick command by user: {}", author);
+    }
+
+    private void kickUserIfPresent(String target, List<String> activeUsers) {
+        if (activeUsers.contains(target)) {
+            engine.modService.kick(target);
+            log.info("Kicked: {}", target);
         } else {
-            super.engine.getModService().kick(firstArg);
+            log.info("User: {} is not in the room", target);
         }
     }
 }

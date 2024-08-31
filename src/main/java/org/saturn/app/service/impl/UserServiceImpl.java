@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.dto.LastSeenDto;
 import org.saturn.app.service.UserService;
 import org.saturn.app.util.DateUtil;
@@ -18,6 +19,7 @@ import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 import static org.saturn.app.util.DateUtil.formatRfc1123;
 import static org.saturn.app.util.DateUtil.getDifference;
 
+@Slf4j
 public class UserServiceImpl extends OutService implements UserService {
     private final Connection connection;
 
@@ -48,7 +50,8 @@ public class UserServiceImpl extends OutService implements UserService {
             statement.close();
             resultSet.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace: ", e);
         }
 
         if (timestamp != null) {
@@ -64,6 +67,7 @@ public class UserServiceImpl extends OutService implements UserService {
             setSessionDurationAndJoinedDateTime(dto);
         }
 
+        log.info("Trip,Nick: {}, \\n Joined: {}, \\n Last seen: {}, \\n Seen active: {} ago, \\n Session duration: {}, \\n Last message: {}", tripOrNick, dto.getJoinedAtRfc1123(), dto.getLastSeenRfc1123(), dto.getTimeSinceSeen(), dto.getSessionDuration(), dto.getLastMessage());
         return "\\n Nick|Trip: " + tripOrNick + "\\n Joined: " + dto.getJoinedAtRfc1123() + "\\n Last seen: " + dto.getLastSeenRfc1123() + "\\n Seen active: " + dto.getTimeSinceSeen() + " ago." + "\\n Session duration: " + dto.getSessionDuration() + " \\n Last message: " + dto.getLastMessage() + "\\n";
     }
 
@@ -83,7 +87,8 @@ public class UserServiceImpl extends OutService implements UserService {
             statement.close();
             resultSet.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.debug("Stack trace: ", e);
         }
 
         if (joinedAt != null) {

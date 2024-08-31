@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.ApplicationRunner;
 import org.saturn.app.service.DataBaseService;
 
@@ -8,6 +9,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+@Slf4j
 public class DataBaseServiceImpl implements DataBaseService {
     private String databasePath;
     private Connection connection;
@@ -18,7 +20,8 @@ public class DataBaseServiceImpl implements DataBaseService {
             this.databasePath = path;
             this.connection = setUpConnection();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error: {}", e.getMessage());
+            log.debug("Stack trace:", e);
             System.exit(1);
         }
     }
@@ -26,12 +29,15 @@ public class DataBaseServiceImpl implements DataBaseService {
     protected void validateDbPath(String path) {
         File file = new File(path);
         if (!file.exists()) {
-            throw new RuntimeException("Can't find database file: " + path);
+            log.error("Can't find database file, path: {}", path);
+            throw new RuntimeException("No database file present, path: " + path);
         }
     }
 
     private Connection setUpConnection() throws SQLException {
-        return DriverManager.getConnection("jdbc:sqlite:" + databasePath);
+        String jdbcUrl = "jdbc:sqlite:" + databasePath;
+        log.debug("Using JDBC connection string: {}", jdbcUrl);
+        return DriverManager.getConnection(jdbcUrl);
     }
 
     @Override

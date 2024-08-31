@@ -1,11 +1,13 @@
 package org.saturn.app.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.concurrent.BlockingQueue;
 
 import static org.saturn.app.util.DateUtil.getTimestampNow;
 
+@Slf4j
 public class OutService {
     protected BlockingQueue<String> queue;
     protected BlockingQueue<String> rawMessages;
@@ -20,6 +22,7 @@ public class OutService {
 
     public String enqueueMessageForSending(String author, String message, boolean isWhisper) {
         if (StringUtils.isBlank(author)) {
+            log.error("Author should not be blank!");
             throw new RuntimeException("Author should not be blank!");
         }
         if (isWhisper) {
@@ -37,7 +40,7 @@ public class OutService {
     }
 
     public void enqueueRawMessageForSending(String message) {
-        System.out.println(getTimestampNow() + " raw sent: " + message);
+        log.debug("raw payload sent: {}", message);
         rawMessages.add(message);
     }
 }

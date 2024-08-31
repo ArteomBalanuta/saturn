@@ -3,6 +3,7 @@ package org.saturn.app.listener.impl;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
@@ -11,6 +12,7 @@ import java.util.List;
 
 import static org.saturn.app.util.Util.gson;
 
+@Slf4j
 public class UserJoinedListenerImpl implements Listener {
     @Override
     public String getListenerName() {
@@ -27,7 +29,7 @@ public class UserJoinedListenerImpl implements Listener {
         JsonElement element = JsonParser.parseString(jsonText);
         JsonObject object = element.getAsJsonObject();
         User user = gson.fromJson(object, User.class);
-        System.out.println("Joined: " + user.toString());
+        log.info("Joined user, nick: {}, trip: {}, hash: {}, channel: {}", user.getNick(), user.getTrip(), user.getHash(), user.getChannel());
 
         engine.addActiveUser(user);
         engine.shareUserInfo(user);
