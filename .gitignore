@@ -14,3 +14,5 @@ hackchat.db
 /deploy/rerun.bash
 /hc.log
 /dependency-reduced-pom.xml
+/logs/
+/deploy/

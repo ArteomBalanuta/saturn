@@ -1,10 +1,10 @@
 Adjust application.properties configuration file.
 
 Build:
-mvn clean compile assembly:single
+mvn clean package
 
 Run:
-java -jar target/saturn-1.0-SNAPSHOT-jar-with-dependencies.jar
+java -Dlog4j.configurationFile=./log4j2.xml -jar target/saturn.jar
 
 
 
