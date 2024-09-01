@@ -1,58 +1,77 @@
 # truncate the tables
 
-delete from internal_events;
+delete from executed_commands;
 delete from mail;
 delete from messages;
 delete from notes;
-delete from banned;
+delete from banned_users;
 
 DELETE FROM SQLITE_SEQUENCE WHERE name in ('mail','messages','banned','notes','internal_events');
 
+/* TODO: implement the code changes. wip */
 # DDL
--- banned definition
-
-CREATE TABLE banned (
-	id TEXT(100) NOT NULL,
-	CONSTRAINT banned_pk PRIMARY KEY (id)
+CREATE TABLE banned_users (
+	"id" INTEGER PRIMARY KEY AUTOINCREMENT,
+	"trip" TEXT,
+	"name" TEXT,
+	"hash" TEXT,
+	"reason" TEXT NOT NULL,
+    "created_on" INTEGER NOT NULL
 );
 
-
--- internal_events definition
-
-CREATE TABLE "internal_events" (
-	"cmd"	TEXT,
+CREATE TABLE "executed_commands" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+	"command_name"	TEXT,
+	"arguments"	TEXT,
 	"status"	TEXT,
-	"created_on"	NUMERIC NOT NULL
+	"created_on" INTEGER NOT NULL
 );
-
--- mail definition
 
 CREATE TABLE "mail" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
 	"owner"	TEXT NOT NULL,
 	"receiver"	TEXT NOT NULL,
 	"message"	TEXT,
 	"status"	TEXT NOT NULL,
-	"created_date"	NUMERIC
-,   "is_whisper"	TEXT);
-
--- messages definition
+	"created_on"	INTEGER NOT NULL,
+	"is_whisper"	TEXT);
 
 CREATE TABLE "messages" (
-	"trip"	TEXT,
-	"nick"	TEXT NOT NULL,
-	"hash"	TEXT,
-	"message"	TEXT,
-	"created_on"	INTEGER NOT NULL,
-	PRIMARY KEY("created_on")
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "trip" TEXT,
+    "name" TEXT NOT NULL,
+    "hash" TEXT,
+    "message" TEXT,
+    "created_on" INTEGER NOT NULL
 );
 
--- notes definition
-
 CREATE TABLE "notes" (
-	"id"	INTEGER,
-	"name"	TEXT,
+	"id"	INTEGER PRIMARY KEY AUTOINCREMENT,
+	"trip"	TEXT,
 	"note"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+	"created_on" INTEGER NOT NULL
+);
+
+CREATE TABLE "trips" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "type" TEXT NOT NULL CHECK(type IN ('ADMIN', 'MODERATOR', 'TRUSTED', 'USER', 'REGULAR')),
+    "trip" TEXT,
+    "created_on" INTEGER NOT NULL
+);
+
+CREATE TABLE "names" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT,
+    "created_on" INTEGER NOT NULL
+);
+
+CREATE TABLE "trip_names" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "trip_id" INTEGER NOT NULL,
+    "name_id" INTEGER NOT NULL,
+    FOREIGN KEY ("trip_id") REFERENCES "trips" ("id"),
+    FOREIGN KEY ("name_id") REFERENCES "names" ("id"),
+    UNIQUE ("trip_id", "name_id")
 );
 
 ## to build the jar
