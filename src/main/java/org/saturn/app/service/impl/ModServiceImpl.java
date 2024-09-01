@@ -5,9 +5,7 @@ import org.saturn.app.service.ModService;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.util.Util;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,10 +51,18 @@ public class ModServiceImpl extends OutService implements ModService {
     }
 
     @Override
-    public void ban(String target) {
+    public void shadowBan(String target) {
         String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", Util.getAuthor(target));
         sqlService.executeSql(sql, false);
     }
+
+    @Override
+    public void ban(String target) {
+        String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", Util.getAuthor(target));
+        sqlService.executeSql(sql, false);
+        enqueueRawMessageForSending(String.format("{ \"cmd\": \"ban\", \"nick\": \"%s\"}", target));
+    }
+
 
     @Override
     public void lock() {

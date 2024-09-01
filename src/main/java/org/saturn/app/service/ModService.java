@@ -7,14 +7,16 @@ public interface ModService {
     void kick(String target);
 
     void overflow(String target);
+    void shadowBan(String target);
+
     void ban(String target);
 
     void lock();
     void unlock();
 
-    default void ban(String... args){
+    default void shadowBan(String... args){
         for (String arg : args) {
-            this.ban(arg);
+            this.shadowBan(arg);
         }
     }
 

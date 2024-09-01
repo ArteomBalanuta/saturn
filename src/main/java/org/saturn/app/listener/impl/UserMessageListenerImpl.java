@@ -28,6 +28,10 @@ public class UserMessageListenerImpl implements Listener {
         return "messageListener";
     }
 
+    boolean isTrustedUser(String trip, String nick, String hash) {
+
+        return false;
+    }
     @Override
     public void notify(String jsonText) {
         log.debug("Full message payload: {}", jsonText);
@@ -45,6 +49,21 @@ public class UserMessageListenerImpl implements Listener {
         }
 
         log.info("hash: {}, trip: {}, nick: {}, message: {}", message.getHash(), message.getTrip(), message.getNick(), message.getText());
+
+        if (!isTrustedUser(message.getTrip(), message.getNick(), message.getHash())) {
+            boolean aboveThreshold = message.getText().length() > 40;
+            if (aboveThreshold) {
+                if (message.getTrip() != null) {
+                    engine.modService.shadowBan(message.getTrip());
+                }
+                engine.modService.shadowBan(message.getHash());
+                engine.modService.kick(message.getNick());
+                engine.modService.lock();
+
+                log.warn("Spam detected by user: {}, banned hash: {}, trip: {}", message.getNick(), message.getHash(), message.getTrip());
+                engine.outService.enqueueMessageForSending("*", " Banned hash: " + message.getHash() + " trip: " + message.getTrip() + " reason: SPAM",false);
+            }
+        }
 
         /* Mail service check */
         engine.deliverMailIfPresent(message.getNick(), message.getTrip());
