@@ -78,11 +78,6 @@ public class EngineImpl extends Base implements Engine {
     }
 
     @Override
-    public List<User> getActiveUsers() {
-        return new ArrayList<>(currentChannelUsers);
-    }
-
-    @Override
     public void setActiveUsers(List<User> users) {
         this.currentChannelUsers.addAll(users);
     }

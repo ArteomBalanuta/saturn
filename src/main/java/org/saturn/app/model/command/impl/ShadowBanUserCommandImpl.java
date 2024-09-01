@@ -50,7 +50,7 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
         if (arguments.stream().anyMatch(arg -> arg.equals("-c"))) {
             String pattern = arguments.get(1);
             log.info("Shadow Banning usernames containing following string: {}", pattern);
-            List<User> users = super.engine.getActiveUsers().stream()
+            List<User> users = super.engine.currentChannelUsers.stream()
                     .filter(user -> user.getNick().contains(pattern))
                     .collect(Collectors.toList());
 

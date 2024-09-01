@@ -49,7 +49,7 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
 
         String flag = arguments.get(0);
 
-        List<String> activeUsers = engine.getActiveUsers().stream().map(User::getNick).collect(Collectors.toList());
+        List<String> activeUsers = engine.currentChannelUsers.stream().map(User::getNick).collect(Collectors.toList());
 
         switch (flag) {
             case "-m" -> {
