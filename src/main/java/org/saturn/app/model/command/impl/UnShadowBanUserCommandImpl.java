@@ -12,12 +12,12 @@ import java.util.List;
 import static org.saturn.app.util.Util.getAdminTrips;
 
 @Slf4j
-@CommandAliases(aliases = {"unban", "mercy"})
-public class UnbanUserCommandImpl extends UserCommandBaseImpl {
+@CommandAliases(aliases = {"unshadowban", "shadowmercy", "unblock"})
+public class UnShadowBanUserCommandImpl extends UserCommandBaseImpl {
 
     private final List<String> aliases = new ArrayList<>();
 
-    public UnbanUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+    public UnShadowBanUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
         super(message, engine, getAdminTrips(engine));
         super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
@@ -54,7 +54,7 @@ public class UnbanUserCommandImpl extends UserCommandBaseImpl {
         arguments.stream()
                 .findFirst()
                 .ifPresent(target -> {
-                    engine.modService.unban(target);
+                    engine.modService.unshadowban(target);
                     engine.outService.enqueueMessageForSending(author," unbanned " + target, isWhisper());
 
                     log.info("Executed [unban] command by user: {}, target: {}", author, target);

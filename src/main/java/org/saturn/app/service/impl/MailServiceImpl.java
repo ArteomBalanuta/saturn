@@ -64,7 +64,7 @@ public class MailServiceImpl extends OutService implements MailService {
             insertMessage.close();
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace", e);
+            log.error("Stack trace", e);
         }
     }
     
@@ -95,7 +95,7 @@ public class MailServiceImpl extends OutService implements MailService {
             resultSet.close();
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace", e);
+            log.error("Stack trace", e);
         }
         
         return messages;
@@ -113,7 +113,7 @@ public class MailServiceImpl extends OutService implements MailService {
             insertMessage.close();
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace", e);
+            log.error("Stack trace", e);
         }
     }
 }

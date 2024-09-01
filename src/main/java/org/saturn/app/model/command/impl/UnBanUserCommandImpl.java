@@ -4,26 +4,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
-import org.saturn.app.model.dto.Afk;
-import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
-import static org.saturn.app.util.Util.listToString;
 
 @Slf4j
-@CommandAliases(aliases = {"ban"})
-public class BanUserCommandImpl extends UserCommandBaseImpl {
+@CommandAliases(aliases = {"unban"})
+public class UnBanUserCommandImpl extends UserCommandBaseImpl {
     private final List<String> aliases = new ArrayList<>();
 
-    public BanUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+    public UnBanUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
         super(message, engine, getAdminTrips(engine));
         super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
@@ -45,13 +39,13 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
 
         Optional<String> target = getArguments().stream().findFirst();
         if (target.isEmpty()) {
-            log.info("Executed [ban] command by user: {}, no target set", author);
-            engine.outService.enqueueMessageForSending(author,"Example: " + engine.prefix + "ban merc", isWhisper());
+            log.info("Executed [unban] command by user: {}, no target set", author);
+            engine.outService.enqueueMessageForSending(author,"Example: " + engine.prefix + "unban merc", isWhisper());
             return;
         }
-        engine.modService.ban(target.get());
-        engine.outService.enqueueMessageForSending(author,target.get() + " " + chatMessage.getHash() + " has been banned", isWhisper());
+        engine.modService.unban(target.get());
+        engine.outService.enqueueMessageForSending(author,target.get() + " " + chatMessage.getHash() + " has been unbanned", isWhisper());
 
-        log.info("Executed [ban] command by user: {}, trip: {}, target: {}", author, chatMessage.getTrip(), target.get());
+        log.info("Executed [unban] command by user: {}, trip: {}, target: {}", author, chatMessage.getTrip(), target.get());
     }
 }

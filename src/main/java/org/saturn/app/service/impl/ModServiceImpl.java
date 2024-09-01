@@ -58,11 +58,13 @@ public class ModServiceImpl extends OutService implements ModService {
 
     @Override
     public void ban(String target) {
-        String sql = ":sql INSERT INTO banned(id) VALUES ('?');".replace("?", Util.getAuthor(target));
-        sqlService.executeSql(sql, false);
         enqueueRawMessageForSending(String.format("{ \"cmd\": \"ban\", \"nick\": \"%s\"}", target));
     }
 
+    @Override
+    public void unban(String target) {
+        enqueueRawMessageForSending(String.format("{ \"cmd\": \"unban\", \"hash\": \"%s\"}", target));
+    }
 
     @Override
     public void lock() {
@@ -87,7 +89,7 @@ public class ModServiceImpl extends OutService implements ModService {
 
 
     @Override
-    public void unban(String target) {
+    public void unshadowban(String target) {
         /* TODO: hash it so special chars are safe */
 //        String hash = Base64.getEncoder().encodeToString(target.getBytes(StandardCharsets.UTF_8));
         String sql = ":sql DELETE FROM banned WHERE id='" + target + "';";
@@ -110,7 +112,7 @@ public class ModServiceImpl extends OutService implements ModService {
         if (bannedIds.isEmpty()) {
             enqueueMessageForSending("", "No users has been banned.", false);
         } else {
-            bannedIds.forEach(this::unban);
+            bannedIds.forEach(this::unshadowban);
             enqueueMessageForSending("", "Unbanned hashes, trips, nicks: " + bannedIds, false);
         }
     }

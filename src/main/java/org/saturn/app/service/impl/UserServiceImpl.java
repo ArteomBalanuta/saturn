@@ -51,7 +51,7 @@ public class UserServiceImpl extends OutService implements UserService {
             resultSet.close();
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace: ", e);
+            log.error("Stack trace: ", e);
         }
 
         if (timestamp != null) {
@@ -88,7 +88,7 @@ public class UserServiceImpl extends OutService implements UserService {
             resultSet.close();
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace: ", e);
+            log.error("Stack trace: ", e);
         }
 
         if (joinedAt != null) {

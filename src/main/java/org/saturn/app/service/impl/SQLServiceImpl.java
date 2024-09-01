@@ -37,7 +37,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
             return String.valueOf(updatedRows);
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace", e);
+            log.error("Stack trace", e);
 
             return e.getMessage();
         }
@@ -73,7 +73,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
             cmd.close();
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace", e);
+            log.error("Stack trace", e);
 
             listOfRows.clear();
             return e.getMessage();
@@ -99,7 +99,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
             return result;
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace", e);
+            log.error("Stack trace", e);
         }
         
         return Collections.emptyList();
@@ -139,7 +139,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
             return result.toString();
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace", e);
+            log.error("Stack trace", e);
         }
 
         return null;

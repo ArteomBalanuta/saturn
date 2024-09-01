@@ -190,7 +190,7 @@ public class EngineImpl extends Base implements Engine {
             }
         } catch (Exception e) {
             log.error("Warning: {}", e.getMessage());
-            log.debug("Stack trace:", e);
+            log.error("Stack trace:", e);
         }
     }
 

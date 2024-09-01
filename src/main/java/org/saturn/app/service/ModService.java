@@ -11,6 +11,8 @@ public interface ModService {
 
     void ban(String target);
 
+    void unban(String target);
+
     void lock();
     void unlock();
 
@@ -24,7 +26,7 @@ public interface ModService {
 
     void disableCaptcha();
 
-    void unban(String target);
+    void unshadowban(String target);
     void listBanned(String author);
     void vote(String author);
     void votekick(String nick);

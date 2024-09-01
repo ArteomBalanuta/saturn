@@ -38,7 +38,7 @@ public class PingServiceImpl extends OutService implements PingService {
             sc.close();
         } catch (IOException e) {
            log.info("Error: {}", e.getMessage());
-           log.debug("Stack trace: ", e);
+           log.error("Stack trace: ", e);
         }
 
         log.info("response latency: {}", timeToRespond);

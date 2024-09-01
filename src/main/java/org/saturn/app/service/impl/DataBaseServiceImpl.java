@@ -21,7 +21,7 @@ public class DataBaseServiceImpl implements DataBaseService {
             this.connection = setUpConnection();
         } catch (Exception e) {
             log.error("Error: {}", e.getMessage());
-            log.debug("Stack trace:", e);
+            log.error("Stack trace:", e);
             System.exit(1);
         }
     }

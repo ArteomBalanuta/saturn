@@ -159,7 +159,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
             return result;
         } catch (IOException e) {
             log.info("Error: {}", e.getMessage());
-            log.debug("Stack trace: ", e);
+            log.error("Stack trace: ", e);
             return null;
         }
     }
