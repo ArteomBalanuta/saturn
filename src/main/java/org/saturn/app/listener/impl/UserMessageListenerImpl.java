@@ -5,6 +5,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.List;
@@ -48,8 +49,10 @@ public class UserMessageListenerImpl implements Listener {
         /* Mail service check */
         engine.deliverMailIfPresent(message.getNick(), message.getTrip());
 
+        /* Get user dto by message author */
+        User user = engine.currentChannelUsers.stream().filter(u -> u.getNick().equalsIgnoreCase(message.getNick())).findFirst().get();
         /* Check if user is afk */
-        engine.notifyUserNotAfkAnymore(message.getNick());
+        engine.notifyUserNotAfkAnymore(user);
 
         /* notify mentioned user is afk currently */
         engine.notifyIsAfkIfUserIsMentioned(message.getNick(), message.getText());

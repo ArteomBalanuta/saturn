@@ -4,12 +4,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.Afk;
+import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.saturn.app.util.Util.listToString;
 
 @Slf4j
 @CommandAliases(aliases = {"afk", "a"})
@@ -35,9 +40,18 @@ public class AfkUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         String author = chatMessage.getNick();
-        engine.afkUsers.put(author, ZonedDateTime.now(ZoneId.of("UTC")));
+        String trip = chatMessage.getTrip();
+        if (trip == null) {
+            log.info("Executed [afk] command by user: {} - no trip provided", author);
+            engine.outService.enqueueMessageForSending(author,"Set your trip in order to use this command", isWhisper());
+            return;
+        }
+
+        List<User> afkUsers = engine.currentChannelUsers.stream().filter(u -> u.getTrip().equals(trip)).collect(Collectors.toList());
+        String reason = listToString(getArguments());
+        engine.afkUsers.put(trip, new Afk(afkUsers, reason, ZonedDateTime.now(ZoneId.of("UTC")), trip));
+        log.info("User: {} executed afk command - marked as afk, using trip: {}, reason: {}", author, trip, reason);
 
         engine.outService.enqueueMessageForSending(author," is afk", isWhisper());
-        log.info("Executed [afk] command by user: {} - marked as afk", author);
     }
 }

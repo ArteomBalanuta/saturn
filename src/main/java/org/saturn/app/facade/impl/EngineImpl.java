@@ -8,17 +8,21 @@ import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.impl.*;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.factory.CommandFactory;
+import org.saturn.app.model.dto.Afk;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.DateUtil;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
@@ -40,7 +44,7 @@ public class EngineImpl extends Base implements Engine {
     private final Listener connectionListener = new ConnectionListenerImpl(this);
     private final Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
-    public final Map<String, ZonedDateTime> afkUsers = new HashMap<>();
+    public final Map<String, Afk> afkUsers = new HashMap<>();
 
     public void setOnlineSetListener(Listener listener) {
         this.onlineSetListener = listener;
@@ -293,19 +297,33 @@ public class EngineImpl extends Base implements Engine {
 //            executeMsgChannelCmd(trip, command);
 //        }
 
-    public void notifyUserNotAfkAnymore(String author) {
-        if (this.afkUsers.containsKey(author)) {
-            String ago = "was afk for " + getDifference(ZonedDateTime.now(), afkUsers.get(author));
-            outService.enqueueMessageForSending(author, ago, false);
-            afkUsers.remove(author);
-            log.debug("Removed user: {}, from afk list", author);
+    public void notifyUserNotAfkAnymore(User user) {
+        Optional<Afk> afk =Optional.empty();
+        for (String trip : afkUsers.keySet()) {
+            if (trip.equals(user.getTrip())) {
+                afk = Optional.ofNullable(afkUsers.get(trip));
+                break;
+            }
+        }
+
+        if (afk.isPresent()) {
+            String ago = "was afk for " + getDifference(ZonedDateTime.now(), afk.get().getAfkOn());
+            String reason = afk.get().getReason();
+            outService.enqueueMessageForSending(user.getNick(), ago + "\\n reason: " + reason, false);
+            afkUsers.remove(user.getTrip());
+            log.debug("Removed user: {}, trip: {}, from afk list", user.getNick(), user.getTrip());
         }
     }
 
     public void notifyIsAfkIfUserIsMentioned(String author, String messageText) {
-        afkUsers.keySet().forEach(user -> {
-            if (messageText.contains(user)) {
-                outService.enqueueMessageForSending(author,user + " is currently away from keyboard!", false);
+        afkUsers.forEach((trip, afk) -> {
+            List<User> users = afk.getUsers();
+            List<String> afkNicks = users.stream().map(User::getNick).toList();
+            for (User user : users) {
+                if (messageText.contains(user.getNick()) || messageText.contains(user.getTrip())) {
+                    outService.enqueueMessageForSending(author, "Users:" + afkNicks + ", trip: "  + user.getTrip() + " are currently away from keyboard! Reason: " + afk.getReason(), false);
+                    return;
+                }
             }
         });
     }

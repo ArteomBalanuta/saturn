@@ -5,12 +5,14 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.Afk;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.model.dto.payload.InfoMessage;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -73,6 +75,17 @@ public class InfoMessageListenerImpl implements Listener {
             log.warn("User renamed from: {} to {}", before, after);
             if (before.equals(engine.nick)) {
                 engine.nick = after;
+            }
+
+            /* Renaming afk users accordingly */
+            for (Map.Entry<String,Afk> entry : engine.afkUsers.entrySet()) {
+                List<User> afkUsers = entry.getValue().getUsers();
+                Optional<User> afkUser = afkUsers.stream().filter(u -> u.getNick().equals(before)).findFirst();
+                if (afkUser.isPresent()) {
+                    log.warn("User: {} was renamed, updating afk list with new username: {}, accordingly", before, after);
+                    User user = afkUser.get();
+                    user.setNick(after);
+                }
             }
         }
     }

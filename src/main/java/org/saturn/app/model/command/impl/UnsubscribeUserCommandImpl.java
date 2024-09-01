@@ -12,12 +12,12 @@ import java.util.List;
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
 @Slf4j
-@CommandAliases(aliases = {"sub", "subscribe"})
-public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
+@CommandAliases(aliases = {"unsub", "unsubscribe"})
+public class UnsubscribeUserCommandImpl extends UserCommandBaseImpl {
 
     private final List<String> aliases = new ArrayList<>();
 
-    public SubscribeUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+    public UnsubscribeUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
         super(message, engine, getWhiteListedTrips(engine));
         super.setAliases(this.getAliases());
         this.aliases.addAll(aliases);
@@ -37,16 +37,16 @@ public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
     public void execute() {
         String author = chatMessage.getNick();
         String trip = chatMessage.getTrip();
-        if (trip == null) {
-            engine.outService.enqueueMessageForSending(author,"you have to set your trip to use this command.", false);
-            log.info("User: {} failed subscription - trip is not set", author);
+        if (trip == null && !engine.subscribers.contains(trip)) {
+            engine.outService.enqueueMessageForSending(author,"you are not subscribed, please set your trip and use " + engine.prefix + " sub command.", false);
+            log.info("User: {} failed unsubing", author);
             return;
         }
-        engine.subscribers.add(trip);
-        log.info("User: {}, trip: {}, subscribed for joining users data - hashes, nicks", author, trip);
-        engine.outService.enqueueMessageForSending(author,"your trip will be whispered hashes and " +
+        engine.subscribers.remove(trip);
+        log.info("User: {}, trip: {}, unsubscribed", author, trip);
+        engine.outService.enqueueMessageForSending(author,"your trip will no longer receive hashes and " +
                 "nicks for each new joining user. ", true);
 
-        log.info("Executed [subscribe] command by user: {}, trip: {}", author, trip);
+        log.info("Executed [unsubscribe] command by user: {}, trip: {}", author, trip);
     }
 }

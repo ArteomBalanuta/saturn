@@ -138,4 +138,10 @@ public class Util {
         log.debug("Utils: returning aligned with white spaces output: \\n {}", result.toString());
         return result.toString();
     }
+
+    public static String listToString (List<String> strings) {
+        StringBuilder b = new StringBuilder();
+        strings.forEach(string -> b.append(string).append(" "));
+        return b.toString();
+    }
 }

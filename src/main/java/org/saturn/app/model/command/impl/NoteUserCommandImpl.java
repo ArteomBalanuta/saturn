@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
+import static org.saturn.app.util.Util.listToString;
 
 @Slf4j
 @CommandAliases(aliases = {"note", "save"})
@@ -47,11 +48,5 @@ public class NoteUserCommandImpl extends UserCommandBaseImpl {
 
         engine.outService.enqueueMessageForSending(chatMessage.getNick(), "note successfully saved!", isWhisper());
         log.info("Executed [note] command by user: {}", chatMessage.getNick());
-    }
-
-    public String listToString (List<String> strings) {
-        StringBuilder b = new StringBuilder();
-        strings.forEach(string -> b.append(string).append(" "));
-        return b.toString();
     }
 }
