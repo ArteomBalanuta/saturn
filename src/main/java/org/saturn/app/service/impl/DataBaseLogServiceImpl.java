@@ -36,7 +36,7 @@ public class DataBaseLogServiceImpl implements LogService {
                 logEvent.close();
             } catch (SQLException e) {
                 log.warn("Error: {}", e.getMessage());
-                log.error("Exception: ", e);
+                log.debug("Exception: ", e);
             }
         }
     }
@@ -58,7 +58,7 @@ public class DataBaseLogServiceImpl implements LogService {
                 logEvent.close();
             } catch (SQLException e) {
                 log.warn("Error: {}", e.getMessage());
-                log.error("Exception: ", e);
+                log.debug("Exception: ", e);
             }
         }
     }

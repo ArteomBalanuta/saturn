@@ -77,7 +77,7 @@ public class CommandFactory {
             aliasesMappedByClassInfo.put(routeClassInfo, aliases);
 
             if (engine.isMain) {
-                System.out.println(routeClassInfo.getName() + " is annotated with aliases: " + Arrays.toString(aliases));
+                log.info(routeClassInfo.getName() + " is annotated with aliases: {}", Arrays.toString(aliases));
             }
         });
 
