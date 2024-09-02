@@ -1,17 +1,25 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.language.bm.Rule;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.AuthorizationService;
+import org.saturn.app.util.DateUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
+
+import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 
 @Slf4j
 public class AuthorizationServiceImpl extends OutService implements AuthorizationService {
@@ -32,7 +40,21 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
             return true;
         }
 
-        enqueueMessageForSending(chatMessage.getNick(), " msg mercury for access.", chatMessage.isWhisper());
+        enqueueMessageForSending(chatMessage.getNick(), "msg mercury for access.", chatMessage.isWhisper());
+        return false;
+    }
+
+    @Override
+    public boolean grant(String trip, Role role) {
+        if (getRoleByTrip(trip).isPresent()) {
+            int updatedRows = update(trip, role);
+            if (updatedRows == 1) {
+                log.warn("Granted new Role: {}, to trip: {}", role.name(), trip);
+            }
+        } else {
+            insert(trip, role);
+            log.warn("Granted Role: {}, to trip: {}", role.name(), trip);
+        }
         return false;
     }
 
@@ -49,9 +71,14 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
 
     private boolean isAllowedByDb(UserCommand userCommand, ChatMessage chatMessage) {
         Role minRequiredRole = userCommand.getAuthorizedRole();
-        Role userRole = getRoleByTrip(chatMessage.getTrip());
+        Optional<Role> userRole = getRoleByTrip(chatMessage.getTrip());
 
-        boolean isAllowed = userRole.getValue() >= minRequiredRole.getValue();
+        if (userRole.isEmpty()) {
+            userRole = Optional.of(Role.REGULAR);
+            log.warn("User: {}, trip: {}, has no role set. Granted REGULAR role permissions.", chatMessage.getNick(), chatMessage.getTrip());
+        }
+
+        boolean isAllowed = userRole.get().getValue() >= minRequiredRole.getValue();
         if (!isAllowed) {
             log.warn("user: {}, trip: {}, [is not] allowed to execute: [{}] command. Required role: {}, provided: {}",
                     chatMessage.getNick(), chatMessage.getTrip(), userCommand.getAliases().get(0), minRequiredRole, userRole);
@@ -61,8 +88,8 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
         return true;
     }
 
-    private Role getRoleByTrip(String trip) {
-        Role role = Role.REGULAR;
+    private Optional<Role> getRoleByTrip(String trip) {
+        Optional<Role> role = Optional.empty();
         log.debug("Querying the db for user role, trip: {}", trip);
         try {
             PreparedStatement statement = connection.prepareStatement(
@@ -72,8 +99,8 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
 
             ResultSet resultSet = statement.getResultSet();
             while (resultSet.next()) {
-                role = Role.valueOf(resultSet.getString("type"));
-                log.info("Retrieved Role: {}, for user trip: {}", role, trip);
+                role = Optional.of(Role.valueOf(resultSet.getString("type")));
+                log.warn("Retrieved Role: {}, for user trip: {}", role.get().name(), trip);
             }
             statement.close();
             resultSet.close();
@@ -84,5 +111,40 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
             log.error("Stack trace", e);
         }
         return role;
+    }
+
+    private void insert(String trip, Role role) {
+        try {
+            PreparedStatement statement = connection
+                    .prepareStatement("INSERT INTO trips('type', 'trip', 'created_on') VALUES (?, ?, ?);");
+            statement.setString(1, role.name());
+            statement.setString(2, trip);
+            statement.setLong(3, DateUtil.getTimestampNow());
+            statement.executeUpdate();
+
+            statement.close();
+        } catch (SQLException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace", e);
+        }
+    }
+
+    private int update(String trip, Role newRole) {
+        try {
+            PreparedStatement insertNote = connection
+                    .prepareStatement("UPDATE trips SET type=? WHERE trip=?;");
+            insertNote.setString(1, newRole.name());
+            insertNote.setString(2, trip);
+
+            int i = insertNote.executeUpdate();
+            insertNote.close();
+
+            return i;
+        } catch (SQLException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace", e);
+        }
+
+        return 0;
     }
 }

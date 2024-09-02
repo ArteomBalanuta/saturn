@@ -38,7 +38,6 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         return super.getArguments();
     }
 
-
     @Override
     public Role getAuthorizedRole() {
         return Role.MODERATOR;

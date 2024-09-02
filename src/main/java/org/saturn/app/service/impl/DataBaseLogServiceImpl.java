@@ -46,7 +46,7 @@ public class DataBaseLogServiceImpl implements LogService {
         if (isSql) {
             try {
                 PreparedStatement logEvent =
-                        connection.prepareStatement("INSERT INTO messages ('trip', 'nick', 'hash', 'message', 'created_on') VALUES (?, ?, ?, ?, ?);");
+                        connection.prepareStatement("INSERT INTO messages ('trip', 'name', 'hash', 'message', 'created_on') VALUES (?, ?, ?, ?, ?);");
                 logEvent.setString(1, trip);
                 logEvent.setString(2, nick);
                 logEvent.setString(3, hash);

@@ -36,7 +36,7 @@ public class LockRoomUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public Role getAuthorizedRole() {
-        return Role.MODERATOR;
+        return Role.TRUSTED;
     }
 
     @Override

@@ -82,7 +82,7 @@ public class UserCommandBaseImpl implements UserCommand  {
 
     @Override
     public Role getAuthorizedRole() {
-        return Role.REGULAR; /* least privileged role required by default */
+        return Role.ADMIN; /* least privileged role required by default */
     }
 
     @Override

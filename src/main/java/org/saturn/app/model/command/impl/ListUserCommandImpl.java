@@ -46,6 +46,11 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
+    public Role getAuthorizedRole() {
+        return Role.TRUSTED;
+    }
+
+    @Override
     public void execute() {
         String author = super.chatMessage.getNick();
 

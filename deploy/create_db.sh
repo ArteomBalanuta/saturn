@@ -5,14 +5,14 @@ echo "Current directory: $(pwd)"
 # Kill any running Java processes
 echo "Recreating sqlite3 database file..."
 
-sqlite3 database.db <<EOF
+sqlite3 ../database/database.db <<EOF
 CREATE TABLE banned_users (
 	"id" INTEGER PRIMARY KEY AUTOINCREMENT,
 	"trip" TEXT,
 	"name" TEXT,
 	"hash" TEXT,
 	"reason" TEXT NOT NULL,
-    "created_on" INTEGER NOT NULL
+  "created_on" INTEGER NOT NULL
 );
 
 CREATE TABLE "executed_commands" (
@@ -25,7 +25,7 @@ CREATE TABLE "executed_commands" (
 );
 
 CREATE TABLE "mail" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+  "id" INTEGER PRIMARY KEY AUTOINCREMENT,
 	"owner"	TEXT NOT NULL,
 	"receiver"	TEXT NOT NULL,
 	"message"	TEXT,
@@ -72,5 +72,3 @@ CREATE TABLE "trip_names" (
     UNIQUE ("trip_id", "name_id")
 );
 EOF
-
-echo "done"

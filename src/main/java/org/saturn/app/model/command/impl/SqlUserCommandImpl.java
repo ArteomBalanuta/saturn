@@ -23,17 +23,16 @@ public class SqlUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public Role getAuthorizedRole() {
-        return Role.ADMIN;
-    }
-    @Override
     public List<String> getAliases() {
         return this.aliases;
     }
-
     @Override
     public List<String> getArguments() {
         return super.getArguments();
+    }
+    @Override
+    public Role getAuthorizedRole() {
+        return Role.ADMIN;
     }
 
     @Override

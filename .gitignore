@@ -13,3 +13,4 @@ hackchat.db
 /hc.log
 /dependency-reduced-pom.xml
 /logs/
+/database/database.db

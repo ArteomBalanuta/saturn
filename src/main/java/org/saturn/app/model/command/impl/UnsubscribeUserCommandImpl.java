@@ -36,7 +36,7 @@ public class UnsubscribeUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public Role getAuthorizedRole() {
-        return Role.TRUSTED;
+        return Role.REGULAR;
     }
 
     @Override
