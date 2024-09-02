@@ -9,6 +9,7 @@ import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.saturn.app.util.DateUtil.getTimestampNow;
@@ -36,11 +37,15 @@ public class UserMessageListenerImpl implements Listener {
     @Override
     public void notify(String jsonText) {
         log.debug("Full message payload: {}", jsonText);
-
         ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
-        log.debug("Active users: {}", engine.currentChannelUsers.stream().map(u -> u.getNick()).collect(Collectors.toList()).toString());
-        String hash = engine.currentChannelUsers.stream().filter(u -> u.getNick().equals(message.getNick())).findFirst().get().getHash();
-        message.setHash(hash);
+
+        Optional<User> first = engine.currentChannelUsers.stream().filter(u -> u.getNick().equals(message.getNick())).findFirst();
+        first.ifPresentOrElse(user -> {
+            message.setHash(user.getHash());
+        }, ()-> {
+            log.warn("Hash for user: {}, not present ", message.getNick());
+            log.warn("Active users: {}", engine.currentChannelUsers.stream().map(User::getNick).toList().toString());
+        });
 
         engine.logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
                 getTimestampNow());
