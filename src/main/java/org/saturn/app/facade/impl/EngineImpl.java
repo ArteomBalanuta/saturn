@@ -12,17 +12,14 @@ import org.saturn.app.model.dto.Afk;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.DateUtil;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
@@ -200,13 +197,12 @@ public class EngineImpl extends Base implements Engine {
         }
     }
 
-    public void proceedBanned(User user) {
+    public void proceedShadowBanned(User user) {
         boolean isBanned = modService.isBanned(user);
         if (isBanned) {
             log.info("User is banned: {}", user.getNick());
             modService.kick(user.getNick());
             log.warn("User: {} has been kicked", user.getNick());
-            this.removeActiveUser(user.getNick());
         }
     }
 
