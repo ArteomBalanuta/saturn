@@ -2,6 +2,7 @@ package org.saturn.app.model.command;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.Role;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
@@ -15,15 +16,15 @@ import static org.saturn.app.util.Util.toLower;
 public class UserCommandBaseImpl implements UserCommand  {
     protected final EngineImpl engine;
     protected ChatMessage chatMessage;
-    protected final List<String> whiteListedTrips = new ArrayList<>();
+    protected final List<String> authorizedTrips = new ArrayList<>();
     private List<String> aliases;
     private final List<String> arguments = new ArrayList<>();
 
-    public UserCommandBaseImpl(ChatMessage chatMessage, EngineImpl engine, List<String> allowedTrips) {
+    public UserCommandBaseImpl(ChatMessage chatMessage, EngineImpl engine, List<String> authorizedTrips) {
         this.engine = engine;
         this.chatMessage = chatMessage;
 
-        this.whiteListedTrips.addAll(allowedTrips);
+        this.authorizedTrips.addAll(authorizedTrips);
 
         String message = chatMessage.getText().substring(engine.prefix.length());
         if (message.contains(" ")) {
@@ -58,23 +59,10 @@ public class UserCommandBaseImpl implements UserCommand  {
         List<String> aliases = toLower(this.getAliases());
         Optional<UserCommand> cmd = engine.commandFactory.getCommand(this.chatMessage, aliases.get(0));
 
-        if (cmd.isPresent() && isUserAuthorized(cmd.get(), this.chatMessage)) {
+        if (cmd.isPresent() && engine.authorizationService.isUserAuthorized(cmd.get(), this.chatMessage)) {
             setupArguments(cmd.get());
             cmd.get().execute();
         }
-    }
-
-    private boolean isUserAuthorized(UserCommand userCommand, ChatMessage chatMessage) {
-        List<String> whiteTrips = userCommand.getWhiteTrips();
-        boolean isWhitelisted = whiteTrips.contains(chatMessage.getTrip()) || whiteTrips.contains("x");
-        if (!isWhitelisted) {
-            log.warn("user: {}, trip: {}, [is not] whitelisted", chatMessage.getNick(), chatMessage.getTrip());
-            this.engine.getOutService().enqueueMessageForSending(chatMessage.getNick(), " msg mercury for access.", isWhisper());
-            return false;
-        }
-
-        log.warn("user: {}, trip: {}, [is] whitelisted", chatMessage.getNick(), chatMessage.getTrip());
-        return true;
     }
 
     private void setupArguments(UserCommand cmd) {
@@ -88,8 +76,13 @@ public class UserCommandBaseImpl implements UserCommand  {
     }
 
     @Override
-    public List<String> getWhiteTrips() {
-        return whiteListedTrips;
+    public List<String> getAuthorizedTrips() {
+        return authorizedTrips;
+    }
+
+    @Override
+    public Role getAuthorizedRole() {
+        return Role.REGULAR; /* least privileged role required by default */
     }
 
     @Override

@@ -7,6 +7,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.*;
 import org.saturn.app.service.impl.*;
 
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -42,6 +43,8 @@ public abstract class Base {
     public final ModService modService;
     public final WeatherService weatherService;
 
+    public final AuthorizationService authorizationService;
+
     public final UserService userService;
 
     public PingService getPingService() {
@@ -64,22 +67,23 @@ public abstract class Base {
     public final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<String> outgoingRawMessageQueue = new ArrayBlockingQueue<>(256);
-    public CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
+    public final CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
 
     public ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
     public Configuration config;
 
-    public Base(java.sql.Connection dbConnection, Configuration config, Boolean isMain) {
+    public Base(java.sql.Connection connection, Configuration config, Boolean isMain) {
         this.outService = new OutService(outgoingMessageQueue, outgoingRawMessageQueue);
         this.scpService = new SCPServiceImpl(outgoingMessageQueue);
-        this.noteService = new NoteServiceImpl(dbConnection, outgoingMessageQueue);
-        this.mailService = new MailServiceImpl(dbConnection, outgoingMessageQueue);
-        this.sqlService = new SQLServiceImpl(dbConnection, outgoingMessageQueue);
+        this.noteService = new NoteServiceImpl(connection, outgoingMessageQueue);
+        this.mailService = new MailServiceImpl(connection, outgoingMessageQueue);
+        this.sqlService = new SQLServiceImpl(connection, outgoingMessageQueue);
         this.pingService = new PingServiceImpl(outgoingMessageQueue);
         this.searchService = new SearchServiceImpl();                                       /* TODO:  add logging */
         this.modService = new ModServiceImpl(this.sqlService, outgoingMessageQueue, outgoingRawMessageQueue);
-        this.userService = new UserServiceImpl(dbConnection, outgoingMessageQueue);
+        this.userService = new UserServiceImpl(connection, outgoingMessageQueue);
         this.weatherService = new WeatherServiceImpl(outgoingMessageQueue);
+        this.authorizationService = new AuthorizationServiceImpl(connection, outgoingMessageQueue);
         this.isMain = isMain;
         this.config = config;
 
@@ -108,7 +112,7 @@ public abstract class Base {
             this.password = config.getString("trip");
         }
 
-        this.logService = new DataBaseLogServiceImpl(dbConnection, Boolean.parseBoolean(this.isSql));
+        this.logService = new DataBaseLogServiceImpl(connection, Boolean.parseBoolean(this.isSql));
     }
     
     public void setChannel(String chanel) {

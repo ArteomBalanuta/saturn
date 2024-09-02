@@ -2,6 +2,7 @@ package org.saturn.app.model.command.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.Afk;
@@ -37,6 +38,11 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public List<String> getArguments() {
         return super.getArguments();
+    }
+
+    @Override
+    public Role getAuthorizedRole() {
+        return Role.ADMIN;
     }
 
     @Override

@@ -33,6 +33,7 @@ public class EngineImpl extends Base implements Engine {
     public final CommandFactory commandFactory;
     protected org.saturn.app.facade.impl.Connection hcConnection;
     public final Set<String> subscribers = new HashSet<>();
+    public final Map<String, Afk> afkUsers = new HashMap<>();
     private Listener onlineSetListener = new OnlineSetListenerImpl(this);
     private final Listener userJoinedListener = new UserJoinedListenerImpl(this);
     private final Listener userLeftListener = new UserLeftListenerImpl(this);
@@ -41,7 +42,6 @@ public class EngineImpl extends Base implements Engine {
     private final Listener connectionListener = new ConnectionListenerImpl(this);
     private final Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
-    public final Map<String, Afk> afkUsers = new HashMap<>();
 
     public void setOnlineSetListener(Listener listener) {
         this.onlineSetListener = listener;

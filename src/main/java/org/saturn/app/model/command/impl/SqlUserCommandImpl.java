@@ -1,6 +1,7 @@
 package org.saturn.app.model.command.impl;
 
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -21,6 +22,10 @@ public class SqlUserCommandImpl extends UserCommandBaseImpl {
         this.aliases.addAll(aliases);
     }
 
+    @Override
+    public Role getAuthorizedRole() {
+        return Role.ADMIN;
+    }
     @Override
     public List<String> getAliases() {
         return this.aliases;
