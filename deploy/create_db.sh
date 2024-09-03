@@ -11,7 +11,7 @@ CREATE TABLE banned_users (
 	"trip" TEXT,
 	"name" TEXT,
 	"hash" TEXT,
-	"reason" TEXT NOT NULL,
+	"reason" TEXT,
   "created_on" INTEGER NOT NULL
 );
 
