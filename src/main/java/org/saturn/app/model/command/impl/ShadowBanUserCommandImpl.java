@@ -84,7 +84,7 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
                     BanDto dto = new BanDto(user.getTrip(), user.getNick(), user.getHash(), null);
                     engine.modService.shadowBan(dto);
                     log.warn("Shadow Banned nick: {}, hash: {}, trip: {}", user.getNick(), user.getHash(), user.getTrip());
-                    engine.outService.enqueueMessageForSending(author," banned: " + target + "trip: " + user.getTrip() + " hash: " + user.getHash(), isWhisper());
+                    engine.outService.enqueueMessageForSending(author,"banned: " + target + " trip: " + user.getTrip() + " hash: " + user.getHash(), isWhisper());
                     engine.modService.kick(target);
                     log.info("User: {}, has been kicked", target);
                 }, () -> {
@@ -92,7 +92,7 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
                     BanDto dto = new BanDto(null, target, null, null);
                     engine.modService.shadowBan(dto);
                     log.info("Target isn't in the room, banned username: {}", target);
-                    engine.outService.enqueueMessageForSending(author," banned: " + target, isWhisper());
+                    engine.outService.enqueueMessageForSending(author,"banned: " + target, isWhisper());
                 });
 
         log.info("Executed [shadow ban] command by user: {}", author);
