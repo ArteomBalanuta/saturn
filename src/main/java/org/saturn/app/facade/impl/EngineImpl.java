@@ -33,6 +33,7 @@ public class EngineImpl extends Base implements Engine {
     public final CommandFactory commandFactory;
     protected org.saturn.app.facade.impl.Connection hcConnection;
     public final Set<String> subscribers = new HashSet<>();
+    public final Map<String, Afk> afkUsers = new HashMap<>();
     private Listener onlineSetListener = new OnlineSetListenerImpl(this);
     private final Listener userJoinedListener = new UserJoinedListenerImpl(this);
     private final Listener userLeftListener = new UserLeftListenerImpl(this);
@@ -41,7 +42,6 @@ public class EngineImpl extends Base implements Engine {
     private final Listener connectionListener = new ConnectionListenerImpl(this);
     private final Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
-    public final Map<String, Afk> afkUsers = new HashMap<>();
 
     public void setOnlineSetListener(Listener listener) {
         this.onlineSetListener = listener;
@@ -211,7 +211,7 @@ public class EngineImpl extends Base implements Engine {
             if (leftUser.equals(user.getNick())) {
                 currentChannelUsers.remove(user);
                 log.info("User left: {}", user.getNick());
-                logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", DateUtil.getTimestampNow());
+                logRepository.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", DateUtil.getTimestampNow());
             }
         }
     }
@@ -219,7 +219,7 @@ public class EngineImpl extends Base implements Engine {
     public void addActiveUser(User newUser) {
         currentChannelUsers.add(newUser);
         log.info("Added user: {}, to list of active users", newUser.getNick());
-        logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", DateUtil.getTimestampNow());
+        logRepository.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", DateUtil.getTimestampNow());
     }
 
 //

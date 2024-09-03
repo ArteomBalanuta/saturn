@@ -11,8 +11,8 @@ import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.service.DataBaseService;
-import org.saturn.app.service.LogService;
-import org.saturn.app.service.impl.DataBaseLogServiceImpl;
+import org.saturn.app.service.LogRepository;
+import org.saturn.app.service.impl.LogRepositoryImpl;
 import org.saturn.app.service.impl.DataBaseServiceImpl;
 
 import java.util.Objects;
@@ -26,8 +26,8 @@ public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
 
     private Configuration config;
-    private final DataBaseService dbConnection;
-    private final LogService internalService;
+    private final DataBaseService connection;
+    private final LogRepository internalService;
 
     public ApplicationRunner() {
         Parameters params = new Parameters();
@@ -40,8 +40,8 @@ public class ApplicationRunner {
             e.printStackTrace();
         }
 
-        this.dbConnection = new DataBaseServiceImpl(this.config.getString("dbPath"));
-        this.internalService = new DataBaseLogServiceImpl(this.dbConnection.getConnection(), false);
+        this.connection = new DataBaseServiceImpl(this.config.getString("dbPath"));
+        this.internalService = new LogRepositoryImpl(this.connection.getConnection());
     }
 
     public static void main(String[] args) {
@@ -52,7 +52,7 @@ public class ApplicationRunner {
 
     void start() {
         log.info("Starting application");
-        Engine saturn = new EngineImpl(dbConnection.getConnection(), config, true);
+        Engine saturn = new EngineImpl(connection.getConnection(), config, true);
         saturn.start();
         if (saturn.isConnected()) {
             log.info("Application started");

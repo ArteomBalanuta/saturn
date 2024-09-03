@@ -2,6 +2,7 @@ package org.saturn.app.model.command.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -33,7 +34,11 @@ public class LastOnlineUserCommandImpl extends UserCommandBaseImpl {
         return super.getArguments();
     }
 
-    /* TODO: doesnt account for user renaming, needs to be fixed. */
+    @Override
+    public Role getAuthorizedRole() {
+        return Role.REGULAR;
+    }
+
     @Override
     public void execute() {
         String author = chatMessage.getNick();

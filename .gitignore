@@ -10,9 +10,7 @@
 hackchat.db
 *.txt
 /saturn.iml
-/deploy/deploy.bash
-/deploy/rerun.bash
 /hc.log
 /dependency-reduced-pom.xml
 /logs/
-/deploy/
+/database/database.db

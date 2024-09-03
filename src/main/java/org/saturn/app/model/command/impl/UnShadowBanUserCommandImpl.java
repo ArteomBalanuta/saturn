@@ -2,6 +2,7 @@ package org.saturn.app.model.command.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -33,6 +34,10 @@ public class UnShadowBanUserCommandImpl extends UserCommandBaseImpl {
         return super.getArguments();
     }
 
+    @Override
+    public Role getAuthorizedRole() {
+        return Role.MODERATOR;
+    }
 
     // TODO: fix the bag where unbanall doesnt unban hashes with escape characters..
     @Override
@@ -47,7 +52,7 @@ public class UnShadowBanUserCommandImpl extends UserCommandBaseImpl {
         }
 
         if (arguments.stream().anyMatch("-all"::equals)) {
-            engine.modService.unbanAll();
+            engine.modService.unbanAll(author);
             log.info("Executed [unban all] command by user: {}", author);
             return;
         }

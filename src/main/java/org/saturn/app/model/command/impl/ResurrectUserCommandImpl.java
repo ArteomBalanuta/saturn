@@ -6,6 +6,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.KickCommandListenerImpl;
+import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
@@ -35,6 +36,11 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public List<String> getArguments() {
         return super.getArguments();
+    }
+
+    @Override
+    public Role getAuthorizedRole() {
+        return Role.MODERATOR;
     }
 
     @Override

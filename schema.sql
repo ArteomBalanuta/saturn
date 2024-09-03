@@ -1,13 +1,3 @@
-# truncate the tables
-
-delete from executed_commands;
-delete from mail;
-delete from messages;
-delete from notes;
-delete from banned_users;
-
-DELETE FROM SQLITE_SEQUENCE WHERE name in ('mail','messages','banned','notes','internal_events');
-
 /* TODO: implement the code changes. wip */
 # DDL
 CREATE TABLE banned_users (
@@ -15,12 +5,13 @@ CREATE TABLE banned_users (
 	"trip" TEXT,
 	"name" TEXT,
 	"hash" TEXT,
-	"reason" TEXT NOT NULL,
+	"reason" TEXT,
     "created_on" INTEGER NOT NULL
 );
 
 CREATE TABLE "executed_commands" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "trip" TEXT,
 	"command_name"	TEXT,
 	"arguments"	TEXT,
 	"status"	TEXT,
@@ -56,7 +47,8 @@ CREATE TABLE "trips" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "type" TEXT NOT NULL CHECK(type IN ('ADMIN', 'MODERATOR', 'TRUSTED', 'USER', 'REGULAR')),
     "trip" TEXT,
-    "created_on" INTEGER NOT NULL
+    "created_on" INTEGER NOT NULL,
+    UNIQUE ("trip")
 );
 
 CREATE TABLE "names" (
@@ -73,6 +65,3 @@ CREATE TABLE "trip_names" (
     FOREIGN KEY ("name_id") REFERENCES "names" ("id"),
     UNIQUE ("trip_id", "name_id")
 );
-
-## to build the jar
-## mvn clean compile assembly:single

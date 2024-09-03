@@ -15,8 +15,7 @@ import static org.saturn.app.util.Util.setToList;
 
 @Slf4j
 public class SQLServiceImpl extends OutService implements SQLService {
-    
-    private Connection connection;
+    private final Connection connection;
     
     public SQLServiceImpl(Connection connection, BlockingQueue<String> queue) {
         super(queue);
@@ -87,34 +86,15 @@ public class SQLServiceImpl extends OutService implements SQLService {
     }
     
     @Override
-    public List<String> getBannedIds() {
-        try (Statement statement = connection.createStatement()) {
-            statement.execute("SELECT id from banned;");
-            
-            List<String> result = new ArrayList<>();
-            ResultSet resultSet = statement.getResultSet();
-            while (resultSet.next()) {
-                result.add(escapeJson(resultSet.getString(1)));
-            }
-            return result;
-        } catch (SQLException e) {
-            log.info("Error: {}", e.getMessage());
-            log.error("Stack trace", e);
-        }
-        
-        return Collections.emptyList();
-    }
-    
-    @Override
     public String getBasicUserData(String hash, String trip) {
         Set<String> hashes = new HashSet<>();
         Set<String> nicks = new HashSet<>();
         try {
             Statement statement = connection.createStatement();
             
-            String sql = "select distinct hash,nick from messages where trip = '" + trip + "' limit 15;";
+            String sql = "select distinct hash,name from messages where trip = '" + trip + "' limit 30;";
             if (trip == null || trip.trim().isEmpty()) {
-                sql = "select distinct hash,nick from messages where hash = '" + hash + "' limit 15;";
+                sql = "select distinct hash,name from messages where hash = '" + hash + "' limit 30;";
             }
             statement.execute(sql);
             ResultSet resultSet = statement.getResultSet();
@@ -143,11 +123,6 @@ public class SQLServiceImpl extends OutService implements SQLService {
         }
 
         return null;
-    }
-    
-    @Override
-    public Connection getConnection() {
-        return this.connection;
     }
 
     private String generateTable(List<String> columnNames, List<List<String>> listOfRows) {

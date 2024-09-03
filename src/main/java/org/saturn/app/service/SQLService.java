@@ -7,9 +7,6 @@ public interface SQLService {
     
     String executeSql(String cmd, boolean withOutput);
     String executeFormatted(String sql);
-    List<String> getBannedIds();
     
     String getBasicUserData(String hash, String trip);
-    
-    Connection getConnection();
 }

@@ -51,7 +51,7 @@ public class MailServiceImpl extends OutService implements MailService {
     public void orderMessageDelivery(String message, String owner, String receiver, String isWhisper) {
         try {
             PreparedStatement insertMessage = connection.prepareStatement(
-                    "INSERT INTO mail ('owner','receiver','message','status','is_whisper', 'created_date') VALUES (?, ?, ?, ?, ?, ?);");
+                    "INSERT INTO mail ('owner','receiver','message','status','is_whisper', 'created_on') VALUES (?, ?, ?, ?, ?, ?);");
             insertMessage.setString(1, owner);
             insertMessage.setString(2, receiver);
             insertMessage.setString(3, message);
@@ -73,7 +73,7 @@ public class MailServiceImpl extends OutService implements MailService {
         List<Mail> messages = new ArrayList<>();
         try {
             PreparedStatement mail = connection.prepareStatement(
-                    "SELECT owner, receiver, message, status, is_whisper, created_date FROM mail WHERE receiver IN (?,?) AND status = " +
+                    "SELECT owner, receiver, message, status, is_whisper, created_on FROM mail WHERE receiver IN (?,?) AND status = " +
                             "'PENDING'; ");
             mail.setString(1, nick);
             mail.setString(2, trip == null ? nick : trip);
@@ -87,7 +87,7 @@ public class MailServiceImpl extends OutService implements MailService {
                         resultSet.getString("message"),
                         resultSet.getString("status"),
                         resultSet.getString("is_whisper"),
-                        resultSet.getLong("created_date"));
+                        resultSet.getLong("created_on"));
                 
                 messages.add(message);
             }

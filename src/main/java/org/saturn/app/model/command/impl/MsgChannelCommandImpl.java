@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.impl.MsgChannelCommandListenerImpl;
+import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
@@ -37,6 +38,11 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
     @Override
     public List<String> getArguments() {
         return super.getArguments();
+    }
+
+    @Override
+    public Role getAuthorizedRole() {
+        return Role.TRUSTED;
     }
 
     /* ![](https://share.lyka.pro/xxxxx.png) */

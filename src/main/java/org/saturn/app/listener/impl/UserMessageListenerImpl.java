@@ -10,7 +10,6 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static org.saturn.app.util.DateUtil.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
@@ -47,7 +46,7 @@ public class UserMessageListenerImpl implements Listener {
             log.warn("Active users: {}", engine.currentChannelUsers.stream().map(User::getNick).toList().toString());
         });
 
-        engine.logService.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
+        engine.logRepository.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
                 getTimestampNow());
 
         boolean isBotMessage = engine.nick.equals(message.getNick());

@@ -1,6 +1,8 @@
 package org.saturn.app.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.service.NoteService;
+import org.saturn.app.util.DateUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,6 +14,7 @@ import java.util.concurrent.BlockingQueue;
 
 import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 
+@Slf4j
 public class NoteServiceImpl extends OutService implements NoteService {
     private final Connection connection;
 
@@ -22,7 +25,7 @@ public class NoteServiceImpl extends OutService implements NoteService {
     
     public void executeNotesPurge(String author, String trip) {
         this.clearNotesByTrip(trip);
-        enqueueMessageForSending(author, "'s notes hsa been deleted", false);
+        enqueueMessageForSending(author, "'s notes has been deleted", false);
     }
 
     public void executeListNotes(String author, String trip) {
@@ -34,14 +37,16 @@ public class NoteServiceImpl extends OutService implements NoteService {
     public void save(String trip, String note) {
         try {
             PreparedStatement insertNote = connection
-                    .prepareStatement("INSERT INTO notes ('id', 'name', 'note') VALUES (null, ?, ?);");
+                    .prepareStatement("INSERT INTO notes ('trip', 'note','created_on') VALUES (?, ?, ?);");
             insertNote.setString(1, trip);
             insertNote.setString(2, note);
+            insertNote.setLong(3, DateUtil.getTimestampNow());
             insertNote.executeUpdate();
 
             insertNote.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace", e);
         }
     }
 
@@ -49,18 +54,19 @@ public class NoteServiceImpl extends OutService implements NoteService {
     public List<String> getNotesByTrip(String trip) {
         List<String> notes = new ArrayList<>();
         try {
-            PreparedStatement notesByTrip = connection.prepareStatement("SELECT * FROM notes WHERE name = ?");
+            PreparedStatement notesByTrip = connection.prepareStatement("SELECT * FROM notes WHERE trip = ?");
             notesByTrip.setString(1, trip);
             notesByTrip.execute();
 
             ResultSet resultSet = notesByTrip.getResultSet();
             while (resultSet.next()) {
-                notes.add(escapeJson(resultSet.getString(3)));
+                notes.add(escapeJson(resultSet.getString("note")));
             }
             notesByTrip.close();
             resultSet.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace", e);
         }
         return notes;
     }
@@ -68,13 +74,14 @@ public class NoteServiceImpl extends OutService implements NoteService {
     @Override
     public void clearNotesByTrip(String trip) {
         try {
-            PreparedStatement notesByTrip = connection.prepareStatement("DELETE FROM notes WHERE name = ?");
+            PreparedStatement notesByTrip = connection.prepareStatement("DELETE FROM notes WHERE trip = ?");
             notesByTrip.setString(1, trip);
             notesByTrip.execute();
             
             notesByTrip.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace", e);
         }
     }
 }
