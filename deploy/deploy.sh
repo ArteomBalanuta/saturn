@@ -19,7 +19,7 @@ cd workspace/
 lcd target
 put saturn.jar
 lcd ../deploy
-put rerun.bash
+put rerun.sh
 lcd ..
 put log4j2.xml
 bye
