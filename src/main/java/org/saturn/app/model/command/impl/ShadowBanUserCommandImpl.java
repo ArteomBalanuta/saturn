@@ -5,6 +5,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
+import org.saturn.app.model.dto.BanDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
@@ -63,8 +64,10 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
             List<String> userNames = users.stream().map(User::getNick).collect(Collectors.toList());
             log.info("Matching users: {}", userNames);
 
+            /* TODO: parse reason */
             users.forEach(user -> {
-                super.engine.getModService().shadowBan(user.getNick(), user.getHash(), user.getTrip());
+                BanDto dto = new BanDto(user.getTrip(), user.getNick(), user.getHash(), null);
+                super.engine.modService.shadowBan(dto);
                 log.info("Shadow Banned nick: {}, hash: {}, trip: {}", user.getNick(), user.getHash(), user.getTrip());
                 engine.modService.kick(user.getNick());
                 log.info("User: {}, has been kicked", user.getNick());
@@ -78,14 +81,16 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
                 .filter(activeUser -> target.equals(activeUser.getNick()))
                 .findFirst()
                 .ifPresentOrElse(user -> {
-                    engine.modService.shadowBan(user.getNick(), user.getTrip(), user.getHash());
+                    BanDto dto = new BanDto(user.getTrip(), user.getNick(), user.getHash(), null);
+                    engine.modService.shadowBan(dto);
                     log.warn("Shadow Banned nick: {}, hash: {}, trip: {}", user.getNick(), user.getHash(), user.getTrip());
                     engine.outService.enqueueMessageForSending(author," banned: " + target + "trip: " + user.getTrip() + " hash: " + user.getHash(), isWhisper());
                     engine.modService.kick(target);
                     log.info("User: {}, has been kicked", target);
                 }, () -> {
                     /* target isn't in the room */
-                    engine.modService.shadowBan(target);
+                    BanDto dto = new BanDto(null, target, null, null);
+                    engine.modService.shadowBan(dto);
                     log.info("Target isn't in the room, banned username: {}", target);
                     engine.outService.enqueueMessageForSending(author," banned: " + target, isWhisper());
                 });

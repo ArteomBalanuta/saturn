@@ -1,5 +1,6 @@
 package org.saturn.app.service;
 
+import org.saturn.app.model.dto.BanDto;
 import org.saturn.app.model.dto.User;
 
 
@@ -7,7 +8,7 @@ public interface ModService {
     void kick(String target);
 
     void overflow(String target);
-    void shadowBan(String target);
+    void shadowBan(BanDto banDto);
 
     void ban(String target);
 
@@ -16,8 +17,8 @@ public interface ModService {
     void lock();
     void unlock();
 
-    default void shadowBan(String... args){
-        for (String arg : args) {
+    default void shadowBan(BanDto... args){
+        for (BanDto arg : args) {
             this.shadowBan(arg);
         }
     }
@@ -28,10 +29,8 @@ public interface ModService {
 
     void unshadowban(String target);
     void listBanned(String author);
-    void vote(String author);
-    void votekick(String nick);
 
-    void unbanAll();
+    void unbanAll(String author);
 
     boolean isBanned(User user);
 }

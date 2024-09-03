@@ -7,7 +7,6 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.*;
 import org.saturn.app.service.impl.*;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -33,7 +32,7 @@ public abstract class Base {
     public String dbPath;
 
     public final OutService outService;
-    public final LogService logService;
+    public final LogRepository logRepository;
     public final SCPService scpService;
     public final NoteService noteService;
     public final SearchService searchService;
@@ -80,7 +79,7 @@ public abstract class Base {
         this.sqlService = new SQLServiceImpl(connection, outgoingMessageQueue);
         this.pingService = new PingServiceImpl(outgoingMessageQueue);
         this.searchService = new SearchServiceImpl();                                       /* TODO:  add logging */
-        this.modService = new ModServiceImpl(this.sqlService, outgoingMessageQueue, outgoingRawMessageQueue);
+        this.modService = new ModServiceImpl(connection, outgoingMessageQueue, outgoingRawMessageQueue);
         this.userService = new UserServiceImpl(connection, outgoingMessageQueue);
         this.weatherService = new WeatherServiceImpl(outgoingMessageQueue);
         this.authorizationService = new AuthorizationServiceImpl(connection, outgoingMessageQueue);
@@ -112,7 +111,7 @@ public abstract class Base {
             this.password = config.getString("trip");
         }
 
-        this.logService = new DataBaseLogServiceImpl(connection, Boolean.parseBoolean(this.isSql));
+        this.logRepository = new LogRepositoryImpl(connection);
     }
     
     public void setChannel(String chanel) {
@@ -131,8 +130,8 @@ public abstract class Base {
         return outService;
     }
 
-    public LogService getLogService() {
-        return logService;
+    public LogRepository getLogService() {
+        return logRepository;
     }
 
     public SCPService getScpService() {

@@ -1,54 +1,46 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.service.LogService;
+import org.saturn.app.service.LogRepository;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.concurrent.TimeUnit;
-
-import static org.saturn.app.util.DateUtil.formatRfc1123;
 
 @Slf4j
-public class DataBaseLogServiceImpl implements LogService {
-    private final boolean isSql;
-
+public class LogRepositoryImpl implements LogRepository {
     private final Connection connection;
 
-    public DataBaseLogServiceImpl(Connection connection, boolean isSql) {
+    public LogRepositoryImpl(Connection connection) {
         this.connection = connection;
-        this.isSql = isSql;
     }
 
-    /* TODO: refactor the schema, make sure it logs executed CMDs. */
     @Override
-    public void logEvent(String cmd, String status, long executedOn) {
-        if (isSql) {
+    public void logCommand(String trip, String cmd,String arguments, String status, long created_on) {
             try {
-                PreparedStatement logEvent = connection.prepareStatement("INSERT INTO internal_events ('cmd', 'status', 'created_on') VALUES (?, ?, ?);");
-                logEvent.setString(1, cmd);
-                logEvent.setString(2, status);
-                logEvent.setLong(3, executedOn);
+                PreparedStatement statement = connection.prepareStatement("INSERT INTO executed_commands ('trip','command_name','arguments','status','created_on') VALUES (?, ?, ?);");
+                statement.setString(1, trip);
+                statement.setString(2, cmd);
+                statement.setString(3, arguments);
+                statement.setString(4, status);
+                statement.setLong(5, created_on);
 
-                logEvent.executeUpdate();
+                statement.executeUpdate();
 
-                logEvent.close();
+                statement.close();
             } catch (SQLException e) {
                 log.info("Error: {}", e.getMessage());
                 log.error("Exception: ", e);
             }
-        }
     }
 
     @Override
-    public void logMessage(String trip, String nick, String hash, String message, long timestamp) {
-        if (isSql) {
+    public void logMessage(String trip, String name, String hash, String message, long timestamp) {
             try {
                 PreparedStatement logEvent =
                         connection.prepareStatement("INSERT INTO messages ('trip', 'name', 'hash', 'message', 'created_on') VALUES (?, ?, ?, ?, ?);");
                 logEvent.setString(1, trip);
-                logEvent.setString(2, nick);
+                logEvent.setString(2, name);
                 logEvent.setString(3, hash);
                 logEvent.setString(4, message);
                 logEvent.setLong(5, timestamp);
@@ -60,6 +52,5 @@ public class DataBaseLogServiceImpl implements LogService {
                 log.info("Error: {}", e.getMessage());
                 log.error("Exception: ", e);
             }
-        }
     }
 }

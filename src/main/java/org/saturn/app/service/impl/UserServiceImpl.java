@@ -36,7 +36,7 @@ public class UserServiceImpl extends OutService implements UserService {
         String lastMessage = null;
         String timestamp = null;
         try {
-            PreparedStatement statement = connection.prepareStatement("SELECT message,created_on FROM messages WHERE (nick = ? or trip = ?) and (message not in ('LEFT','JOINED')) order by created_on desc limit 1;");
+            PreparedStatement statement = connection.prepareStatement("SELECT message,created_on FROM messages WHERE (name = ? or trip = ?) and (message not in ('LEFT','JOINED')) order by created_on desc limit 1;");
             statement.setString(1, tripOrNick);
             statement.setString(2, tripOrNick);
             statement.execute();
@@ -74,7 +74,7 @@ public class UserServiceImpl extends OutService implements UserService {
     public void setSessionDurationAndJoinedDateTime(LastSeenDto dto) {
         String joinedAt = null;
         try {
-            PreparedStatement statement = connection.prepareStatement("SELECT created_on FROM messages WHERE (nick = ? or trip = ?) and message = 'JOINED' order by created_on desc limit 1;");
+            PreparedStatement statement = connection.prepareStatement("SELECT created_on FROM messages WHERE (name = ? or trip = ?) and message = 'JOINED' order by created_on desc limit 1;");
             statement.setString(1, dto.getTripOrNick());
             statement.setString(2, dto.getTripOrNick());
             statement.execute();

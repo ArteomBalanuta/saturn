@@ -10,11 +10,9 @@ import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.model.dto.payload.InfoMessage;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.saturn.app.util.DateUtil.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
@@ -49,7 +47,7 @@ public class InfoMessageListenerImpl implements Listener {
             return;
         }
 
-        engine.logService.logMessage(chatMessage.getTrip(), chatMessage.getNick(), chatMessage.getHash(), chatMessage.getText(), getTimestampNow());
+        engine.logRepository.logMessage(chatMessage.getTrip(), chatMessage.getNick(), chatMessage.getHash(), chatMessage.getText(), getTimestampNow());
 
         String cmd = chatMessage.getText().trim();
         if (!cmd.startsWith(engine.prefix)) {

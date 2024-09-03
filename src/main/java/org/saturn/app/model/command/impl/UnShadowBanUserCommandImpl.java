@@ -52,7 +52,7 @@ public class UnShadowBanUserCommandImpl extends UserCommandBaseImpl {
         }
 
         if (arguments.stream().anyMatch("-all"::equals)) {
-            engine.modService.unbanAll();
+            engine.modService.unbanAll(author);
             log.info("Executed [unban all] command by user: {}", author);
             return;
         }

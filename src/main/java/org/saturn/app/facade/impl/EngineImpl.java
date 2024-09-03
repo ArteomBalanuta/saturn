@@ -211,7 +211,7 @@ public class EngineImpl extends Base implements Engine {
             if (leftUser.equals(user.getNick())) {
                 currentChannelUsers.remove(user);
                 log.info("User left: {}", user.getNick());
-                logService.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", DateUtil.getTimestampNow());
+                logRepository.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", DateUtil.getTimestampNow());
             }
         }
     }
@@ -219,7 +219,7 @@ public class EngineImpl extends Base implements Engine {
     public void addActiveUser(User newUser) {
         currentChannelUsers.add(newUser);
         log.info("Added user: {}, to list of active users", newUser.getNick());
-        logService.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", DateUtil.getTimestampNow());
+        logRepository.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", DateUtil.getTimestampNow());
     }
 
 //
