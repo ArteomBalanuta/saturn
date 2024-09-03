@@ -1,8 +1,8 @@
 package org.saturn.app.listener.impl;
 
+import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.impl.OutService;
 import org.saturn.app.util.Util;

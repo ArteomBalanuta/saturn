@@ -7,7 +7,6 @@ import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.service.ModService;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,6 +1,11 @@
 package org.saturn.app.model.command.factory;
 
-import io.github.classgraph.*;
+import io.github.classgraph.AnnotationInfo;
+import io.github.classgraph.AnnotationParameterValue;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ClassInfoList;
+import io.github.classgraph.ScanResult;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.command.UserCommand;
@@ -10,7 +15,11 @@ import org.saturn.app.util.Util;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 

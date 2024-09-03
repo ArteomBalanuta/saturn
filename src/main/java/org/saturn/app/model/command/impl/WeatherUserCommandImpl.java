@@ -10,7 +10,6 @@ import org.saturn.app.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 

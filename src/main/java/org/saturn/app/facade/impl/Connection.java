@@ -2,12 +2,18 @@ package org.saturn.app.facade.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.drafts.Draft_6455;
 import org.java_websocket.handshake.ServerHandshake;
 import org.saturn.app.listener.Listener;
 
-import javax.net.ssl.*;
-import java.net.*;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;

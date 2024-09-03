@@ -5,19 +5,13 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
-import org.saturn.app.model.dto.Afk;
-import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
-import static org.saturn.app.util.Util.listToString;
 
 @Slf4j
 @CommandAliases(aliases = {"ban"})

@@ -5,7 +5,13 @@ import org.apache.commons.configuration2.Configuration;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.listener.Listener;
-import org.saturn.app.listener.impl.*;
+import org.saturn.app.listener.impl.ConnectionListenerImpl;
+import org.saturn.app.listener.impl.IncomingMessageListenerImpl;
+import org.saturn.app.listener.impl.InfoMessageListenerImpl;
+import org.saturn.app.listener.impl.OnlineSetListenerImpl;
+import org.saturn.app.listener.impl.UserJoinedListenerImpl;
+import org.saturn.app.listener.impl.UserLeftListenerImpl;
+import org.saturn.app.listener.impl.UserMessageListenerImpl;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.factory.CommandFactory;
 import org.saturn.app.model.dto.Afk;
@@ -17,7 +23,13 @@ import org.saturn.app.util.DateUtil;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -25,7 +37,8 @@ import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.DateUtil.getDifference;
 import static org.saturn.app.util.DateUtil.toZoneDateTimeUTC;
-import static org.saturn.app.util.Util.*;
+import static org.saturn.app.util.Util.extractCmdFromJson;
+import static org.saturn.app.util.Util.getAuthor;
 
 @Slf4j
 public class EngineImpl extends Base implements Engine {
@@ -91,8 +104,11 @@ public class EngineImpl extends Base implements Engine {
             hcConnection.start();
             log.debug("Started blocking connection");
         } catch (URISyntaxException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.error("Exception: ", e);
         } catch (InterruptedException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Exception: ", e);
             throw new RuntimeException(e);
         }
     }
@@ -104,8 +120,11 @@ public class EngineImpl extends Base implements Engine {
             hcConnection.startNonBlocking();
             log.debug("Started non-blocking connection");
         } catch (URISyntaxException e) {
-            e.printStackTrace();
+            log.info("Error: {}", e.getMessage());
+            log.error("Exception: ", e);
         } catch (InterruptedException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Exception: ", e);
             throw new RuntimeException(e);
         }
     }
@@ -151,8 +170,9 @@ public class EngineImpl extends Base implements Engine {
                 log.debug("Connection is already closed");
             }
         } catch (Exception e) {
+            log.info("Error: {}", e.getMessage());
             log.error("Exception: ", e);
-            e.printStackTrace();
+            System.exit(1);
         }
     }
 
@@ -232,21 +252,11 @@ public class EngineImpl extends Base implements Engine {
 //        if (command.is(VOTE)) {
 //            modService.vote(author);
 //        }
-//        if (command.is(SQL) && admins.contains(trip)) {
-//            String result = sqlService.executeSql(cmd, true);
-//            outService.enqueueMessageForSending(result);
-//        }
-//        if (command.is(HELP)) {
-//            outService.enqueueMessageForSending(HELP_RESPONSE);
-//        }
 //        if (command.is(SENTRY)) {
 //            outService.enqueueMessageForSending("@" + author + " Sentry on!");
 //        }
 //        if (command.is(FISH)) {
 //            outService.enqueueMessageForSending("@" + author + " Bloop bloop!");
-//        }
-//        if (command.is(LIST)) {
-//            executeListCommand(command, author);
 //        }
 //        if (command.is(BABAKIUERIA)) {
 //            outService.enqueueMessageForSending("@" + author + " https://www.youtube.com/watch?v=NqcFg4z6EYY");
@@ -257,36 +267,15 @@ public class EngineImpl extends Base implements Engine {
 //        if (command.is(RUST)) {
 //            outService.enqueueMessageForSending("@" + author + " https://doc.rust-lang.org/book/title-page.html");
 //        }
-//        if (command.is(PING)) {
-//            pingService.executePing(author);
-//        }
 //        if (command.is(SOLID)) {
 //            outService.enqueueMessageForSending(Constants.SOLID + " @" + author);
 //        }
 //        if (command.is(SCP)) {
 //            scpService.executeRandomSCP(author);
 //        }
-//        if (command.is(NOTESPURGE)) {
-//            noteService.executeNotesPurge(author, trip);
-//        }
-//        if (command.is(NOTE)) {
-//            noteService.executeAddNote(trip, command.getCommandName());
-//        }
-//        if (command.is(NOTES)) {
-//            noteService.executeListNotes(author, trip);
-//        }
 //        if (command.is(SEARCH)) {
 //            // executeSearch(author, cmd);
-//        }
-//        if (command.is(MAIL)) {
-//            mailService.executeMail(author, command);
-//        }
-//        if (command.is(WEATHER) || trustedUsers.contains(trip) ) {
-//            weatherService.executeWeather(author, command);
-//        }
-//        if (command.is(MSGCHANNEL)) {
-//            executeMsgChannelCmd(trip, command);
-//        }
+
 
     public void notifyUserNotAfkAnymore(User user) {
         Optional<Afk> afk =Optional.empty();

@@ -22,8 +22,8 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
 
         this.aliases.addAll(aliases);
 
-        if (super.engine.getConfig() != null) {
-            prefix = super.engine.getConfig().getString("cmdPrefix");
+        if (super.engine.config != null) {
+            prefix = super.engine.config.getString("cmdPrefix");
         }
     }
 
@@ -45,7 +45,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public void execute() {
         String author = chatMessage.getNick();
-        super.engine.getOutService().enqueueMessageForSending(author, String.format(help, prefix, prefix, prefix), isWhisper());
+        super.engine.outService.enqueueMessageForSending(author, String.format(help, prefix, prefix, prefix), isWhisper());
         log.info("Executed [help] command by user: {}", author);
     }
     //.ddg   ​  

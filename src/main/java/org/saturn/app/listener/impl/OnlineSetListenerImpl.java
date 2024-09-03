@@ -9,7 +9,6 @@ import org.saturn.app.model.dto.User;
 
 import java.util.Arrays;
 
-import static org.saturn.app.util.DateUtil.getTimestampNow;
 import static org.saturn.app.util.Util.gson;
 
 

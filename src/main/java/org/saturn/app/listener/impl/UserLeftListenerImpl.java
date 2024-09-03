@@ -7,8 +7,6 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 
-import java.util.List;
-
 import static org.saturn.app.util.Util.gson;
 
 public class UserLeftListenerImpl implements Listener {

@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.ListCommandListenerImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.annotation.CommandAliases;
@@ -11,7 +12,6 @@ import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.service.impl.OutService;
 
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
     public ListUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
         super(message, engine, getWhiteListedTrips(engine));
         super.setAliases(this.getAliases());
-        this.outService = super.engine.getOutService();
+        this.outService = super.engine.outService;
         this.aliases.addAll(aliases);
     }
 

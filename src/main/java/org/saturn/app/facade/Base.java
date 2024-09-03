@@ -1,24 +1,36 @@
 package org.saturn.app.facade;
 
 import org.apache.commons.configuration2.Configuration;
-import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.service.*;
-import org.saturn.app.service.impl.*;
+import org.saturn.app.service.AuthorizationService;
+import org.saturn.app.service.LogRepository;
+import org.saturn.app.service.MailService;
+import org.saturn.app.service.ModService;
+import org.saturn.app.service.NoteService;
+import org.saturn.app.service.PingService;
+import org.saturn.app.service.SCPService;
+import org.saturn.app.service.SQLService;
+import org.saturn.app.service.SearchService;
+import org.saturn.app.service.UserService;
+import org.saturn.app.service.WeatherService;
+import org.saturn.app.service.impl.AuthorizationServiceImpl;
+import org.saturn.app.service.impl.LogRepositoryImpl;
+import org.saturn.app.service.impl.MailServiceImpl;
+import org.saturn.app.service.impl.ModServiceImpl;
+import org.saturn.app.service.impl.NoteServiceImpl;
+import org.saturn.app.service.impl.OutService;
+import org.saturn.app.service.impl.PingServiceImpl;
+import org.saturn.app.service.impl.SCPServiceImpl;
+import org.saturn.app.service.impl.SQLServiceImpl;
+import org.saturn.app.service.impl.SearchServiceImpl;
+import org.saturn.app.service.impl.UserServiceImpl;
+import org.saturn.app.service.impl.WeatherServiceImpl;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ScheduledExecutorService;
-
-import static java.util.concurrent.Executors.newScheduledThreadPool;
-import static org.saturn.app.util.Constants.THREAD_NUMBER;
 
 public abstract class Base {
-    protected List<UserCommand> enabledUserCommands = new ArrayList<>();
     protected String baseWsURL;
     public String proxies;
     public boolean isMain;
@@ -46,29 +58,9 @@ public abstract class Base {
 
     public final UserService userService;
 
-    public PingService getPingService() {
-        return pingService;
-    }
-
-    public ModService getModService() {
-        return modService;
-    }
-
-    public WeatherService getWeatherService() {
-        return weatherService;
-    }
-
-    public List<UserCommand> getEnabledCommands() {
-        return enabledUserCommands;
-    }
-
-    public final BlockingQueue<String> incomingStringQueue = new ArrayBlockingQueue<>(256);
-    public final BlockingQueue<ChatMessage> incomingChatMessageQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<String> outgoingRawMessageQueue = new ArrayBlockingQueue<>(256);
     public final CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
-
-    public ScheduledExecutorService executorScheduler = newScheduledThreadPool(THREAD_NUMBER);
     public Configuration config;
 
     public Base(java.sql.Connection connection, Configuration config, Boolean isMain) {
@@ -124,34 +116,6 @@ public abstract class Base {
     
     public void setTrip(String password) {
         this.password = password;
-    }
-
-    public OutService getOutService() {
-        return outService;
-    }
-
-    public LogRepository getLogService() {
-        return logRepository;
-    }
-
-    public SCPService getScpService() {
-        return scpService;
-    }
-
-    public NoteService getNoteService() {
-        return noteService;
-    }
-
-    public SearchService getSearchService() {
-        return searchService;
-    }
-
-    public MailService getMailService() {
-        return mailService;
-    }
-
-    public SQLService getSqlService() {
-        return sqlService;
     }
 
     public Configuration getConfig() {
