@@ -18,7 +18,7 @@ public class LogRepositoryImpl implements LogRepository {
     @Override
     public void logCommand(String trip, String cmd,String arguments, String status, long created_on) {
             try {
-                PreparedStatement statement = connection.prepareStatement("INSERT INTO executed_commands ('trip','command_name','arguments','status','created_on') VALUES (?, ?, ?);");
+                PreparedStatement statement = connection.prepareStatement("INSERT INTO executed_commands ('trip','command_name','arguments','status','created_on') VALUES (?, ?, ?, ?, ?);");
                 statement.setString(1, trip);
                 statement.setString(2, cmd);
                 statement.setString(3, arguments);
