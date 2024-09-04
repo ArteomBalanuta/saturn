@@ -40,7 +40,7 @@ public class SearchServiceImpl implements SearchService {
                 result = "Please pay for the service requested.";
             }
 
-            return StringEscapeUtils.escapeJson(result).toString();
+            return StringEscapeUtils.escapeJson(result);
         } catch (IOException e) {
             e.printStackTrace();
         }

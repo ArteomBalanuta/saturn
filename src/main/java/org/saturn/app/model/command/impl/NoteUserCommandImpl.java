@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -41,18 +42,19 @@ public class NoteUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
         boolean isEmpty = getArguments().stream().findFirst().isEmpty();
         if (isEmpty) {
             engine.outService.enqueueMessageForSending(chatMessage.getNick(), engine.prefix + "note Jedi am I?!", isWhisper());
             log.info("Executed [note] command by user: {}", chatMessage.getNick());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         trip.ifPresent(s -> engine.noteService.save(s, listToString(getArguments())));
 
         engine.outService.enqueueMessageForSending(chatMessage.getNick(), "note successfully saved!", isWhisper());
         log.info("Executed [note] command by user: {}", chatMessage.getNick());
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

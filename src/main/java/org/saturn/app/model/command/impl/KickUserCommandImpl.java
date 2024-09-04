@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.User;
@@ -10,6 +11,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
@@ -41,7 +43,7 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         List<String> arguments = getArguments();
         arguments = arguments.stream().map(arg -> arg.replace("@", "")).collect(Collectors.toList());
 
@@ -49,7 +51,7 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
         if (arguments.isEmpty()) {
             log.info("Executed [kick] command by user: {}, no username parameter specified", author);
             engine.outService.enqueueMessageForSending(author, "\\n Example: " + engine.prefix + "kick merc", isWhisper());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         String flag = arguments.get(0);
@@ -80,6 +82,8 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
         }
 
         log.info("Executed kick command by user: {}", author);
+
+        return Optional.of(Status.SUCCESSFUL);
     }
 
     private void kickUserIfPresent(String target, List<String> activeUsers) {

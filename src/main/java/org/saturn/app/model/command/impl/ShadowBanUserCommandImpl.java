@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.BanDto;
@@ -11,6 +12,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.getAdminTrips;
@@ -42,7 +44,7 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         List<String> arguments = getArguments();
         String author = super.chatMessage.getNick();
 
@@ -51,7 +53,7 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
         if (arguments.isEmpty()) {
             log.info("Executed [shadow ban] command by user: {}, no target set", author);
             engine.outService.enqueueMessageForSending(author,"Example:" + engine.prefix + "shadowban merc", isWhisper());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         if (arguments.stream().anyMatch(arg -> arg.equals("-c"))) {
@@ -59,7 +61,7 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
             log.info("Shadow Banning usernames containing following string: {}", pattern);
             List<User> users = super.engine.currentChannelUsers.stream()
                     .filter(user -> user.getNick().contains(pattern))
-                    .collect(Collectors.toList());
+                    .toList();
 
             List<String> userNames = users.stream().map(User::getNick).collect(Collectors.toList());
             log.info("Matching users: {}", userNames);
@@ -72,7 +74,9 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
                 engine.modService.kick(user.getNick());
                 log.info("User: {}, has been kicked", user.getNick());
             });
-            return;
+
+            log.info("Executed [shadow ban] command by user: {}", author);
+            return Optional.of(Status.SUCCESSFUL);
         }
 
         String target = getBanningUser(arguments);
@@ -96,6 +100,7 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
                 });
 
         log.info("Executed [shadow ban] command by user: {}", author);
+        return Optional.of(Status.SUCCESSFUL);
     }
 
     private static String getBanningUser(List<String> arguments) {

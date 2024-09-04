@@ -6,6 +6,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.MsgChannelCommandListenerImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
@@ -14,6 +15,7 @@ import org.saturn.app.service.impl.OutService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
@@ -47,14 +49,14 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
 
     /* ![](https://share.lyka.pro/xxxxx.png) */
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String author = super.chatMessage.getNick();
 
         List<String> arguments = this.getArguments();
         if (arguments.isEmpty()) {
             outService.enqueueMessageForSending(author, " Example: " + engine.prefix + "msgroom your-room 1984", isWhisper());
             log.info("Executed [msgchannel] command buy user: {}", author);
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         StringBuilder message = new StringBuilder();
@@ -86,11 +88,13 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
             slaveEngine.setOnlineSetListener(joinChannelListener);
             slaveEngine.start();
         }
+
+        return Optional.of(Status.SUCCESSFUL);
     }
 
     private String formatMessage(String message) {
         if (message.contains("![](")) {
-            return message +  "\\n anonymous mail from: ?" + engine.channel + "";
+            return message +  "\\n anonymous mail from: ?" + engine.channel;
         }
         return "anonymous mail from: ?" + engine.channel + " message: " + message;
     }

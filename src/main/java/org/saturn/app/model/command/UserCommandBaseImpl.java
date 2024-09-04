@@ -3,7 +3,10 @@ package org.saturn.app.model.command;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.service.LogRepository;
+import org.saturn.app.util.DateUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,14 +58,25 @@ public class UserCommandBaseImpl implements UserCommand  {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         List<String> aliases = toLower(this.getAliases());
         Optional<UserCommand> cmd = engine.commandFactory.getCommand(this.chatMessage, aliases.get(0));
 
         if (cmd.isPresent() && engine.authorizationService.isUserAuthorized(cmd.get(), this.chatMessage)) {
             setupArguments(cmd.get());
-            cmd.get().execute();
+            String trip = null;
+            if (chatMessage.getTrip() != null) {
+                trip = chatMessage.getTrip();
+            }
+
+            String arguments = cmd.get().getArguments().toString();
+            Optional<Status> status = cmd.get().execute();
+
+            engine.logRepository.logCommand(trip, cmd.get().getAliases().toString(), arguments,  status.get().name(), DateUtil.getTimestampNow());
+            return status;
         }
+
+        return Optional.empty();
     }
 
     private void setupArguments(UserCommand cmd) {

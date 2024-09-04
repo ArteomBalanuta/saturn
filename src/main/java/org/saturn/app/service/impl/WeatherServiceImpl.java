@@ -18,7 +18,6 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -26,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.saturn.app.model.dto.Weather.getTime;
 import static org.saturn.app.util.DateUtil.formatRfc1123;
-import static org.saturn.app.util.DateUtil.formatTime;
 import static org.saturn.app.util.DateUtil.tsToSec8601;
 
 @Slf4j

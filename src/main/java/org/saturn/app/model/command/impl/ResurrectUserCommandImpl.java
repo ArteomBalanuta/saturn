@@ -7,6 +7,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.KickCommandListenerImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
@@ -14,6 +15,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
@@ -44,13 +46,14 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         List<String> arguments = getArguments();
         String author = chatMessage.getNick();
 
         if (arguments.size() != 3) {
             super.engine.outService.enqueueMessageForSending(author, " " + engine.prefix + "move <nick> <from> <to>", isWhisper());
             log.info("Executed [move] command by user: {} - missing required parameters", author);
+            return Optional.of(Status.FAILED);
         }
 
         String from = arguments.get(1);
@@ -61,6 +64,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         resurrect(from, target, to);
 
         log.info("Executed [move] command by user: {}, target: {}", author, target);
+        return Optional.of(Status.SUCCESSFUL);
     }
 
     public void resurrect(String channel, String nick, String targetChannel) {

@@ -6,6 +6,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.impl.MinerListenerImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.Proxy;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -62,21 +64,21 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         List<String> arguments = this.getArguments();
         if (arguments.size() < 2) {
             super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " Example: " + engine.prefix + "mine <room> <start|stop>", isWhisper());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         String channel = arguments.get(0);
         if (channel.equals(engine.channel)) {
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         String cmd = arguments.get(1);
         if (cmd == null || cmd.isBlank()) {
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         if ("count".equals(cmd)) {
@@ -84,7 +86,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
             long completedTaskCount = executorService.getCompletedTaskCount();
             long taskCount = executorService.getTaskCount();
             super.engine.outService.enqueueMessageForSending(chatMessage.getNick(), " TaskCount: " + taskCount + ", Completed: " + completedTaskCount + ", Active: " + activeCount, isWhisper());
-            return;
+            return Optional.of(Status.SUCCESSFUL);
         }
 
         if ("start".equals(cmd)) {
@@ -116,6 +118,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
         }
 
         executorServiceTaskChecker.scheduleWithFixedDelay(MineTripCommandImpl::check, 1, 5, TimeUnit.SECONDS);
+        return Optional.of(Status.SUCCESSFUL);
     }
 
     private static void check() {

@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -10,6 +11,7 @@ import org.saturn.app.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
@@ -37,13 +39,14 @@ public class WeatherUserCommandImpl extends UserCommandBaseImpl {
         return Role.REGULAR;
     }
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String weather = engine.weatherService.getWeather(getArguments());
         if (weather == null) {
             log.error("Weather API is not responding, arguments: {}", getArguments());
-            return;
+            return Optional.of(Status.FAILED);
         }
         String weatherAligned = Util.alignWithWhiteSpace(weather);
         engine.outService.enqueueMessageForSending(chatMessage.getNick(), weatherAligned, isWhisper());
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

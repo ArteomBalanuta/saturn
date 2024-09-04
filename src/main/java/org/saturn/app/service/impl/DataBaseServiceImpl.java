@@ -1,7 +1,6 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.ApplicationRunner;
 import org.saturn.app.service.DataBaseService;
 
 import java.io.File;

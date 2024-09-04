@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -37,7 +38,7 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
         return Role.REGULAR;
     }
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String author = chatMessage.getNick();
         Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
 
@@ -55,5 +56,7 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
 
         super.engine.outService.enqueueMessageForSending(author, message, isWhisper());
         log.info("Executed [say] command by user: {}, argument: {}", author, message);
+
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

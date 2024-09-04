@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -40,7 +41,7 @@ public class CaptchaCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         List<String> arguments = getArguments();
 
         String author = chatMessage.getNick();
@@ -48,7 +49,7 @@ public class CaptchaCommandImpl extends UserCommandBaseImpl {
             engine.modService.lock();
             log.info("Executed [captcha] command by user: {} - captcha: enabled", author);
             super.engine.outService.enqueueMessageForSending(author," Captcha enabled!", isWhisper());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         Optional<String> argument = arguments.stream().findFirst();
@@ -56,10 +57,16 @@ public class CaptchaCommandImpl extends UserCommandBaseImpl {
             engine.modService.enableCaptcha();
             super.engine.outService.enqueueMessageForSending(author," Captcha enabled!", isWhisper());
             log.info("Executed [captcha] command by user: {}, captcha: enabled", author);
+
+            return Optional.of(Status.SUCCESSFUL);
         } else if ("off".equals(argument.get())) {
             engine.modService.disableCaptcha();
             super.engine.outService.enqueueMessageForSending(author, " Captcha disabled!", isWhisper());
             log.info("Executed [captcha] command by user: {}, captcha: disabled", author);
+
+            return Optional.of(Status.SUCCESSFUL);
         }
+
+        return Optional.of(Status.FAILED);
     }
 }

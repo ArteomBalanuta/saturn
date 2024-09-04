@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -41,14 +42,14 @@ public class OverflowCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         List<String> arguments = getArguments();
         String author = chatMessage.getNick();
 
         if (arguments.isEmpty()) {
             super.engine.outService.enqueueMessageForSending(author, "target nick isn't set! Example: "+ engine.prefix + "shoot @merc", isWhisper());
             log.info("Executed [overflow] command by user: {}", author);
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         Optional<String> argument = arguments.stream().findFirst();
@@ -57,5 +58,7 @@ public class OverflowCommandImpl extends UserCommandBaseImpl {
         engine.modService.overflow(target);
 
         log.info("Executed [overflow] command by user: {}, target: {}", author, target);
+
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

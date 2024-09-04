@@ -3,12 +3,15 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
+import javax.swing.text.html.Option;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
@@ -37,9 +40,10 @@ public class BanList extends UserCommandBaseImpl {
     public Role getAuthorizedRole() {
         return Role.REGULAR;
     }
-    public void execute() {
+    public Optional<Status> execute() {
         String author = chatMessage.getNick();
         engine.modService.listBanned(author);
         log.info("Executed [banlist] command by user: {}", author);
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

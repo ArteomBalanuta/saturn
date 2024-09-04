@@ -3,12 +3,14 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
@@ -40,13 +42,13 @@ public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String author = chatMessage.getNick();
         String trip = chatMessage.getTrip();
         if (trip == null) {
             engine.outService.enqueueMessageForSending(author,"you have to set your trip to use this command.", false);
             log.info("User: {} failed subscription - trip is not set", author);
-            return;
+            return Optional.of(Status.FAILED);
         }
         engine.subscribers.add(trip);
         log.info("User: {}, trip: {}, subscribed for joining users data - hashes, nicks", author, trip);
@@ -54,5 +56,6 @@ public class SubscribeUserCommandImpl extends UserCommandBaseImpl {
                 "nicks for each new joining user. ", true);
 
         log.info("Executed [subscribe] command by user: {}, trip: {}", author, trip);
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

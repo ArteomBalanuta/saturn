@@ -12,8 +12,8 @@ import org.saturn.app.facade.Engine;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.service.DataBaseService;
 import org.saturn.app.service.LogRepository;
-import org.saturn.app.service.impl.LogRepositoryImpl;
 import org.saturn.app.service.impl.DataBaseServiceImpl;
+import org.saturn.app.service.impl.LogRepositoryImpl;
 
 import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
@@ -56,7 +56,7 @@ public class ApplicationRunner {
         saturn.start();
         if (saturn.isConnected()) {
             log.info("Application started");
-        };
+        }
 
         if (Objects.equals(this.config.getString("autoReconnect"), "true")) {
             healthCheckScheduler.scheduleWithFixedDelay(() -> {

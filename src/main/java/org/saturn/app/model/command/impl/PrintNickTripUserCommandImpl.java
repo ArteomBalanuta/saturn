@@ -3,12 +3,14 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @CommandAliases(aliases = {"users","whitelist","blacklist","offenders","knownoffenders"})
@@ -35,7 +37,7 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
         return Role.REGULAR;
     }
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String author = chatMessage.getNick();
         String users = "\\n Registered offenders: \\n merc | 8Wotmg\\n" +
                 "wwandrew | pwnuUa\\n" +
@@ -64,5 +66,7 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
 
         engine.outService.enqueueMessageForSending(author,users, isWhisper());
         log.info("Executed [users] command by user: {}", author);
+
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

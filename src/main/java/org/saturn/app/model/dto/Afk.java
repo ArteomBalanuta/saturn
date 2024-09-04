@@ -1,7 +1,6 @@
 package org.saturn.app.model.dto;
 
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 public class Afk {

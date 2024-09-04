@@ -7,6 +7,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.ListCommandListenerImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
@@ -17,6 +18,7 @@ import org.saturn.app.service.impl.OutService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
@@ -51,14 +53,14 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String author = super.chatMessage.getNick();
 
         List<String> arguments = this.getArguments();
         if (arguments.isEmpty()) {
             printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
             outService.enqueueMessageForSending(author, "Example: " + engine.prefix + "list programming", isWhisper());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         String channel = arguments.get(0).trim();
@@ -69,6 +71,8 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
             /* ListCommandListenerImpl will make sure to close the connection */
             joinChannel(author, channel);
         }
+
+        return Optional.of(Status.SUCCESSFUL);
     }
 
     public void joinChannel(String author, String channel) {

@@ -1,7 +1,6 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.language.bm.Rule;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -12,14 +11,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
-
-import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 
 @Slf4j
 public class AuthorizationServiceImpl extends OutService implements AuthorizationService {

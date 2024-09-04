@@ -1,10 +1,10 @@
 package org.saturn.app.model.dto;
 
 public class BanDto {
-    private String trip;
-    private String name;
-    private String hash;
-    private String reason;
+    private final String trip;
+    private final String name;
+    private final String hash;
+    private final String reason;
 
     public BanDto(String trip, String name, String hash, String reason) {
         this.trip = trip;

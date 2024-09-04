@@ -135,7 +135,7 @@ public class ModServiceImpl extends OutService implements ModService {
                 String hash = resultSet.getString("hash");
                 if (hash != null) {
                     byte[] decodedBytes = decoder.decode(hash.getBytes(StandardCharsets.UTF_8));
-                    hash = new String(decodedBytes, StandardCharsets.UTF_8);;
+                    hash = new String(decodedBytes, StandardCharsets.UTF_8);
                 }
 
                 BanDto banDto = new BanDto(

@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -40,14 +41,14 @@ public class LockRoomUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         List<String> arguments = getArguments();
 
         String author = chatMessage.getNick();
         if (arguments.isEmpty()) {
             log.info("Executed [lock] command by user: {}, flag: not set", author);
             super.engine.outService.enqueueMessageForSending(author,engine.prefix + "lock on", isWhisper());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         Optional<String> argument = arguments.stream().findFirst();
@@ -55,9 +56,13 @@ public class LockRoomUserCommandImpl extends UserCommandBaseImpl {
         if ("on".equals(argument.get())) {
             engine.modService.lock();
             super.engine.outService.enqueueMessageForSending(author, " Room locked!", isWhisper());
+            return Optional.of(Status.SUCCESSFUL);
         } else if ("off".equals(argument.get())) {
             engine.modService.unlock();
             super.engine.outService.enqueueMessageForSending(author, " Room unlocked!", isWhisper());
+            return Optional.of(Status.SUCCESSFUL);
         }
+
+        return Optional.of(Status.FAILED);
     }
 }

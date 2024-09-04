@@ -28,11 +28,6 @@ public class UserMessageListenerImpl implements Listener {
     public String getListenerName() {
         return "messageListener";
     }
-
-    boolean isTrustedUser(String trip, String nick, String hash) {
-
-        return false;
-    }
     @Override
     public void notify(String jsonText) {
         log.debug("Full message payload: {}", jsonText);
@@ -43,7 +38,7 @@ public class UserMessageListenerImpl implements Listener {
             message.setHash(user.getHash());
         }, ()-> {
             log.warn("Hash for user: {}, not present ", message.getNick());
-            log.warn("Active users: {}", engine.currentChannelUsers.stream().map(User::getNick).toList().toString());
+            log.warn("Active users: {}", engine.currentChannelUsers.stream().map(User::getNick).toList());
         });
 
         engine.logRepository.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),

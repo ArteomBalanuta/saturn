@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.User;
@@ -40,7 +41,7 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String author = chatMessage.getNick();
         Optional<String> nick = getArguments().stream()
                 .findFirst();
@@ -48,7 +49,7 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
         if (nick.isEmpty()) {
             log.info("Executed [info] command by user: {}, target: not set", author);
             engine.outService.enqueueMessageForSending(author, "\\n Example: " + engine.prefix + "info merc", isWhisper());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         Optional<User> user = engine.currentChannelUsers.stream()
@@ -58,7 +59,7 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
         if (user.isEmpty()) {
             engine.outService.enqueueMessageForSending(author, "\\n target with nick:  " + nick.get() + " not found!", isWhisper());
             log.info("Executed [info] command by user: {}, target: {} is not in the room", author, nick.get());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         engine.outService.enqueueMessageForSending(author,
@@ -66,5 +67,6 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
                         "\\n User hash: " + user.get().getHash(), isWhisper());
 
         log.info("Executed [info] command by user: {}, target: {}", author, nick.get());
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

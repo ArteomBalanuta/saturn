@@ -1,8 +1,10 @@
 package org.saturn.app.model.command;
 
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface UserCommand {
     List<String> getAliases();
@@ -12,5 +14,5 @@ public interface UserCommand {
 
     Role getAuthorizedRole();
     boolean isWhisper();
-    void execute();
+    Optional<Status> execute();
 }

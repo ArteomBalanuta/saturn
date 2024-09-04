@@ -3,6 +3,7 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.Afk;
@@ -13,6 +14,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.saturn.app.util.Util.listToString;
@@ -44,13 +46,13 @@ public class AfkUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String author = chatMessage.getNick();
         String trip = chatMessage.getTrip();
         if (trip == null) {
             log.info("Executed [afk] command by user: {} - no trip provided", author);
             engine.outService.enqueueMessageForSending(author,"Set your trip in order to use this command", isWhisper());
-            return;
+            return Optional.of(Status.FAILED);
         }
 
         List<User> afkUsers = engine.currentChannelUsers.stream().filter(u -> u.getTrip().equals(trip)).collect(Collectors.toList());
@@ -59,5 +61,6 @@ public class AfkUserCommandImpl extends UserCommandBaseImpl {
         log.info("User: {} executed afk command - marked as afk, using trip: {}, reason: {}", author, trip, reason);
 
         engine.outService.enqueueMessageForSending(author," is afk", isWhisper());
+        return Optional.of(Status.SUCCESSFUL);
     }
 }

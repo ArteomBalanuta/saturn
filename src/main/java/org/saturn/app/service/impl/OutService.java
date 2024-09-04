@@ -5,8 +5,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.concurrent.BlockingQueue;
 
-import static org.saturn.app.util.DateUtil.getTimestampNow;
-
 @Slf4j
 public class OutService {
     protected BlockingQueue<String> queue;

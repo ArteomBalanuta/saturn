@@ -3,12 +3,14 @@ package org.saturn.app.model.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.annotation.CommandAliases;
 import org.saturn.app.model.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @CommandAliases(aliases = {"help", "h"})
@@ -43,10 +45,12 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     }
 
     @Override
-    public void execute() {
+    public Optional<Status> execute() {
         String author = chatMessage.getNick();
         super.engine.outService.enqueueMessageForSending(author, String.format(help, prefix, prefix, prefix), isWhisper());
         log.info("Executed [help] command by user: {}", author);
+
+        return Optional.of(Status.SUCCESSFUL);
     }
     //.ddg   ​  
     //    
@@ -69,7 +73,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u200B kick,k <nick>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - kicks the user\\n" +
                     "\u200B ban <nick|trip|hash>\u200B \u200B \u200B - bans the user by either nick,trip or hash\\n" +
                     "\u200B msgroom <room> <text>\u200B \u200B - sends the mail to specified room\\n" +
-                    "\u200B sql <SQL>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - executes the sql against bot\'s database\\n" +
+                            "\u200B sql <SQL>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - executes the sql against bot's database\\n" +
 //                    "\u200B \\n" +
                     "Whisper supported commands (input, output is whispered):\\n" +
                     "\u200B /whisper @orangesun [mail,msg] <nick> <text> - sends a message to <nick>\\n" +
