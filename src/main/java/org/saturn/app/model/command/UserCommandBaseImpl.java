@@ -5,7 +5,6 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.service.LogRepository;
 import org.saturn.app.util.DateUtil;
 
 import java.util.ArrayList;

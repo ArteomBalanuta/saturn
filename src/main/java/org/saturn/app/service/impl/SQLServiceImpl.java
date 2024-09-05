@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.service.impl.util.TableGenerator;
+import org.saturn.app.util.SqlUtil;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -100,9 +101,9 @@ public class SQLServiceImpl extends OutService implements SQLService {
         try {
             Statement statement = connection.createStatement();
             
-            String sql = "select distinct hash,name from messages where trip = '" + trip + "' limit 30;";
+            String sql = SqlUtil.SELECT_DISTINCT_HASH_NAME_FROM_MESSAGES_WHERE_TRIP + trip + "' limit 30;";
             if (trip == null || trip.trim().isEmpty()) {
-                sql = "select distinct hash,name from messages where hash = '" + hash + "' limit 30;";
+                sql = SqlUtil.SELECT_DISTINCT_HASH_NAME_FROM_MESSAGES_WHERE_HASH + hash + "' limit 30;";
             }
             statement.execute(sql);
             ResultSet resultSet = statement.getResultSet();

@@ -6,6 +6,7 @@ import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.MailService;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.SqlUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -51,7 +52,7 @@ public class MailServiceImpl extends OutService implements MailService {
     public void orderMessageDelivery(String message, String owner, String receiver, String isWhisper) {
         try {
             PreparedStatement insertMessage = connection.prepareStatement(
-                    "INSERT INTO mail ('owner','receiver','message','status','is_whisper', 'created_on') VALUES (?, ?, ?, ?, ?, ?);");
+                    SqlUtil.INSERT_INTO_MAIL_OWNER_RECEIVER_MESSAGE_STATUS_IS_WHISPER_CREATED_ON_VALUES);
             insertMessage.setString(1, owner);
             insertMessage.setString(2, receiver);
             insertMessage.setString(3, message);
@@ -73,8 +74,7 @@ public class MailServiceImpl extends OutService implements MailService {
         List<Mail> messages = new ArrayList<>();
         try {
             PreparedStatement mail = connection.prepareStatement(
-                    "SELECT owner, receiver, message, status, is_whisper, created_on FROM mail WHERE receiver IN (?,?) AND status = " +
-                            "'PENDING'; ");
+                    SqlUtil.SELECT_MAIL_BY_NICK_OR_TRIP);
             mail.setString(1, nick);
             mail.setString(2, trip == null ? nick : trip);
             mail.execute();
@@ -105,7 +105,7 @@ public class MailServiceImpl extends OutService implements MailService {
     public void updateMailStatus(String nick) {
         try {
             PreparedStatement insertMessage = connection.prepareStatement(
-                    "UPDATE mail SET status='DELIVERED' WHERE receiver = ?");
+                    SqlUtil.UPDATE_MAIL_SET_STATUS_DELIVERED_WHERE_RECEIVER);
             insertMessage.setString(1, nick);
             
             insertMessage.executeUpdate();

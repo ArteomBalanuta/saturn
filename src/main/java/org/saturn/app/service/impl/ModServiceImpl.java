@@ -5,6 +5,7 @@ import org.saturn.app.model.dto.BanDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.ModService;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.SqlUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -37,7 +38,7 @@ public class ModServiceImpl extends OutService implements ModService {
     public void shadowBan(BanDto banDto) {
         try {
             PreparedStatement statement = connection
-                    .prepareStatement("INSERT INTO banned_users(trip,name,hash,reason,created_on) VALUES (?,?,?,?,?);");
+                    .prepareStatement(SqlUtil.INSERT_INTO_BANNED_USERS_TRIP_NAME_HASH_REASON_CREATED_ON_VALUES);
 
             if (banDto.getTrip() != null) {
                 statement.setString(1, banDto.getTrip());
@@ -108,7 +109,7 @@ public class ModServiceImpl extends OutService implements ModService {
     public void unshadowban(String target) {
         try {
             PreparedStatement statement = connection
-                    .prepareStatement("DELETE FROM banned_users WHERE name == ? OR trip == ? OR hash = '?';");
+                    .prepareStatement(SqlUtil.DELETE_FROM_BANNED_USERS_WHERE_NAME_OR_TRIP_OR_HASH);
             statement.setString(1, target);
             statement.setString(2, target);
 
@@ -127,7 +128,7 @@ public class ModServiceImpl extends OutService implements ModService {
         List<BanDto> banned = new ArrayList<>();
         try {
             PreparedStatement statement = connection.prepareStatement(
-                    "SELECT trip,name,hash,reason FROM banned_users;");
+                    SqlUtil.SELECT_BANNED_USERS);
             statement.execute();
 
             ResultSet resultSet = statement.getResultSet();
@@ -183,7 +184,7 @@ public class ModServiceImpl extends OutService implements ModService {
             bannedIds.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getName()).append("\\n"));
 
             try {
-                PreparedStatement notesByTrip = connection.prepareStatement("DELETE FROM banned_users;");
+                PreparedStatement notesByTrip = connection.prepareStatement(SqlUtil.DELETE_FROM_BANNED_USERS);
                 notesByTrip.executeUpdate();
 
                 notesByTrip.close();

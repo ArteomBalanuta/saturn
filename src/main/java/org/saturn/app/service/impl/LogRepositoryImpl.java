@@ -2,6 +2,7 @@ package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.service.LogRepository;
+import org.saturn.app.util.SqlUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -18,7 +19,7 @@ public class LogRepositoryImpl implements LogRepository {
     @Override
     public void logCommand(String trip, String cmd,String arguments, String status, long created_on) {
             try {
-                PreparedStatement statement = connection.prepareStatement("INSERT INTO executed_commands ('trip','command_name','arguments','status','created_on') VALUES (?, ?, ?, ?, ?);");
+                PreparedStatement statement = connection.prepareStatement(SqlUtil.INSERT_INTO_EXECUTED_COMMANDS_TRIP_COMMAND_NAME_ARGUMENTS_STATUS_CREATED_ON_VALUES);
                 statement.setString(1, trip);
                 statement.setString(2, cmd);
                 statement.setString(3, arguments);
@@ -38,7 +39,7 @@ public class LogRepositoryImpl implements LogRepository {
     public void logMessage(String trip, String name, String hash, String message, long timestamp) {
             try {
                 PreparedStatement logEvent =
-                        connection.prepareStatement("INSERT INTO messages ('trip', 'name', 'hash', 'message', 'created_on') VALUES (?, ?, ?, ?, ?);");
+                        connection.prepareStatement(SqlUtil.INSERT_INTO_MESSAGES_TRIP_NAME_HASH_MESSAGE_CREATED_ON_VALUES);
                 logEvent.setString(1, trip);
                 logEvent.setString(2, name);
                 logEvent.setString(3, hash);

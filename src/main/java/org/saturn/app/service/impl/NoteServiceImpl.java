@@ -3,6 +3,7 @@ package org.saturn.app.service.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.service.NoteService;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.SqlUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -37,7 +38,7 @@ public class NoteServiceImpl extends OutService implements NoteService {
     public void save(String trip, String note) {
         try {
             PreparedStatement insertNote = connection
-                    .prepareStatement("INSERT INTO notes ('trip', 'note','created_on') VALUES (?, ?, ?);");
+                    .prepareStatement(SqlUtil.INSERT_INTO_NOTES_TRIP_NOTE_CREATED_ON_VALUES);
             insertNote.setString(1, trip);
             insertNote.setString(2, note);
             insertNote.setLong(3, DateUtil.getTimestampNow());
@@ -54,7 +55,7 @@ public class NoteServiceImpl extends OutService implements NoteService {
     public List<String> getNotesByTrip(String trip) {
         List<String> notes = new ArrayList<>();
         try {
-            PreparedStatement notesByTrip = connection.prepareStatement("SELECT * FROM notes WHERE trip = ?");
+            PreparedStatement notesByTrip = connection.prepareStatement(SqlUtil.SELECT_NOTES_BY_TRIP);
             notesByTrip.setString(1, trip);
             notesByTrip.execute();
 
@@ -74,7 +75,7 @@ public class NoteServiceImpl extends OutService implements NoteService {
     @Override
     public void clearNotesByTrip(String trip) {
         try {
-            PreparedStatement notesByTrip = connection.prepareStatement("DELETE FROM notes WHERE trip = ?");
+            PreparedStatement notesByTrip = connection.prepareStatement(SqlUtil.DELETE_FROM_NOTES_WHERE_TRIP);
             notesByTrip.setString(1, trip);
             notesByTrip.execute();
             

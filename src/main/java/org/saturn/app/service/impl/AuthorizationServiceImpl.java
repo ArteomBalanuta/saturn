@@ -6,6 +6,7 @@ import org.saturn.app.model.command.UserCommand;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.AuthorizationService;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.SqlUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -110,7 +111,7 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
     private void insert(String trip, Role role) {
         try {
             PreparedStatement statement = connection
-                    .prepareStatement("INSERT INTO trips('type', 'trip', 'created_on') VALUES (?, ?, ?);");
+                    .prepareStatement(SqlUtil.INSERT_INTO_TRIPS_TYPE_TRIP_CREATED_ON_VALUES);
             statement.setString(1, role.name());
             statement.setString(2, trip);
             statement.setLong(3, DateUtil.getTimestampNow());
@@ -126,7 +127,7 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
     private int update(String trip, Role newRole) {
         try {
             PreparedStatement insertNote = connection
-                    .prepareStatement("UPDATE trips SET type=? WHERE trip=?;");
+                    .prepareStatement(SqlUtil.UPDATE_TRIPS_SET_TYPE_WHERE_TRIP);
             insertNote.setString(1, newRole.name());
             insertNote.setString(2, trip);
 
