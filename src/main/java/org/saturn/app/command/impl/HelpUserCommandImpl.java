@@ -51,7 +51,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
 
         String header = String.format(helpHeader, prefix);
         String payload = Util.alignWithWhiteSpace(helpPayload, "-","\u2009", false);
-        String examples = String.format(helpExamples, prefix, prefix, prefix, prefix, prefix, prefix);
+        String examples = String.format(helpExamples, prefix, prefix, prefix, prefix, prefix);
 
         super.engine.outService.enqueueMessageForSending(author, header + payload + examples, isWhisper());
         
