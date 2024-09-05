@@ -7,6 +7,7 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +48,13 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public Optional<Status> execute() {
         String author = chatMessage.getNick();
-        super.engine.outService.enqueueMessageForSending(author, String.format(help, prefix, prefix, prefix), isWhisper());
+
+        String header = String.format(helpHeader, prefix);
+        String payload = Util.alignWithWhiteSpace(helpPayload, "-","\u2009", false);
+        String examples = String.format(helpExamples, prefix, prefix, prefix, prefix, prefix, prefix);
+
+        super.engine.outService.enqueueMessageForSending(author, header + payload + examples, isWhisper());
+        
         log.info("Executed [help] command by user: {}", author);
 
         return Optional.of(Status.SUCCESSFUL);
@@ -55,32 +62,43 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     //.ddg   ​  
     //    
     //​
-    public final String help =
-                    "Prefix: %s \\n" +
-                    "Commands:\\n" +
-                    "\u200B help,h \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - prints this output \\n" +
-                    "\u200B say,echo <text>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - echoes the input \\n" +
-                    "\u200B sub,subscribe\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - subscribe on nicks,trips,hashes on joining users \\n" +
-                    "\u200B note <text>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - saves a note \\n" +
-                    "\u200B notes\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - lists your saved notes \\n" +
-                    "\u200B notes purge\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - removes all notes \\n" +
-                    "\u200B mail,msg <nick> <text>\u200B - sends a message to <nick> \\n" +
-                    "\u200B info,i <nick>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - whispers back user's trip, hash\\n" +
-                    "\u200B list <channel_name>\u200B \u200B \u200B \u200B - prints hash,trip,nicks of users in the channel\\n" +
-                    "\u200B weather <city>\u200B \u200B \u200B \u200B - some weather data\\n" +
-//                    "\u200B \\n" +
-                    "Whitelisted user commands:\\n" +
-                    "\u200B kick,k <nick>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - kicks the user\\n" +
-                    "\u200B ban <nick|trip|hash>\u200B \u200B \u200B - bans the user by either nick,trip or hash\\n" +
-                    "\u200B msgroom <room> <text>\u200B \u200B - sends the mail to specified room\\n" +
-                            "\u200B sql <SQL>\u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B \u200B - executes the sql against bot's database\\n" +
-//                    "\u200B \\n" +
-                    "Whisper supported commands (input, output is whispered):\\n" +
-                    "\u200B /whisper @orangesun [mail,msg] <nick> <text> - sends a message to <nick>\\n" +
-//                    "\u200B \\n" +
-                    "Examples:\\n" +
-                    "\u200B %slist programming \\n" +
-                    "\u200B %smail santa Get me a native java compiler";
+    public static final String helpHeader = "All commands can be used through '/whisper'\\n" +
+            "Prefix: %s \\n" +
+            "Commands:\\n";
+
+    public static String helpPayload =
+                    "\u2009help,h\u2009- prints this output \\n" +
+                    "\u2009say,echo <text>\u2009\u2009\u2009- echoes the input \\n" +
+                    "\u2009note <text>\u2009\u2009\u2009- saves a note \\n" +
+                    "\u2009notes\u2009\u2009\u2009\u2009\u2009- lists your saved notes \\n" +
+                    "\u2009notes purge\u2009\u2009\u2009\u2009- removes all notes \\n" +
+                    "\u2009msg <nick|trip> <text>\u2009\u2009- sends a message to <nick|trip> \\n" +
+                    "\u2009info,i <nick>\u2009u2009\u2009\u2009- whispers back user's nicks, hashes\\n" +
+                    "\u2009list <channel_name>\u2009\u2009- prints hash,trip,nicks of users in the channel\\n" +
+                    "\u2009weather <city>\u2009\u2009\u2009- weather data (open-meteo api)\\n" +
+                    "\u2009ping\u2009\u2009\u2009\u2009\u2009- prints the latency between bot and hc\\n" +
+                    "\u2009afk\u2009\u2009\u2009\u2009\u2009\u2009- marks the user as afk\\n" +
+                    "\u2009lastseen\u2009\u2009- prints useful info about users activity\\n" +
+                    "\u2009sub\u2009\u2009- you receive nick,hashes for joining users\\n" +
+                    "\u2009unsub\u2009\u2009\u2009- cancels the subscription\\n" +
+                    "Moderator commands:\\n" +
+                    "\u2009shadowban <nick|trip|hash>\u2009- bans the user by either nick,trip or hash\\n" +
+                    "\u2009msgroom <room> <text>\u2009\u2009- sends the mail to specified room\\n" +
+                    "\u2009captcha on|off\u2009\u2009- enables/disables captcha\\n" +
+                    "\u2009lock on|off\u2009\u2009\u2009- enables/disables the lock on the current room\\n" +
+                    "\u2009move <from> <to> <name>\u2009\u2009\u2009- moves the user to specified room\\n" +
+                    "Admin commands:\\n" +
+                    "\u2009sql <SQL>\u2009\u2009- executes the sql against bot's database\\n";
+
+    public static String helpExamples = "Examples:\\n" +
+            "\u2009%scaptcha on \\n" +
+            "\u2009%safk domestic business \\n" +
+            "\u2009%slist programming \\n" +
+            "\u2009%sweather nc, charlotte \\n" +
+            "\u2009%smail santa Get me a native java compiler \\n" +
+            "\u2009**Developed by mercury**, _https://github.com/ArteomBalanuta/saturn_\\n";
+
+
 
     public static final String SOLID =
             "```Text \\n" + "S - single responsibility principle \\n"

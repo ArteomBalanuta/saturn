@@ -45,7 +45,7 @@ public class WeatherUserCommandImpl extends UserCommandBaseImpl {
             log.error("Weather API is not responding, arguments: {}", getArguments());
             return Optional.of(Status.FAILED);
         }
-        String weatherAligned = Util.alignWithWhiteSpace(weather);
+        String weatherAligned = Util.alignWithWhiteSpace(weather,":", "&nbsp;", false);
         engine.outService.enqueueMessageForSending(chatMessage.getNick(), weatherAligned, isWhisper());
         return Optional.of(Status.SUCCESSFUL);
     }

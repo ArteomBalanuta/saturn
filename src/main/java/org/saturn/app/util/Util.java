@@ -93,31 +93,36 @@ public class Util {
         return lines.indexOf(longestLine);
     }
 
-    public static String alignToLine(String input, String line) {
+    public static String alignToLine(String input, String line, String space, boolean prepend) {
         StringBuilder tmp = new StringBuilder(input);
 //        String space = "\u200B"; // is not displayed properly in hack client v1.
-        String space = "&nbsp;";
         int left = line.length() - tmp.length();
         while (left != 0) {
-//            tmp.append(space);
-            tmp.insert(0, space); // prepend
+            if (prepend) {
+                tmp.insert(0, space); // prepend
+            } else {
+                tmp.append(space);
+            }
             left--;
         }
 
         return tmp.toString();
     }
 
-    public static String alignWithWhiteSpace(String output) {
-        String[] lines = StringUtils.split(output.replace("\\n","\n"), '\n');
+    public static String alignWithWhiteSpace(String output, String separator, String space, boolean prepend) {
+        String[] lines = StringUtils.splitByWholeSeparator(output, "\\n");
 
         List<String> keys = new ArrayList<>();
         List<String> values = new ArrayList<>();
 
         for (String line : lines) {
-            if (line.contains(":")) {
-                String[] pair = StringUtils.split(line, ":");
+            if (line.contains(separator)) {
+                String[] pair = StringUtils.split(line, separator);
                 String key = pair[0];
-                String value = pair[1];
+                String value = "";
+                if (pair.length > 1) {
+                    value = pair[1];
+                }
 
                 keys.add(key);
                 values.add(value);
@@ -129,8 +134,8 @@ public class Util {
 
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < keys.size(); i++) {
-            String aligned = alignToLine(keys.get(i), longestLine);
-            result.append(aligned).append(":").append(values.get(i)).append("\\n");
+            String aligned = alignToLine(keys.get(i), longestLine, space, prepend);
+            result.append(aligned).append(separator).append(values.get(i)).append("\\n");
         }
 
         log.debug("Util: returning aligned with white spaces output: \\n {}", result);
