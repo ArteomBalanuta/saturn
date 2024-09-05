@@ -2,7 +2,7 @@ package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.Role;
-import org.saturn.app.model.command.UserCommand;
+import org.saturn.app.command.UserCommand;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.AuthorizationService;
 import org.saturn.app.util.DateUtil;

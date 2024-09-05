@@ -1,6 +1,6 @@
 package org.saturn.app.service;
 
-import org.saturn.app.model.command.UserCommand;
+import org.saturn.app.command.UserCommand;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
