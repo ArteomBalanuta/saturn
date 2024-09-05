@@ -3,72 +3,30 @@ package org.saturn.app.util;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.saturn.app.command.impl.HelpUserCommandImpl.helpExamples;
+import static org.saturn.app.command.impl.HelpUserCommandImpl.helpHeader;
+import static org.saturn.app.command.impl.HelpUserCommandImpl.helpPayload;
 
 
-/* TODO: fix */
-/*
+/* TODO: add assertion */
 class UtilTest {
 
-
     @Test
-    void testAlign() {
-        String input =
-                "abc:1\\n" +
-                "abcdefgh:1\\n" +
-                "abc:2\\n" +
-                "abc123:3\\n" +
-                "a:4\\n";
+    void testAlignHelp() {
+        String prefix = "-";
 
-        String expected = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;abc:123123\\nabcdefgh:123123\\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;abc:123123\\n&nbsp;abc 123:123123\\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a:123123\\n";
+        String header = String.format(helpHeader, prefix);
+        String payload = helpPayload;
+        String examples = String.format(helpExamples, prefix, prefix, prefix, prefix, prefix, prefix);
 
-        String actual = Util.alignWithWhiteSpace(input);
+        String input = header + payload + examples;
 
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    void testAlignWithValues() {
-        String input =
-                        "abc:123123\\n" +
-                        "abcdefgh:123123\\n" +
-                        "abc:123123\\n" +
-                        "abc 123:123123\\n" +
-                        "a:123123\\n";
-
-        String expected =
-                        "abc&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:123123\\n" +
-                        "abcdefgh:123123\\n" +
-                        "abc&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:123123\\n" +
-                        "abc 123&nbsp;:123123\\n" +
-                        "a&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:123123\\n";
-
-        String actual = Util.alignWithWhiteSpace(input);
-
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    void testRealCase(){
-        String input =
-                "Temperature: 25.9 °C\n" +
-                "Feels temp: 26.1 °C\n" +
-                "&nbsp;&nbsp;&nbsp; \n" +
-                "Wind speed : 8.6 km/h\n" +
-                "Pressure surface: 1007.3 hPa\n" +
-                "&nbsp;&nbsp;&nbsp; \n" +
-                "Pressure sea level: 1014.5 hPa";
-
-        String expected =
-                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Temperature: 25.9 °C\\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Feels temp: 26.1 °C\\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Wind speed : 8.6 km/h\\n&nbsp;&nbsp;Pressure surface: 1007.3 hPa\\nPressure sea level: 1014.5 hPa\\n";
-
-        String actual = Util.alignWithWhiteSpace(input);
+        String actual = Util.alignWithWhiteSpace(payload, "-","\u2009", false);
 
         System.out.println(input);
         System.out.println("####");
-        System.out.println(actual.replace("\\n","\n"));
+        System.out.println(header.replace("\\n","\n") + actual.replace("\\n","\n") + examples.replace("\\n","\n"));
 
-        assertEquals(expected, actual);
+
     }
-
 }
-*/
