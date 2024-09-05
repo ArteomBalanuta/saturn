@@ -176,7 +176,7 @@ public class EngineImpl extends Base implements Engine {
         }
     }
 
-    public void dispatchMessage(String jsonText) {
+    public final void dispatchMessage(String jsonText) {
         try {
             log.debug("Dispatching message: {}", jsonText);
             String cmd = extractCmdFromJson(jsonText);

@@ -23,11 +23,9 @@ public class DateUtil {
     public static long getTimestampNow() {
         return Timestamp.from(Instant.now()).getTime();
     }
-
     public static String getUtcNow() {
         return OffsetDateTime.now(ZoneOffset.UTC).toString();
     }
-
     public static Long tsToSec8601(String timestamp, String zoneId) {
         if (timestamp == null) return null;
         try {

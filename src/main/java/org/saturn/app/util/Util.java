@@ -17,11 +17,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class Util {
     public static Gson gson = new Gson();
-
     public static String getAuthor(String author) {
         return author == null ? null : author.replace("@", "");
     }
-
     public static String extractCmdFromJson(String jsonText) {
         JsonElement element = JsonParser.parseString(jsonText);
         JsonElement listingElement = element.getAsJsonObject().get("cmd");
@@ -135,7 +133,7 @@ public class Util {
             result.append(aligned).append(":").append(values.get(i)).append("\\n");
         }
 
-        log.debug("Utils: returning aligned with white spaces output: \\n {}", result);
+        log.debug("Util: returning aligned with white spaces output: \\n {}", result);
         return result.toString();
     }
 

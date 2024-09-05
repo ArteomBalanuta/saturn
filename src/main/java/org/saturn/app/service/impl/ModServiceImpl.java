@@ -106,7 +106,7 @@ public class ModServiceImpl extends OutService implements ModService {
     }
 
     @Override
-    public void unshadowban(String target) {
+    public void unshadowBan(String target) {
         try {
             PreparedStatement statement = connection
                     .prepareStatement(SqlUtil.DELETE_FROM_BANNED_USERS_WHERE_NAME_OR_TRIP_OR_HASH);

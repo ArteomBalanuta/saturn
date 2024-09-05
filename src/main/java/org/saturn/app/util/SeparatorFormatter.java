@@ -3,7 +3,6 @@ package org.saturn.app.util;
 import java.util.List;
 
 public class SeparatorFormatter {
-    
     public static List addSeparator(List list, char separator) {
         int size = list.size();
         if (size == 1 || list.isEmpty()) {

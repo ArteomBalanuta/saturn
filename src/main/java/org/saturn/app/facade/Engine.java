@@ -7,24 +7,13 @@ import java.util.List;
 
 public interface Engine {
     void start();
-
     void start(Proxy proxy);
-
     void stop();
-
     boolean isConnected();
-
     void setBaseWsUrl(String address);
-
     void setChannel(String channel);
     void setNick(String nick);
     void setPassword(String password);
-
-//    List<User> getActiveUsers();
-
     void setActiveUsers(List<User> users);
-
     void dispatchMessage(String json);
-
-
 }

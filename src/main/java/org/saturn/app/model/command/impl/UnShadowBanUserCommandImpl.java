@@ -59,7 +59,7 @@ public class UnShadowBanUserCommandImpl extends UserCommandBaseImpl {
         arguments.stream()
                 .findFirst()
                 .ifPresent(target -> {
-                    engine.modService.unshadowban(target);
+                    engine.modService.unshadowBan(target);
                     engine.outService.enqueueMessageForSending(author," unbanned " + target, isWhisper());
                     log.info("Executed [unban] command by user: {}, target: {}", author, target);
                 });
