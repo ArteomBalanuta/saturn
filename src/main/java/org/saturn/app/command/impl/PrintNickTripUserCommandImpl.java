@@ -7,6 +7,7 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +40,9 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public Optional<Status> execute() {
         String author = chatMessage.getNick();
-        String users = "\\n Registered offenders: \\n merc | 8Wotmg\\n" +
+        String header = "\\n Regular users: \\n ";
+        String users =
+                "merc | 8Wotmg\\n" +
                 "wwandrew | pwnuUa\\n" +
                 "perge_sequar | VirtuS\\n" +
                 "bacon | 4bR/CS\\n" +
@@ -64,7 +67,8 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
                 "EntertainmentOne | XalBBq\\n" +
                 "lol | xhvbdp";
 
-        engine.outService.enqueueMessageForSending(author,users, isWhisper());
+        String formattedUsers = Util.alignWithWhiteSpace(users, "|", "\u2009", true);
+        engine.outService.enqueueMessageForSending(author, header + formattedUsers, isWhisper());
         log.info("Executed [users] command by user: {}", author);
 
         return Optional.of(Status.SUCCESSFUL);
