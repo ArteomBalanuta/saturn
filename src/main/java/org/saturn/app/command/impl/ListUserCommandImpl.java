@@ -1,8 +1,10 @@
 package org.saturn.app.command.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.ListUtils;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
@@ -16,9 +18,12 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.impl.OutService;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
@@ -89,8 +94,9 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
     }
 
     public void printUsers(String author, List<User> users, OutService outService, boolean isWhisper) {
+        Set<User> unique = new HashSet<>(users);
         StringBuilder output = new StringBuilder();
-        users.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getNick()).append("\\n"));
+        unique.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getNick()).append("\\n"));
 
         outService.enqueueMessageForSending(author, "\\nUsers online: \\n" + output + "\\n", isWhisper);
     }

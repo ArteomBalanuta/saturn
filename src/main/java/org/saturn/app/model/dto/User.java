@@ -1,5 +1,7 @@
 package org.saturn.app.model.dto;
 
+import java.util.Objects;
+
 public class User {
     //    channel,isme bool, nick, trip, uType, hash, level int , userId long, isBot bool, color bool
     
@@ -107,5 +109,18 @@ public class User {
         this.level = level;
         this.userId = userId;
         this.isBot = isBot;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return isme == user.isme && level == user.level && userId == user.userId && isBot == user.isBot && Objects.equals(nick, user.nick) && Objects.equals(trip, user.trip) && Objects.equals(uType, user.uType) && Objects.equals(hash, user.hash);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(isme, nick, trip, uType, hash, level, userId, isBot);
     }
 }
