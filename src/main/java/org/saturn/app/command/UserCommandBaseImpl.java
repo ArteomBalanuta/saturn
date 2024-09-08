@@ -88,7 +88,7 @@ public class UserCommandBaseImpl implements UserCommand  {
     @Override
     public List<String> getArguments() {
         String[] array = arguments.toArray(new String[0]);
-        if (array[0].contains("\\n")) {
+        if (array.length > 0 && array[0].contains("\\n")) {
             /* split first argument into array */
             String[] fixedReceiver = StringUtils.splitByWholeSeparator(array[0],"\\n");
 
