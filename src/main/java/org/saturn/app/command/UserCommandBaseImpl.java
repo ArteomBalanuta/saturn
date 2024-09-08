@@ -88,8 +88,6 @@ public class UserCommandBaseImpl implements UserCommand  {
     @Override
     public List<String> getArguments() {
         String[] array = arguments.toArray(new String[0]);
-        List<String> arguments = new ArrayList<>();
-
         if (array[0].contains("\\n")) {
             /* split first argument into array */
             String[] fixedReceiver = StringUtils.splitByWholeSeparator(array[0],"\\n");
@@ -98,7 +96,7 @@ public class UserCommandBaseImpl implements UserCommand  {
             String[] freshArguments = ArrayUtils.remove(array, 0);
 
             /* reset arguments with fixed arguments */
-            arguments = new ArrayList<>(List.of(ArrayUtils.insert(0, freshArguments, fixedReceiver)));
+            return new ArrayList<>(List.of(ArrayUtils.insert(0, freshArguments, fixedReceiver)));
         }
 
         return arguments;
