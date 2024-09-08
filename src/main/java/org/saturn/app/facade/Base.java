@@ -121,4 +121,6 @@ public abstract class Base {
     public Configuration getConfig() {
         return config;
     }
+
+    public String getPrefix() { return prefix; }
 }

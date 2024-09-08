@@ -1,6 +1,8 @@
 package org.saturn.app.command;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
@@ -28,7 +30,7 @@ public class UserCommandBaseImpl implements UserCommand  {
 
         this.authorizedTrips.addAll(authorizedTrips);
 
-        String message = chatMessage.getText().substring(engine.prefix.length());
+        String message = chatMessage.getText().substring(engine.getPrefix().length());
         if (message.contains(" ")) {
             setAliases(List.of(message.substring(0, message.indexOf(" ")).trim().toUpperCase()));
             parseArguments(message);
@@ -85,6 +87,20 @@ public class UserCommandBaseImpl implements UserCommand  {
 
     @Override
     public List<String> getArguments() {
+        String[] array = arguments.toArray(new String[0]);
+        List<String> arguments = new ArrayList<>();
+
+        if (array[0].contains("\\n")) {
+            /* split first argument into array */
+            String[] fixedReceiver = StringUtils.splitByWholeSeparator(array[0],"\\n");
+
+            /* nullify broken receiver in initial argument array */
+            String[] freshArguments = ArrayUtils.remove(array, 0);
+
+            /* reset arguments with fixed arguments */
+            arguments = new ArrayList<>(List.of(ArrayUtils.insert(0, freshArguments, fixedReceiver)));
+        }
+
         return arguments;
     }
 
