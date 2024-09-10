@@ -69,6 +69,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
     public static String helpPayload =
                     "\u2009help,h\u2009- prints this output \\n" +
                     "\u2009say,echo <text>\u2009\u2009\u2009- echoes the input \\n" +
+                    "\u2009time,t <city|country>\u2009\u2009\u2009- time output \\n" +
                     "\u2009note <text>\u2009\u2009\u2009- saves a note \\n" +
                     "\u2009notes\u2009\u2009\u2009\u2009\u2009- lists your saved notes \\n" +
                     "\u2009notes purge\u2009\u2009\u2009\u2009- removes all notes \\n" +
@@ -91,12 +92,13 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u2009sql <SQL>\u2009\u2009- executes the sql against bot's database\\n";
 
     public static String helpExamples = "Examples:\\n" +
-            "\u2009%scaptcha on \\n" +
-            "\u2009%safk domestic business \\n" +
-            "\u2009%slist programming \\n" +
-            "\u2009%sweather nc, charlotte \\n" +
-            "\u2009%smail santa Get me a native java compiler \\n" +
-            "\u2009**Developed by mercury**, _https://github.com/ArteomBalanuta/saturn_\\n";
+            "\u2009 %scaptcha on \\n" +
+            "\u2009 %safk domestic business \\n" +
+            "\u2009 %slist programming \\n" +
+            "\u2009 %sweather nc, charlotte \\n" +
+            "\u2009 %smail santa Get me a native java compiler \\n" +
+            "\u2009\u2009\u2009\u2009\u2009\u2009\u2009\u2009 \\n" +
+            "\u2009 Developed by mercury, _https://github.com/ArteomBalanuta/saturn_\\n";
 
 
 
