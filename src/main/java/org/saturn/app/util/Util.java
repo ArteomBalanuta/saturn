@@ -5,9 +5,18 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.service.impl.WeatherServiceImpl;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -146,5 +155,43 @@ public class Util {
         StringBuilder b = new StringBuilder();
         strings.forEach(string -> b.append(string).append(" "));
         return b.toString();
+    }
+
+    public static String extractCoordinates(String body) {
+        String lat = StringUtils.substringBetween(body, "<lat>", "</lat>");
+        String lng = StringUtils.substringBetween(body, "<lng>", "</lng>");
+
+        return lat + "," + lng;
+    }
+
+    public static String extractCountryName(String body) {
+        return StringUtils.substringBetween(body, "<countryName>", "</countryName>");
+    }
+
+    public static String getResponseByURL(String uri) {
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+
+        HttpGet request = new HttpGet(uri);
+
+        // add request headers
+        request.addHeader(HttpHeaders.USER_AGENT, "Firefox 59.9.0-MDA-Universe");
+
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+           log.debug("Protocol: {}, StatusCode: {}, ", response.getProtocolVersion(), response.getStatusLine().getStatusCode());              // HTTP/1.1
+
+            String result = null;
+            HttpEntity entity = response.getEntity();
+            if (entity != null) {
+                result = EntityUtils.toString(entity);
+            }
+            if (response.getStatusLine().getStatusCode() != 200) {
+                log.info("API Response status code: {}", response.getStatusLine().getStatusCode());
+            }
+            return result;
+        } catch (IOException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace: ", e);
+            return null;
+        }
     }
 }

@@ -1,19 +1,11 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHeaders;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
-import org.saturn.app.model.dto.Time;
+import org.saturn.app.model.dto.WeatherTime;
 import org.saturn.app.model.dto.Weather;
 import org.saturn.app.service.WeatherService;
+import org.saturn.app.util.Util;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -49,9 +41,9 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         String zone = zoneB.toString().trim();
 
         String uri = String.format(apiGeoNames, zone.trim().replace(" ", "%20"));
-        String body = getResponseByURL(uri);
-        String coordinates = extractCoordinates(body);
-        String country = extractCountryName(body);
+        String body = Util.getResponseByURL(uri);
+        String coordinates = Util.extractCoordinates(body);
+        String country = Util.extractCountryName(body);
 
         String lat = coordinates.split(",")[0];
         String lng = coordinates.split(",")[1];
@@ -73,7 +65,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
 
         log.debug("Getting: " + weatherApi);
 
-        String response = getResponseByURL(weatherApi);
+        String response = Util.getResponseByURL(weatherApi);
 
         if (response == null) {
             return null;
@@ -88,13 +80,13 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         Weather.CurrentWeatherUnits currentWeatherUnits = weather.getCurrent_weather_units();
 
         String timeZoneUri = String.format("https://timeapi.io/api/Time/current/coordinate?latitude=%s&longitude=%s", lat, lng);
-        Time time = getTime(getResponseByURL(timeZoneUri));
+        WeatherTime time = getTime(Util.getResponseByURL(timeZoneUri));
 
         return formatWeather(zone + ", " + country, daily, currentWeather, dailyUnits, time, hourly, hourlyUnits, currentWeatherUnits);
     }
 
-    private String formatWeather(String area, Weather.Daily daily, Weather.CurrentWeather currentWeather,
-                                 Weather.DailyUnits dailyUnits, Time time, Weather.Hourly hourly, Weather.HourlyUnits hourlyUnits, Weather.CurrentWeatherUnits currentWeatherUnits) {
+    public String formatWeather(String area, Weather.Daily daily, Weather.CurrentWeather currentWeather,
+                                 Weather.DailyUnits dailyUnits, WeatherTime time, Weather.Hourly hourly, Weather.HourlyUnits hourlyUnits, Weather.CurrentWeatherUnits currentWeatherUnits) {
 
         ZonedDateTime zonedDateTime = Instant.ofEpochSecond(tsToSec8601(time.dateTime, time.timeZone)).atZone(ZoneId.of(time.timeZone));
         ZonedDateTime sunriseDateTime = Instant.ofEpochSecond(tsToSec8601(daily.sunrise.get(0), null)).atZone(ZoneId.of(time.timeZone));
@@ -124,43 +116,6 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
                 "Soil moist 3-9cm: " + hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour()) + " " + hourlyUnits.soil_moisture_3_to_9cm + "\\n";
     }
 
-    private String extractCoordinates(String body) {
-        String lat = StringUtils.substringBetween(body, "<lat>", "</lat>");
-        String lng = StringUtils.substringBetween(body, "<lng>", "</lng>");
-
-        return lat + "," + lng;
-    }
-
-    private String extractCountryName(String body) {
-        return StringUtils.substringBetween(body, "<countryName>", "</countryName>");
-    }
-
-    private String getResponseByURL(String uri) {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-
-        HttpGet request = new HttpGet(uri);
-
-        // add request headers
-        request.addHeader(HttpHeaders.USER_AGENT, "Firefox 59.9.0-MDA-Universe");
-
-        try (CloseableHttpResponse response = httpClient.execute(request)) {
-           log.debug("Protocol: {}, StatusCode: {}, ", response.getProtocolVersion(), response.getStatusLine().getStatusCode());              // HTTP/1.1
-
-            String result = null;
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                result = EntityUtils.toString(entity);
-            }
-            if (response.getStatusLine().getStatusCode() != 200) {
-                log.info("API Response status code: {}", response.getStatusLine().getStatusCode());
-            }
-            return result;
-        } catch (IOException e) {
-            log.info("Error: {}", e.getMessage());
-            log.error("Stack trace: ", e);
-            return null;
-        }
-    }
 }
 
 

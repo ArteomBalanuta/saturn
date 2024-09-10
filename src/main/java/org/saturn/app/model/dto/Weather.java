@@ -1,11 +1,13 @@
 package org.saturn.app.model.dto;
 
+
 import com.google.gson.Gson;
 
 import java.util.List;
 
+import static org.saturn.app.util.Util.gson;
+
 public class Weather {
-    static Gson gson = new Gson();
     
     private String latitude;
     private String longitude;
@@ -93,8 +95,8 @@ public class Weather {
         return gson.fromJson(json, Weather.class);
     }
     
-    public static Time getTime(String json) {
-        return gson.fromJson(json, Time.class);
+    public static WeatherTime getTime(String json) {
+        return gson.fromJson(json, WeatherTime.class);
     }
 
     public static class CurrentWeatherUnits {
