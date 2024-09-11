@@ -191,7 +191,9 @@ public class Weather {
     }
 
     public static class Hourly {
-        public List<String> apparent_temperature, pressure_msl, surface_pressure, shortwave_radiation, diffuse_radiation, visibility, soil_temperature_18cm, soil_moisture_3_to_9cm;
+        public List<String> apparent_temperature, pressure_msl, surface_pressure,
+                shortwave_radiation, diffuse_radiation, visibility,
+                soil_temperature_18cm, soil_moisture_3_to_9cm, relative_humidity_2m;
 
         @Override
         public String toString() {
@@ -203,6 +205,7 @@ public class Weather {
                     ", diffuse_radiation=" + diffuse_radiation +
                     ", visibility=" + visibility +
                     ", soil_temperature_18cm=" + soil_temperature_18cm +
+                    ", relative_humidity_2m=" + relative_humidity_2m +
                     ", soil_moisture_3_to_9cm=" + soil_moisture_3_to_9cm +
                     '}';
         }
@@ -217,6 +220,7 @@ public class Weather {
         visibility,
         diffuse_radiation,
         shortwave_radiation,
+        relative_humidity_2m,
         apparent_temperature;
 
         @Override
@@ -230,6 +234,7 @@ public class Weather {
                     ", diffuse_radiation=" + diffuse_radiation +
                     ", shortwave_radiation=" + shortwave_radiation +
                     ", apparent_temperature=" + apparent_temperature +
+                    ", relative_humidity_2m=" + relative_humidity_2m +
                     '}';
         }
     }

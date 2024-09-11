@@ -1,6 +1,7 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.saturn.app.model.WmoWeatherInterpCodes;
 import org.saturn.app.model.dto.WeatherTime;
 import org.saturn.app.model.dto.Weather;
 import org.saturn.app.service.WeatherService;
@@ -10,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -57,7 +59,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
                         "&current_weather=true" +
                         "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset," +
                         "winddirection_10m_dominant,shortwave_radiation_sum,uv_index_max,uv_index_clear_sky_max,weather_code" +
-                        "&hourly=pressure_msl,surface_pressure,soil_temperature_18cm,soil_moisture_3_to_9cm,visibility,diffuse_radiation,shortwave_radiation,apparent_temperature" +
+                        "&hourly=pressure_msl,surface_pressure,soil_temperature_18cm,soil_moisture_3_to_9cm,visibility,diffuse_radiation,shortwave_radiation,apparent_temperature,relative_humidity_2m" +
                         "&timezone=GMT" +
                         "&start_date=%s" +
                         "&end_date=%s"
@@ -96,9 +98,14 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
         String sunriseTime = formatRfc1123(sunriseDateTime.toEpochSecond(), TimeUnit.SECONDS, zonedDateTime.getZone().toString());
         String sunsetTime = formatRfc1123(sunsetDateTime.toEpochSecond(), TimeUnit.SECONDS, zonedDateTime.getZone().toString());
 
+        String weatherEmoji = Arrays.stream(WmoWeatherInterpCodes.values()).filter(v -> currentWeather.weathercode.equals(String.valueOf(v.getValue().getCode()))).findFirst().get().getValue().getWeatherEmoji();
+
+        log.warn("Using weather emoji: {}", weatherEmoji);
         return "Weather forecast for today: **" + area + "**\\n" +
                 "Temperature: " + currentWeather.temperature + " " + currentWeatherUnits.temperature + "\\n" +
                 "Feels temp: " + hourly.apparent_temperature.get(zonedDateTime.getHour()) + " " + hourlyUnits.apparent_temperature + "\\n" +
+                "Air Humidity: " + hourly.relative_humidity_2m.get(zonedDateTime.getHour()) + " " + hourlyUnits.relative_humidity_2m + "\\n" +
+                "Precipitation: " + weatherEmoji + "\\n" +
                 "Wind speed: " + currentWeather.windspeed + " " + currentWeatherUnits.windspeed + "\\n" +
                 "Pressure surface: " + hourly.surface_pressure.get(zonedDateTime.getHour()) + " " + hourlyUnits.surface_pressure + "\\n" +
                 "Pressure sea level: " + hourly.pressure_msl.get(zonedDateTime.getHour()) + " " + hourlyUnits.pressure_msl + "\\n" +
