@@ -3,6 +3,7 @@ package org.saturn.app.command.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.MsgChannelCommandListenerImpl;
@@ -73,7 +74,7 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
             log.info("Messaging current room: {}", room);
         } else {
             /* JoinChannelListener will make sure to close the connection */
-            EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), false); // no db connection, nor config for this one is required
+            EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD); // no db connection, nor config for this one is required
             setupListBot(room, slaveEngine);
 
             JoinChannelListener joinChannelListener = new MsgChannelCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, room));

@@ -6,6 +6,7 @@ import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.ListCommandListenerImpl;
@@ -77,12 +78,13 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
             joinChannel(author, channel);
         }
 
+        log.info("Executed [list] command by user: {}, channel: {}", author, channel);
         return Optional.of(Status.SUCCESSFUL);
     }
 
     public void joinChannel(String author, String channel) {
         Configuration main = super.engine.getConfig();
-        EngineImpl slaveEngine = new EngineImpl(null, main, false); // no db connection, nor config for this one is needed
+        EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD); // no db connection, nor config for this one is needed
         setupEngine(channel, slaveEngine);
 
         JoinChannelListener onlineSetListener = new ListCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));

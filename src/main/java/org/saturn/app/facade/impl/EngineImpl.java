@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.impl.ConnectionListenerImpl;
 import org.saturn.app.listener.impl.IncomingMessageListenerImpl;
@@ -42,6 +43,7 @@ import static org.saturn.app.util.Util.getAuthor;
 
 @Slf4j
 public class EngineImpl extends Base implements Engine {
+    public final Map<String, EngineImpl> replicasMappedByChannel = new HashMap<>();
     public List<String> proxies;
     public final CommandFactory commandFactory;
     protected org.saturn.app.facade.impl.Connection hcConnection;
@@ -55,13 +57,12 @@ public class EngineImpl extends Base implements Engine {
     private final Listener connectionListener = new ConnectionListenerImpl(this);
     private final Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
-
     public void setOnlineSetListener(Listener listener) {
         this.onlineSetListener = listener;
     }
 
-    public EngineImpl(Connection dbConnection, Configuration config, Boolean isMain) {
-        super(dbConnection, config, isMain);
+    public EngineImpl(Connection dbConnection, Configuration config, EngineType engineType) {
+        super(dbConnection, config, engineType);
 
         if (super.proxies != null) {
             if (!super.proxies.isEmpty() || !super.proxies.isBlank()) {
@@ -161,18 +162,17 @@ public class EngineImpl extends Base implements Engine {
 
     @Override
     public void stop() {
-        log.debug("Closing the connection...");
+        log.debug("Closing the WS connection...");
         try {
             if (hcConnection != null) {
                 this.hcConnection.close();
-                log.debug("Closed the connection...");
+                log.debug("Closed the WS connection...");
             } else {
-                log.debug("Connection is already closed");
+                log.debug("WS Connection is already closed");
             }
         } catch (Exception e) {
             log.info("Error: {}", e.getMessage());
             log.error("Exception: ", e);
-            System.exit(1);
         }
     }
 
@@ -206,6 +206,11 @@ public class EngineImpl extends Base implements Engine {
         }
     }
 
+    @Override
+    public void addReplica(EngineImpl engine) {
+        this.replicasMappedByChannel.put(engine.channel, engine);
+    }
+
     public void shareUserInfo(User user) {
         String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
         for (String subTrip : subscribers) {
@@ -231,7 +236,7 @@ public class EngineImpl extends Base implements Engine {
             if (leftUser.equals(user.getNick())) {
                 currentChannelUsers.remove(user);
                 log.info("User left: {}", user.getNick());
-                logRepository.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", DateUtil.getTimestampNow());
+                logRepository.logMessage(user.getTrip(), user.getNick(), user.getHash(), "LEFT", this.channel , DateUtil.getTimestampNow());
             }
         }
     }
@@ -239,7 +244,7 @@ public class EngineImpl extends Base implements Engine {
     public void addActiveUser(User newUser) {
         currentChannelUsers.add(newUser);
         log.info("Added user: {}, to list of active users", newUser.getNick());
-        logRepository.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", DateUtil.getTimestampNow());
+        logRepository.logMessage(newUser.getTrip(), newUser.getNick(), newUser.getHash(), "JOINED", this.channel, DateUtil.getTimestampNow());
     }
 
 //

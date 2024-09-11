@@ -3,6 +3,7 @@ package org.saturn.app.command.impl;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.impl.MinerListenerImpl;
@@ -138,7 +139,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
 
     private void joinChannel(String channel, Proxy proxyDto) {
         Configuration config = super.engine.getConfig();
-        EngineImpl mineBot = new EngineImpl(null, config, false);
+        EngineImpl mineBot = new EngineImpl(null, config, EngineType.LIST_CMD);
 
         mineBot.isMain = false;
         mineBot.setChannel(channel);

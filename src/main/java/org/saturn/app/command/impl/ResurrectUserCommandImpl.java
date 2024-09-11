@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.KickCommandListenerImpl;
@@ -69,7 +70,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
 
     public void resurrect(String channel, String nick, String targetChannel) {
         Configuration main = super.engine.getConfig();
-        EngineImpl slaveEngine = new EngineImpl(null, main, false);
+        EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD);
         setupEngine(channel, slaveEngine);
 
         JoinChannelListenerDto dto = new JoinChannelListenerDto(this.engine, slaveEngine, slaveEngine.nick, channel);

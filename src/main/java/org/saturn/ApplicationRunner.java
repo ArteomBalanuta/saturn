@@ -9,6 +9,7 @@ import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.saturn.app.facade.Engine;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.service.DataBaseService;
 import org.saturn.app.service.LogRepository;
@@ -26,7 +27,7 @@ public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
 
     private Configuration config;
-    private final DataBaseService connection;
+    private final DataBaseService dbService;
     private final LogRepository internalService;
 
     public ApplicationRunner() {
@@ -40,8 +41,8 @@ public class ApplicationRunner {
             e.printStackTrace();
         }
 
-        this.connection = new DataBaseServiceImpl(this.config.getString("dbPath"));
-        this.internalService = new LogRepositoryImpl(this.connection.getConnection());
+        this.dbService = new DataBaseServiceImpl(this.config.getString("dbPath"));
+        this.internalService = new LogRepositoryImpl(this.dbService.getConnection());
     }
 
     public static void main(String[] args) {
@@ -52,26 +53,26 @@ public class ApplicationRunner {
 
     void start() {
         log.info("Starting application");
-        Engine saturn = new EngineImpl(connection.getConnection(), config, true);
-        saturn.start();
-        if (saturn.isConnected()) {
+        Engine host = new EngineImpl(dbService.getConnection(), config, EngineType.HOST);
+        host.start();
+        if (host.isConnected()) {
             log.info("Application started");
         }
 
         if (Objects.equals(this.config.getString("autoReconnect"), "true")) {
             healthCheckScheduler.scheduleWithFixedDelay(() -> {
-                if (saturn.isConnected()) {
+                if (host.isConnected()) {
                     return;
                 }
 
                 log.warn("Connection is closed.. Restarting the bot in 15 seconds.");
-                saturn.stop();
+                host.stop();
                 try {
                     Thread.sleep(15_000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                saturn.start();
+                host.start();
             }, 0, 15, TimeUnit.SECONDS);
         }
     }

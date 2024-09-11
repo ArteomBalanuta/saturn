@@ -28,15 +28,13 @@ public class ListCommandListenerImpl implements JoinChannelListener {
     public void notify(String jsonText) {
         List<User> users = Util.extractUsersFromJson(jsonText);
         boolean onlyMeOnline = users.stream().allMatch(User::isIsMe);
-        OutService outService = dto.mainEngine.outService;
         String author = chatMessage.getNick();
         if (onlyMeOnline) {
-            outService.enqueueMessageForSending(author, " " + dto.channel + " is empty", chatMessage.isWhisper());
+            dto.mainEngine.outService.enqueueMessageForSending(author, " " + dto.channel + " is empty", chatMessage.isWhisper());
         } else {
-            printUsers(author, users,  outService, chatMessage.isWhisper());
+            printUsers(author, users, dto.mainEngine.outService, chatMessage.isWhisper());
         }
         dto.slaveEngine.stop();
-
         dto.mainEngine.shareMessages();
     }
 

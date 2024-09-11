@@ -26,6 +26,7 @@ import org.saturn.app.service.impl.SearchServiceImpl;
 import org.saturn.app.service.impl.UserServiceImpl;
 import org.saturn.app.service.impl.WeatherServiceImpl;
 
+import java.sql.Connection;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -38,7 +39,7 @@ public abstract class Base {
     public String channel;
     public String nick;
     public String password;
-    public String isSql;
+//    public String isSql;
     public String userTrips;
     public String adminTrips;
     public String dbPath;
@@ -53,17 +54,19 @@ public abstract class Base {
     public final PingService pingService;
     public final ModService modService;
     public final WeatherService weatherService;
-
     public final AuthorizationService authorizationService;
-
     public final UserService userService;
+
+    private final Connection dbConnection;
+    private final EngineType engineType;
 
     public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<String> outgoingRawMessageQueue = new ArrayBlockingQueue<>(256);
     public final CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
     public Configuration config;
 
-    public Base(java.sql.Connection connection, Configuration config, Boolean isMain) {
+    public Base(Connection connection, Configuration config, EngineType engineType) {
+        this.dbConnection = connection;
         this.outService = new OutService(outgoingMessageQueue, outgoingRawMessageQueue);
         this.scpService = new SCPServiceImpl(outgoingMessageQueue);
         this.noteService = new NoteServiceImpl(connection, outgoingMessageQueue);
@@ -75,16 +78,14 @@ public abstract class Base {
         this.userService = new UserServiceImpl(connection, outgoingMessageQueue);
         this.weatherService = new WeatherServiceImpl(outgoingMessageQueue);
         this.authorizationService = new AuthorizationServiceImpl(connection, outgoingMessageQueue);
-        this.isMain = isMain;
+        this.engineType = engineType;
         this.config = config;
 
-        if (isMain && config == null) {
+        if (engineType.equals(EngineType.HOST) && config == null) {
             throw new RuntimeException("Configuration isn't set for main thread.");
         }
 
-        /* master */
-        if (isMain) {
-            this.isSql = config.getString("isSqlEnabled");
+        if (engineType.equals(EngineType.HOST)) {
             this.prefix = config.getString("cmdPrefix");
             this.channel = config.getString("channel");
             this.nick = config.getString("nick");
@@ -96,8 +97,19 @@ public abstract class Base {
             this.proxies = config.getString("proxies");
         }
 
-        /* slave */
-        if (!isMain && config != null) {
+        if (engineType.equals(EngineType.REPLICA)) {
+            this.prefix = config.getString("cmdPrefix");
+            this.channel = config.getString("channel");
+            this.nick = config.getString("nick");
+            this.password = config.getString("trip");
+            this.userTrips = config.getString("userTrips");
+            this.adminTrips = config.getString("adminTrips");
+            this.dbPath = config.getString("dbPath");
+            this.baseWsURL = config.getString("wsUrl");
+            this.proxies = config.getString("proxies");
+        }
+
+        if (engineType.equals(EngineType.LIST_CMD) && config != null) {
             this.baseWsURL = config.getString("wsUrl");
             this.proxies = config.getString("proxies");
             this.password = config.getString("trip");
@@ -123,4 +135,8 @@ public abstract class Base {
     }
 
     public String getPrefix() { return prefix; }
+
+    public Connection getDbConnection(){
+        return this.dbConnection;
+    }
 }

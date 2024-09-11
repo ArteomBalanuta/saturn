@@ -15,6 +15,7 @@ CREATE TABLE "executed_commands" (
 	"command_name"	TEXT,
 	"arguments"	TEXT,
 	"status"	TEXT,
+	"channel" TEXT,
 	"created_on" INTEGER NOT NULL
 );
 
@@ -33,6 +34,7 @@ CREATE TABLE "messages" (
     "name" TEXT NOT NULL,
     "hash" TEXT,
     "message" TEXT,
+    "channel" TEXT,
     "created_on" INTEGER NOT NULL
 );
 
