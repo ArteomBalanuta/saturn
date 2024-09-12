@@ -24,8 +24,8 @@ public class LogRepositoryImpl implements LogRepository {
                 statement.setString(2, cmd);
                 statement.setString(3, arguments);
                 statement.setString(4, status);
-                statement.setString(5, channel);
-                statement.setLong(6, created_on);
+                statement.setLong(5, created_on);
+                statement.setString(6, channel);
 
                 statement.executeUpdate();
 
@@ -45,8 +45,8 @@ public class LogRepositoryImpl implements LogRepository {
                 logEvent.setString(2, name);
                 logEvent.setString(3, hash);
                 logEvent.setString(4, message);
-                logEvent.setString(5, channel);
-                logEvent.setLong(6, timestamp);
+                logEvent.setLong(5, timestamp);
+                logEvent.setString(6, channel);
 
                 logEvent.executeUpdate();
 
