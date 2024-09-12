@@ -45,7 +45,7 @@ public class ReplicaStatusCommandImpl extends UserCommandBaseImpl {
     public Optional<Status> execute() {
         String author = super.chatMessage.getNick();
 
-        String header = "Host room:" + engine.channel + "Replicas active: " + engine.replicasMappedByChannel.size() + " \\n";
+        String header = "Host room:" + engine.channel + ", replicas active: " + engine.replicasMappedByChannel.size() + " \\n";
         StringBuilder b = new StringBuilder();
 
         engine.replicasMappedByChannel.forEach((k,v) -> {
