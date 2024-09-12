@@ -34,7 +34,6 @@ CREATE TABLE "messages" (
     "name" TEXT NOT NULL,
     "hash" TEXT,
     "message" TEXT,
-    "channel" TEXT,
     "created_on" INTEGER NOT NULL,
     "channel" TEXT
 );
