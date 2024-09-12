@@ -40,8 +40,14 @@ public class MailUserCommandImpl extends UserCommandBaseImpl {
 
     @Override
     public Optional<Status> execute() {
+        String author = chatMessage.getNick();
+        if (getArguments().isEmpty()) {
+            log.info("Executed [msg] command by user: {}, no target set", author);
+            engine.outService.enqueueMessageForSending(author,"Example: " + engine.prefix + "msg MinusGix doom", isWhisper());
+            return Optional.of(Status.FAILED);
+        }
         engine.mailService.executeMail(chatMessage, this);
-        log.info("Executed [msg] command by user: {}", chatMessage.getNick());
+        log.info("Executed [msg] command by user: {}", author);
         return Optional.of(Status.SUCCESSFUL);
     }
 }
