@@ -58,10 +58,12 @@ public class ReplicaOffCommandImpl extends UserCommandBaseImpl {
             EngineImpl replica = engine.replicasMappedByChannel.get(channel);
             if (replica == null) {
                 log.warn("No replica in channel: {}", channel);
+                outService.enqueueMessageForSending(author, "No replica in channel: " + channel, isWhisper());
             } else {
                 replica.stop();
                 engine.replicasMappedByChannel.remove(channel);
                 log.info("Successfully shut down replica in channel: {}", channel);
+                outService.enqueueMessageForSending(author, "Successfully shut down replica in channel: " + channel, isWhisper());
             }
         }
 
