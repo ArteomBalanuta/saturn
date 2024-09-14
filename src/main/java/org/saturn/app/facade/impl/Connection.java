@@ -31,9 +31,9 @@ public class Connection {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 if (engine.engineType.equals(EngineType.REPLICA)) {
-                    ThreadContext.put("instanceType", "REPLICA");
+                    ThreadContext.put("instanceType", "REPLICA:" + engine.channel);
                 } else {
-                    ThreadContext.put("instanceType", "HOST");
+                    ThreadContext.put("instanceType", "HOST:" + engine.channel);
                 }
 
                 client.sendPing();
