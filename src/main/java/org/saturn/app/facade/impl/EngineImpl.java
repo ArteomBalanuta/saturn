@@ -2,6 +2,7 @@ package org.saturn.app.facade.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
+import org.apache.logging.log4j.ThreadContext;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.facade.EngineType;
@@ -63,6 +64,12 @@ public class EngineImpl extends Base implements Engine {
 
     public EngineImpl(Connection dbConnection, Configuration config, EngineType engineType) {
         super(dbConnection, config, engineType);
+
+        if (engineType.equals(EngineType.REPLICA)) {
+            ThreadContext.put("instanceType", "REPLICA");
+        } else {
+            ThreadContext.put("instanceType", "HOST");
+        }
 
         if (super.proxies != null) {
             if (!super.proxies.isEmpty() || !super.proxies.isBlank()) {
