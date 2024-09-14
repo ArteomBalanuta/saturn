@@ -7,6 +7,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.MailService;
 import org.saturn.app.util.DateUtil;
 import org.saturn.app.util.SqlUtil;
+import org.saturn.app.util.Util;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -25,13 +26,15 @@ public class MailServiceImpl extends OutService implements MailService {
         this.connection = connection;
     }
 
-    /* fix whisper support */
-    
     @Override
     public void executeMail(ChatMessage chatMessage, UserCommand command) {
         List<String> arguments = command.getArguments();
         String receiver = arguments.get(0).replace("@", "");
-        
+
+        /* check against trip_names table. */
+        List<String> trips = this.getTripsByNick(receiver);
+        receiver = Util.listToCommaString(trips);
+
         StringBuilder message = new StringBuilder();
         /* skipping fist argument as it is the receiver's nickname */
         for (int i = 1; i < arguments.size(); i++) {
@@ -39,8 +42,8 @@ public class MailServiceImpl extends OutService implements MailService {
         }
 
         String author = chatMessage.getNick();
-        this.orderMessageDelivery(message.toString(), author, receiver, String.valueOf(chatMessage.isWhisper()));
-        enqueueMessageForSending(author, receiver + " will receive your message as soon they chat", chatMessage.isWhisper());
+        this.orderMessageDelivery(message.toString(), author.concat("#") + chatMessage.getTrip(), receiver, String.valueOf(chatMessage.isWhisper()));
+        enqueueMessageForSending(author, "trips: " + receiver + " will receive your message as soon they chat", chatMessage.isWhisper());
     }
 
     /**
@@ -68,20 +71,44 @@ public class MailServiceImpl extends OutService implements MailService {
             log.error("Stack trace", e);
         }
     }
-    
+
     @Override
-    public List<Mail> getMailByNickOrTrip(String nick, String trip) {
+    public List<String> getTripsByNick(String nick) {
+        List<String> trips = new ArrayList<>();
+        try {
+            PreparedStatement trip = connection.prepareStatement(
+                    SqlUtil.GET_TRIP_BY_NICK_REGISTERED);
+            trip.setString(1, nick);
+            trip.execute();
+
+            ResultSet resultSet = trip.getResultSet();
+            while (resultSet.next()) {
+                trips.add(resultSet.getString("trip"));
+            }
+            trip.close();
+            resultSet.close();
+        } catch (SQLException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace", e);
+        }
+
+        return trips;
+    }
+
+
+    @Override
+    public List<Mail> getMailByTrip(String trip) {
         List<Mail> messages = new ArrayList<>();
         try {
             PreparedStatement mail = connection.prepareStatement(
                     SqlUtil.SELECT_MAIL_BY_NICK_OR_TRIP);
-            mail.setString(1, nick);
-            mail.setString(2, trip == null ? nick : trip);
+            mail.setString(1, "%" + trip + "%");
             mail.execute();
             
             ResultSet resultSet = mail.getResultSet();
             while (resultSet.next()) {
                 Mail message = new Mail(
+                        resultSet.getString("id"),
                         resultSet.getString("owner"),
                         resultSet.getString("receiver"),
                         resultSet.getString("message"),
@@ -102,11 +129,11 @@ public class MailServiceImpl extends OutService implements MailService {
     }
     
     @Override
-    public void updateMailStatus(String nick) {
+    public void updateMailStatus(String id) {
         try {
             PreparedStatement insertMessage = connection.prepareStatement(
                     SqlUtil.UPDATE_MAIL_SET_STATUS_DELIVERED_WHERE_RECEIVER);
-            insertMessage.setString(1, nick);
+            insertMessage.setString(1, id);
             
             insertMessage.executeUpdate();
             

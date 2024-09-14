@@ -194,4 +194,10 @@ public class Util {
             return null;
         }
     }
+
+    public static String listToCommaString(List<String> stringList) {
+        String replace = stringList.toString().replace("[", "");
+        String replace1 = replace.replace("]", "");
+        return replace1;
+    }
 }
