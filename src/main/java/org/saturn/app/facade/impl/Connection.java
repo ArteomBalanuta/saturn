@@ -1,6 +1,7 @@
 package org.saturn.app.facade.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ThreadUtils;
 import org.apache.logging.log4j.ThreadContext;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -31,9 +32,20 @@ public class Connection {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 if (engine.engineType.equals(EngineType.REPLICA)) {
-                    ThreadContext.put("instanceType", "REPLICA");
+                    log.warn("HC Connection threadId: {}", Thread.currentThread().getId());
+                    if (ThreadContext.get("instanceType") != null) {
+                        log.warn("instanceType is not null for REPLICA: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
+                    } else {
+                        ThreadContext.put("instanceType", "REPLICA");
+                        log.warn("set instanceType for REPLICA: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
+                    }
                 } else {
-                    ThreadContext.put("instanceType", "HOST");
+                    if (ThreadContext.get("instanceType") != null) {
+                        log.warn("instanceType is not null for HOST: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
+                    } else {
+                        ThreadContext.put("instanceType", "HOST");
+                        log.warn("set instanceType for HOST: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
+                    }
                 }
 
                 client.sendPing();

@@ -1,6 +1,8 @@
 package org.saturn.app.facade;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
+import org.apache.logging.log4j.ThreadContext;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.AuthorizationService;
 import org.saturn.app.service.LogRepository;
@@ -31,6 +33,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+@Slf4j
 public abstract class Base {
     protected String baseWsURL;
     public String proxies;
@@ -114,6 +117,23 @@ public abstract class Base {
             this.baseWsURL = config.getString("wsUrl");
             this.proxies = config.getString("proxies");
             this.password = config.getString("trip");
+        }
+
+        if (engineType.equals(EngineType.REPLICA)) {
+            log.warn("Base threadId: {}", Thread.currentThread().getId());
+            if (ThreadContext.get("instanceType") != null) {
+                log.warn("instanceType is not null for REPLICA: {}, threadId: {}", channel, Thread.currentThread().getId());
+            } else {
+                ThreadContext.put("instanceType", "REPLICA:" + channel);
+                log.warn("set instanceType for REPLICA: {}, threadId: {}", channel, Thread.currentThread().getId());
+            }
+        } else {
+            if (ThreadContext.get("instanceType") != null) {
+                log.warn("instanceType is not null for HOST: {}, threadId: {}", channel, Thread.currentThread().getId());
+            } else {
+                ThreadContext.put("instanceType", "HOST:" + channel);
+                log.warn("set instanceType for HOST: {}, threadId: {}", channel, Thread.currentThread().getId());
+            }
         }
 
         this.logRepository = new LogRepositoryImpl(connection);
