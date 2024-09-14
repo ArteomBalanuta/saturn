@@ -309,7 +309,7 @@ public class EngineImpl extends Base implements Engine {
     }
 
     public void deliverMailIfPresent(String author, String trip) {
-        List<Mail> messages = mailService.getMailByNickOrTrip(getAuthor(author), getAuthor(trip));
+        List<Mail> messages = mailService.getMailByTrip(trip);
         if (messages.isEmpty()) {
             return;
         }
@@ -328,9 +328,10 @@ public class EngineImpl extends Base implements Engine {
             outService.enqueueMessageForSending(author," new mail: \\n " + publicMailPayload, false);
         }
 
-        mailService.updateMailStatus(author);
-        mailService.updateMailStatus(trip);
-        log.debug("Updated message status to 'DELIVERED' for: {}, {}", author, trip);
+        messages.forEach(m -> {
+            mailService.updateMailStatus(m.id);
+            log.debug("Updated message status with ID: {}, to 'DELIVERED'", m.id);
+        });
     }
 
     private static List<Mail> getMail(List<Mail> messages, boolean isWhisper) {
