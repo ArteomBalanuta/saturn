@@ -36,14 +36,14 @@ public class Connection {
                     if (ThreadContext.get("instanceType") != null) {
                         log.warn("instanceType is not null for REPLICA: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
                     } else {
-                        ThreadContext.put("instanceType", "REPLICA");
+                        ThreadContext.put("instanceType", "REPLICA:" + engine.channel);
                         log.warn("set instanceType for REPLICA: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
                     }
                 } else {
                     if (ThreadContext.get("instanceType") != null) {
                         log.warn("instanceType is not null for HOST: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
                     } else {
-                        ThreadContext.put("instanceType", "HOST");
+                        ThreadContext.put("instanceType", "HOST:" + engine.channel);
                         log.warn("set instanceType for HOST: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
                     }
                 }
