@@ -73,7 +73,7 @@ public class UserCommandBaseImpl implements UserCommand  {
             String arguments = cmd.get().getArguments().toString();
             Optional<Status> status = cmd.get().execute();
 
-            engine.logRepository.logCommand(trip, cmd.get().getAliases().toString(), arguments,  status.get().name(), DateUtil.getTimestampNow());
+            engine.logRepository.logCommand(trip, cmd.get().getAliases().toString(), arguments,  status.get().name(), this.engine.channel, DateUtil.getTimestampNow());
             return status;
         }
 

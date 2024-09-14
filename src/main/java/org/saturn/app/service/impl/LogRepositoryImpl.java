@@ -17,7 +17,7 @@ public class LogRepositoryImpl implements LogRepository {
     }
 
     @Override
-    public void logCommand(String trip, String cmd,String arguments, String status, long created_on) {
+    public void logCommand(String trip, String cmd,String arguments, String status, String channel, long created_on) {
             try {
                 PreparedStatement statement = connection.prepareStatement(SqlUtil.INSERT_INTO_EXECUTED_COMMANDS_TRIP_COMMAND_NAME_ARGUMENTS_STATUS_CREATED_ON_VALUES);
                 statement.setString(1, trip);
@@ -25,6 +25,7 @@ public class LogRepositoryImpl implements LogRepository {
                 statement.setString(3, arguments);
                 statement.setString(4, status);
                 statement.setLong(5, created_on);
+                statement.setString(6, channel);
 
                 statement.executeUpdate();
 
@@ -36,7 +37,7 @@ public class LogRepositoryImpl implements LogRepository {
     }
 
     @Override
-    public void logMessage(String trip, String name, String hash, String message, long timestamp) {
+    public void logMessage(String trip, String name, String hash, String message, String channel, long timestamp) {
             try {
                 PreparedStatement logEvent =
                         connection.prepareStatement(SqlUtil.INSERT_INTO_MESSAGES_TRIP_NAME_HASH_MESSAGE_CREATED_ON_VALUES);
@@ -45,6 +46,7 @@ public class LogRepositoryImpl implements LogRepository {
                 logEvent.setString(3, hash);
                 logEvent.setString(4, message);
                 logEvent.setLong(5, timestamp);
+                logEvent.setString(6, channel);
 
                 logEvent.executeUpdate();
 

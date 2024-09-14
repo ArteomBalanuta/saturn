@@ -47,7 +47,7 @@ public class InfoMessageListenerImpl implements Listener {
             return;
         }
 
-        engine.logRepository.logMessage(chatMessage.getTrip(), chatMessage.getNick(), chatMessage.getHash(), chatMessage.getText(), getTimestampNow());
+        engine.logRepository.logMessage(chatMessage.getTrip(), chatMessage.getNick(), chatMessage.getHash(), chatMessage.getText(), this.engine.channel, getTimestampNow());
 
         String cmd = chatMessage.getText().trim();
         if (!cmd.startsWith(engine.prefix)) {

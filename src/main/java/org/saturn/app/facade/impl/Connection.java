@@ -1,8 +1,10 @@
 package org.saturn.app.facade.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.ThreadContext;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.listener.Listener;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -28,6 +30,12 @@ public class Connection {
         client = new WebSocketClient(uri) {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
+                if (engine.engineType.equals(EngineType.REPLICA)) {
+                    ThreadContext.put("instanceType", "REPLICA");
+                } else {
+                    ThreadContext.put("instanceType", "HOST");
+                }
+
                 client.sendPing();
                 log.debug("Handshake Status: " + serverHandshake.getHttpStatus());
                 listeners.stream().filter(listener -> "connectionListener".equals(listener.getListenerName()))

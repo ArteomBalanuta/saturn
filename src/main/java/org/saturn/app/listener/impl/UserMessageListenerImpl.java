@@ -41,7 +41,7 @@ public class UserMessageListenerImpl implements Listener {
             log.warn("Active users: {}", engine.currentChannelUsers.stream().map(User::getNick).toList());
         });
 
-        engine.logRepository.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(),
+        engine.logRepository.logMessage(message.getTrip(), message.getNick(), message.getHash(), message.getText(), this.engine.channel,
                 getTimestampNow());
 
         boolean isBotMessage = engine.nick.equals(message.getNick());
