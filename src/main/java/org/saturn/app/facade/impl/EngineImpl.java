@@ -64,13 +64,6 @@ public class EngineImpl extends Base implements Engine {
 
     public EngineImpl(Connection dbConnection, Configuration config, EngineType engineType) {
         super(dbConnection, config, engineType);
-
-        if (engineType.equals(EngineType.REPLICA)) {
-            ThreadContext.put("instanceType", "REPLICA:" + this.channel);
-        } else {
-            ThreadContext.put("instanceType", "HOST:" + this.channel);
-        }
-
         if (super.proxies != null) {
             if (!super.proxies.isEmpty() || !super.proxies.isBlank()) {
                 this.proxies = Arrays.asList(super.proxies.split(","));
