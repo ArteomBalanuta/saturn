@@ -54,7 +54,7 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
                 "jetty | 7a5Ev9\\n" +
                 "Roslot | Roslot\\n" +
                 "0x17 | 6gIBvG \\n" +
-                "Rut | rrrrr\\n" +
+                "Rut | //////\\n" +
                 "Zed | GODZed\\n" +
                 "Cereals | TeaJjh\\n" +
                 "jill | Zvoxsl\\n" +

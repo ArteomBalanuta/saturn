@@ -67,3 +67,24 @@ CREATE TABLE "trip_names" (
     FOREIGN KEY ("name_id") REFERENCES "names" ("id"),
     UNIQUE ("trip_id", "name_id")
 );
+
+## DML, useful
+
+select t.trip
+from trip_names tn
+inner join names n on tn.name_id  = n.id
+inner join trips t on tn.trip_id = t.id
+where name = 'xen0';
+
+select tn.id,name,trip from names n
+inner join trip_names tn on n.id = tn.name_id
+inner join trips t on t.id = tn.trip_id;
+
+INSERT INTO names (name, created_on) VALUES ('nathan',strftime('%s', 'now'));
+INSERT INTO trips (type, trip, created_on) VALUES ('MODERATOR','//////',strftime('%s', 'now'));
+
+INSERT INTO trip_names (trip_id,name_id) VALUES (20, 13);
+
+UPDATE sqlite_sequence
+SET seq = 0
+WHERE name = 'trip_names';

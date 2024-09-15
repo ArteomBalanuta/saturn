@@ -24,6 +24,8 @@ import static java.util.concurrent.Executors.newScheduledThreadPool;
 
 @Slf4j
 public class ApplicationRunner {
+    public static final int CHECK_DELAY = 15;
+    public static final int RESTART_DELAY_MILL = 15_000;
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
 
     private Configuration config;
@@ -38,7 +40,7 @@ public class ApplicationRunner {
         try {
             this.config = builder.getConfiguration();
         } catch (ConfigurationException e) {
-            e.printStackTrace();
+            System.exit(1);
         }
 
         this.dbService = new DataBaseServiceImpl(this.config.getString("dbPath"));
@@ -68,12 +70,12 @@ public class ApplicationRunner {
                 log.warn("Connection is closed.. Restarting the bot in 15 seconds.");
                 host.stop();
                 try {
-                    Thread.sleep(15_000);
+                    Thread.sleep(RESTART_DELAY_MILL);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
                 host.start();
-            }, 0, 15, TimeUnit.SECONDS);
+            }, 0, CHECK_DELAY, TimeUnit.SECONDS);
         }
     }
 }
