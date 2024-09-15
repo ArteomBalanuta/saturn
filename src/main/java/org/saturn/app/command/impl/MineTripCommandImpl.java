@@ -141,7 +141,6 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
         Configuration config = super.engine.getConfig();
         EngineImpl mineBot = new EngineImpl(null, config, EngineType.LIST_CMD);
 
-        mineBot.isMain = false;
         mineBot.setChannel(channel);
         int nickLength = 8;
         boolean useLetters = true;

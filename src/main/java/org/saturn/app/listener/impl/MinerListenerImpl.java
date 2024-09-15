@@ -1,5 +1,6 @@
 package org.saturn.app.listener.impl;
 
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
@@ -32,7 +33,7 @@ public class MinerListenerImpl implements Listener {
     @Override
     public void notify(String jsonText) {
         List<User> users = Util.extractUsersFromJson(jsonText);
-        if (engine.isMain) {
+        if (engine.engineType.equals(EngineType.HOST)) {
             engine.stop();
             throw new RuntimeException("Shouldn't be used with main threat!");
         }

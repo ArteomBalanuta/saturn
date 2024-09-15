@@ -7,6 +7,7 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import lombok.extern.slf4j.Slf4j;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.command.UserCommand;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -85,7 +86,7 @@ public class CommandFactory {
             String[] aliases = collect.get(0);
             aliasesMappedByClassInfo.put(routeClassInfo, aliases);
 
-            if (engine.isMain) {
+            if (engine.engineType.equals(EngineType.HOST)) {
                 log.info(routeClassInfo.getName() + " is annotated with aliases: {}", Arrays.toString(aliases));
             }
         });

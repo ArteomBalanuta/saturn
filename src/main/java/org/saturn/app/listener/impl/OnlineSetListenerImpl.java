@@ -3,6 +3,7 @@ package org.saturn.app.listener.impl;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
@@ -28,8 +29,8 @@ public class OnlineSetListenerImpl implements Listener {
         JsonElement listingElement = e.getAsJsonObject().get("users");
         User[] users = gson.fromJson(listingElement, User[].class);
         engine.setActiveUsers(Arrays.asList(users));
-        if (engine.isMain) {
-            engine.outService.enqueueMessageForSending("/color #ff6200");
+        if (engine.engineType.equals(EngineType.HOST)) {
+            engine.outService.enqueueMessageForSending("/color BF40BF");
         }
     }
 }

@@ -37,12 +37,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public abstract class Base {
     protected String baseWsURL;
     public String proxies;
-    public boolean isMain;
     public String prefix;
     public String channel;
     public String nick;
     public String password;
-//    public String isSql;
     public String userTrips;
     public String adminTrips;
     public String dbPath;

@@ -101,7 +101,6 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
     }
 
     private void setupListBot(String channel, EngineImpl listBot) {
-        listBot.isMain = false;
         listBot.setChannel(channel);
         int length = 8;
         boolean useLetters = true;

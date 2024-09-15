@@ -91,7 +91,6 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
     }
 
     public void setupEngine(String channel, EngineImpl listBot) {
-        listBot.isMain = false;
         listBot.setChannel(channel);
         int length = 8;
         boolean useLetters = true;
