@@ -73,21 +73,24 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u2009note <text>\u2009\u2009\u2009- saves a note \\n" +
                     "\u2009notes\u2009\u2009\u2009\u2009\u2009- lists your saved notes \\n" +
                     "\u2009notes purge\u2009\u2009\u2009\u2009- removes all notes \\n" +
-                    "\u2009msg <nick|trip> <text>\u2009\u2009- sends a message to <nick|trip> \\n" +
+                    "\u2009msg <nick> <text>\u2009\u2009- sends a message to trips registered by <nick>. \\n" +
                     "\u2009info,i <nick>\u2009u2009\u2009\u2009- whispers back user's nicks, hashes\\n" +
                     "\u2009list <channel_name>\u2009\u2009- prints hash,trip,nicks of users in the channel\\n" +
-                    "\u2009weather <city>\u2009\u2009\u2009- weather data (open-meteo api)\\n" +
+                    "\u2009weather <city>\u2009\u2009\u2009- weather data (Many thanks to API.OPEN-METEO.COM)\\n" +
                     "\u2009ping\u2009\u2009\u2009\u2009\u2009- prints the latency between bot and hc\\n" +
-                    "\u2009afk\u2009\u2009\u2009\u2009\u2009\u2009- marks the user as afk\\n" +
-                    "\u2009lastseen\u2009\u2009- prints useful info about users activity\\n" +
+                    "\u2009afk [reason]\u2009\u2009\u2009\u2009\u2009\u2009- marks the user as afk\\n" +
+                    "\u2009lastseen <name>\u2009\u2009- prints useful info about users activity\\n" +
                     "\u2009sub\u2009\u2009- you receive nick,hashes for joining users\\n" +
                     "\u2009unsub\u2009\u2009\u2009- cancels the subscription\\n" +
                     "Moderator commands:\\n" +
                     "\u2009shadowban <nick|trip|hash>\u2009- bans the user by either nick,trip or hash\\n" +
                     "\u2009msgroom <room> <text>\u2009\u2009- sends the mail to specified room\\n" +
-                    "\u2009captcha on|off\u2009\u2009- enables/disables captcha\\n" +
-                    "\u2009lock on|off\u2009\u2009\u2009- enables/disables the lock on the current room\\n" +
+                    "\u2009captcha <on|off>\u2009\u2009- enables/disables captcha\\n" +
+                    "\u2009lock <on|off>\u2009\u2009\u2009- enables/disables the lock on the current room\\n" +
                     "\u2009move <from> <to> <name>\u2009\u2009\u2009- moves the user to specified room\\n" +
+                    "\u2009replica <channel>\u2009\u2009\u2009- runs an instance in specified room\\n" +
+                    "\u2009replicaoff <channel>\u2009\u2009\u2009- shut downs the replica in channel\\n" +
+                    "\u2009replicastatus\u2009\u2009\u2009- prints basic info about running replicas\\n" +
                     "Admin commands:\\n" +
                     "\u2009sql <SQL>\u2009\u2009- executes the sql against bot's database\\n";
 
@@ -97,6 +100,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
             "\u2009 %slist programming \\n" +
             "\u2009 %sweather nc, charlotte \\n" +
             "\u2009 %smail santa Get me a native java compiler \\n" +
+            "\u2009 %smsg wwandrew you, tonight \\n" +
             "\u2009\u2009\u2009\u2009\u2009\u2009\u2009\u2009 \\n" +
             "\u2009 Developed by mercury, _https://github.com/ArteomBalanuta/saturn_\\n";
 
