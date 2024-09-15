@@ -37,6 +37,15 @@ mvn clean package
 ### 3. Adjust the application.properties configuration
 
 Example:
+`wsUrl=wss://hack.chat/chat-ws` Chat's WebSocket address.
+`cmdPrefix=-` Command prefix used to trigger the bot.
+`channel=programming` Channel used by the bot.
+`nick=alpha` Bot's nick.
+`trip=ab13` Bot's trip.
+`adminTrips=g0KY09,8Wotmg` Trip codes that are granted ADMIN role, full access.
+`dbPath=database/database.db` Path do databse file. Relative/absolute path can be used.
+`autoReconnect=false` Setting responsible for auto reconnect feature. Bot will try reconnect within 15 after connection were closed.
+
 
 ![example](./readme/configuration_example.png)
 
