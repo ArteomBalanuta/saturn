@@ -2,6 +2,7 @@ package org.saturn.app.command.impl;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.command.impl.user.MailUserCommandImpl;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 

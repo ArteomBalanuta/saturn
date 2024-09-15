@@ -2,10 +2,9 @@ package org.saturn.app.util;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.saturn.app.command.impl.HelpUserCommandImpl.helpExamples;
-import static org.saturn.app.command.impl.HelpUserCommandImpl.helpHeader;
-import static org.saturn.app.command.impl.HelpUserCommandImpl.helpPayload;
+import static org.saturn.app.command.impl.user.HelpUserCommandImpl.helpExamples;
+import static org.saturn.app.command.impl.user.HelpUserCommandImpl.helpHeader;
+import static org.saturn.app.command.impl.user.HelpUserCommandImpl.helpPayload;
 
 
 /* TODO: add assertion */
