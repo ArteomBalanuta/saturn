@@ -51,7 +51,7 @@ Example:
 
 `dbPath=database/database.db` Path do databse file. Relative/absolute path can be used.
 
-`autoReconnect=false` Setting responsible for auto reconnect feature. Bot will try reconnect within 15 after connection were closed.
+`autoReconnect=false` Setting responsible for auto reconnect feature. Bot will try reconnect within 15 seconds after connection were closed.
 
 
 ![example](./readme/configuration_example.png)
