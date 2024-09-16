@@ -89,3 +89,62 @@ INSERT INTO trip_names (trip_id,name_id) VALUES (20, 13);
 UPDATE sqlite_sequence
 SET seq = 0
 WHERE name = 'trip_names';
+
+
+-- fun
+
+WITH DateRange AS (
+    SELECT
+        strftime('%Y-%m-%d', 'now', '-7 days') AS start_date,
+        strftime('%Y-%m-%d', 'now') AS end_date
+),
+
+-- Count messages for each trip per day
+MessagesPerTrip AS (
+    SELECT
+        trip,
+        strftime('%Y-%m-%d', created_on / 1000, 'unixepoch') AS message_date,
+        COUNT(*) AS message_count
+    FROM messages
+    JOIN DateRange ON created_on BETWEEN strftime('%s', start_date) * 1000 AND strftime('%s', end_date) * 1000
+    WHERE created_on >= (strftime('%s', 'now') * 1000 - 7 * 24 * 60 * 60 * 1000)
+    GROUP BY trip, message_date
+),
+
+-- Count total messages for each day
+TotalMessagesPerDay AS (
+    SELECT
+        strftime('%Y-%m-%d', created_on / 1000, 'unixepoch') AS message_date,
+        COUNT(*) AS total_message_count
+    FROM messages
+    JOIN DateRange ON created_on BETWEEN strftime('%s', start_date) * 1000 AND strftime('%s', end_date) * 1000
+    GROUP BY message_date
+),
+
+-- Calculate the probability of each trip being active on each day
+Probability AS (
+    SELECT
+        m.trip,
+        m.message_date,
+        (m.message_count * 1.0 / t.total_message_count) * 100 AS probability_percentage,
+        strftime('%w', m.message_date) AS day_number, -- Numeric day of the week (0 = Sunday, 6 = Saturday)
+        CASE strftime('%w', m.message_date)
+            WHEN '0' THEN 'Sunday'
+            WHEN '1' THEN 'Monday'
+            WHEN '2' THEN 'Tuesday'
+            WHEN '3' THEN 'Wednesday'
+            WHEN '4' THEN 'Thursday'
+            WHEN '5' THEN 'Friday'
+            WHEN '6' THEN 'Saturday'
+        END AS day_full
+    FROM MessagesPerTrip m
+    JOIN TotalMessagesPerDay t ON m.message_date = t.message_date
+)
+
+-- Final result
+SELECT
+    trip,
+    day_full AS day_of_week,
+    probability_percentage AS probability_percentage
+FROM Probability
+ORDER BY trip, message_date;
