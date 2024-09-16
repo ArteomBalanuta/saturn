@@ -72,6 +72,22 @@ public class UserServiceImpl extends OutService implements UserService {
         return "\\n Nick|Trip: " + tripOrNick + "\\n Joined: " + dto.getJoinedAtRfc1123() + "\\n Last seen: " + dto.getLastSeenRfc1123() + "\\n Seen active: " + dto.getTimeSinceSeen() + " ago." + "\\n Session duration: " + dto.getSessionDuration() + " \\n Last message: " + dto.getLastMessage() + "\\n";
     }
 
+    @Override
+    public String register(String name, String trip, String role) {
+        try (PreparedStatement statement = connection.prepareStatement(SqlUtil.INSERT_NICK_ROLE_TRIP);) {
+            statement.setString(1, name);
+            statement.setString(2, role);
+            statement.setString(3, trip);
+            return String.valueOf(statement.executeUpdate());
+
+        } catch (SQLException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Exception: ", e);
+        }
+
+        return null;
+    }
+
     public void setSessionDurationAndJoinedDateTime(LastSeenDto dto) {
         String joinedAt = null;
         try {
