@@ -37,7 +37,7 @@ public class SQLServiceImpl extends OutService implements SQLService {
         String sql = cmdParts[1].replace("\\n", "\n");
         if (withOutput) {
             log.info("Executing SQL query, expecting output");
-            return this.executeFormatted(sql);
+            return this.executeFormatted(sql.replace("\\n", "\n"));
         }
         try {
             Statement statement = connection.createStatement();
