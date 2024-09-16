@@ -1,4 +1,4 @@
-package org.saturn.app.command.impl.user;
+package org.saturn.app.command.impl.moderator;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
@@ -51,15 +51,27 @@ public class RegisterUserCommandImpl extends UserCommandBaseImpl {
         String name = arguments.get(0);
         String trip = arguments.get(1);
 
-        int code = engine.userService.register(name, trip, Role.REGULAR.name());
-        if (code == 1) {
-            engine.outService.enqueueMessageForSending(author,"Something went wrong", isWhisper());
-            return Optional.of(Status.FAILED);
+        /* new nick and trip */
+        if (!engine.userService.isNameRegistered(name) && !engine.userService.isTripRegistered(trip)){
+            int code = engine.userService.register(name, trip, Role.REGULAR.name());
+            if (code == 1) {
+                engine.outService.enqueueMessageForSending(author,"Something went wrong", isWhisper());
+                return Optional.of(Status.FAILED);
+            }
+
+            engine.outService.enqueueMessageForSending(author, "User has been registered successfully, now you can msg him by nick: " + name , isWhisper());
+        } else if (!engine.userService.isNameRegistered(name)) {
+            /* new name, trip exists */
+            engine.userService.registerNameByTrip(name, trip);
+            engine.outService.enqueueMessageForSending(author, "New name has been registered successfully. " + name , isWhisper());
+        } else if (!engine.userService.isTripRegistered(name)) {
+            /* new trip, nick exists */
+            engine.userService.registerTripByName(name, trip);
+            engine.outService.enqueueMessageForSending(author, "New trip has been registered successfully. " + name , isWhisper());
         }
 
-        engine.outService.enqueueMessageForSending(author, "User has been registered successfully, now you can msg him by nick: " + name , isWhisper());
-        log.info("Executed [register] command by user: {}, arguments: {}", author, arguments);
 
+        log.info("Executed [register] command by user: {}, arguments: {}", author, arguments);
         return Optional.of(Status.SUCCESSFUL);
     }
 }

@@ -1,5 +1,6 @@
 package org.saturn.app.command.impl.admin;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
@@ -41,6 +42,9 @@ public class SqlUserCommandImpl extends UserCommandBaseImpl {
     public Optional<Status> execute() {
         String cmd = chatMessage.getText();
         String result = engine.sqlService.executeSql(cmd, true);
+        if (result.contains("SQLITE_ERROR")) {
+            result = StringEscapeUtils.escapeJava(result);
+        }
         engine.outService.enqueueMessageForSending(chatMessage.getNick(),  "Result: \\n" + result, isWhisper());
         return Optional.of(Status.SUCCESSFUL);
     }

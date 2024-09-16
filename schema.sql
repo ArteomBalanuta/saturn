@@ -56,7 +56,8 @@ CREATE TABLE "trips" (
 CREATE TABLE "names" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "name" TEXT,
-    "created_on" INTEGER NOT NULL
+    "created_on" INTEGER NOT NULL,
+    UNIQUE ("name")
 );
 
 CREATE TABLE "trip_names" (
@@ -74,7 +75,7 @@ select t.trip
 from trip_names tn
 inner join names n on tn.name_id  = n.id
 inner join trips t on tn.trip_id = t.id
-where name = 'xen0';
+where LOWER(name) = 'xen0';
 
 select tn.id,name,trip from names n
 inner join trip_names tn on n.id = tn.name_id

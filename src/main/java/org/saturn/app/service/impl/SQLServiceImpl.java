@@ -34,13 +34,14 @@ public class SQLServiceImpl extends OutService implements SQLService {
     @Override
     public String executeSql(String cmd, boolean withOutput) {
         String[] cmdParts = cmd.split("sql ");
+        String sql = cmdParts[1].replace("\\n", " ");
         if (withOutput) {
             log.info("Executing SQL query, expecting output");
-            return this.executeFormatted(cmdParts[1]);
+            return this.executeFormatted(sql);
         }
         try {
             Statement statement = connection.createStatement();
-            int updatedRows  = statement.executeUpdate(cmdParts[1]);
+            int updatedRows  = statement.executeUpdate(sql);
             log.info("Executed SQL query: {} rows updated", updatedRows);
             return String.valueOf(updatedRows);
         } catch (SQLException e) {

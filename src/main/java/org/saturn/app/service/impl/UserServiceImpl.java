@@ -111,6 +111,13 @@ public class UserServiceImpl extends OutService implements UserService {
             connection.commit();  // Commit transaction
             connection.setAutoCommit(true);
         } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                log.info("Error: {}", e.getMessage());
+                log.error("Stack trace: ", e);
+                throw new RuntimeException(ex);
+            }
             log.info("Error: {}", e.getMessage());
             log.error("Stack trace: ", e);
 
@@ -118,6 +125,133 @@ public class UserServiceImpl extends OutService implements UserService {
         }
 
         return 0;
+    }
+
+    @Override
+    public boolean isNameRegistered(String name) {
+        boolean exists = false;
+        try (PreparedStatement statement = connection.prepareStatement("SELECT id from names where LOWER(name)==?")) {
+            statement.setString(1, name.toLowerCase());
+            statement.execute();
+
+            ResultSet resultSet = statement.getResultSet();
+            while (resultSet.next()) {
+                exists = true;
+            }
+
+            statement.close();
+            resultSet.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return exists;
+    }
+
+    @Override
+    public boolean isTripRegistered(String trip) {
+        boolean exists = false;
+        try (PreparedStatement statement = connection.prepareStatement("SELECT id from trips where LOWER(trip)==?")) {
+            statement.setString(1, trip.toLowerCase());
+            statement.execute();
+
+            ResultSet resultSet = statement.getResultSet();
+            while (resultSet.next()) {
+                exists = true;
+            }
+
+            statement.close();
+            resultSet.close();
+        } catch (SQLException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace: ", e);
+        }
+        return exists;
+    }
+
+    @Override
+    public void registerTripByName(String name, String trip) {
+        String insertTripSql = "INSERT INTO trips (type, trip, created_on) VALUES ('MODERATOR', ?, strftime('%s', 'now'))";
+        String insertTripNamesSql = "INSERT INTO trip_names (trip_id, name_id) SELECT ?, id FROM names WHERE name = ?";
+        try {
+            connection.setAutoCommit(false);  // Begin transaction
+            // First statement: Insert into trips and get the generated ID
+            int tripId;
+            try (PreparedStatement pstmtInsertTrip = connection.prepareStatement(insertTripSql, Statement.RETURN_GENERATED_KEYS)) {
+                pstmtInsertTrip.setString(1, trip); // Set the trip parameter
+                pstmtInsertTrip.executeUpdate();
+
+                ResultSet rs = pstmtInsertTrip.getGeneratedKeys();
+                if (rs.next()) {
+                    tripId = rs.getInt(1);  // Retrieve the generated ID
+                } else {
+                    throw new SQLException("Failed to retrieve generated ID");
+                }
+            }
+
+            // Second statement: Insert into trip_names using the ID from the first insert
+            try (PreparedStatement pstmtInsertTripNames = connection.prepareStatement(insertTripNamesSql)) {
+                pstmtInsertTripNames.setInt(1, tripId); // Use the retrieved trip ID
+                pstmtInsertTripNames.setString(2, name); // Set the name parameter
+                pstmtInsertTripNames.executeUpdate();
+            }
+
+            connection.commit();  // Commit transaction
+            log.info("Registered new trip: {}, for name: {}", trip, name);
+        } catch (SQLException e) {
+            try {
+                connection.rollback();  // Rollback in case of error
+            } catch (SQLException ex) {
+                log.info("Error: {}", e.getMessage());
+                log.error("Stack trace: ", e);
+                throw new RuntimeException(ex);
+            }
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace: ", e);
+        }
+    }
+    @Override
+    public void registerNameByTrip(String name, String trip) {
+        String insertNameSql = "INSERT INTO names (name, created_on) VALUES (?, strftime('%s', 'now'))";
+        String insertTripNamesSql = "INSERT INTO trip_names (trip_id, name_id) SELECT id, ? FROM trips WHERE trip = ?";
+
+        try {
+            connection.setAutoCommit(false);  // Begin transaction
+            // First statement: Insert into names and get the generated ID
+            int nameId;
+            try (PreparedStatement pstmtInsertName = connection.prepareStatement(insertNameSql, Statement.RETURN_GENERATED_KEYS)) {
+                pstmtInsertName.setString(1, name); // Set the name parameter
+                pstmtInsertName.executeUpdate();
+
+                ResultSet rs = pstmtInsertName.getGeneratedKeys();
+                if (rs.next()) {
+                    nameId = rs.getInt(1);  // Retrieve the generated ID
+                } else {
+                    log.error("Failed to retrieve generated ID");
+                    throw new SQLException("Failed to retrieve generated ID");
+                }
+            }
+
+            // Second statement: Insert into trip_names using the ID from the first insert
+            try (PreparedStatement pstmtInsertTripNames = connection.prepareStatement(insertTripNamesSql)) {
+                pstmtInsertTripNames.setInt(1, nameId); // Use the retrieved ID
+                pstmtInsertTripNames.setString(2, trip); // Set the trip parameter
+                pstmtInsertTripNames.executeUpdate();
+            }
+
+            connection.commit();  // Commit transaction
+
+            log.info("Registered new name: {}, for trip: {}", name, trip);
+        } catch (SQLException e) {
+            try {
+                connection.rollback();  // Rollback in case of error
+            } catch (SQLException ex) {
+                log.info("Error: {}", e.getMessage());
+                log.error("Stack trace: ", e);
+                throw new RuntimeException(ex);
+            }
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace: ", e);
+        }
     }
 
     public void setSessionDurationAndJoinedDateTime(LastSeenDto dto) {

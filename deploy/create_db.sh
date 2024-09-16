@@ -62,7 +62,8 @@ CREATE TABLE "trips" (
 CREATE TABLE "names" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "name" TEXT,
-    "created_on" INTEGER NOT NULL
+    "created_on" INTEGER NOT NULL,
+    UNIQUE ("name")
 );
 
 CREATE TABLE "trip_names" (
