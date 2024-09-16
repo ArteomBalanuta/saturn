@@ -78,7 +78,7 @@ public class MailServiceImpl extends OutService implements MailService {
         try {
             PreparedStatement trip = connection.prepareStatement(
                     SqlUtil.GET_TRIP_BY_NICK_REGISTERED);
-            trip.setString(1, nick);
+            trip.setString(1, nick.toLowerCase());
             trip.execute();
 
             ResultSet resultSet = trip.getResultSet();
