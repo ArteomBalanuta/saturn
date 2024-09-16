@@ -93,41 +93,45 @@ WHERE name = 'trip_names';
 
 -- fun
 
+
 WITH DateRange AS (
+    -- Define the range of days (last 7 days)
     SELECT
         strftime('%Y-%m-%d', 'now', '-7 days') AS start_date,
         strftime('%Y-%m-%d', 'now') AS end_date
 ),
 
--- Count messages for each trip per day
+-- Count messages for each trip per day and hour
 MessagesPerTrip AS (
     SELECT
         trip,
         strftime('%Y-%m-%d', created_on / 1000, 'unixepoch') AS message_date,
+        strftime('%H', created_on / 1000, 'unixepoch') AS hour,
         COUNT(*) AS message_count
     FROM messages
-    JOIN DateRange ON created_on BETWEEN strftime('%s', start_date) * 1000 AND strftime('%s', end_date) * 1000
-    WHERE created_on >= (strftime('%s', 'now') * 1000 - 7 * 24 * 60 * 60 * 1000)
-    GROUP BY trip, message_date
+    JOIN DateRange
+    WHERE created_on BETWEEN strftime('%s', DateRange.start_date) * 1000
+                         AND strftime('%s', DateRange.end_date) * 1000
+    GROUP BY trip, message_date, hour
 ),
 
--- Count total messages for each day
-TotalMessagesPerDay AS (
+-- Count total messages across all trips
+TotalMessages AS (
     SELECT
-        strftime('%Y-%m-%d', created_on / 1000, 'unixepoch') AS message_date,
         COUNT(*) AS total_message_count
     FROM messages
-    JOIN DateRange ON created_on BETWEEN strftime('%s', start_date) * 1000 AND strftime('%s', end_date) * 1000
-    GROUP BY message_date
+    JOIN DateRange
+    WHERE created_on BETWEEN strftime('%s', DateRange.start_date) * 1000
+                         AND strftime('%s', DateRange.end_date) * 1000
 ),
 
--- Calculate the probability of each trip being active on each day
+-- Calculate the probability of each trip being active on each day and hour
 Probability AS (
     SELECT
         m.trip,
         m.message_date,
+        m.hour,
         (m.message_count * 1.0 / t.total_message_count) * 100 AS probability_percentage,
-        strftime('%w', m.message_date) AS day_number, -- Numeric day of the week (0 = Sunday, 6 = Saturday)
         CASE strftime('%w', m.message_date)
             WHEN '0' THEN 'Sunday'
             WHEN '1' THEN 'Monday'
@@ -138,13 +142,26 @@ Probability AS (
             WHEN '6' THEN 'Saturday'
         END AS day_full
     FROM MessagesPerTrip m
-    JOIN TotalMessagesPerDay t ON m.message_date = t.message_date
+    CROSS JOIN TotalMessages t
+),
+
+-- Normalize the probabilities to sum to 100
+NormalizedProbability AS (
+    SELECT
+        trip,
+        day_full AS day_of_week,
+        hour,
+        message_date,
+        probability_percentage,
+        (probability_percentage / SUM(probability_percentage) OVER (PARTITION BY trip)) * 100 AS normalized_probability_percentage
+    FROM Probability
 )
 
 -- Final result
 SELECT
     trip,
-    day_full AS day_of_week,
-    probability_percentage AS probability_percentage
-FROM Probability
-ORDER BY trip, message_date;
+    day_of_week,
+    hour,
+    normalized_probability_percentage AS probability_percentage
+FROM NormalizedProbability where trip !=null or trip != ''
+ORDER BY trip, message_date, hour;
