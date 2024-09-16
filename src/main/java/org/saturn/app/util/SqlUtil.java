@@ -3,24 +3,9 @@ package org.saturn.app.util;
 public final class SqlUtil {
     public static final String INSERT_INTO_TRIPS_TYPE_TRIP_CREATED_ON_VALUES = "INSERT INTO trips('type', 'trip', 'created_on') VALUES (?, ?, ?);";
     public static final String UPDATE_TRIPS_SET_TYPE_WHERE_TRIP = "UPDATE trips SET type=? WHERE trip=?;";
-    public static final String INSERT_NICK_ROLE_TRIP = "WITH \n" +
-            "-- Insert into the names table and capture the id\n" +
-            "name_insert AS (\n" +
-            "  INSERT INTO names (name, created_on) \n" +
-            "  VALUES (?, strftime('%s', 'now'))\n" +
-            "  RETURNING id AS name_id\n" +
-            "),\n" +
-            "\n" +
-            "-- Insert into the trips table and capture the id\n" +
-            "trip_insert AS (\n" +
-            "  INSERT INTO trips (type, trip, created_on) \n" +
-            "  VALUES (?, ?, strftime('%s', 'now'))\n" +
-            "  RETURNING id AS trip_id\n" +
-            ")\n" +
-            "\n" +
-            "INSERT INTO trip_names (trip_id, name_id)\n" +
-            "SELECT trip_insert.trip_id, name_insert.name_id\n" +
-            "FROM trip_insert, name_insert;\n";
+    public static final String INSERT_NAMES = "INSERT INTO names (name, created_on) VALUES (?, strftime('%s', 'now'))";
+    public static final String INSERT_TRIPS = "INSERT INTO trips (type, trip, created_on) VALUES (?, ?, strftime('%s', 'now'))";
+    public static final String INSERT_TRIP_NAME = "INSERT INTO trip_names (trip_id, name_id) VALUES (?, ?)";
     public static final String INSERT_INTO_EXECUTED_COMMANDS_TRIP_COMMAND_NAME_ARGUMENTS_STATUS_CREATED_ON_VALUES = "INSERT INTO executed_commands ('trip','command_name','arguments','status','created_on','channel') VALUES (?, ?, ?, ?, ?, ?);";
     public static final String INSERT_INTO_MESSAGES_TRIP_NAME_HASH_MESSAGE_CREATED_ON_VALUES = "INSERT INTO messages ('trip', 'name', 'hash', 'message', 'created_on', 'channel') VALUES (?, ?, ?, ?, ?, ?);";
     public static final String INSERT_INTO_MAIL_OWNER_RECEIVER_MESSAGE_STATUS_IS_WHISPER_CREATED_ON_VALUES = "INSERT INTO mail ('owner','receiver','message','status','is_whisper', 'created_on') VALUES (?, ?, ?, ?, ?, ?);";

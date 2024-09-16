@@ -51,8 +51,13 @@ public class RegisterUserCommandImpl extends UserCommandBaseImpl {
         String name = arguments.get(0);
         String trip = arguments.get(1);
 
-        String register = engine.userService.register(name, trip, Role.REGULAR.name());
-        engine.outService.enqueueMessageForSending(author, "Rows inserted:"  + register + ". User has been registered successfully, now you can msg him by nick: " + name , isWhisper());
+        int code = engine.userService.register(name, trip, Role.REGULAR.name());
+        if (code == 1) {
+            engine.outService.enqueueMessageForSending(author,"Something went wrong", isWhisper());
+            return Optional.of(Status.FAILED);
+        }
+
+        engine.outService.enqueueMessageForSending(author, "User has been registered successfully, now you can msg him by nick: " + name , isWhisper());
         log.info("Executed [register] command by user: {}, arguments: {}", author, arguments);
 
         return Optional.of(Status.SUCCESSFUL);

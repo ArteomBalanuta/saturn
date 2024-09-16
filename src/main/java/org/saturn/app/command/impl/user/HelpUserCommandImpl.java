@@ -74,6 +74,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u2009notes\u2009\u2009\u2009\u2009\u2009- lists your saved notes \\n" +
                     "\u2009notes purge\u2009\u2009\u2009\u2009- removes all notes \\n" +
                     "\u2009msg <nick> <text>\u2009\u2009- sends a message to trips registered by <nick>. \\n" +
+                    "\u2009register,reg <nick> <trip\u2009\u2009- registers the user. \\n" +
                     "\u2009info,i <nick>\u2009u2009\u2009\u2009- whispers back user's nicks, hashes\\n" +
                     "\u2009list <channel_name>\u2009\u2009- prints hash,trip,nicks of users in the channel\\n" +
                     "\u2009weather <city>\u2009\u2009\u2009- weather data (Many thanks to API.OPEN-METEO.COM)\\n" +

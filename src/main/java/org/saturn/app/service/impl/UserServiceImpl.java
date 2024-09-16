@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -19,6 +20,9 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 import static org.saturn.app.util.DateUtil.formatRfc1123;
 import static org.saturn.app.util.DateUtil.getDifference;
+import static org.saturn.app.util.SqlUtil.INSERT_NAMES;
+import static org.saturn.app.util.SqlUtil.INSERT_TRIPS;
+import static org.saturn.app.util.SqlUtil.INSERT_TRIP_NAME;
 
 @Slf4j
 public class UserServiceImpl extends OutService implements UserService {
@@ -73,19 +77,47 @@ public class UserServiceImpl extends OutService implements UserService {
     }
 
     @Override
-    public String register(String name, String trip, String role) {
-        try (PreparedStatement statement = connection.prepareStatement(SqlUtil.INSERT_NICK_ROLE_TRIP);) {
-            statement.setString(1, name);
-            statement.setString(2, role);
-            statement.setString(3, trip);
-            return String.valueOf(statement.executeUpdate());
+    public int register(String name, String trip, String role) {
+        try {
+            connection.setAutoCommit(false);  // Begin transaction
 
+            // Insert into names table
+            try (PreparedStatement pstmtNames = connection.prepareStatement(INSERT_NAMES, Statement.RETURN_GENERATED_KEYS)) {
+                pstmtNames.setString(1, name);
+                pstmtNames.executeUpdate();
+
+                ResultSet rsNames = pstmtNames.getGeneratedKeys();
+                rsNames.next();
+                int nameId = rsNames.getInt(1);
+
+                // Insert into trips table
+                try (PreparedStatement pstmtTrips = connection.prepareStatement(INSERT_TRIPS, Statement.RETURN_GENERATED_KEYS)) {
+                    pstmtTrips.setString(1, role);
+                    pstmtTrips.setString(2, trip);
+                    pstmtTrips.executeUpdate();
+
+                    ResultSet rsTrips = pstmtTrips.getGeneratedKeys();
+                    rsTrips.next();
+                    int tripId = rsTrips.getInt(1);
+
+                    // Insert into trip_names table
+                    try (PreparedStatement pstmtTripNames = connection.prepareStatement(INSERT_TRIP_NAME)) {
+                        pstmtTripNames.setInt(1, tripId);
+                        pstmtTripNames.setInt(2, nameId);
+                        pstmtTripNames.executeUpdate();
+                    }
+                }
+            }
+            connection.commit();  // Commit transaction
+            connection.setAutoCommit(true);
         } catch (SQLException e) {
             log.info("Error: {}", e.getMessage());
-            log.error("Exception: ", e);
+            log.error("Stack trace: ", e);
+
+            return 1;
         }
 
-        return null;
+        return 0;
     }
 
     public void setSessionDurationAndJoinedDateTime(LastSeenDto dto) {
