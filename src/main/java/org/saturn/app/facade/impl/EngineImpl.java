@@ -305,7 +305,8 @@ public class EngineImpl extends Base implements Engine {
             List<User> users = afk.getUsers();
             List<String> afkNicks = users.stream().map(User::getNick).toList();
             for (User user : users) {
-                if (messageText.contains(user.getNick()) || messageText.contains(user.getTrip())) {
+                boolean isNickMentioned = messageText.contains("@"+user.getNick()) || messageText.contains(" " + user.getNick()) || messageText.contains(" " + user.getNick() + " ");
+                if ((isNickMentioned) || messageText.contains(user.getTrip())) {
                     outService.enqueueMessageForSending(author, "Users:" + afkNicks + ", trip: "  + user.getTrip() + " are currently away from keyboard! Reason: " + afk.getReason(), false);
                     return;
                 }
