@@ -54,7 +54,7 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
 
         String message = String.valueOf(stringBuilder);
 
-        super.engine.outService.enqueueMessageForSending(author, message, isWhisper());
+        engine.outService.enqueueMessageForSending(message);
         log.info("Executed [say] command by user: {}, argument: {}", author, message);
 
         return Optional.of(Status.SUCCESSFUL);
