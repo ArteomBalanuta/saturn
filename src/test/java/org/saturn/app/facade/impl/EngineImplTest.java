@@ -26,7 +26,9 @@ class EngineImplTest {
                 () -> assertTrue(engine.isUserMentioned(" merc", user), "6"),
                 () -> assertTrue(engine.isUserMentioned("merc ", user), "7"),
                 () -> assertTrue(engine.isUserMentioned(" merc ", user), "8"),
-                () -> assertTrue(engine.isUserMentioned(" merc ", user), "9"));
+                () -> assertTrue(engine.isUserMentioned("asd merc asd", user), "9"),
+                () -> assertTrue(engine.isUserMentioned("merc asds", user), "10"),
+                () -> assertTrue(engine.isUserMentioned("asad merc", user), "11"));
     }
 
     @Test
@@ -41,6 +43,7 @@ class EngineImplTest {
                 () -> assertFalse(engine.isUserMentioned(" mercury", user), "6"),
                 () -> assertFalse(engine.isUserMentioned("merca ", user), "7"),
                 () -> assertFalse(engine.isUserMentioned(" merc2 ", user), "8"),
-                () -> assertFalse(engine.isUserMentioned(" merc1 ", user), "9"));
+                () -> assertFalse(engine.isUserMentioned(" merc1 ", user), "9"),
+                () -> assertFalse(engine.isUserMentioned("a asdmerc", user), "10"));
     }
 }

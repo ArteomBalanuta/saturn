@@ -317,7 +317,10 @@ public class EngineImpl extends Base implements Engine {
     public boolean isUserMentioned(String message, User user) {
         String messageText = message.trim();
         boolean isTripMentioned = messageText.contains(user.getTrip());
-        boolean isNickMentioned = StringUtils.endsWith(messageText, " " + user.getNick())
+        boolean isNickMentioned =
+                StringUtils.startsWith(messageText, user.getNick() + " ")
+                || StringUtils.startsWith(messageText, "@" + user.getNick() + " ")
+                || StringUtils.endsWith(messageText, " " + user.getNick())
                 || StringUtils.endsWith(messageText, " @" + user.getNick())
                 || messageText.equals(user.getNick())
                 || messageText.equals("@" + user.getNick())
