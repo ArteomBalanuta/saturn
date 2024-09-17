@@ -2,6 +2,7 @@ package org.saturn.app.facade.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.ThreadContext;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
@@ -305,13 +306,24 @@ public class EngineImpl extends Base implements Engine {
             List<User> users = afk.getUsers();
             List<String> afkNicks = users.stream().map(User::getNick).toList();
             for (User user : users) {
-                boolean isNickMentioned = messageText.contains("@"+user.getNick()) || messageText.contains(" " + user.getNick()) || messageText.contains(" " + user.getNick() + " ");
-                if ((isNickMentioned) || messageText.contains(user.getTrip())) {
+                if (isUserMentioned(messageText, user)) {
                     outService.enqueueMessageForSending(author, "Users:" + afkNicks + ", trip: "  + user.getTrip() + " are currently away from keyboard! Reason: " + afk.getReason(), false);
                     return;
                 }
             }
         });
+    }
+
+    public boolean isUserMentioned(String message, User user) {
+        String messageText = message.trim();
+        boolean isTripMentioned = messageText.contains(user.getTrip());
+        boolean isNickMentioned = StringUtils.endsWith(messageText, " " + user.getNick())
+                || StringUtils.endsWith(messageText, " @" + user.getNick())
+                || messageText.equals(user.getNick())
+                || messageText.equals("@" + user.getNick())
+                || messageText.contains(" @" + user.getNick() + " ")
+                || messageText.contains(" " + user.getNick() + " ");
+        return isTripMentioned || isNickMentioned;
     }
 
     public void deliverMailIfPresent(String author, String trip) {
