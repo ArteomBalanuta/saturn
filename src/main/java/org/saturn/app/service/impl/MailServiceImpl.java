@@ -1,6 +1,7 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommand;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -58,7 +59,7 @@ public class MailServiceImpl extends OutService implements MailService {
                     SqlUtil.INSERT_INTO_MAIL_OWNER_RECEIVER_MESSAGE_STATUS_IS_WHISPER_CREATED_ON_VALUES);
             insertMessage.setString(1, owner);
             insertMessage.setString(2, receiver);
-            insertMessage.setString(3, message);
+            insertMessage.setString(3, StringEscapeUtils.escapeJson(message));
             insertMessage.setString(4, "PENDING");
             insertMessage.setString(5, isWhisper);
             insertMessage.setLong(6, DateUtil.getTimestampNow());

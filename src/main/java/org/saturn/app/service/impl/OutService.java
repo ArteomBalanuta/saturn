@@ -31,7 +31,7 @@ public class OutService {
         }
 
         /* TODO: remove all the manual escaping and use `StringEscapeUtils.escapeJava(message)` */
-        queue.add(message.replace("\"","\\\""));
+        queue.add(message);
         return message;
     }
 
