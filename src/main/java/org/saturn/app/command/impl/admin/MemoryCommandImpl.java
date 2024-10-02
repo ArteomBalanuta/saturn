@@ -16,7 +16,7 @@ import java.util.Optional;
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
 @Slf4j
-@CommandAliases(aliases = {"replica", "bot", "agent"})
+@CommandAliases(aliases = {"mem", "memory", "memstats"})
 public class MemoryCommandImpl extends UserCommandBaseImpl {
     private final OutService outService;
     private final List<String> aliases = new ArrayList<>();
