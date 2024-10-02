@@ -29,7 +29,9 @@ public class OutService {
         } else {
             message = "@" + author + " " + message;
         }
-        queue.add(message);
+
+        /* TODO: remove all the manual escaping and use `StringEscapeUtils.escapeJava(message)` */
+        queue.add(message.replace("\"","\\\""));
         return message;
     }
 
