@@ -41,7 +41,7 @@ public class HowToUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public Optional<Status> execute() {
         String author = chatMessage.getNick();
-        engine.outService.enqueueMessageForSending(author, "hack.chat moderation guide \n In case spammer or a ~~valid~~ nasty user joined: \n https://youtu.be/E_Yl9ul3Ulw", isWhisper());
+        engine.outService.enqueueMessageForSending(author, "hack.chat moderation guide \\n In case spammer or a ~~valid~~ nasty user joined: \\n https://youtu.be/E_Yl9ul3Ulw", isWhisper());
 
         log.info("Executed [howto] command by user: {}, value", author);
         return Optional.of(Status.SUCCESSFUL);
