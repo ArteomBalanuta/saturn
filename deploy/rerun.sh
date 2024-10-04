@@ -13,5 +13,5 @@ sleep 3
 
 # Start the new Java process
 echo "Starting saturn.jar..."
-nohup java -Dlog4j.configurationFile=log4j2.xml -jar saturn.jar > /dev/null 2> saturn_error.log &
+nohup java -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=./heapdump.hprof -XX:+PrintGCDetails -XX:ErrorFile=./hs_err_pid%p.log -Dlog4j.configurationFile=log4j2.xml -jar saturn.jar > saturn_stdout.log 2> saturn_stderr.log &
 
