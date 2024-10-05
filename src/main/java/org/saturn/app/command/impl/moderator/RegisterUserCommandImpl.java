@@ -59,15 +59,15 @@ public class RegisterUserCommandImpl extends UserCommandBaseImpl {
                 return Optional.of(Status.FAILED);
             }
 
-            engine.outService.enqueueMessageForSending(author, "User has been registered successfully, now you can msg him by nick: " + name , isWhisper());
+            engine.outService.enqueueMessageForSending(author, "User has been registered successfully, now you can msg him by name: " + name , isWhisper());
         } else if (!engine.userService.isNameRegistered(name)) {
             /* new name, trip exists */
             engine.userService.registerNameByTrip(name, trip);
-            engine.outService.enqueueMessageForSending(author, "New name has been registered successfully. " + name , isWhisper());
+            engine.outService.enqueueMessageForSending(author, "New name has been registered successfully. Name: " + name , isWhisper());
         } else if (!engine.userService.isTripRegistered(name)) {
             /* new trip, nick exists */
             engine.userService.registerTripByName(name, trip);
-            engine.outService.enqueueMessageForSending(author, "New trip has been registered successfully. " + name , isWhisper());
+            engine.outService.enqueueMessageForSending(author, "New trip has been registered successfully. Trip: " + trip , isWhisper());
         }
 
 
