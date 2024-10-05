@@ -24,13 +24,11 @@ import static java.util.concurrent.Executors.newScheduledThreadPool;
 
 @Slf4j
 public class ApplicationRunner {
-    public static final int CHECK_DELAY = 15;
-    public static final int RESTART_DELAY_MILL = 15_000;
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
-
-    private Configuration config;
     private final DataBaseService dbService;
-    private final LogRepository internalService;
+    private Configuration config;
+    private Engine host;
+
 
     public ApplicationRunner() {
         Parameters params = new Parameters();
@@ -44,38 +42,76 @@ public class ApplicationRunner {
         }
 
         this.dbService = new DataBaseServiceImpl(this.config.getString("dbPath"));
-        this.internalService = new LogRepositoryImpl(this.dbService.getConnection());
     }
+
 
     public static void main(String[] args) {
         ApplicationRunner applicationRunner = new ApplicationRunner();
         log.warn("Running at user dir: {}", System.getProperty("user.dir"));
         applicationRunner.start();
+
+        // Register a shutdown hook for graceful shutdown
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            log.info("Shutdown initiated... Stopping services.");
+            applicationRunner.stop();
+            log.info("Shutdown complete.");
+        }));
     }
 
     void start() {
         log.info("Starting application");
-        Engine host = new EngineImpl(dbService.getConnection(), config, EngineType.HOST);
+        host = new EngineImpl(dbService.getConnection(), config, EngineType.HOST);
         host.start();
+
         if (host.isConnected()) {
             log.info("Application started");
         }
 
         if (Objects.equals(this.config.getString("autoReconnect"), "true")) {
             healthCheckScheduler.scheduleWithFixedDelay(() -> {
-                if (host.isConnected()) {
-                    return;
-                }
-
-                log.warn("Connection is closed.. Restarting the bot in 15 seconds.");
-                host.stop();
                 try {
-                    Thread.sleep(RESTART_DELAY_MILL);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    if (host.isConnected()) {
+                        return;
+                    }
+
+                    log.warn("Connection is closed... Restarting the bot.");
+                    host.stop();
+                    host.start();
+                } catch (Exception e) {
+                    log.error("An unexpected error occurred while restarting the bot: ", e);
                 }
-                host.start();
-            }, 0, CHECK_DELAY, TimeUnit.SECONDS);
+            }, 0, 15, TimeUnit.SECONDS);  // 15-second interval
+        } else {
+            log.warn("autoReconnect is disabled... Exiting.");
+        }
+    }
+
+    // Stop method to gracefully shut down the application
+    void stop() {
+        log.info("Stopping the host and health check scheduler...");
+
+        // Stop the host
+        if (host != null) {
+            try {
+                host.stop();
+                log.info("Host stopped.");
+            } catch (Exception e) {
+                log.error("Error while stopping the host: ", e);
+            }
+        }
+
+        // Shut down the scheduler
+        healthCheckScheduler.shutdown();
+        try {
+            if (!healthCheckScheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+                log.warn("Scheduler did not terminate in the specified time. Forcing shutdown...");
+                healthCheckScheduler.shutdownNow();
+            }
+            log.info("Scheduler stopped.");
+        } catch (InterruptedException e) {
+            log.error("Error while shutting down the scheduler: ", e);
+            Thread.currentThread().interrupt();  // Preserve interrupt status
+            healthCheckScheduler.shutdownNow();
         }
     }
 }
