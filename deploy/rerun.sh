@@ -6,7 +6,7 @@ echo "Current directory: $(pwd)"
 cd workspace
 
 echo "Killing saturn.jar..."
-pkill -f 'java -Dlog4j.configurationFile=log4j2.xml -jar saturn.jar'
+pkill -f java
 
 # Wait a few seconds to ensure the process has terminated
 sleep 3
