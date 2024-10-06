@@ -6,6 +6,9 @@ import org.saturn.app.model.dto.User;
 
 public interface ModService {
     void kick(String target);
+
+    void kickTo(String target, String channel);
+
     void overflow(String target);
     void shadowBan(BanDto banDto);
     void ban(String target);

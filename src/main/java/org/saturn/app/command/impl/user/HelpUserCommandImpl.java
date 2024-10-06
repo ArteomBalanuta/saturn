@@ -87,8 +87,9 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u2009shadowban <nick|trip|hash>\u2009- bans the user by either nick,trip or hash\\n" +
                     "\u2009msgroom <room> <text>\u2009\u2009- sends the mail to specified room\\n" +
                     "\u2009captcha <on|off>\u2009\u2009- enables/disables captcha\\n" +
+                    "\u2009automove <on|off>\u2009\u2009- enables/disables auto move to ?lounge room from ?purgatory\\n" +
                     "\u2009lock <on|off>\u2009\u2009\u2009- enables/disables the lock on the current room\\n" +
-                    "\u2009move <from> <to> <name>\u2009\u2009\u2009- moves the user to specified room\\n" +
+                    "\u2009move <name> <from> <to>\u2009\u2009\u2009- moves the user to specified room\\n" +
                     "\u2009replica <channel>\u2009\u2009\u2009- runs an instance in specified room\\n" +
                     "\u2009replicaoff <channel>\u2009\u2009\u2009- shut downs the replica in channel\\n" +
                     "\u2009replicastatus\u2009\u2009\u2009- prints basic info about running replicas\\n" +

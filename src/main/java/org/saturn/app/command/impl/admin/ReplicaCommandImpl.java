@@ -8,16 +8,12 @@ import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.impl.OutService;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.saturn.app.util.Util.getWhiteListedTrips;
 
@@ -60,7 +56,7 @@ public class ReplicaCommandImpl extends UserCommandBaseImpl {
         } else {
             if (engine.replicasMappedByChannel.get(channel) == null) {
                 log.debug("Registering replica for channel: {}", channel);
-                registerChannel(author, channel);
+                registerReplica(author, channel);
                 log.info("Successfully started replica for channel: {}", channel);
             } else {
                 log.warn("Channel: {} already has a replica running", channel);
@@ -71,7 +67,7 @@ public class ReplicaCommandImpl extends UserCommandBaseImpl {
         return Optional.of(Status.SUCCESSFUL);
     }
 
-    public void registerChannel(String author, String channel) {
+    public void registerReplica(String author, String channel) {
         Configuration main = engine.getConfig();
         EngineImpl replica = new EngineImpl(engine.getDbConnection(), main, EngineType.REPLICA);
         replica.setChannel(channel);
