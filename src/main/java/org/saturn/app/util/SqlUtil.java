@@ -18,7 +18,7 @@ public final class SqlUtil {
     public static final String SELECT_MAIL_BY_NICK_OR_TRIP = "SELECT id, owner, receiver, message, status, is_whisper, created_on FROM mail WHERE receiver LIKE ? AND status = 'PENDING';";
     public static final String UPDATE_MAIL_SET_STATUS_DELIVERED_WHERE_RECEIVER = "UPDATE mail SET status='DELIVERED' WHERE id = ?";
     public static final String INSERT_INTO_BANNED_USERS_TRIP_NAME_HASH_REASON_CREATED_ON_VALUES = "INSERT INTO banned_users(trip,name,hash,reason,created_on) VALUES (?,?,?,?,?);";
-    public static final String DELETE_FROM_BANNED_USERS_WHERE_NAME_OR_TRIP_OR_HASH = "DELETE FROM banned_users WHERE name == ? OR trip == ? OR hash = '?';";
+    public static final String DELETE_FROM_BANNED_USERS_WHERE_NAME_OR_TRIP_OR_HASH = "DELETE FROM banned_users WHERE name = ? OR trip = ? OR hash = ?;";
     public static final String SELECT_BANNED_USERS = "SELECT trip,name,hash,reason FROM banned_users;";
     public static final String DELETE_FROM_BANNED_USERS = "DELETE FROM banned_users;";
     public static final String INSERT_INTO_NOTES_TRIP_NOTE_CREATED_ON_VALUES = "INSERT INTO notes ('trip', 'note','created_on') VALUES (?, ?, ?);";
