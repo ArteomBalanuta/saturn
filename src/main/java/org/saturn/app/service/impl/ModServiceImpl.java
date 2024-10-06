@@ -203,7 +203,7 @@ public class ModServiceImpl extends OutService implements ModService {
 
     @Override
     public void kickTo(String target, String channel) {
-        enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\"}", target));
+        enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", target, channel));
     }
 
     @Override
