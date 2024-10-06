@@ -12,6 +12,7 @@ import org.saturn.app.model.dto.User;
 
 import static org.saturn.app.command.impl.moderator.AutoMoveUserCommandImpl.AUTHORIZED_LOUNGE_TRIPS;
 import static org.saturn.app.command.impl.moderator.AutoMoveUserCommandImpl.CHANNEL;
+import static org.saturn.app.command.impl.moderator.AutoMoveUserCommandImpl.SOURCE_CHANNEL;
 import static org.saturn.app.util.Util.gson;
 
 @Slf4j
@@ -38,7 +39,7 @@ public class UserJoinedListenerImpl implements Listener {
         engine.shareUserInfo(user);
         engine.proceedShadowBanned(user);
         /* AutoMoveCommand has been triggered */
-        if (AutoMoveUserCommandImpl.isAutoMoveStatus() && engine.engineType.equals(EngineType.REPLICA)) {
+        if (AutoMoveUserCommandImpl.isAutoMoveStatus() && engine.engineType.equals(EngineType.REPLICA) && engine.channel.equals(SOURCE_CHANNEL)) {
             log.warn("AutoMoveCommand feature flag is true");
             if (AUTHORIZED_LOUNGE_TRIPS.contains(user.getTrip())) {
                 engine.outService.enqueueMessageForSending(user.getNick(), " your trip is authorized to join ?lounge, you will be moved to ?lounge", false);

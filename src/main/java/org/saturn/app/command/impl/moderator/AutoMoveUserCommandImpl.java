@@ -25,6 +25,7 @@ import static org.saturn.app.util.Util.getAdminTrips;
 @Slf4j
 @CommandAliases(aliases = {"automove"})
 public class AutoMoveUserCommandImpl extends UserCommandBaseImpl {
+    public static String SOURCE_CHANNEL = "purgatory";
     private static boolean AUTO_MOVE_STATUS = false;
 
     public static boolean isAutoMoveStatus() {
