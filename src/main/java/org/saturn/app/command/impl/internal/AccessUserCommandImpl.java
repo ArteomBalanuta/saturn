@@ -46,7 +46,6 @@ public class AccessUserCommandImpl extends UserCommandBaseImpl {
             return Optional.of(Status.FAILED);
         }
 
-        String targetTrip = getArguments().get(0);
         Role newRole = null;
         try {
             newRole = Role.valueOf(getArguments().get(1));
@@ -56,8 +55,20 @@ public class AccessUserCommandImpl extends UserCommandBaseImpl {
             return Optional.of(Status.FAILED);
         }
 
-        engine.authorizationService.grant(targetTrip, newRole);
-        engine.outService.enqueueMessageForSending(author, "\\n Granted new Role: " + newRole.name() + " to trip: " + targetTrip, isWhisper());
+        String targetTrip = getArguments().get(0);
+        List<String> trips = new ArrayList<>();
+        if (targetTrip.contains(",")) {
+            trips = List.of(targetTrip.split(","));
+        }
+
+        if (trips.isEmpty()) {
+            engine.authorizationService.grant(targetTrip, newRole);
+            engine.outService.enqueueMessageForSending(author, "\\n Granted new Role: " + newRole.name() + " to trip: " + targetTrip, isWhisper());
+        } else {
+            trips.forEach(t -> engine.authorizationService.grant(t, Role.USER));
+            engine.outService.enqueueMessageForSending(author, "\\n Granted new Roles: " + newRole.name() + " to trips: " + trips, isWhisper());
+        }
+
         log.info("Executed [grant] command by user: {}, trip: {}, new Role: {} for trip: {}", author, trip.get(), newRole.name(), targetTrip);
 
         return Optional.of(Status.SUCCESSFUL);
