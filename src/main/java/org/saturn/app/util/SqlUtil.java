@@ -20,6 +20,10 @@ public final class SqlUtil {
     public static final String INSERT_INTO_BANNED_USERS_TRIP_NAME_HASH_REASON_CREATED_ON_VALUES = "INSERT INTO banned_users(trip,name,hash,reason,created_on) VALUES (?,?,?,?,?);";
     public static final String DELETE_FROM_BANNED_USERS_WHERE_NAME_OR_TRIP_OR_HASH = "DELETE FROM banned_users WHERE name = ? OR trip = ? OR hash = ?;";
     public static final String SELECT_BANNED_USERS = "SELECT trip,name,hash,reason FROM banned_users;";
+    public static final String SELECT_ROLE_BY_TRIP = "SELECT type FROM trips WHERE trip == ?;";
+
+    /* For now using USER role per every whitelisted ?lounge user */
+    public static final String SELECT_LOUNGE_TRIPS = "SELECT trip FROM trips WHERE type = 'USER';";
     public static final String DELETE_FROM_BANNED_USERS = "DELETE FROM banned_users;";
     public static final String INSERT_INTO_NOTES_TRIP_NOTE_CREATED_ON_VALUES = "INSERT INTO notes ('trip', 'note','created_on') VALUES (?, ?, ?);";
     public static final String SELECT_NOTES_BY_TRIP = "SELECT * FROM notes WHERE trip = ?";

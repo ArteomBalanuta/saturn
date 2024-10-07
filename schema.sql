@@ -45,6 +45,7 @@ CREATE TABLE "notes" (
 	"created_on" INTEGER NOT NULL
 );
 
+-- USER type is used for whitelisted ?lounge users (*automove cmd)
 CREATE TABLE "trips" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "type" TEXT NOT NULL CHECK(type IN ('ADMIN', 'MODERATOR', 'TRUSTED', 'USER', 'REGULAR')),

@@ -80,7 +80,7 @@ public class ApplicationRunner {
                 } catch (Exception e) {
                     log.error("An unexpected error occurred while restarting the bot: ", e);
                 }
-            }, 0, 15, TimeUnit.SECONDS);  // 15-second interval
+            }, 0, 5, TimeUnit.MINUTES);
         } else {
             log.warn("autoReconnect is disabled... Exiting.");
         }

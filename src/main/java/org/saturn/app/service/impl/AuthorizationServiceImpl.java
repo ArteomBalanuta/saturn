@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 
+import static org.saturn.app.util.SqlUtil.SELECT_ROLE_BY_TRIP;
+
 @Slf4j
 public class AuthorizationServiceImpl extends OutService implements AuthorizationService {
     private final Connection connection;
@@ -87,8 +89,7 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
         Optional<Role> role = Optional.empty();
         log.debug("Querying the db for user role, trip: {}", trip);
         try {
-            PreparedStatement statement = connection.prepareStatement(
-                    "SELECT type FROM trips WHERE trip == ?; ");
+            PreparedStatement statement = connection.prepareStatement(SELECT_ROLE_BY_TRIP);
             statement.setString(1, trip);
             statement.execute();
 
