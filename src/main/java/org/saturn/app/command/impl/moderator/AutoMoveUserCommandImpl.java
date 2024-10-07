@@ -33,14 +33,15 @@ public class AutoMoveUserCommandImpl extends UserCommandBaseImpl {
     }
 
     public final static String CHANNEL = "lounge";
-    public final static String AUTHORIZED_LOUNGE_TRIPS = "AAfFKK,VEbeHK,NO/4w4,Myh1TA,2ZQ3+0,coBad2,9kQGU6,+BBiCm,cmdTV+," +
+    private final static String TRIPS = "AAfFKK,VEbeHK,NO/4w4,Myh1TA,2ZQ3+0,coBad2,9kQGU6,+BBiCm,cmdTV+," +
             "aoXWSB,for9zT,zV2BBB,FaAfFY,sDMF6Q,jYTF8t,F7IuX2,gOtnKd,0UTOss,3/e804,A8FTOC," +
             "/JoyWo,48wNI7,k5uRbC,Jpr4bJ,IC3bl5,/StGZu,MQkpTM,jeyM4l,FQ2U+8,+fs0AT,Tar///," +
             "IiPtqX,6M6hbr,LY105Q,R5n5dC,fzWxIe,eyJdud,1G6EnU,vtFJUL,vuPizP,ZIYSBT,9A2yhx," +
             "0/JM7u,ToP++E,u3rwOv,OSArw7,CrvQXO,6Xgj9g,foMeFv,XDL9Nb,mgcSSR,godDDS,/DeDr/," +
             "bPi8nj,LrziAI,V2V5f7,ko60fH,eHsdHe,9pP6M5,k7jgLY,txMoon,ezp/5u,j156Wo,dnS+hr," +
             "Zvoxsl,RFa+gs,mBN1Ek,utcAWA,NJRDQJ,wwDQww,DQJCph,HCBt3b,WEBPut,0AKKA0,USAriP," +
-            "aiwLKl,Hi/UVU,/9Br2y,ViMXVG,MRx/sb,IRC/Gz,C5Puj6,CJ0kky,aEWCdx,BpC+MG";
+            "aiwLKl,Hi/UVU,/9Br2y,ViMXVG,MRx/sb,IRC/Gz,C5Puj6,CJ0kky,aEWCdx,BpC+MG,xI/cmd";
+    public final static List<String> AUTHORIZED_LOUNGE_TRIPS = List.of(TRIPS.split(","));
     private final List<String> aliases = new ArrayList<>();
 
     public AutoMoveUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {

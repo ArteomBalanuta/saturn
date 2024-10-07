@@ -71,6 +71,12 @@ CREATE TABLE "trip_names" (
 
 ## DML, useful
 
+select t.trip, n.name
+from trip_names tn
+inner join names n on tn.name_id  = n.id
+inner join trips t on tn.trip_id = t.id;
+
+
 select t.trip
 from trip_names tn
 inner join names n on tn.name_id  = n.id
