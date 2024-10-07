@@ -27,7 +27,7 @@ public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
     private final DataBaseService dbService;
     private Configuration config;
-    private Engine host;
+    private EngineImpl host;
 
 
     public ApplicationRunner() {
@@ -61,6 +61,8 @@ public class ApplicationRunner {
     void start() {
         log.info("Starting application");
         host = new EngineImpl(dbService.getConnection(), config, EngineType.HOST);
+        /* setting host reference, so each replica can access it through static reference */
+        host.setHostRef(host);
         host.start();
 
         if (host.isConnected()) {

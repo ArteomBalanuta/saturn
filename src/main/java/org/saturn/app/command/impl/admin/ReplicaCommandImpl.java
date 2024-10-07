@@ -56,7 +56,7 @@ public class ReplicaCommandImpl extends UserCommandBaseImpl {
         } else {
             if (engine.replicasMappedByChannel.get(channel) == null) {
                 log.debug("Registering replica for channel: {}", channel);
-                registerReplica(author, channel);
+                registerReplica(engine, chatMessage, author, channel);
                 log.info("Successfully started replica for channel: {}", channel);
             } else {
                 log.warn("Channel: {} already has a replica running", channel);
@@ -67,7 +67,7 @@ public class ReplicaCommandImpl extends UserCommandBaseImpl {
         return Optional.of(Status.SUCCESSFUL);
     }
 
-    public void registerReplica(String author, String channel) {
+    public static void registerReplica(EngineImpl engine, ChatMessage chatMessage, String author, String channel) {
         Configuration main = engine.getConfig();
         EngineImpl replica = new EngineImpl(engine.getDbConnection(), main, EngineType.REPLICA);
         replica.setChannel(channel);

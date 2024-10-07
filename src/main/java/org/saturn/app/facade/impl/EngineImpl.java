@@ -45,6 +45,7 @@ import static org.saturn.app.util.Util.getAuthor;
 
 @Slf4j
 public class EngineImpl extends Base implements Engine {
+    private static EngineImpl hostRef = null;
     public final Map<String, EngineImpl> replicasMappedByChannel = new HashMap<>();
     public List<String> proxies;
     public final CommandFactory commandFactory;
@@ -72,6 +73,14 @@ public class EngineImpl extends Base implements Engine {
         }
 
         this.commandFactory = new CommandFactory(this, "org.saturn.app.model.command.impl", CommandAliases.class);
+    }
+
+    public void setHostRef(EngineImpl hostRef){
+        EngineImpl.hostRef = hostRef;
+    }
+
+    public EngineImpl getHostRef() {
+        return EngineImpl.hostRef;
     }
 
     @Override

@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.saturn.app.command.impl.admin.ReplicaCommandImpl.registerReplica;
 import static org.saturn.app.util.Util.getAdminTrips;
 
 @Slf4j
@@ -71,11 +72,34 @@ public class AutoMoveUserCommandImpl extends UserCommandBaseImpl {
         }
 
         String firstArgument = arguments.get(0).trim();
+        EngineImpl hostRef = engine.getHostRef();
         if (firstArgument.equalsIgnoreCase("on")) {
             AUTO_MOVE_STATUS = true;
+            if (hostRef != null) {
+                Set<String> replicaChannels = hostRef.replicasMappedByChannel.keySet();
+                SOURCE_CHANNELS.forEach(source -> {
+                    if (replicaChannels.contains(source)) {
+                        log.info("Channel: {}, is served by a replica", source);
+                    } else {
+                        /* run replica for this channel */
+                        log.warn("Channel: {}, [IS NOT] server by a replica, launching one automatically.", source);
+
+                        engine.outService.enqueueMessageForSending(author, "Channel: " + source + ", [IS NOT] server by a replica, launching one automatically.", isWhisper());
+                        registerReplica(engine, chatMessage, author, source);
+                    }
+                });
+            }
             engine.outService.enqueueMessageForSending(author, " " + engine.prefix + "automove is enabled", isWhisper());
         } else if (firstArgument.equalsIgnoreCase("off")) {
             AUTO_MOVE_STATUS = false;
+            if (hostRef != null) {
+                log.info("Stopping replicas in: {}, channels", SOURCE_CHANNELS);
+                SOURCE_CHANNELS.forEach(channel -> {
+                    /* stop replica */
+                    log.info("Stopping replica in channel: {}", channel);
+                    hostRef.replicasMappedByChannel.get(channel).stop();
+                });
+            }
             engine.outService.enqueueMessageForSending(author, " " + engine.prefix + "automove is disabled", isWhisper());
         } else if (arguments.size() == 2) {
             String secondArgument = arguments.get(1).trim();

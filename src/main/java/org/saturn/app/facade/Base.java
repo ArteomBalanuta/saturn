@@ -59,7 +59,6 @@ public abstract class Base {
     public final UserService userService;
 
     private final Connection dbConnection;
-    /* TODO: add ref to host engine. Adjust some cmds should not be available by replicas */
     public final EngineType engineType;
 
     public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
