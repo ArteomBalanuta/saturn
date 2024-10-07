@@ -98,6 +98,7 @@ public class AutoMoveUserCommandImpl extends UserCommandBaseImpl {
                     /* stop replica */
                     log.info("Stopping replica in channel: {}", channel);
                     hostRef.replicasMappedByChannel.get(channel).stop();
+                    hostRef.replicasMappedByChannel.remove(channel);
                 });
             }
             engine.outService.enqueueMessageForSending(author, " " + engine.prefix + "automove is disabled", isWhisper());
