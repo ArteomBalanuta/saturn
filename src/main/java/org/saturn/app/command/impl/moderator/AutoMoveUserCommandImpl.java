@@ -9,8 +9,10 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
@@ -18,7 +20,7 @@ import static org.saturn.app.util.Util.getAdminTrips;
 @CommandAliases(aliases = {"automove"})
 public class AutoMoveUserCommandImpl extends UserCommandBaseImpl {
     private static String DESTINATION_CHANNEL = "lounge";
-    public static final List<String> SOURCE_CHANNELS = new ArrayList<>();
+    public static final Set<String> SOURCE_CHANNELS = new HashSet<>();
     private static boolean AUTO_MOVE_STATUS = false;
 
     public static String getDestinationChannel() {
