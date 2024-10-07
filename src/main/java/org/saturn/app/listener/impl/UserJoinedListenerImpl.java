@@ -16,8 +16,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.saturn.app.command.impl.moderator.AutoMoveUserCommandImpl.CHANNEL;
-import static org.saturn.app.command.impl.moderator.AutoMoveUserCommandImpl.SOURCE_CHANNEL;
+import static org.saturn.app.command.impl.moderator.AutoMoveUserCommandImpl.SOURCE_CHANNELS;
+import static org.saturn.app.command.impl.moderator.AutoMoveUserCommandImpl.getDestinationChannel;
 import static org.saturn.app.util.SqlUtil.SELECT_LOUNGE_TRIPS;
 import static org.saturn.app.util.Util.gson;
 
@@ -45,12 +45,12 @@ public class UserJoinedListenerImpl implements Listener {
         engine.shareUserInfo(user);
         engine.proceedShadowBanned(user);
         /* AutoMoveCommand has been triggered */
-        if (AutoMoveUserCommandImpl.isAutoMoveStatus() && engine.engineType.equals(EngineType.REPLICA) && engine.channel.equals(SOURCE_CHANNEL)) {
+        if (AutoMoveUserCommandImpl.isAutoMoveStatus() && engine.engineType.equals(EngineType.REPLICA) && SOURCE_CHANNELS.contains(engine.channel)) {
             log.warn("AutoMoveCommand feature flag is true");
             if (getWhitelistedTrips().contains(user.getTrip())) {
                 engine.outService.enqueueMessageForSending(user.getNick(), "your trip is authorized to join ?lounge, you will be moved to ?lounge", false);
-                engine.modService.kickTo(user.getNick(), CHANNEL);
-                log.info("User: {}, has been moved to: {}", user.getNick(), CHANNEL);
+                engine.modService.kickTo(user.getNick(), getDestinationChannel());
+                log.info("User: {}, has been moved to: {}", user.getNick(), getDestinationChannel());
             }
         }
     }
