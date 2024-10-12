@@ -72,13 +72,14 @@ public class ApplicationRunner {
     private void healthCheck() {
         log.info("Health: performing health check...");
         try {
-            if (host.isConnected()) {
-                log.debug("Health: Connected");
-                return;
-            }
-
-            log.debug("Health: Connection is closed... Restarting the bot.");
             if (host != null) {
+                if (host.isConnected()) {
+                    log.debug("Health: Connected");
+                    return;
+                } else {
+                    log.debug("Health: Connection is closed... Restarting the bot.");
+                }
+
                 /* try gracefully */
                 host.stop();
                 Thread.sleep(1_000);
@@ -87,16 +88,16 @@ public class ApplicationRunner {
                 host = null;
                 Thread.sleep(1_000);
                 Runtime.getRuntime().gc();
-
-                /* reset */
-                host = new EngineImpl(dbService.getConnection(), config, EngineType.HOST);
-                /* setting host reference, so each replica can access it through static reference */
-                host.setHostRef(host);
-                host.start();
-                log.debug("Health: Bot has been restarted");
             } else {
-                log.debug("Health: Bot is not set");
+                log.warn("Health: Bot is not set");
             }
+
+            /* reset */
+            host = new EngineImpl(dbService.getConnection(), config, EngineType.HOST);
+            /* setting host reference, so each replica can access it through static reference */
+            host.setHostRef(host);
+            host.start();
+            log.warn("Health: Bot has been restarted");
         } catch (Exception e) {
             log.info("Error: {}", e.getMessage());
             log.error("Stack trace", e);
