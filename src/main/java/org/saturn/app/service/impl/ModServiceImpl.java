@@ -3,6 +3,7 @@ package org.saturn.app.service.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.dto.BanDto;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.ModService;
 import org.saturn.app.util.DateUtil;
 import org.saturn.app.util.SqlUtil;
@@ -159,7 +160,8 @@ public class ModServiceImpl extends OutService implements ModService {
     }
 
     @Override
-    public void listBanned(String author) {
+    public void listBanned(ChatMessage chatMessage) {
+        String author = chatMessage.getNick();
         List<BanDto> bannedIds = this.getBannedUsers();
 
         StringBuilder output = new StringBuilder();
@@ -168,9 +170,9 @@ public class ModServiceImpl extends OutService implements ModService {
         });
 
         if (bannedIds.isEmpty()) {
-            enqueueMessageForSending(author,"No users has been banned.", false);
+            enqueueMessageForSending(author,"No users has been banned.", chatMessage.isWhisper());
         } else {
-            enqueueMessageForSending(author,"Banned hashes, trips, names: \\n" + output, false);
+            enqueueMessageForSending(author,"Banned hashes, trips, names: \\n" + output, chatMessage.isWhisper());
         }
     }
 

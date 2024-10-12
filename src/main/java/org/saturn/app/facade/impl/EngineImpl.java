@@ -112,8 +112,8 @@ public class EngineImpl extends Base implements Engine {
     public void start() {
         try {
             hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), null, this);
-            hcConnection.start();
-            log.debug("Started blocking connection");
+            hcConnection.startNonBlocking();
+            log.debug("Started non-blocking connection");
         } catch (URISyntaxException e) {
             log.info("Error: {}", e.getMessage());
             log.error("Exception: ", e);

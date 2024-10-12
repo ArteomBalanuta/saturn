@@ -149,3 +149,6 @@ SELECT
     probability_percentage
 FROM Probability where trip !='' and trip !='null'
 ORDER BY trip, day_number, hour;
+
+-- cmd history
+select trip,command_name,channel,datetime(created_on / 1000, 'unixepoch') as dt from executed_commands where channel = 'lounge' order by created_on desc limit 30

@@ -40,9 +40,8 @@ public class BanList extends UserCommandBaseImpl {
         return Role.MODERATOR;
     }
     public Optional<Status> execute() {
-        String author = chatMessage.getNick();
-        engine.modService.listBanned(author);
-        log.info("Executed [banlist] command by user: {}", author);
+        engine.modService.listBanned(chatMessage);
+        log.info("Executed [banlist] command by user: {}", chatMessage.getNick());
         return Optional.of(Status.SUCCESSFUL);
     }
 }

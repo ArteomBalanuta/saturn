@@ -2,6 +2,7 @@ package org.saturn.app.service;
 
 import org.saturn.app.model.dto.BanDto;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.model.dto.payload.ChatMessage;
 
 
 public interface ModService {
@@ -18,7 +19,7 @@ public interface ModService {
     void enableCaptcha();
     void disableCaptcha();
     void unshadowBan(String target);
-    void listBanned(String author);
+    void listBanned(ChatMessage chatMessage);
     void unbanAll(String author);
     boolean isBanned(User user);
 }

@@ -108,8 +108,8 @@ public class Connection {
         client.send(message);
     }
     
-    public void close() {
-        client.close();
+    public void close() throws InterruptedException {
+        client.closeBlocking();
     }
 
     public void start() throws InterruptedException {
@@ -121,6 +121,6 @@ public class Connection {
     }
 
     public boolean isConnected() {
-        return client.isOpen();
+        return client.isOpen() && !client.isClosing() && !client.isFlushAndClose();
     }
 }
