@@ -21,14 +21,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class Util {
     public static Gson gson = new Gson();
+
     public static String getAuthor(String author) {
         return author == null ? null : author.replace("@", "");
     }
+
     public static String extractCmdFromJson(String jsonText) {
         JsonElement element = JsonParser.parseString(jsonText);
         JsonElement listingElement = element.getAsJsonObject().get("cmd");
@@ -151,7 +155,7 @@ public class Util {
         return result.toString();
     }
 
-    public static String listToString (List<String> strings) {
+    public static String listToString(List<String> strings) {
         StringBuilder b = new StringBuilder();
         strings.forEach(string -> b.append(string).append(" "));
         return b.toString();
@@ -177,7 +181,7 @@ public class Util {
         request.addHeader(HttpHeaders.USER_AGENT, "Firefox 59.9.0-MDA-Universe");
 
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-           log.debug("Protocol: {}, StatusCode: {}, ", response.getProtocolVersion(), response.getStatusLine().getStatusCode());              // HTTP/1.1
+            log.debug("Protocol: {}, StatusCode: {}, ", response.getProtocolVersion(), response.getStatusLine().getStatusCode());              // HTTP/1.1
 
             String result = null;
             HttpEntity entity = response.getEntity();
@@ -199,5 +203,15 @@ public class Util {
         String replace = stringList.toString().replace("[", "");
         String replace1 = replace.replace("]", "");
         return replace1;
+    }
+
+    public static void sleep(int value, TimeUnit timeUnit) {
+        CountDownLatch latch = new CountDownLatch(1);
+        // Wait for 5 seconds (doing nothing)
+        try {
+            boolean ignored_ = latch.await(value, timeUnit);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

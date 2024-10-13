@@ -19,24 +19,22 @@ import static org.saturn.app.util.Util.gson;
 
 @Slf4j
 public class InfoMessageListenerImpl implements Listener {
-
     private final EngineImpl engine;
-
     public InfoMessageListenerImpl(EngineImpl engine) {
         this.engine = engine;
     }
-
     @Override
     public String getListenerName() {
         return "infoMessageListener";
     }
-
     @Override
     public void notify(String jsonText) {
         InfoMessage message = gson.fromJson(jsonText, InfoMessage.class);
         message.setJson(jsonText);
 
-        if (engine.nick.equals(message.getFrom()) || message.getText().contains("You whispered")) {
+        // Allowing self whispering
+        /* engine.nick.equals(message.getFrom()) ||  */
+        if (message.getText().contains("You whispered")) {
             return;
         }
 
@@ -54,7 +52,6 @@ public class InfoMessageListenerImpl implements Listener {
             return;
         }
 
-        /* empty whitelist */
         log.info("Possible whisper cmd: {}", cmd);
 
         chatMessage.setWhisper(true);

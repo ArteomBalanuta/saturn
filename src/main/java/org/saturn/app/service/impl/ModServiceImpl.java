@@ -180,7 +180,7 @@ public class ModServiceImpl extends OutService implements ModService {
     public void unbanAll(String author) {
         List<BanDto> bannedIds = this.getBannedUsers();
         if (bannedIds.isEmpty()) {
-            enqueueMessageForSending("", "No users has been banned.", false);
+            enqueueMessageForSending(author, "No users has been banned.", false);
         } else {
             StringBuilder output = new StringBuilder();
             bannedIds.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getName()).append("\\n"));

@@ -36,6 +36,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Slf4j
 public abstract class Base {
     protected String baseWsURL;
+    public String autorunCmds;
     public String proxies;
     public String prefix;
     public String channel;
@@ -96,6 +97,7 @@ public abstract class Base {
             this.dbPath = config.getString("dbPath");
             this.baseWsURL = config.getString("wsUrl");
             this.proxies = config.getString("proxies");
+            this.autorunCmds = config.getString("autorunCommands");
         }
 
         if (engineType.equals(EngineType.REPLICA)) {
