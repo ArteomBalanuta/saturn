@@ -43,7 +43,7 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
         Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
 
         StringBuilder stringBuilder = new StringBuilder();
-        if (trip.isPresent() && engine.adminTrips.contains(trip.get())) {
+        if (trip.isPresent() && List.of(engine.adminTrips.split(",")).contains(trip.get())) {
             this.getArguments().forEach(argument -> stringBuilder.append(argument).append(" ")) ;
         } else {
             this.getArguments().forEach(argument -> {
