@@ -64,7 +64,7 @@ public class UserJoinedListenerImpl implements Listener {
 
             ResultSet resultSet = statement.getResultSet();
             while (resultSet.next()) {
-                trips.add(resultSet.getString("type"));
+                trips.add(resultSet.getString("trip"));
             }
             statement.close();
             resultSet.close();
