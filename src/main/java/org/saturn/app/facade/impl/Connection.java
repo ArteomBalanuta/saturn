@@ -25,6 +25,7 @@ import java.util.List;
 @Slf4j
 public class Connection {
     private final WebSocketClient client;
+    private boolean isError;
 
     public Connection(String address, List<Listener> listeners, org.saturn.app.model.dto.Proxy proxy, EngineImpl engine) throws URISyntaxException {
         URI uri = new URI(address);
@@ -68,6 +69,7 @@ public class Connection {
             @Override
             public void onError(Exception e) {
                 log.error("Exception:", e);
+                isError = true;
                 throw new RuntimeException(e);
             }
         };
@@ -121,6 +123,6 @@ public class Connection {
     }
 
     public boolean isConnected() {
-        return client.isOpen() && !client.isClosing() && !client.isFlushAndClose();
+        return (client.isOpen() && !client.isClosing() && !client.isFlushAndClose()) && !isError;
     }
 }

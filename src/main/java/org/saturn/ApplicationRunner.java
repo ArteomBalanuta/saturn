@@ -74,10 +74,10 @@ public class ApplicationRunner {
         try {
             if (host != null) {
                 if (host.isConnected()) {
-                    log.debug("Health: Connected");
+                    log.info("Health: Connected");
                     return;
                 } else {
-                    log.debug("Health: Connection is closed... Restarting the bot.");
+                    log.info("Health: Connection is closed... Restarting the bot.");
                 }
 
                 /* try gracefully */

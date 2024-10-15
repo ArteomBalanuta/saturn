@@ -114,10 +114,7 @@ public class EngineImpl extends Base implements Engine {
             hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), null, this);
             hcConnection.startNonBlocking();
             log.debug("Started non-blocking connection");
-        } catch (URISyntaxException e) {
-            log.info("Error: {}", e.getMessage());
-            log.error("Exception: ", e);
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             log.info("Error: {}", e.getMessage());
             log.error("Exception: ", e);
             throw new RuntimeException(e);
@@ -130,10 +127,7 @@ public class EngineImpl extends Base implements Engine {
             hcConnection = new org.saturn.app.facade.impl.Connection(baseWsURL, List.of(connectionListener, incomingMessageListener), proxy, this);
             hcConnection.startNonBlocking();
             log.debug("Started non-blocking connection");
-        } catch (URISyntaxException e) {
-            log.info("Error: {}", e.getMessage());
-            log.error("Exception: ", e);
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             log.info("Error: {}", e.getMessage());
             log.error("Exception: ", e);
             throw new RuntimeException(e);
