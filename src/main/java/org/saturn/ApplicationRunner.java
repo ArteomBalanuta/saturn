@@ -101,6 +101,8 @@ public class ApplicationRunner {
         } catch (Exception e) {
             log.info("Error: {}", e.getMessage());
             log.error("Stack trace", e);
+            host = null;
+            Runtime.getRuntime().gc();
         }
     }
 
