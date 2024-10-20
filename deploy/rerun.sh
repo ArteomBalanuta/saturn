@@ -6,7 +6,13 @@ echo "Current directory: $(pwd)"
 cd workspace
 
 echo "Killing saturn.jar..."
-pkill -f java
+
+PIDS=$(ps aux | grep java | grep "\-jar saturn.jar" | grep -v grep | awk "{print $2}")
+readarray -t PIDS_ARR < <(printf "%b\n" "$PIDS")
+for PID in ${PIDS_ARR[@]}
+do
+  kill $PID
+done
 
 # Wait a few seconds to ensure the process has terminated
 sleep 3
