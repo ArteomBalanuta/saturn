@@ -81,6 +81,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
                     "\u2009ping\u2009\u2009\u2009\u2009\u2009- prints the latency between bot and hc\\n" +
                     "\u2009afk [reason]\u2009\u2009\u2009\u2009\u2009\u2009- marks the user as afk\\n" +
                     "\u2009lastseen <name>\u2009\u2009- prints useful info about users activity\\n" +
+                    "\u2009lastmessages <trip> <count>\u2009\u2009- prints users last messages\\n" +
                     "\u2009sub\u2009\u2009- you receive nick,hashes for joining users\\n" +
                     "\u2009unsub\u2009\u2009\u2009- cancels the subscription\\n" +
                     "Moderator commands:\\n" +

@@ -68,9 +68,12 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
             return Optional.of(Status.FAILED);
         }
 
+        if (numberOfMessages > 9) {
+            engine.outService.enqueueMessageForSending(author,"Retrieving at max 9 messages! ", isWhisper());
+            numberOfMessages = 9;
+        }
 
         List<Message> messages = engine.userService.lastMessages(null, trip, numberOfMessages);
-
         String payload = formatLastMessages(messages);
         engine.outService.enqueueMessageForSending(author, payload, isWhisper());
 
@@ -80,10 +83,8 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
     private String formatLastMessages(List<Message> messages) {
         StringBuilder lastMessages = new StringBuilder();
         messages.forEach(message -> {
-            long createdDate = Long.parseLong(message.getCreatedOn());
-            String header = DateUtil.formatRfc1123(createdDate, TimeUnit.MILLISECONDS, "UTC") + ". " + getDifference(ZonedDateTime.now(), toZoneDateTimeUTC(createdDate)) + " ago.";
-            String body =  message.getAuthor() + "#" + message.getTrip() + ": " + message.getMessage();
-            lastMessages.append(header).append("\\n").append(body).append("\\n \u2009 \\n");
+            String body = message.getAuthor() + "#" + message.getTrip() + ": " + message.getMessage();
+            lastMessages.append("\\n").append(body).append("\\n");
         });
 
         return lastMessages.toString();

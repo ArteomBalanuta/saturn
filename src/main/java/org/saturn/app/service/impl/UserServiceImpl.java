@@ -237,8 +237,9 @@ public class UserServiceImpl extends OutService implements UserService {
             while (resultSet.next()) {
                 String timestamp = resultSet.getString("created_on");
                 String text = resultSet.getString("message");
+                String mName = resultSet.getString("name");
 
-                Message message = new Message(name, trip, text, formatRfc1123(Long.parseLong(timestamp), TimeUnit.MILLISECONDS, "UTC"));
+                Message message = new Message(mName, trip, text, timestamp);
                 messages.add(message);
             }
 
