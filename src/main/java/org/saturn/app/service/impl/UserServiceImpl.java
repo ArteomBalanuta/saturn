@@ -2,6 +2,7 @@ package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.dto.LastSeenDto;
+import org.saturn.app.model.dto.Message;
 import org.saturn.app.service.UserService;
 import org.saturn.app.util.DateUtil;
 import org.saturn.app.util.SqlUtil;
@@ -11,9 +12,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -209,6 +213,45 @@ public class UserServiceImpl extends OutService implements UserService {
             log.error("Stack trace: ", e);
         }
     }
+
+    @Override
+    public List<Message> lastMessages(String name, String trip, int count) {
+        if (count <= 0) {
+            /* default */
+            count = 5;
+        }
+
+        List<Message> messages = new ArrayList<>();
+        try {
+            PreparedStatement statement = connection.prepareStatement(SqlUtil.SELECT_LAST_N_MESSAGES);
+            if (name == null) {
+                statement.setNull(1, Types.VARCHAR);
+            } else {
+                statement.setString(1, name);
+            }
+            statement.setString(2, trip);
+            statement.setString(3, String.valueOf(count));
+            statement.execute();
+
+            ResultSet resultSet = statement.getResultSet();
+            while (resultSet.next()) {
+                String timestamp = resultSet.getString("created_on");
+                String text = resultSet.getString("message");
+
+                Message message = new Message(name, trip, text, formatRfc1123(Long.parseLong(timestamp), TimeUnit.MILLISECONDS, "UTC"));
+                messages.add(message);
+            }
+
+            statement.close();
+            resultSet.close();
+        } catch (SQLException e) {
+            log.info("Error: {}", e.getMessage());
+            log.error("Stack trace: ", e);
+        }
+
+        return messages;
+    }
+
     @Override
     public void registerNameByTrip(String name, String trip) {
         String insertNameSql = "INSERT INTO names (name, created_on) VALUES (?, strftime('%s', 'now'))";

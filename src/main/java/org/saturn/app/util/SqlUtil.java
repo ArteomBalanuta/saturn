@@ -31,5 +31,7 @@ public final class SqlUtil {
     public static final String SELECT_DISTINCT_HASH_NAME_FROM_MESSAGES_WHERE_TRIP = "select distinct hash,name from messages where trip = '";
     public static final String SELECT_DISTINCT_HASH_NAME_FROM_MESSAGES_WHERE_HASH = "select distinct hash,name from messages where hash = '";
     public static final String SELECT_LAST_SEEN = "SELECT message,created_on FROM messages WHERE (name = ? or trip = ?) and (message not in ('LEFT','JOINED')) order by created_on desc limit 1;";
+
+    public static final String SELECT_LAST_N_MESSAGES = "SELECT message,created_on FROM messages WHERE (name = ? or trip = ?) and (message not in ('LEFT','JOINED')) order by created_on desc limit ?;";
     public static final String SELECT_SESSION_JOINED = "SELECT created_on FROM messages WHERE (name = ? or trip = ?) and message = 'JOINED' order by created_on desc limit 1;";
 }
