@@ -14,7 +14,9 @@ import org.saturn.app.service.DataBaseService;
 import org.saturn.app.service.impl.DataBaseServiceImpl;
 
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newScheduledThreadPool;
@@ -58,7 +60,7 @@ public class ApplicationRunner {
     private void start() {
         if (autoReconnectEnabled) {
             log.info("Scheduling health check every 5 minutes");
-            healthCheckScheduler.scheduleWithFixedDelay(this::healthCheck, 0, 5, TimeUnit.MINUTES);
+            healthCheckScheduler.scheduleAtFixedRate(this::healthCheck, 0, 5, TimeUnit.MINUTES);
         } else {
             log.warn("AutoReconnect is disabled..");
             log.info("Starting application manually");
@@ -103,6 +105,8 @@ public class ApplicationRunner {
             log.error("Stack trace", e);
             host = null;
             Runtime.getRuntime().gc();
+        } finally {
+            log.info("Health: finished checking");
         }
     }
 
