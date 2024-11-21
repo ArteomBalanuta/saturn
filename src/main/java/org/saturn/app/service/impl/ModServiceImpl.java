@@ -102,6 +102,16 @@ public class ModServiceImpl extends OutService implements ModService {
     }
 
     @Override
+    public void auth(String trip) {
+        enqueueRawMessageForSending(String.format("{ \"cmd\": \"authtrip\", \"trip\": \"%s\"}", trip));
+    }
+
+    @Override
+    public void deauth(String trip) {
+        enqueueRawMessageForSending(String.format("{ \"cmd\": \"deauthtrip\", \"trip\": \"%s\"}", trip));
+    }
+
+    @Override
     public void disableCaptcha() {
         enqueueRawMessageForSending("{ \"cmd\": \"disablecaptcha\"}");
     }

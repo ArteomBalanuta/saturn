@@ -62,15 +62,31 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         String to = arguments.get(2);
 
         log.info("Moving user: {}, from: {}, to: {}", target, from, to);
-        resurrect(from, target, to);
+
+        if (super.engine.replicasMappedByChannel.containsKey(from) || super.engine.getHostRef().channel.equals(from)) {
+            /* got an instance in the room already or host room */
+            EngineImpl replica = null;
+            boolean isReplicaPresent = super.engine.replicasMappedByChannel.containsKey(from);
+            if (!isReplicaPresent) {
+                /* using host */
+                replica = super.engine.getHostRef();
+            } else {
+                replica = super.engine.replicasMappedByChannel.get(from);
+            }
+
+            replica.outService.enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", target, to));
+            replica.shareMessages();
+        } else {
+            Configuration main = super.engine.getConfig();
+            EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD);
+            resurrect(from, target, to, slaveEngine);
+        }
 
         log.info("Executed [move] command by user: {}, target: {}", author, target);
         return Optional.of(Status.SUCCESSFUL);
     }
 
-    public void resurrect(String channel, String nick, String targetChannel) {
-        Configuration main = super.engine.getConfig();
-        EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD);
+    public void resurrect(String channel, String nick, String targetChannel, EngineImpl slaveEngine) {
         setupEngine(channel, slaveEngine);
 
         JoinChannelListenerDto dto = new JoinChannelListenerDto(this.engine, slaveEngine, slaveEngine.nick, channel);

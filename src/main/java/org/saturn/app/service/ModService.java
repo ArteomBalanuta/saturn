@@ -17,6 +17,11 @@ public interface ModService {
     void lock();
     void unlock();
     void enableCaptcha();
+
+    void auth(String trip);
+
+    void deauth(String trip);
+
     void disableCaptcha();
     void unshadowBan(String target);
     void listBanned(ChatMessage chatMessage);
