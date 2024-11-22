@@ -32,6 +32,12 @@ public class InfoMessageListenerImpl implements Listener {
         InfoMessage message = gson.fromJson(jsonText, InfoMessage.class);
         message.setJson(jsonText);
 
+        String text = message.getText();
+        if (text != null && text.contains("was banished to ?")) {
+            UserCommandBaseImpl.kickedTo = substringFromEndUpTo(text, "?"); // retrieving the room
+            UserCommandBaseImpl.lastKicked = substringFromStartUpTo(text, " was banished");
+        }
+
         // Allowing self whispering
         /* engine.nick.equals(message.getFrom()) ||  */
         if (message.getText().contains("You whispered")) {
@@ -105,5 +111,13 @@ public class InfoMessageListenerImpl implements Listener {
             return chatMessage;
         }
         return null;
+    }
+
+    public String substringFromEndUpTo(String text, String c) {
+        return text.substring(text.length() - (text.length() - text.indexOf(c) - c.length()));
+    }
+
+    public String substringFromStartUpTo(String text, String c) {
+        return text.substring(0, text.indexOf(c));
     }
 }

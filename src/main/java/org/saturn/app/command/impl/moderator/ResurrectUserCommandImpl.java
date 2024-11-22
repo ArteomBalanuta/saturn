@@ -23,9 +23,6 @@ import static org.saturn.app.util.Util.getAdminTrips;
 @Slf4j
 @CommandAliases(aliases = {"move", "recover", "heal", "resurrect"})
 public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
-    private String lastKicked;
-    private String kickedTo;
-
     private final List<String> aliases = new ArrayList<>();
 
     public ResurrectUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
@@ -54,11 +51,10 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         List<String> arguments = getArguments();
         String author = chatMessage.getNick();
 
-        if (arguments.isEmpty() && this.lastKicked != null && this.kickedTo != null && !this.kickedTo.equals(this.engine.channel)) {
-            Configuration main = super.engine.getConfig();
-            EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD);
+        if (arguments.isEmpty() && resurrectLastKicked(this.engine.channel)) {
+            EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
             resurrect(kickedTo, lastKicked, this.engine.channel, slaveEngine);
-            log.info("Executed [move] command by user: {} - resurrected last kicked user", author);
+            log.info("Executed [move] command by user: {} - resurrected last moved user", author);
             return Optional.of(Status.SUCCESSFUL);
         }
 
@@ -71,9 +67,6 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         String from = arguments.get(1);
         String target = arguments.get(0).replace("@","");
         String to = arguments.get(2);
-
-        this.lastKicked = target;
-        this.kickedTo = to;
 
         log.info("Moving user: {}, from: {}, to: {}", target, from, to);
 
@@ -98,35 +91,5 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
 
         log.info("Executed [move] command by user: {}, target: {}", author, target);
         return Optional.of(Status.SUCCESSFUL);
-    }
-
-    public void resurrect(String channel, String nick, String targetChannel, EngineImpl slaveEngine) {
-        setupEngine(channel, slaveEngine);
-
-        JoinChannelListenerDto dto = new JoinChannelListenerDto(this.engine, slaveEngine, slaveEngine.nick, channel);
-        dto.target = nick;
-        dto.destinationRoom = targetChannel;
-
-        JoinChannelListener onlineSetListener = new KickCommandListenerImpl(dto);
-        onlineSetListener.setChatMessage(chatMessage);
-
-        onlineSetListener.setAction(() -> {
-            slaveEngine.outService.enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", nick, targetChannel));
-            slaveEngine.shareMessages();
-            log.info("user: {}, has been moved to: {}", nick, targetChannel);
-        });
-
-        slaveEngine.setOnlineSetListener(onlineSetListener);
-        slaveEngine.start();
-    }
-
-    public void setupEngine(String channel, EngineImpl listBot) {
-        listBot.setChannel(channel);
-        int length = 8;
-        boolean useLetters = true;
-        boolean useNumbers = true;
-        String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
-        listBot.setNick(generatedNick);
-        listBot.setPassword(engine.password);
     }
 }

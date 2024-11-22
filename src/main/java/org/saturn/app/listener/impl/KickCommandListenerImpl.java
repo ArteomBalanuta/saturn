@@ -40,7 +40,7 @@ public class KickCommandListenerImpl implements JoinChannelListener {
                 System.out.println("Done executing runnable..");
             }
         } else {
-            dto.mainEngine.outService.enqueueMessageForSending(chatMessage.getNick()," @" + dto.target + " isn't in the room ?" + dto.destinationRoom, chatMessage.isWhisper());
+            dto.mainEngine.outService.enqueueMessageForSending(chatMessage.getNick()," @" + dto.target + " isn't in the room ?" + dto.slaveEngine.channel, chatMessage.isWhisper());
         }
 
         dto.slaveEngine.stop();

@@ -1,11 +1,17 @@
 package org.saturn.app.command.impl.moderator;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.listener.JoinChannelListener;
+import org.saturn.app.listener.impl.KickCommandListenerImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.command.annotation.CommandAliases;
+import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
@@ -48,7 +54,14 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
         arguments = arguments.stream().map(arg -> arg.replace("@", "")).collect(Collectors.toList());
 
         String author = chatMessage.getNick();
-        if (arguments.isEmpty()) {
+        if (arguments.isEmpty() && resurrectLastKicked(this.engine.channel)) {
+                EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
+                resurrect(kickedTo, lastKicked, this.engine.channel, slaveEngine);
+                log.info("Executed [kick] command by user: {} - resurrected last kicked user", author);
+                return Optional.of(Status.SUCCESSFUL);
+        }
+
+        if (arguments.isEmpty() && (lastKicked == null && kickedTo == null)) {
             log.info("Executed [kick] command by user: {}, no username parameter specified", author);
             engine.outService.enqueueMessageForSending(author, "\\n Example: " + engine.prefix + "kick merc", isWhisper());
             return Optional.of(Status.FAILED);
@@ -60,7 +73,7 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
 
         switch (flag) {
             case "-m" -> {
-                List<String> usernames = arguments.stream().skip(1).collect(Collectors.toList());
+                List<String> usernames = arguments.stream().skip(1).toList();
                 for (String target : usernames) {
                     kickUserIfPresent(target, activeUsers);
                 }
@@ -89,6 +102,7 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
     private void kickUserIfPresent(String target, List<String> activeUsers) {
         if (activeUsers.contains(target)) {
             engine.modService.kick(target);
+            lastKicked = target;
             log.info("Kicked: {}", target);
         } else {
             log.info("User: {} is not in the room", target);

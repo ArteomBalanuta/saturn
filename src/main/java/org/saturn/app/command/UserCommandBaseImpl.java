@@ -2,10 +2,14 @@ package org.saturn.app.command;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.listener.JoinChannelListener;
+import org.saturn.app.listener.impl.KickCommandListenerImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
+import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.DateUtil;
 
@@ -20,9 +24,15 @@ import static org.saturn.app.util.Util.toLower;
 public class UserCommandBaseImpl implements UserCommand  {
     protected final EngineImpl engine;
     protected ChatMessage chatMessage;
+    public static String lastKicked;
+    public static String kickedTo;
     protected final List<String> authorizedTrips = new ArrayList<>();
     private List<String> aliases;
     private final List<String> arguments = new ArrayList<>();
+
+    public boolean resurrectLastKicked(String thisEngineChannel) {
+        return lastKicked != null && kickedTo != null && !kickedTo.equals(thisEngineChannel);
+    }
 
     public UserCommandBaseImpl(ChatMessage chatMessage, EngineImpl engine, List<String> authorizedTrips) {
         this.engine = engine;
@@ -115,6 +125,35 @@ public class UserCommandBaseImpl implements UserCommand  {
     @Override
     public boolean isWhisper() {
         return chatMessage.isWhisper();
+    }
+
+    public void resurrect(String channel, String nick, String targetChannel, EngineImpl slaveEngine) {
+        setupEngine(channel, slaveEngine);
+
+        JoinChannelListenerDto dto = new JoinChannelListenerDto(this.engine, slaveEngine, slaveEngine.nick, channel);
+        dto.target = nick;
+        dto.destinationRoom = targetChannel;
+
+        JoinChannelListener onlineSetListener = new KickCommandListenerImpl(dto);
+        onlineSetListener.setChatMessage(chatMessage);
+
+        onlineSetListener.setAction(() -> {
+            slaveEngine.outService.enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", nick, targetChannel));
+            slaveEngine.shareMessages();
+            log.info("user: {}, has been moved to: {}", nick, targetChannel);
+        });
+
+        slaveEngine.setOnlineSetListener(onlineSetListener);
+        slaveEngine.start();
+    }
+    public void setupEngine(String channel, EngineImpl listBot) {
+        listBot.setChannel(channel);
+        int length = 8;
+        boolean useLetters = true;
+        boolean useNumbers = true;
+        String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
+        listBot.setNick(generatedNick);
+        listBot.setPassword(engine.password);
     }
 }
 
