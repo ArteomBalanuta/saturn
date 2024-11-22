@@ -23,6 +23,9 @@ import static org.saturn.app.util.Util.getAdminTrips;
 @Slf4j
 @CommandAliases(aliases = {"move", "recover", "heal", "resurrect"})
 public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
+    private String lastKicked;
+    private String kickedTo;
+
     private final List<String> aliases = new ArrayList<>();
 
     public ResurrectUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
@@ -51,6 +54,14 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         List<String> arguments = getArguments();
         String author = chatMessage.getNick();
 
+        if (arguments.isEmpty() && this.lastKicked != null && this.kickedTo != null && !this.kickedTo.equals(this.engine.channel)) {
+            Configuration main = super.engine.getConfig();
+            EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD);
+            resurrect(kickedTo, lastKicked, this.engine.channel, slaveEngine);
+            log.info("Executed [move] command by user: {} - resurrected last kicked user", author);
+            return Optional.of(Status.SUCCESSFUL);
+        }
+
         if (arguments.size() != 3) {
             super.engine.outService.enqueueMessageForSending(author, " " + engine.prefix + "move <nick> <from> <to>", isWhisper());
             log.info("Executed [move] command by user: {} - missing required parameters", author);
@@ -60,6 +71,9 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
         String from = arguments.get(1);
         String target = arguments.get(0).replace("@","");
         String to = arguments.get(2);
+
+        this.lastKicked = target;
+        this.kickedTo = to;
 
         log.info("Moving user: {}, from: {}, to: {}", target, from, to);
 
