@@ -111,7 +111,7 @@ public class Connection {
     }
     
     public void close() throws InterruptedException {
-        client.closeBlocking();
+        client.close();
     }
 
     public void start() throws InterruptedException {
