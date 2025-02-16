@@ -132,7 +132,7 @@ public class UserCommandBaseImpl implements UserCommand  {
 
         JoinChannelListenerDto dto = new JoinChannelListenerDto(this.engine, slaveEngine, slaveEngine.nick, channel);
         dto.target = nick;
-        dto.destinationRoom = targetChannel;
+        dto.destinationChannel = targetChannel;
 
         JoinChannelListener onlineSetListener = new KickCommandListenerImpl(dto);
         onlineSetListener.setChatMessage(chatMessage);

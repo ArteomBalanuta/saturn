@@ -2,10 +2,10 @@ package org.saturn.app.command.impl.user;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
-import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 import java.util.ArrayList;

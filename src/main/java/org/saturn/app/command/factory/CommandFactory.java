@@ -7,9 +7,9 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import lombok.extern.slf4j.Slf4j;
+import org.saturn.app.command.UserCommand;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.command.UserCommand;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.Util;
 
@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class CommandFactory {
@@ -82,7 +81,7 @@ public class CommandFactory {
             List<String[]> collect = parameterValues.stream()
                     .filter(s -> "aliases".equals(s.getName()))
                     .map(v -> (String[]) v.getValue())
-                    .collect(Collectors.toList());
+                    .toList();
 
             String[] aliases = collect.get(0);
             aliasesMappedByClassInfo.put(routeClassInfo, aliases);

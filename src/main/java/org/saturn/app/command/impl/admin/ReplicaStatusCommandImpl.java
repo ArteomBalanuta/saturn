@@ -1,10 +1,9 @@
 package org.saturn.app.command.impl.admin;
+
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
-import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
@@ -47,9 +46,7 @@ public class ReplicaStatusCommandImpl extends UserCommandBaseImpl {
         String header = "Host room:" + engine.channel + ", replicas active: " + engine.replicasMappedByChannel.size() + " \\n";
         StringBuilder b = new StringBuilder();
 
-        engine.replicasMappedByChannel.forEach((k,v) -> {
-            b.append(k).append(", ");
-        });
+        engine.replicasMappedByChannel.forEach((k,v) -> b.append(k).append(", "));
 
         String servingChannels = "Serving channels: " + StringUtils.removeEnd(b.toString(), ", ");
         outService.enqueueMessageForSending(author, header + servingChannels, isWhisper());

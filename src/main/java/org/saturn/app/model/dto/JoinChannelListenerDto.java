@@ -3,13 +3,15 @@ package org.saturn.app.model.dto;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
+
+// TODO: replace with record.
 public class JoinChannelListenerDto {
     public EngineImpl mainEngine;
     public EngineImpl slaveEngine;
     public String author;
     public String channel;
     public String target;
-    public String destinationRoom;
+    public String destinationChannel;
 
     public ChatMessage chatMessage;
 

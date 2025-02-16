@@ -3,22 +3,13 @@ package org.saturn;
 
 import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.configuration2.FileBasedConfiguration;
-import org.apache.commons.configuration2.PropertiesConfiguration;
-import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
-import org.apache.commons.configuration2.builder.fluent.Parameters;
-import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.service.DataBaseService;
 import org.saturn.app.service.impl.DataBaseServiceImpl;
 
 import java.io.File;
-import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.Executors.newScheduledThreadPool;
@@ -27,7 +18,7 @@ import static java.util.concurrent.Executors.newScheduledThreadPool;
 public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
     private final DataBaseService dbService;
-    private Toml config;
+    private final Toml config;
     private EngineImpl host;
     private boolean autoReconnectEnabled;
 

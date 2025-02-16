@@ -14,7 +14,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.dto.User;
-import org.saturn.app.service.impl.WeatherServiceImpl;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,8 +38,8 @@ public class Util {
         return gson.fromJson(listingElement, String.class);
     }
 
-    public static List setToList(Set set) {
-        return new ArrayList(set);
+    public static List<String> setToList(Set<String> set) {
+        return new ArrayList<>(set);
     }
 
     public static List<String> toLower(List<String> l) {
@@ -201,8 +200,7 @@ public class Util {
 
     public static String listToCommaString(List<String> stringList) {
         String replace = stringList.toString().replace("[", "");
-        String replace1 = replace.replace("]", "");
-        return replace1;
+        return replace.replace("]", "");
     }
 
     public static void sleep(int value, TimeUnit timeUnit) {

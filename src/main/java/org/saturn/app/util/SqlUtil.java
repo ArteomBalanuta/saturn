@@ -10,11 +10,12 @@ public final class SqlUtil {
     public static final String INSERT_INTO_MESSAGES_TRIP_NAME_HASH_MESSAGE_CREATED_ON_VALUES = "INSERT INTO messages ('trip', 'name', 'hash', 'message', 'created_on', 'channel') VALUES (?, ?, ?, ?, ?, ?);";
     public static final String INSERT_INTO_MAIL_OWNER_RECEIVER_MESSAGE_STATUS_IS_WHISPER_CREATED_ON_VALUES = "INSERT INTO mail ('owner','receiver','message','status','is_whisper', 'created_on') VALUES (?, ?, ?, ?, ?, ?);";
 
-    public static final String GET_TRIP_BY_NICK_REGISTERED = "SELECT t.trip \n" +
-            "FROM trip_names tn \n" +
-            "INNER JOIN names n on tn.name_id  = n.id \n" +
-            "INNER JOIN trips t on tn.trip_id = t.id \n" +
-            "WHERE LOWER(name) = ?;";
+    public static final String GET_TRIP_BY_NICK_REGISTERED = """
+            SELECT t.trip\s
+            FROM trip_names tn\s
+            INNER JOIN names n on tn.name_id  = n.id\s
+            INNER JOIN trips t on tn.trip_id = t.id\s
+            WHERE LOWER(name) = ?;""";
     public static final String SELECT_MAIL_BY_NICK_OR_TRIP = "SELECT id, owner, receiver, message, status, is_whisper, created_on FROM mail WHERE receiver LIKE ? AND status = 'PENDING';";
     public static final String UPDATE_MAIL_SET_STATUS_DELIVERED_WHERE_RECEIVER = "UPDATE mail SET status='DELIVERED' WHERE id = ?";
     public static final String INSERT_INTO_BANNED_USERS_TRIP_NAME_HASH_REASON_CREATED_ON_VALUES = "INSERT INTO banned_users(trip,name,hash,reason,created_on) VALUES (?,?,?,?,?);";

@@ -1,8 +1,8 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.model.Role;
 import org.saturn.app.command.UserCommand;
+import org.saturn.app.model.Role;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.AuthorizationService;
 import org.saturn.app.util.DateUtil;
@@ -42,7 +42,7 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
     }
 
     @Override
-    public boolean grant(String trip, Role role) {
+    public void grant(String trip, Role role) {
         if (getRoleByTrip(trip).isPresent()) {
             int updatedRows = update(trip, role);
             if (updatedRows == 1) {
@@ -52,7 +52,6 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
             insert(trip, role);
             log.warn("Granted Role: {}, to trip: {}", role.name(), trip);
         }
-        return false;
     }
 
     private boolean isAllowedByApplicationConfig(UserCommand userCommand, ChatMessage chatMessage) {
