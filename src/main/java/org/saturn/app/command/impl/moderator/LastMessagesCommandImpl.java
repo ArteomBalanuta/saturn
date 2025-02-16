@@ -2,6 +2,7 @@ package org.saturn.app.command.impl.moderator;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -76,7 +77,7 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
 
         List<Message> messages = engine.userService.lastMessages(null, trip, numberOfMessages);
         String payload = formatLastMessages(messages);
-        engine.outService.enqueueMessageForSending(author, payload, isWhisper());
+        engine.outService.enqueueMessageForSending(author, StringEscapeUtils.escapeJava(payload), isWhisper());
 
         log.info("Executed [lastmessages] command by user: {}, target: {}", author, trip);
         return Optional.of(Status.SUCCESSFUL);
@@ -92,7 +93,7 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
                 msg = message.getMessage();
             }
             String body = message.getAuthor() + "#" + message.getTrip() + ": " + msg;
-            lastMessages.append("\\n").append(body).append("\\n");
+            lastMessages.append("\n").append(body).append("\n");
         });
 
         return lastMessages.toString();
