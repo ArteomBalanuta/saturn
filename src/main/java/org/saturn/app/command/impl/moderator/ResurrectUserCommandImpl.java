@@ -1,5 +1,6 @@
 package org.saturn.app.command.impl.moderator;
 
+import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -84,7 +85,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
             replica.outService.enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", target, to));
             replica.shareMessages();
         } else {
-            Configuration main = super.engine.getConfig();
+            Toml main = super.engine.getConfig();
             EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD);
             resurrect(from, target, to, slaveEngine);
         }

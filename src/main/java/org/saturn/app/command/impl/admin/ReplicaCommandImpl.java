@@ -1,5 +1,6 @@
 package org.saturn.app.command.impl.admin;
 
+import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.saturn.app.command.UserCommandBaseImpl;
@@ -68,7 +69,7 @@ public class ReplicaCommandImpl extends UserCommandBaseImpl {
     }
 
     public static void registerReplica(EngineImpl engine, ChatMessage chatMessage, String author, String channel) {
-        Configuration main = engine.getConfig();
+        Toml main = engine.getConfig();
         EngineImpl replica = new EngineImpl(engine.getDbConnection(), main, EngineType.REPLICA);
         replica.setChannel(channel);
         replica.setNick(engine.nick.concat("Replica"));

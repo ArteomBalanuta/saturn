@@ -1,5 +1,6 @@
 package org.saturn.app.command.impl.user;
 
+import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.configuration2.Configuration;
@@ -83,7 +84,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
     }
 
     public void joinChannel(String author, String channel) {
-        Configuration main = super.engine.getConfig();
+        Toml main = super.engine.getConfig();
         EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD); // no db connection, nor config for this one is needed
         setupEngine(channel, slaveEngine);
 

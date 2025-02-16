@@ -34,7 +34,7 @@ Build the project, Jar file `saturn.jar` will be generated in `target/` director
 mvn clean package
 ```
 
-### 3. Adjust the application.properties configuration
+### 3. Adjust the configuration file - config.toml
 
 Example:
 `wsUrl=wss://hack.chat/chat-ws` Chat's WebSocket address.
