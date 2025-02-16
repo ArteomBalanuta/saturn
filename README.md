@@ -3,13 +3,16 @@
 `Saturn` is a Moderator Bot made for `Hack.Chat` (_https://github.com/hack-chat_ ) project. 
 
 ## Getting started
+Clone the project and step into the `saturn/` directory before proceeding.
 
-You may clone the project and step into the `saturn/` directory before proceeding.
-
-Make sure JDK 23 or above is installed.
 ```bash
 git clone https://github.com/ArteomBalanuta/saturn.git
 cd saturn
+```
+
+Make sure JDK 23 or above is installed.
+```bash
+java --version
 ```
 
 ### 1. Creating and setting up the database
@@ -19,45 +22,48 @@ Before proceeding make sure `sqlite3` is installed and available in your termina
 ```
 Check `database.db` is created in `database/` directory.
 
-Adjust `application.properties` configuration file in root directory, set the flag:
+Adjust `config.toml` configuration file in root directory, set the flag:
 
-`dbPath=database/database.db`
+`dbPath = "database/database.db"`
 
-### 2. Compiling the application
-Make sure `maven` is set up and is discovered:
+### 2. Building the application
+Linux:
 ```bash
-mvn -version
+ ./mvnw package
 ```
 
-Build the project, Jar file `saturn.jar` will be generated in `target/` directory:
-```bash
-mvn clean package
+Windows:
+```commandline
+mvnw.cmd package
 ```
+
+After build is complete Jar file `saturn.jar` will be generated in `target/` directory:
 
 ### 3. Adjust the configuration file - config.toml
 
 Example:
-`wsUrl=wss://hack.chat/chat-ws` Chat's WebSocket address.
 
-`cmdPrefix=-` Command prefix used to trigger the bot.
+`dbPath = "database/database.db"` Path do database file. Relative/absolute path can be used.
 
-`channel=programming` Channel used by the bot.
+`wsUrl = "wss://hack.chat/chat-ws"` Chat's WebSocket address.
 
-`nick=alpha` Bot's nick.
+`cmdPrefix = "*"` Command prefix used to trigger the bot.
 
-`trip=ab13` Bot's password - it is used by the server to generate the trip.
+`channel = "programming"` Channel used by the bot.
 
-`adminTrips=g0KY09,8Wotmg` Trip codes that are granted ADMIN role, full access.
+`nick = "alphaBot"` Bot's nick.
 
-`dbPath=database/database.db` Path do database file. Relative/absolute path can be used.
+`trip = "secret13"` Bot's password is used by the server to generate the trip.
 
-`autoReconnect=false` Setting responsible for auto reconnect feature. Bot will try reconnect within 15 seconds after connection were closed.
+`userTrips = ""`    List of trips that are granted access to run basic commands.
 
+`adminTrips = "g0KY09"` Trip codes that are granted ADMIN role, full access.
 
-![example](./readme/configuration_example.png)
+`autoReconnect = false` Enable/disable reconnect feature.
 
+`healthCheckIntervalMs = 300000 ` Setting the health check interval in milliseconds.
 
-### 4. Run the application:
+### 4. Run the bot:
 
 ```bash
 java -Dlog4j.configurationFile=./log4j2.xml -jar target/saturn.jar
@@ -65,11 +71,11 @@ java -Dlog4j.configurationFile=./log4j2.xml -jar target/saturn.jar
 
 ### Notes
 
-`Fat/Uber` JAR is generated: `/target/saturn.jar`. 
+`Fat/Uber` JAR is generated at: `/target/saturn.jar`. 
 
-Feel free to move/deploy the application along with: 
+Feel free to move/deploy the application along with next required files: 
 
-`database.db, application.properties, log4j2.xml` files.
+`database.db, config.toml, log4j2.xml`
 
 
 
