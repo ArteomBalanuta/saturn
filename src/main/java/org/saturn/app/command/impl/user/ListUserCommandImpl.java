@@ -2,18 +2,14 @@ package org.saturn.app.command.impl.user;
 
 import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.ListUtils;
-import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.JoinChannelListener;
 import org.saturn.app.listener.impl.ListCommandListenerImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
-import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -22,7 +18,6 @@ import org.saturn.app.service.impl.OutService;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -102,15 +97,5 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
         unique.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getNick()).append("\\n"));
 
         outService.enqueueMessageForSending(author, "\\nUsers online: \\n" + output + "\\n", isWhisper);
-    }
-
-    public void setupEngine(String channel, EngineImpl listBot) {
-        listBot.setChannel(channel);
-        int length = 8;
-        boolean useLetters = true;
-        boolean useNumbers = true;
-        String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
-        listBot.setNick(generatedNick);
-        listBot.setPassword(engine.password);
     }
 }

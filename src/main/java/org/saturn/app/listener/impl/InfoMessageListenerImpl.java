@@ -1,10 +1,9 @@
 package org.saturn.app.listener.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
-import org.saturn.app.command.UserCommand;
-import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.model.dto.Afk;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -63,7 +62,7 @@ public class InfoMessageListenerImpl implements Listener {
         chatMessage.setWhisper(true);
         UserCommandBaseImpl userCommandBase = new UserCommandBaseImpl(chatMessage, engine, List.of());
 
-        ((UserCommand) userCommandBase).execute();
+        userCommandBase.execute();
     }
 
     private void processRename(InfoMessage message) {

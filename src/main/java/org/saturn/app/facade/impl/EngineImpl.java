@@ -2,9 +2,9 @@ package org.saturn.app.facade.impl;
 
 import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.ThreadContext;
+import org.saturn.app.command.annotation.CommandAliases;
+import org.saturn.app.command.factory.CommandFactory;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.facade.EngineType;
@@ -16,16 +16,13 @@ import org.saturn.app.listener.impl.OnlineSetListenerImpl;
 import org.saturn.app.listener.impl.UserJoinedListenerImpl;
 import org.saturn.app.listener.impl.UserLeftListenerImpl;
 import org.saturn.app.listener.impl.UserMessageListenerImpl;
-import org.saturn.app.command.annotation.CommandAliases;
-import org.saturn.app.command.factory.CommandFactory;
 import org.saturn.app.model.dto.Afk;
-import org.saturn.app.model.dto.BanDto;
+import org.saturn.app.model.dto.BanRecord;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.util.DateUtil;
 
-import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -43,7 +40,6 @@ import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.DateUtil.getDifference;
 import static org.saturn.app.util.DateUtil.toZoneDateTimeUTC;
 import static org.saturn.app.util.Util.extractCmdFromJson;
-import static org.saturn.app.util.Util.getAuthor;
 
 @Slf4j
 public class EngineImpl extends Base implements Engine {
@@ -189,21 +185,11 @@ public class EngineImpl extends Base implements Engine {
             switch (cmd) {
                 case "join" -> {
                 }
-                case "onlineSet" -> {
-                    onlineSetListener.notify(jsonText);
-                }
-                case "onlineAdd" -> {
-                    userJoinedListener.notify(jsonText);
-                }
-                case "onlineRemove" -> {
-                    userLeftListener.notify(jsonText);
-                }
-                case "chat" -> {
-                    chatMessageListener.notify(jsonText);
-                }
-                case "info" -> {
-                    infoMessageListener.notify(jsonText);
-                }
+                case "onlineSet" -> onlineSetListener.notify(jsonText);
+                case "onlineAdd" -> userJoinedListener.notify(jsonText);
+                case "onlineRemove" -> userLeftListener.notify(jsonText);
+                case "chat" -> chatMessageListener.notify(jsonText);
+                case "info" -> infoMessageListener.notify(jsonText);
                 default -> log.warn("Non functional payload: {}", jsonText);
             }
         } catch (Exception e) {
@@ -220,7 +206,7 @@ public class EngineImpl extends Base implements Engine {
     public void shareUserInfo(User user) {
         String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
         for (String subTrip : subscribers) {
-            List<User> tripUsers = currentChannelUsers.stream().filter(u -> u.getTrip().equalsIgnoreCase(subTrip)).collect(Collectors.toList());
+            List<User> tripUsers = currentChannelUsers.stream().filter(u -> u.getTrip().equalsIgnoreCase(subTrip)).toList();
             tripUsers.forEach(u -> {
                 log.warn("Sharing hash, nick lists with subscriber: {}, trip: {} ", u.getNick(), u.getTrip());
                 outService.enqueueMessageForSending(u.getNick(), " -\\n\\n" + joinedUserData, true);
@@ -229,7 +215,7 @@ public class EngineImpl extends Base implements Engine {
     }
 
     public void kickIfShadowBanned(User user) {
-        Optional<BanDto> bannedUser = modService.isShadowBanned(user);
+        Optional<BanRecord> bannedUser = modService.isShadowBanned(user);
         if (bannedUser.isPresent()) {
             log.info("Channel: {}, user is banned: {}", user.getChannel(), bannedUser.get());
             modService.kick(user.getNick());

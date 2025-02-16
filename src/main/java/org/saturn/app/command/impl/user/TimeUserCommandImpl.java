@@ -7,9 +7,6 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.TimeResponse;
-import org.saturn.app.model.dto.Afk;
-import org.saturn.app.model.dto.User;
-import org.saturn.app.model.dto.Weather;
 import org.saturn.app.model.dto.WeatherTime;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.Util;
@@ -21,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.saturn.app.model.dto.Weather.getTime;
 import static org.saturn.app.util.DateUtil.formatRfc1123;
@@ -30,7 +26,6 @@ import static org.saturn.app.util.Util.extractCoordinates;
 import static org.saturn.app.util.Util.extractCountryName;
 import static org.saturn.app.util.Util.getResponseByURL;
 import static org.saturn.app.util.Util.gson;
-import static org.saturn.app.util.Util.listToString;
 
 @Slf4j
 @CommandAliases(aliases = {"time", "t"})

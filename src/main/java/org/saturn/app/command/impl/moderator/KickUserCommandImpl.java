@@ -1,17 +1,12 @@
 package org.saturn.app.command.impl.moderator;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.listener.JoinChannelListener;
-import org.saturn.app.listener.impl.KickCommandListenerImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
-import org.saturn.app.command.annotation.CommandAliases;
-import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
@@ -51,7 +46,7 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
     @Override
     public Optional<Status> execute() {
         List<String> arguments = getArguments();
-        arguments = arguments.stream().map(arg -> arg.replace("@", "")).collect(Collectors.toList());
+        arguments = arguments.stream().map(arg -> arg.replace("@", "")).toList();
 
         String author = chatMessage.getNick();
         if (arguments.isEmpty() && resurrectLastKicked(this.engine.channel)) {

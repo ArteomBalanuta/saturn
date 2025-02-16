@@ -2,8 +2,6 @@ package org.saturn.app.service;
 
 import org.saturn.app.model.dto.Message;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 public interface UserService {

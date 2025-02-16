@@ -115,8 +115,8 @@ public class SQLServiceImpl extends OutService implements SQLService {
                 Optional.ofNullable(resultSet.getString(2)).ifPresent(s_nick -> nicks.add(escapeJson(s_nick)));
             }
             
-            List formattedHashes = addSeparator(setToList(hashes), ',');
-            List formattedNicks = addSeparator(setToList(nicks), ',');
+            List<String> formattedHashes = addSeparator(setToList(hashes), ',');
+            List<String> formattedNicks = addSeparator(setToList(nicks), ',');
             
             result.append("Hashes: \\n");
             formattedHashes.forEach(result::append);

@@ -17,56 +17,55 @@ import static org.saturn.app.util.Util.getAdminTrips;
 @Slf4j
 @CommandAliases(aliases = {"active"})
 public class ActivityCommandImpl extends UserCommandBaseImpl {
-    public static final String SQL_STATS_PER_HOUR_OF_WEEK = "\n" +
-            "\n" +
-            "-- Count messages for each trip, grouped by day of the week and hour\n" +
-            "WITH MessagesPerTrip AS (\n" +
-            "    SELECT\n" +
-            "        trip,\n" +
-            "        strftime('%w', created_on / 1000, 'unixepoch') AS day_number, -- Day of the week (0 = Sunday, 6 = Saturday)\n" +
-            "        strftime('%H', created_on / 1000, 'unixepoch') AS hour, -- Hour of the day\n" +
-            "        COUNT(*) AS message_count\n" +
-            "    FROM messages\n" +
-            "    GROUP BY trip, day_number, hour\n" +
-            "),\n" +
-            "\n" +
-            "-- Count total messages across all trips\n" +
-            "TotalMessages AS (\n" +
-            "    SELECT\n" +
-            "        trip,\n" +
-            "        COUNT(*) AS total_message_count\n" +
-            "    FROM messages\n" +
-            "    GROUP BY trip\n" +
-            "),\n" +
-            "\n" +
-            "-- Calculate the probability of each trip being active on each day and hour\n" +
-            "Probability AS (\n" +
-            "    SELECT\n" +
-            "        m.trip,\n" +
-            "        m.day_number,\n" +
-            "        m.hour,\n" +
-            "        (m.message_count * 1.0 / t.total_message_count) * 100 AS probability_percentage,\n" +
-            "        CASE m.day_number\n" +
-            "            WHEN '0' THEN 'Sunday'\n" +
-            "            WHEN '1' THEN 'Monday'\n" +
-            "            WHEN '2' THEN 'Tuesday'\n" +
-            "            WHEN '3' THEN 'Wednesday'\n" +
-            "            WHEN '4' THEN 'Thursday'\n" +
-            "            WHEN '5' THEN 'Friday'\n" +
-            "            WHEN '6' THEN 'Saturday'\n" +
-            "        END AS day_full\n" +
-            "    FROM MessagesPerTrip m\n" +
-            "    JOIN TotalMessages t ON m.trip = t.trip\n" +
-            ")\n" +
-            "\n" +
-            "-- Final result, with normalized percentages\n" +
-            "SELECT\n" +
-            "    trip,\n" +
-            "    day_full AS day_of_week,\n" +
-            "    hour,\n" +
-            "    probability_percentage\n" +
-            "FROM Probability where LOWER(trip) == LOWER('?') \n" +
-            "ORDER BY trip, day_number, hour;";
+    public static final String SQL_STATS_PER_HOUR_OF_WEEK = """
+            -- Count messages for each trip, grouped by day of the week and hour
+            WITH MessagesPerTrip AS (
+                SELECT
+                    trip,
+                    strftime('%w', created_on / 1000, 'unixepoch') AS day_number, -- Day of the week (0 = Sunday, 6 = Saturday)
+                    strftime('%H', created_on / 1000, 'unixepoch') AS hour, -- Hour of the day
+                    COUNT(*) AS message_count
+                FROM messages
+                GROUP BY trip, day_number, hour
+            ),
+            
+            -- Count total messages across all trips
+            TotalMessages AS (
+                SELECT
+                    trip,
+                    COUNT(*) AS total_message_count
+                FROM messages
+                GROUP BY trip
+            ),
+            
+            -- Calculate the probability of each trip being active on each day and hour
+            Probability AS (
+                SELECT
+                    m.trip,
+                    m.day_number,
+                    m.hour,
+                    (m.message_count * 1.0 / t.total_message_count) * 100 AS probability_percentage,
+                    CASE m.day_number
+                        WHEN '0' THEN 'Sunday'
+                        WHEN '1' THEN 'Monday'
+                        WHEN '2' THEN 'Tuesday'
+                        WHEN '3' THEN 'Wednesday'
+                        WHEN '4' THEN 'Thursday'
+                        WHEN '5' THEN 'Friday'
+                        WHEN '6' THEN 'Saturday'
+                    END AS day_full
+                FROM MessagesPerTrip m
+                JOIN TotalMessages t ON m.trip = t.trip
+            )
+            
+            -- Final result, with normalized percentages
+            SELECT
+                trip,
+                day_full AS day_of_week,
+                hour,
+                probability_percentage
+            FROM Probability where LOWER(trip) == LOWER('?')\s
+            ORDER BY trip, day_number, hour;""";
     private final List<String> aliases = new ArrayList<>();
 
     public ActivityCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
@@ -100,7 +99,7 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
             return Optional.of(Status.FAILED);
         }
 
-        String target = arguments.get(0);
+        String target = arguments.getFirst();
         String s = engine.sqlService.executeFormatted(SQL_STATS_PER_HOUR_OF_WEEK.replace("?", target.trim().replace("'","").replace("\"","")));
         engine.outService.enqueueMessageForSending(author,"Stats: \\n" + s, isWhisper());
         log.info("Executed [active] command by user: {}, trip: {}, target: {}", author, chatMessage.getTrip(), target);

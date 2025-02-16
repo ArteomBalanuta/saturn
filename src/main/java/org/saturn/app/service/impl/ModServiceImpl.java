@@ -1,7 +1,7 @@
 package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.model.dto.BanDto;
+import org.saturn.app.model.dto.BanRecord;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.ModService;
@@ -37,32 +37,32 @@ public class ModServiceImpl extends OutService implements ModService {
     }
 
     @Override
-    public void shadowBan(BanDto banDto) {
+    public void shadowBan(BanRecord banDto) {
         try {
             PreparedStatement statement = connection
                     .prepareStatement(SqlUtil.INSERT_INTO_BANNED_USERS_TRIP_NAME_HASH_REASON_CREATED_ON_VALUES);
 
-            if (banDto.getTrip() != null) {
-                statement.setString(1, banDto.getTrip());
+            if (banDto.trip() != null) {
+                statement.setString(1, banDto.trip());
             } else {
                 statement.setNull(1, Types.VARCHAR);
             }
 
-            if (banDto.getName() != null) {
-                statement.setString(2, banDto.getName());
+            if (banDto.name() != null) {
+                statement.setString(2, banDto.name());
             } else {
                 statement.setNull(2, Types.VARCHAR);
             }
 
-            if (banDto.getHash() != null) {
-                String hashedHash = encoder.encodeToString(banDto.getHash().getBytes(StandardCharsets.UTF_8));
+            if (banDto.hash() != null) {
+                String hashedHash = encoder.encodeToString(banDto.hash().getBytes(StandardCharsets.UTF_8));
                 statement.setString(3, hashedHash);
             } else {
                 statement.setNull(3, Types.VARCHAR);
             }
 
-            if (banDto.getReason() != null) {
-                statement.setString(4, banDto.getReason());
+            if (banDto.reason() != null) {
+                statement.setString(4, banDto.reason());
             } else {
                 statement.setNull(4, Types.VARCHAR);
             }
@@ -136,8 +136,8 @@ public class ModServiceImpl extends OutService implements ModService {
         }
     }
 
-    public List<BanDto> getBannedUsers() {
-        List<BanDto> banned = new ArrayList<>();
+    public List<BanRecord> getBannedUsers() {
+        List<BanRecord> banned = new ArrayList<>();
         try {
             PreparedStatement statement = connection.prepareStatement(
                     SqlUtil.SELECT_BANNED_USERS);
@@ -151,7 +151,7 @@ public class ModServiceImpl extends OutService implements ModService {
                     hash = new String(decodedBytes, StandardCharsets.UTF_8);
                 }
 
-                BanDto banDto = new BanDto(
+                BanRecord banDto = new BanRecord(
                         resultSet.getString("trip"),
                         resultSet.getString("name"),
                         hash,
@@ -173,10 +173,10 @@ public class ModServiceImpl extends OutService implements ModService {
     @Override
     public void listBanned(ChatMessage chatMessage) {
         String author = chatMessage.getNick();
-        List<BanDto> bannedIds = this.getBannedUsers();
+        List<BanRecord> bannedIds = this.getBannedUsers();
 
         StringBuilder output = new StringBuilder();
-        bannedIds.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getName()).append("\\n"));
+        bannedIds.forEach(user -> output.append(user.hash()).append(" - ").append(user.trip() == null || Objects.equals(user.trip(), "") ? "------" : user.trip()).append(" - ").append(user.name()).append("\\n"));
 
         if (bannedIds.isEmpty()) {
             enqueueMessageForSending(author, "No users has been banned.", chatMessage.isWhisper());
@@ -187,12 +187,12 @@ public class ModServiceImpl extends OutService implements ModService {
 
     @Override
     public void unbanAll(String author) {
-        List<BanDto> bannedIds = this.getBannedUsers();
+        List<BanRecord> bannedIds = this.getBannedUsers();
         if (bannedIds.isEmpty()) {
             enqueueMessageForSending(author, "No users has been banned.", false);
         } else {
             StringBuilder output = new StringBuilder();
-            bannedIds.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getName()).append("\\n"));
+            bannedIds.forEach(user -> output.append(user.hash()).append(" - ").append(user.trip() == null || Objects.equals(user.trip(), "") ? "------" : user.trip()).append(" - ").append(user.name()).append("\\n"));
 
             try {
                 PreparedStatement notesByTrip = connection.prepareStatement(SqlUtil.DELETE_FROM_BANNED_USERS);
@@ -223,25 +223,25 @@ public class ModServiceImpl extends OutService implements ModService {
     }
 
     @Override
-    public Optional<BanDto> isShadowBanned(User target) {
-        Optional<BanDto> bannedUser = Optional.empty();
+    public Optional<BanRecord> isShadowBanned(User target) {
+        Optional<BanRecord> bannedUser = Optional.empty();
         if (target == null) {
             return bannedUser;
         }
-        List<BanDto> bannedIds = getBannedUsers();
-        for (BanDto banned : bannedIds) {
-            if (target.getTrip() != null && banned.getTrip() != null && target.getTrip().equals(banned.getTrip())) {
+        List<BanRecord> bannedIds = getBannedUsers();
+        for (BanRecord banned : bannedIds) {
+            if (target.getTrip() != null && banned.trip() != null && target.getTrip().equals(banned.trip())) {
                 bannedUser = Optional.of(banned);
-                log.warn("User's trip is banned: {}", banned.getTrip());
+                log.warn("User's trip is banned: {}", banned.trip());
             }
-            if (target.getNick() != null && banned.getName() != null && target.getNick().equals(banned.getName())) {
+            if (target.getNick() != null && banned.name() != null && target.getNick().equals(banned.name())) {
                 bannedUser = Optional.of(banned);
-                log.warn("User's nick is banned: {}", banned.getName());
+                log.warn("User's nick is banned: {}", banned.name());
             }
 
-            if (target.getHash() != null && banned.getHash() != null && target.getHash().equals(banned.getHash())) {
+            if (target.getHash() != null && banned.hash() != null && target.getHash().equals(banned.hash())) {
                 bannedUser = Optional.of(banned);
-                log.warn("User's hash is banned: {}", banned.getHash());
+                log.warn("User's hash is banned: {}", banned.hash());
             }
         }
 

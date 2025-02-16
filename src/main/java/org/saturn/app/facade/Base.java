@@ -2,7 +2,6 @@ package org.saturn.app.facade;
 
 import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.configuration2.Configuration;
 import org.apache.logging.log4j.ThreadContext;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.AuthorizationService;

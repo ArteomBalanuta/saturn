@@ -1,7 +1,6 @@
 package org.saturn.app.facade.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ThreadUtils;
 import org.apache.logging.log4j.ThreadContext;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -33,24 +32,24 @@ public class Connection {
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 if (engine.engineType.equals(EngineType.REPLICA)) {
-                    log.warn("HC Connection threadId: {}", Thread.currentThread().getId());
+                    log.warn("HC Connection threadId: {}", Thread.currentThread().threadId());
                     if (ThreadContext.get("instanceType") != null) {
-                        log.warn("instanceType is not null for REPLICA: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
+                        log.warn("instanceType is not null for REPLICA: {}, threadId: {}", engine.channel, Thread.currentThread().threadId());
                     } else {
                         ThreadContext.put("instanceType", "REPLICA:" + engine.channel);
-                        log.warn("set instanceType for REPLICA: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
+                        log.warn("set instanceType for REPLICA: {}, threadId: {}", engine.channel, Thread.currentThread().threadId());
                     }
                 } else {
                     if (ThreadContext.get("instanceType") != null) {
-                        log.warn("instanceType is not null for HOST: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
+                        log.warn("instanceType is not null for HOST: {}, threadId: {}", engine.channel, Thread.currentThread().threadId());
                     } else {
                         ThreadContext.put("instanceType", "HOST:" + engine.channel);
-                        log.warn("set instanceType for HOST: {}, threadId: {}", engine.channel, Thread.currentThread().getId());
+                        log.warn("set instanceType for HOST: {}, threadId: {}", engine.channel, Thread.currentThread().threadId());
                     }
                 }
 
                 client.sendPing();
-                log.debug("Handshake Status: " + serverHandshake.getHttpStatus());
+                log.debug("Handshake Status: {}", serverHandshake.getHttpStatus());
                 listeners.stream().filter(listener -> "connectionListener".equals(listener.getListenerName()))
                         .forEach(listener -> listener.notify("connected"));
             }
@@ -63,7 +62,7 @@ public class Connection {
 
             @Override
             public void onClose(int i, String s, boolean b) {
-                log.warn("Server closed the connection: " + i + " " + s);
+                log.warn("Server closed the connection: {} {}", i, s);
             }
             
             @Override

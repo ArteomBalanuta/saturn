@@ -3,7 +3,7 @@ package org.saturn.app.util;
 import java.util.List;
 
 public class SeparatorFormatter {
-    public static List addSeparator(List list, char separator) {
+    public static List<String> addSeparator(List<String> list, char separator) {
         int size = list.size();
         if (size == 1 || list.isEmpty()) {
             return list;
@@ -26,7 +26,7 @@ public class SeparatorFormatter {
         return list;
     }
     
-    public static Object getFirst(List list) {
+    public static Object getFirst(List<String> list) {
         for (Object element : list) {
             if (element != null) {
                 return element;
@@ -35,7 +35,7 @@ public class SeparatorFormatter {
         return null;
     }
     
-    public static Object getLast(List list) {
+    public static Object getLast(List<String> list) {
         Object value = null;
         int index = list.size() - 1;
         for (; index != 0; index--) {

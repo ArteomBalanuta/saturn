@@ -1,6 +1,6 @@
 package org.saturn.app.service;
 
-import org.saturn.app.model.dto.BanDto;
+import org.saturn.app.model.dto.BanRecord;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
@@ -13,7 +13,7 @@ public interface ModService {
     void kickTo(String target, String channel);
 
     void overflow(String target);
-    void shadowBan(BanDto banDto);
+    void shadowBan(BanRecord banDto);
     void ban(String target);
     void unban(String target);
     void lock();
@@ -28,5 +28,5 @@ public interface ModService {
     void unshadowBan(String target);
     void listBanned(ChatMessage chatMessage);
     void unbanAll(String author);
-    Optional<BanDto> isShadowBanned(User user);
+    Optional<BanRecord> isShadowBanned(User user);
 }

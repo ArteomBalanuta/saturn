@@ -2,8 +2,8 @@ package org.saturn.app.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.WmoWeatherInterpCodes;
-import org.saturn.app.model.dto.WeatherTime;
 import org.saturn.app.model.dto.Weather;
+import org.saturn.app.model.dto.WeatherTime;
 import org.saturn.app.service.WeatherService;
 import org.saturn.app.util.Util;
 
@@ -65,7 +65,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
                         "&end_date=%s"
                 , lat, lng, curr_date, curr_date);
 
-        log.debug("Getting: " + weatherApi);
+        log.debug("Getting: {}", weatherApi);
 
         String response = Util.getResponseByURL(weatherApi);
 

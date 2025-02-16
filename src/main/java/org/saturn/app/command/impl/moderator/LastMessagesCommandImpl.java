@@ -1,26 +1,19 @@
 package org.saturn.app.command.impl.moderator;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.Message;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.util.DateUtil;
 
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
-import static org.saturn.app.util.DateUtil.getDifference;
-import static org.saturn.app.util.DateUtil.toZoneDateTimeUTC;
 import static org.saturn.app.util.Util.getAdminTrips;
 
 @Slf4j
@@ -87,12 +80,12 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
         messages.forEach(message -> {
             String msg = null;
             /* We print first N characters of the message */
-            if (message.getMessage().length() > 200) {
-                msg = getFrontCharacters(message.getMessage(), 200);
+            if (message.message().length() > 200) {
+                msg = getFrontCharacters(message.message(), 200);
             } else {
-                msg = message.getMessage();
+                msg = message.message();
             }
-            String body = message.getAuthor() + "#" + message.getTrip() + ": " + msg;
+            String body = message.author() + "#" + message.trip() + ": " + msg;
             lastMessages.append("\n").append(body).append("\n");
         });
 

@@ -1,10 +1,10 @@
 package org.saturn.app.listener.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.listener.Listener;
 import org.saturn.app.command.UserCommand;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
@@ -34,9 +34,7 @@ public class UserMessageListenerImpl implements Listener {
         ChatMessage message = gson.fromJson(jsonText, ChatMessage.class);
 
         Optional<User> first = engine.currentChannelUsers.stream().filter(u -> u.getNick().equals(message.getNick())).findFirst();
-        first.ifPresentOrElse(user -> {
-            message.setHash(user.getHash());
-        }, ()-> {
+        first.ifPresentOrElse(user -> message.setHash(user.getHash()), ()-> {
             log.warn("Hash for user: {}, not present ", message.getNick());
             log.warn("Active users: {}", engine.currentChannelUsers.stream().map(User::getNick).toList());
         });
