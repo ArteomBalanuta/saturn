@@ -19,6 +19,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 
 @Slf4j
@@ -175,14 +176,12 @@ public class ModServiceImpl extends OutService implements ModService {
         List<BanDto> bannedIds = this.getBannedUsers();
 
         StringBuilder output = new StringBuilder();
-        bannedIds.forEach(user -> {
-            output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getName()).append("\\n");
-        });
+        bannedIds.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getName()).append("\\n"));
 
         if (bannedIds.isEmpty()) {
-            enqueueMessageForSending(author,"No users has been banned.", chatMessage.isWhisper());
+            enqueueMessageForSending(author, "No users has been banned.", chatMessage.isWhisper());
         } else {
-            enqueueMessageForSending(author,"Banned hashes, trips, names: \\n" + output, chatMessage.isWhisper());
+            enqueueMessageForSending(author, "Banned hashes, trips, names: \\n" + output, chatMessage.isWhisper());
         }
     }
 
@@ -224,23 +223,28 @@ public class ModServiceImpl extends OutService implements ModService {
     }
 
     @Override
-    public boolean isBanned(User target) {
+    public Optional<BanDto> isShadowBanned(User target) {
+        Optional<BanDto> bannedUser = Optional.empty();
         if (target == null) {
-            return false;
+            return bannedUser;
         }
-
         List<BanDto> bannedIds = getBannedUsers();
-
         for (BanDto banned : bannedIds) {
-            boolean isTripPresent = target.getTrip() != null && banned.getTrip() != null;
-            if (isTripPresent && target.getTrip().equals(banned.getTrip())) {
-                return true;
+            if (target.getTrip() != null && banned.getTrip() != null && target.getTrip().equals(banned.getTrip())) {
+                bannedUser = Optional.of(banned);
+                log.warn("User's trip is banned: {}", banned.getTrip());
             }
-            if (target.getNick().equals(banned.getName()) || target.getHash().equals(banned.getHash())) {
-                return true;
+            if (target.getNick() != null && banned.getName() != null && target.getNick().equals(banned.getName())) {
+                bannedUser = Optional.of(banned);
+                log.warn("User's nick is banned: {}", banned.getName());
+            }
+
+            if (target.getHash() != null && banned.getHash() != null && target.getHash().equals(banned.getHash())) {
+                bannedUser = Optional.of(banned);
+                log.warn("User's hash is banned: {}", banned.getHash());
             }
         }
 
-        return false;
+        return bannedUser;
     }
 }

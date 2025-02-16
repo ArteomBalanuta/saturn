@@ -4,6 +4,8 @@ import org.saturn.app.model.dto.BanDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
+import java.util.Optional;
+
 
 public interface ModService {
     void kick(String target);
@@ -26,5 +28,5 @@ public interface ModService {
     void unshadowBan(String target);
     void listBanned(ChatMessage chatMessage);
     void unbanAll(String author);
-    boolean isBanned(User user);
+    Optional<BanDto> isShadowBanned(User user);
 }
