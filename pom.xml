@@ -13,8 +13,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>23</maven.compiler.source>
+        <maven.compiler.target>23</maven.compiler.target>
 
         <commons-configuration2.version>2.10.1</commons-configuration2.version>
         <commons-beanutils.version>1.9.4</commons-beanutils.version>
@@ -22,10 +22,12 @@
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <sqlite-jdbc.version>3.41.2.2</sqlite-jdbc.version>
         <log4j-api.version>2.23.1</log4j-api.version>
-        <lombok.version>1.18.34</lombok.version>
+        <lombok.version>1.18.36</lombok.version>
         <Java-WebSocket.version>1.5.3</Java-WebSocket.version>
         <classgraph.version>4.8.157</classgraph.version>
-        <mockito-junit-jupiter.version>5.12.0</mockito-junit-jupiter.version>
+        <mockito-junit-jupiter.version>5.15.2</mockito-junit-jupiter.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven.compiler.proc>full</maven.compiler.proc>
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <httpclient.version>4.5.14</httpclient.version>
@@ -158,6 +160,15 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
