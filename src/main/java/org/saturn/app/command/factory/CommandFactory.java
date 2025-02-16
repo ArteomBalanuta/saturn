@@ -54,7 +54,8 @@ public class CommandFactory {
 
         ClassInfo info = first.get().getKey();
         try {
-            Class<?> cl = Class.forName(info.getName());
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            Class<?> cl = classLoader.loadClass(info.getName());
             Constructor<?> declaredConstructor = cl.getDeclaredConstructors()[0];
 
             log.debug("Using implementation class, aliases: {}, [{}]",  info.getName(), aliases.get());
