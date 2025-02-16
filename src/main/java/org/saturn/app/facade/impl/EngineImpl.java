@@ -18,6 +18,7 @@ import org.saturn.app.listener.impl.UserMessageListenerImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.command.factory.CommandFactory;
 import org.saturn.app.model.dto.Afk;
+import org.saturn.app.model.dto.BanDto;
 import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.User;
@@ -226,10 +227,10 @@ public class EngineImpl extends Base implements Engine {
         }
     }
 
-    public void proceedShadowBanned(User user) {
-        boolean isBanned = modService.isBanned(user);
-        if (isBanned) {
-            log.info("User is banned: {}", user.getNick());
+    public void kickIfShadowBanned(User user) {
+        Optional<BanDto> bannedUser = modService.isShadowBanned(user);
+        if (bannedUser.isPresent()) {
+            log.info("Channel: {}, user is banned: {}", user.getChannel(), bannedUser.get());
             modService.kick(user.getNick());
             log.warn("User: {} has been kicked", user.getNick());
         }

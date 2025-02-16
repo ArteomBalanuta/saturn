@@ -39,11 +39,11 @@ public class UserJoinedListenerImpl implements Listener {
         JsonElement element = JsonParser.parseString(jsonText);
         JsonObject object = element.getAsJsonObject();
         User user = gson.fromJson(object, User.class);
-        log.info("Joined user, nick: {}, trip: {}, hash: {}, channel: {}", user.getNick(), user.getTrip(), user.getHash(), user.getChannel());
+        log.info("User joined - nick: {}, trip: {}, hash: {}, channel: {}", user.getNick(), user.getTrip(), user.getHash(), user.getChannel());
 
         engine.addActiveUser(user);
         engine.shareUserInfo(user);
-        engine.proceedShadowBanned(user);
+        engine.kickIfShadowBanned(user);
         /* AutoMoveCommand has been triggered */
         if (AutoMoveUserCommandImpl.isAutoMoveStatus() && engine.engineType.equals(EngineType.REPLICA) && SOURCE_CHANNELS.contains(engine.channel)) {
             log.warn("AutoMoveCommand feature flag is true");
