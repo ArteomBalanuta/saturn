@@ -87,8 +87,8 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
         messages.forEach(message -> {
             String msg = null;
             /* We print first N characters of the message */
-            if (message.getMessage().length() > 70) {
-                msg = getFrontCharacters(message.getMessage(), 70);
+            if (message.getMessage().length() > 200) {
+                msg = getFrontCharacters(message.getMessage(), 200);
             } else {
                 msg = message.getMessage();
             }
