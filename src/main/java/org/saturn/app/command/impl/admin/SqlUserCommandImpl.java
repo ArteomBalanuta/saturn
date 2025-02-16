@@ -42,10 +42,8 @@ public class SqlUserCommandImpl extends UserCommandBaseImpl {
     public Optional<Status> execute() {
         String cmd = chatMessage.getText();
         String result = engine.sqlService.executeSql(cmd, true);
-        if (result.contains("SQLITE_ERROR")) {
-            result = StringEscapeUtils.escapeJava(result);
-        }
-        engine.outService.enqueueMessageForSending(chatMessage.getNick(),  "Result: \\n" + result, isWhisper());
+
+        engine.outService.enqueueMessageForSending(chatMessage.getNick(),  StringEscapeUtils.escapeJava("Result: \n" + result.replace("\\n","\n")), isWhisper());
         return Optional.of(Status.SUCCESSFUL);
     }
 }
