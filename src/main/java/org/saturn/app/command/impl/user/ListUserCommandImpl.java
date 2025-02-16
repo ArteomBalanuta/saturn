@@ -1,6 +1,14 @@
 package org.saturn.app.command.impl.user;
 
+import static org.saturn.app.util.Util.getWhiteListedTrips;
+
 import com.moandjiezana.toml.Toml;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
@@ -15,87 +23,95 @@ import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.impl.OutService;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-
-import static org.saturn.app.util.Util.getWhiteListedTrips;
-
 @Slf4j
 @CommandAliases(aliases = {"list", "l"})
 public class ListUserCommandImpl extends UserCommandBaseImpl {
 
-    private final OutService outService;
+  private final OutService outService;
 
-    private final List<String> aliases = new ArrayList<>();
+  private final List<String> aliases = new ArrayList<>();
 
-    public ListUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-        super(message, engine, getWhiteListedTrips(engine));
-        super.setAliases(this.getAliases());
-        this.outService = super.engine.outService;
-        this.aliases.addAll(aliases);
+  public ListUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+    super(message, engine, getWhiteListedTrips(engine));
+    super.setAliases(this.getAliases());
+    this.outService = super.engine.outService;
+    this.aliases.addAll(aliases);
+  }
+
+  @Override
+  public List<String> getAliases() {
+    return this.aliases;
+  }
+
+  @Override
+  public List<String> getArguments() {
+    return super.getArguments();
+  }
+
+  @Override
+  public Role getAuthorizedRole() {
+    return Role.REGULAR;
+  }
+
+  @Override
+  public Optional<Status> execute() {
+    String author = super.chatMessage.getNick();
+
+    List<String> arguments = this.getArguments();
+    if (arguments.isEmpty()) {
+      printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
+      outService.enqueueMessageForSending(
+          author, "Example: " + engine.prefix + "list programming", isWhisper());
+      return Optional.of(Status.FAILED);
     }
 
-    @Override
-    public List<String> getAliases() {
-        return this.aliases;
+    String channel = arguments.get(0).trim();
+    if (channel.isBlank() || channel.equals(engine.channel)) {
+      /* parse nicks from current channel */
+      printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
+    } else {
+      /* ListCommandListenerImpl will make sure to close the connection */
+      joinChannel(author, channel);
     }
 
-    @Override
-    public List<String> getArguments() {
-        return super.getArguments();
-    }
+    log.info("Executed [list] command by user: {}, channel: {}", author, channel);
+    return Optional.of(Status.SUCCESSFUL);
+  }
 
-    @Override
-    public Role getAuthorizedRole() {
-        return Role.REGULAR;
-    }
+  public void joinChannel(String author, String channel) {
+    Toml main = super.engine.getConfig();
+    EngineImpl slaveEngine =
+        new EngineImpl(
+            null, main, EngineType.LIST_CMD); // no db connection, nor config for this one is needed
+    setupEngine(channel, slaveEngine);
 
-    @Override
-    public Optional<Status> execute() {
-        String author = super.chatMessage.getNick();
+    JoinChannelListener onlineSetListener =
+        new ListCommandListenerImpl(
+            new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
+    onlineSetListener.setChatMessage(chatMessage);
 
-        List<String> arguments = this.getArguments();
-        if (arguments.isEmpty()) {
-            printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
-            outService.enqueueMessageForSending(author, "Example: " + engine.prefix + "list programming", isWhisper());
-            return Optional.of(Status.FAILED);
-        }
+    slaveEngine.setOnlineSetListener(onlineSetListener);
 
-        String channel = arguments.get(0).trim();
-        if (channel.isBlank() || channel.equals(engine.channel)) {
-            /* parse nicks from current channel */
-            printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
-        } else {
-            /* ListCommandListenerImpl will make sure to close the connection */
-            joinChannel(author, channel);
-        }
+    slaveEngine.start();
+  }
 
-        log.info("Executed [list] command by user: {}, channel: {}", author, channel);
-        return Optional.of(Status.SUCCESSFUL);
-    }
+  public void printUsers(
+      String author, List<User> users, OutService outService, boolean isWhisper) {
+    Set<User> unique = new HashSet<>(users);
+    StringBuilder output = new StringBuilder();
+    unique.forEach(
+        user ->
+            output
+                .append(user.getHash())
+                .append(" - ")
+                .append(
+                    user.getTrip() == null || Objects.equals(user.getTrip(), "")
+                        ? "------"
+                        : user.getTrip())
+                .append(" - ")
+                .append(user.getNick())
+                .append("\\n"));
 
-    public void joinChannel(String author, String channel) {
-        Toml main = super.engine.getConfig();
-        EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD); // no db connection, nor config for this one is needed
-        setupEngine(channel, slaveEngine);
-
-        JoinChannelListener onlineSetListener = new ListCommandListenerImpl(new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
-        onlineSetListener.setChatMessage(chatMessage);
-
-        slaveEngine.setOnlineSetListener(onlineSetListener);
-
-        slaveEngine.start();
-    }
-
-    public void printUsers(String author, List<User> users, OutService outService, boolean isWhisper) {
-        Set<User> unique = new HashSet<>(users);
-        StringBuilder output = new StringBuilder();
-        unique.forEach(user -> output.append(user.getHash()).append(" - ").append(user.getTrip() == null || Objects.equals(user.getTrip(), "") ? "------" : user.getTrip()).append(" - ").append(user.getNick()).append("\\n"));
-
-        outService.enqueueMessageForSending(author, "\\nUsers online: \\n" + output + "\\n", isWhisper);
-    }
+    outService.enqueueMessageForSending(author, "\\nUsers online: \\n" + output + "\\n", isWhisper);
+  }
 }

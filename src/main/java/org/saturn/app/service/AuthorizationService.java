@@ -5,6 +5,7 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 public interface AuthorizationService {
-    boolean isUserAuthorized(UserCommand userCommand, ChatMessage chatMessage);
-    void grant(String trip, Role role);
+  boolean isUserAuthorized(UserCommand userCommand, ChatMessage chatMessage);
+
+  void grant(String trip, Role role);
 }

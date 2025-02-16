@@ -1,5 +1,8 @@
 package org.saturn.app.command.impl.user;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
@@ -7,10 +10,6 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 /*
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⢠⣄⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -50,8 +49,9 @@ import java.util.Optional;
 @CommandAliases(aliases = {"ape", "harambe"})
 public class ApeUserCommandImpl extends UserCommandBaseImpl {
 
-    private static  final String ape = """
-            
+  private static final String ape =
+      """
+
             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⢠⣄⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣟⠻⣉⠈⢧⣂⣝⣳⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡾⠁⣹⡯⠉⢀⡸⠿⠋⠉⠛⠻⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -84,35 +84,35 @@ public class ApeUserCommandImpl extends UserCommandBaseImpl {
             ⠸⢷⣿⡯⠵⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⡄⠀⠀⠀⠀⠾⠟⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⠀⠀⠀
             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⡇⢾⣿⢼⣷⣳⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
             ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠓⠚⠙⠛⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀""";
-    private final List<String> aliases = new ArrayList<>();
+  private final List<String> aliases = new ArrayList<>();
 
-    public ApeUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-        super(message, engine, List.of("x"));
-        super.setAliases(this.getAliases());
-        this.aliases.addAll(aliases);
-    }
+  public ApeUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+    super(message, engine, List.of("x"));
+    super.setAliases(this.getAliases());
+    this.aliases.addAll(aliases);
+  }
 
-    @Override
-    public List<String> getAliases() {
-        return this.aliases;
-    }
+  @Override
+  public List<String> getAliases() {
+    return this.aliases;
+  }
 
-    @Override
-    public List<String> getArguments() {
-        return super.getArguments();
-    }
+  @Override
+  public List<String> getArguments() {
+    return super.getArguments();
+  }
 
-    @Override
-    public Role getAuthorizedRole() {
-        return Role.REGULAR;
-    }
+  @Override
+  public Role getAuthorizedRole() {
+    return Role.REGULAR;
+  }
 
-    @Override
-    public Optional<Status> execute() {
-        String author = chatMessage.getNick();
-        engine.outService.enqueueMessageForSending(author," " + ape.replace("\n","\\n"), isWhisper());
-        log.info("Executed [harambe] command by user: {}", author);
+  @Override
+  public Optional<Status> execute() {
+    String author = chatMessage.getNick();
+    engine.outService.enqueueMessageForSending(author, " " + ape.replace("\n", "\\n"), isWhisper());
+    log.info("Executed [harambe] command by user: {}", author);
 
-        return Optional.of(Status.SUCCESSFUL);
-    }
+    return Optional.of(Status.SUCCESSFUL);
+  }
 }
