@@ -1,5 +1,6 @@
 package org.saturn.app.facade.impl;
 
+import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.StringUtils;
@@ -65,7 +66,7 @@ public class EngineImpl extends Base implements Engine {
         this.onlineSetListener = listener;
     }
 
-    public EngineImpl(Connection dbConnection, Configuration config, EngineType engineType) {
+    public EngineImpl(Connection dbConnection, Toml config, EngineType engineType) {
         super(dbConnection, config, engineType);
         if (super.proxies != null) {
             if (!super.proxies.isEmpty() || !super.proxies.isBlank()) {

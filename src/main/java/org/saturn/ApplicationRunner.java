@@ -1,6 +1,7 @@
 package org.saturn;
 
 
+import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.FileBasedConfiguration;
@@ -13,6 +14,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.service.DataBaseService;
 import org.saturn.app.service.impl.DataBaseServiceImpl;
 
+import java.io.File;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,19 +27,18 @@ import static java.util.concurrent.Executors.newScheduledThreadPool;
 public class ApplicationRunner {
     private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
     private final DataBaseService dbService;
-    private Configuration config;
+    private Toml config;
     private EngineImpl host;
     private boolean autoReconnectEnabled;
 
     public ApplicationRunner() {
-        Parameters params = new Parameters();
-        FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(PropertiesConfiguration.class)
-                .configure(params.properties()
-                        .setFileName("application.properties"));
+        // Load TOML file using toml4j
+        File tomlFile = new File("config.toml");
+        this.config = new Toml().read(tomlFile);
+
         try {
-            this.config = builder.getConfiguration();
-            this.autoReconnectEnabled = Objects.equals(this.config.getString("autoReconnect"), "true");
-        } catch (ConfigurationException e) {
+            this.autoReconnectEnabled = config.getBoolean("autoReconnect");
+        } catch (Exception e) {
             System.exit(1);
         }
 

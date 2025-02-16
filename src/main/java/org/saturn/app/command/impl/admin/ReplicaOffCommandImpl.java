@@ -1,5 +1,6 @@
 package org.saturn.app.command.impl.admin;
 
+import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.saturn.app.command.UserCommandBaseImpl;
@@ -69,20 +70,5 @@ public class ReplicaOffCommandImpl extends UserCommandBaseImpl {
 
         log.info("Executed [replicaoff] command by user: {}, channel: {}", author, channel);
         return Optional.of(Status.SUCCESSFUL);
-    }
-
-    public void registerChannel(String author, String channel) {
-        Configuration main = engine.getConfig();
-        EngineImpl replica = new EngineImpl(engine.getDbConnection(), main, EngineType.REPLICA);
-        replica.setChannel(channel);
-        replica.setNick(engine.nick.concat("Replica"));
-        replica.setPassword(engine.password);
-
-        /* register replica */
-        engine.addReplica(replica);
-
-        replica.start();
-
-        engine.outService.enqueueMessageForSending(author, "started replica in channel: " + channel + " successfully. Number of agents: " + engine.replicasMappedByChannel.size(), chatMessage.isWhisper());
     }
 }

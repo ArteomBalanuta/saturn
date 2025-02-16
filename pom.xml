@@ -31,6 +31,7 @@
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <httpclient.version>4.5.14</httpclient.version>
+        <toml.version>0.7.3</toml.version>
     </properties>
 
     <dependencies>
@@ -105,6 +106,11 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
             <version>${maven-shade-plugin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.hotmoka</groupId>
+            <artifactId>toml4j</artifactId>
+            <version>${toml.version}</version>
         </dependency>
     </dependencies>
 

@@ -1,0 +1,10 @@
+cmdPrefix = "*"
+channel = "programming"
+nick = "alpha"
+trip = ""
+userTrips = ""
+adminTrips = "g0KY09"
+proxies = ""
+dbPath = "database/database.db"
+autoReconnect = false
+wsUrl = "wss://hack.chat/chat-ws"

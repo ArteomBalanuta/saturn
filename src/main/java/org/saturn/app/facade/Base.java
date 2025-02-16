@@ -1,5 +1,6 @@
 package org.saturn.app.facade;
 
+import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.logging.log4j.ThreadContext;
@@ -65,9 +66,9 @@ public abstract class Base {
     public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
     public final BlockingQueue<String> outgoingRawMessageQueue = new ArrayBlockingQueue<>(256);
     public final CopyOnWriteArrayList<User> currentChannelUsers = new CopyOnWriteArrayList<>();
-    public Configuration config;
+    public Toml config;
 
-    public Base(Connection connection, Configuration config, EngineType engineType) {
+    public Base(Connection connection, Toml config, EngineType engineType) {
         this.dbConnection = connection;
         this.outService = new OutService(outgoingMessageQueue, outgoingRawMessageQueue);
         this.scpService = new SCPServiceImpl(outgoingMessageQueue);
@@ -119,19 +120,19 @@ public abstract class Base {
         }
 
         if (engineType.equals(EngineType.REPLICA)) {
-            log.warn("Base threadId: {}", Thread.currentThread().getId());
+            log.warn("Base threadId: {}", Thread.currentThread().threadId());
             if (ThreadContext.get("instanceType") != null) {
-                log.warn("instanceType is not null for REPLICA: {}, threadId: {}", channel, Thread.currentThread().getId());
+                log.warn("instanceType is not null for REPLICA: {}, threadId: {}", channel, Thread.currentThread().threadId());
             } else {
                 ThreadContext.put("instanceType", "REPLICA:" + channel);
-                log.warn("set instanceType for REPLICA: {}, threadId: {}", channel, Thread.currentThread().getId());
+                log.warn("set instanceType for REPLICA: {}, threadId: {}", channel, Thread.currentThread().threadId());
             }
         } else {
             if (ThreadContext.get("instanceType") != null) {
-                log.warn("instanceType is not null for HOST: {}, threadId: {}", channel, Thread.currentThread().getId());
+                log.warn("instanceType is not null for HOST: {}, threadId: {}", channel, Thread.currentThread().threadId());
             } else {
                 ThreadContext.put("instanceType", "HOST:" + channel);
-                log.warn("set instanceType for HOST: {}, threadId: {}", channel, Thread.currentThread().getId());
+                log.warn("set instanceType for HOST: {}, threadId: {}", channel, Thread.currentThread().threadId());
             }
         }
 
@@ -150,7 +151,7 @@ public abstract class Base {
         this.password = password;
     }
 
-    public Configuration getConfig() {
+    public Toml getConfig() {
         return config;
     }
 
