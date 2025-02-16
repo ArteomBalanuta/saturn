@@ -28,4 +28,14 @@ public class BanDto {
     public String getReason() {
         return reason;
     }
+
+    @Override
+    public String toString() {
+        return "BanDto{" +
+                "trip='" + trip + '\'' +
+                ", name='" + name + '\'' +
+                ", hash='" + hash + '\'' +
+                ", reason='" + reason + '\'' +
+                '}';
+    }
 }
