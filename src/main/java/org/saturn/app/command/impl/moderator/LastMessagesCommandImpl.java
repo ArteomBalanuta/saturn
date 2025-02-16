@@ -1,6 +1,7 @@
 package org.saturn.app.command.impl.moderator;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -68,9 +69,9 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
             return Optional.of(Status.FAILED);
         }
 
-        if (numberOfMessages > 9) {
-            engine.outService.enqueueMessageForSending(author,"Retrieving at max 9 messages! ", isWhisper());
-            numberOfMessages = 9;
+        if (numberOfMessages > 30) {
+            engine.outService.enqueueMessageForSending(author,"Retrieving at max 30 messages! ", isWhisper());
+            numberOfMessages = 30;
         }
 
         List<Message> messages = engine.userService.lastMessages(null, trip, numberOfMessages);
@@ -83,10 +84,27 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
     private String formatLastMessages(List<Message> messages) {
         StringBuilder lastMessages = new StringBuilder();
         messages.forEach(message -> {
-            String body = message.getAuthor() + "#" + message.getTrip() + ": " + message.getMessage();
+            String msg = null;
+            /* We print first N characters of the message */
+            if (message.getMessage().length() > 70) {
+                msg = getFrontCharacters(message.getMessage(), 70);
+            } else {
+                msg = message.getMessage();
+            }
+            String body = message.getAuthor() + "#" + message.getTrip() + ": " + msg;
             lastMessages.append("\\n").append(body).append("\\n");
         });
 
         return lastMessages.toString();
+    }
+
+    protected static String getFrontCharacters(String message, int length) {
+        StringBuilder cut = new StringBuilder();
+        for (int i=0; i < length; i++) {
+            cut.append(message.charAt(i));
+        }
+
+        cut.append("...");
+        return cut.toString();
     }
 }
