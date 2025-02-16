@@ -24,7 +24,7 @@
         <log4j-api.version>2.23.1</log4j-api.version>
         <lombok.version>1.18.36</lombok.version>
         <Java-WebSocket.version>1.5.3</Java-WebSocket.version>
-        <classgraph.version>4.8.157</classgraph.version>
+        <classgraph.version>4.8.179</classgraph.version>
         <mockito-junit-jupiter.version>5.15.2</mockito-junit-jupiter.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven.compiler.proc>full</maven.compiler.proc>
