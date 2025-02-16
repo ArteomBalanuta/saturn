@@ -6,7 +6,7 @@
 
 You may clone the project and step into the `saturn/` directory before proceeding.
 
-Make sure Java 17 or above is installed.
+Make sure JDK 23 or above is installed.
 ```bash
 git clone https://github.com/ArteomBalanuta/saturn.git
 cd saturn
@@ -45,11 +45,11 @@ Example:
 
 `nick=alpha` Bot's nick.
 
-`trip=ab13` Bot's trip.
+`trip=ab13` Bot's password - it is used by the server to generate the trip.
 
 `adminTrips=g0KY09,8Wotmg` Trip codes that are granted ADMIN role, full access.
 
-`dbPath=database/database.db` Path do databse file. Relative/absolute path can be used.
+`dbPath=database/database.db` Path do database file. Relative/absolute path can be used.
 
 `autoReconnect=false` Setting responsible for auto reconnect feature. Bot will try reconnect within 15 seconds after connection were closed.
 
