@@ -1,5 +1,6 @@
 package org.saturn.app.facade.impl;
 
+import com.moandjiezana.toml.Toml;
 import org.apache.commons.configuration2.Configuration;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.facade.EngineType;
@@ -13,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 class EngineImplTest {
-    private final EngineImpl engine = new EngineImpl(mock(Connection.class), mock(Configuration.class), EngineType.HOST);
+    private final EngineImpl engine = new EngineImpl(mock(Connection.class), mock(Toml.class), EngineType.HOST);
     @Test
     public void isUserMentioned() {
         User user = new User("lab", false, "merc", "8Wotmg", "", "", 9999, 1, false);
