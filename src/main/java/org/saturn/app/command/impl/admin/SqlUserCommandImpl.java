@@ -1,5 +1,10 @@
 package org.saturn.app.command.impl.admin;
 
+import static org.saturn.app.util.Util.getAdminTrips;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
@@ -8,42 +13,41 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static org.saturn.app.util.Util.getAdminTrips;
-
 @CommandAliases(aliases = {"sql"})
 public class SqlUserCommandImpl extends UserCommandBaseImpl {
 
-    private final List<String> aliases = new ArrayList<>();
+  private final List<String> aliases = new ArrayList<>();
 
-    public SqlUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-        super(message, engine, getAdminTrips(engine));
-        super.setAliases(this.getAliases());
-        this.aliases.addAll(aliases);
-    }
+  public SqlUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+    super(message, engine, getAdminTrips(engine));
+    super.setAliases(this.getAliases());
+    this.aliases.addAll(aliases);
+  }
 
-    @Override
-    public List<String> getAliases() {
-        return this.aliases;
-    }
-    @Override
-    public List<String> getArguments() {
-        return super.getArguments();
-    }
-    @Override
-    public Role getAuthorizedRole() {
-        return Role.ADMIN;
-    }
+  @Override
+  public List<String> getAliases() {
+    return this.aliases;
+  }
 
-    @Override
-    public Optional<Status> execute() {
-        String cmd = chatMessage.getText();
-        String result = engine.sqlService.executeSql(cmd, true);
+  @Override
+  public List<String> getArguments() {
+    return super.getArguments();
+  }
 
-        engine.outService.enqueueMessageForSending(chatMessage.getNick(),  StringEscapeUtils.escapeJava("Result: \n" + result.replace("\\n","\n")), isWhisper());
-        return Optional.of(Status.SUCCESSFUL);
-    }
+  @Override
+  public Role getAuthorizedRole() {
+    return Role.ADMIN;
+  }
+
+  @Override
+  public Optional<Status> execute() {
+    String cmd = chatMessage.getText();
+    String result = engine.sqlService.executeSql(cmd, true);
+
+    engine.outService.enqueueMessageForSending(
+        chatMessage.getNick(),
+        StringEscapeUtils.escapeJava("Result: \n" + result.replace("\\n", "\n")),
+        isWhisper());
+    return Optional.of(Status.SUCCESSFUL);
+  }
 }

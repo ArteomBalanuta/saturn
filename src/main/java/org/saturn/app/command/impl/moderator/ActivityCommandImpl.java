@@ -1,5 +1,10 @@
 package org.saturn.app.command.impl.moderator;
 
+import static org.saturn.app.util.Util.getAdminTrips;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
@@ -8,16 +13,11 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static org.saturn.app.util.Util.getAdminTrips;
-
 @Slf4j
 @CommandAliases(aliases = {"active"})
 public class ActivityCommandImpl extends UserCommandBaseImpl {
-    public static final String SQL_STATS_PER_HOUR_OF_WEEK = """
+  public static final String SQL_STATS_PER_HOUR_OF_WEEK =
+      """
             -- Count messages for each trip, grouped by day of the week and hour
             WITH MessagesPerTrip AS (
                 SELECT
@@ -28,7 +28,7 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                 FROM messages
                 GROUP BY trip, day_number, hour
             ),
-            
+
             -- Count total messages across all trips
             TotalMessages AS (
                 SELECT
@@ -37,7 +37,7 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                 FROM messages
                 GROUP BY trip
             ),
-            
+
             -- Calculate the probability of each trip being active on each day and hour
             Probability AS (
                 SELECT
@@ -57,7 +57,7 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                 FROM MessagesPerTrip m
                 JOIN TotalMessages t ON m.trip = t.trip
             )
-            
+
             -- Final result, with normalized percentages
             SELECT
                 trip,
@@ -66,43 +66,51 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                 probability_percentage
             FROM Probability where LOWER(trip) == LOWER('?')\s
             ORDER BY trip, day_number, hour;""";
-    private final List<String> aliases = new ArrayList<>();
+  private final List<String> aliases = new ArrayList<>();
 
-    public ActivityCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-        super(message, engine, getAdminTrips(engine));
-        super.setAliases(this.getAliases());
-        this.aliases.addAll(aliases);
+  public ActivityCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+    super(message, engine, getAdminTrips(engine));
+    super.setAliases(this.getAliases());
+    this.aliases.addAll(aliases);
+  }
+
+  @Override
+  public List<String> getAliases() {
+    return this.aliases;
+  }
+
+  @Override
+  public List<String> getArguments() {
+    return super.getArguments();
+  }
+
+  @Override
+  public Role getAuthorizedRole() {
+    return Role.MODERATOR;
+  }
+
+  @Override
+  public Optional<Status> execute() {
+    List<String> arguments = getArguments();
+    String author = chatMessage.getNick();
+    if (arguments.isEmpty()) {
+      log.info("Executed [active] command by user: {}, no target set", author);
+      engine.outService.enqueueMessageForSending(
+          author, "Example: " + engine.prefix + "online 8Wotmg", isWhisper());
+      return Optional.of(Status.FAILED);
     }
 
-    @Override
-    public List<String> getAliases() {
-        return this.aliases;
-    }
-
-    @Override
-    public List<String> getArguments() {
-        return super.getArguments();
-    }
-
-    @Override
-    public Role getAuthorizedRole() {
-        return Role.MODERATOR;
-    }
-
-    @Override
-    public Optional<Status> execute() {
-        List<String> arguments = getArguments();
-        String author = chatMessage.getNick();
-        if (arguments.isEmpty()) {
-            log.info("Executed [active] command by user: {}, no target set", author);
-            engine.outService.enqueueMessageForSending(author,"Example: " + engine.prefix + "online 8Wotmg", isWhisper());
-            return Optional.of(Status.FAILED);
-        }
-
-        String target = arguments.getFirst();
-        String s = engine.sqlService.executeFormatted(SQL_STATS_PER_HOUR_OF_WEEK.replace("?", target.trim().replace("'","").replace("\"","")));
-        engine.outService.enqueueMessageForSending(author,"Stats: \\n" + s, isWhisper());
-        log.info("Executed [active] command by user: {}, trip: {}, target: {}", author, chatMessage.getTrip(), target);
-        return Optional.of(Status.SUCCESSFUL);
-    }
+    String target = arguments.getFirst();
+    String s =
+        engine.sqlService.executeFormatted(
+            SQL_STATS_PER_HOUR_OF_WEEK.replace(
+                "?", target.trim().replace("'", "").replace("\"", "")));
+    engine.outService.enqueueMessageForSending(author, "Stats: \\n" + s, isWhisper());
+    log.info(
+        "Executed [active] command by user: {}, trip: {}, target: {}",
+        author,
+        chatMessage.getTrip(),
+        target);
+    return Optional.of(Status.SUCCESSFUL);
+  }
 }
