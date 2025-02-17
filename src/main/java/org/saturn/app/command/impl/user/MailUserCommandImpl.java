@@ -14,22 +14,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @Slf4j
 @CommandAliases(aliases = {"mail", "msg", "send"})
 public class MailUserCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public MailUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-    super(message, engine, List.of("x")); /* everyone */
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super(message, engine, List.of("x")); /* using '*' is more natural than 'x', refactor later */
+    super.setAliases(aliases);
   }
 
   @Override

@@ -23,23 +23,10 @@ import org.saturn.app.service.impl.OutService;
 @CommandAliases(aliases = {"msgchannel", "msgroom"})
 public class MsgChannelCommandImpl extends UserCommandBaseImpl {
   private final OutService outService;
-  private final List<String> aliases = new ArrayList<>();
-
   public MsgChannelCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getWhiteListedTrips(engine));
-    super.setAliases(this.getAliases());
+    super.setAliases(aliases);
     this.outService = super.engine.outService;
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
   }
 
   @Override
@@ -47,7 +34,6 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
     return Role.REGULAR;
   }
 
-  /* ![](https://share.lyka.pro/xxxxx.png) */
   @Override
   public Optional<Status> execute() {
     String author = super.chatMessage.getNick();
@@ -65,7 +51,7 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
       message.append(' ').append(arguments.get(i));
     }
 
-    String room = arguments.get(0).replace("?", "");
+    String room = arguments.getFirst().replace("?", "");
     log.info("Delivering Message: {}, Room: {}", message, room);
 
     if (room.equals(engine.channel)) {

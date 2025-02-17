@@ -21,22 +21,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @Slf4j
 @CommandAliases(aliases = {"afk", "a"})
 public class AfkUserCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public AfkUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, List.of("x"));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super.setAliases(aliases);
   }
 
   @Override
@@ -46,8 +33,8 @@ public class AfkUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    String author = chatMessage.getNick();
-    String trip = chatMessage.getTrip();
+    final String author = chatMessage.getNick();
+    final String trip = chatMessage.getTrip();
     if (trip == null) {
       log.info("Executed [afk] command by user: {} - no trip provided", author);
       engine.outService.enqueueMessageForSending(

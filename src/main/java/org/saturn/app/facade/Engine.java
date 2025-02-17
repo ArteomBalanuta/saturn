@@ -7,24 +7,14 @@ import org.saturn.app.model.dto.User;
 
 public interface Engine {
   void start();
-
   void start(Proxy proxy);
-
   void stop();
-
   boolean isConnected();
-
   void setBaseWsUrl(String address);
-
   void setChannel(String channel);
-
   void setNick(String nick);
-
   void setPassword(String password);
-
   void setActiveUsers(List<User> users);
-
   void dispatchMessage(String json);
-
   void addReplica(EngineImpl engine);
 }
