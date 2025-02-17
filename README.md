@@ -63,6 +63,8 @@ Example:
 
 `healthCheckIntervalMs = 300000 ` Setting the health check interval in milliseconds.
 
+`autorunCommands = "/whisper alphaBot *replica lounge, /whisper alphaBot *say hello lads!"` Autorun commands to be executed on bot's startup.
+
 ### 4. Run the bot:
 
 ```bash
