@@ -70,7 +70,7 @@ public class EngineImpl extends Base implements Engine {
     }
 
     this.commandFactory =
-        new CommandFactory(this, "org.saturn.app.model.command.impl", CommandAliases.class);
+        new CommandFactory(this,  CommandAliases.class);
   }
 
   public void setHostRef(EngineImpl hostRef) {

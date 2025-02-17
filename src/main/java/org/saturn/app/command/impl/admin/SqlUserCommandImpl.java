@@ -15,28 +15,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 
 @CommandAliases(aliases = {"sql"})
 public class SqlUserCommandImpl extends UserCommandBaseImpl {
-
-  private final List<String> aliases = new ArrayList<>();
-
   public SqlUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
-  }
-
-  @Override
-  public Role getAuthorizedRole() {
-    return Role.ADMIN;
+    super.setAliases(aliases);
   }
 
   @Override

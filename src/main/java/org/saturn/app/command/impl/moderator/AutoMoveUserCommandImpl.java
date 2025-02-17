@@ -3,7 +3,6 @@ package org.saturn.app.command.impl.moderator;
 import static org.saturn.app.command.impl.admin.ReplicaCommandImpl.registerReplica;
 import static org.saturn.app.util.Util.getAdminTrips;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -27,29 +26,16 @@ public class AutoMoveUserCommandImpl extends UserCommandBaseImpl {
     return DESTINATION_CHANNEL;
   }
 
-  public static boolean isAutoMoveStatus() {
+  public static boolean isAutoMoveEnabled() {
     return AUTO_MOVE_STATUS;
   }
 
-  private final List<String> aliases = new ArrayList<>();
-
   public AutoMoveUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
+    super.setAliases(aliases);
 
     /* Default one */
     SOURCE_CHANNELS.add("purgatory");
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
   }
 
   @Override
@@ -59,8 +45,8 @@ public class AutoMoveUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    List<String> arguments = getArguments();
-    String author = chatMessage.getNick();
+    final List<String> arguments = getArguments();
+    final String author = chatMessage.getNick();
 
     if (arguments.isEmpty()) {
       engine.outService.enqueueMessageForSending(

@@ -24,13 +24,12 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
-/* TODO: implement logging separately too not flood the main logging output */
+/* TODO: implement logging separately too not flood the main logging output. P.S This class is horrible. */
 @CommandAliases(aliases = {"mine"})
 public class MineTripCommandImpl extends UserCommandBaseImpl {
   private static final ScheduledThreadPoolExecutor executorService =
       new ScheduledThreadPoolExecutor(32);
   private static final List<Future<?>> tasks = new ArrayList<>();
-  private final List<String> aliases = new ArrayList<>();
 
   private static final HashMap<String, Proxy> portMappedByIp = new HashMap<>();
 
@@ -39,29 +38,13 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
 
   public MineTripCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
+    super.setAliases(aliases);
 
     if (this.engine.proxies != null && !this.engine.proxies.isEmpty()) {
       this.engine.proxies.stream()
           .map(proxy -> new Proxy(false, proxy.split(":")[0], proxy.split(":")[1]))
           .forEach(p -> portMappedByIp.put(p.getIp(), p));
     }
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
-  }
-
-  @Override
-  public Role getAuthorizedRole() {
-    return Role.ADMIN;
   }
 
   @Override

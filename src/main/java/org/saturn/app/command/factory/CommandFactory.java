@@ -28,16 +28,13 @@ public class CommandFactory {
       new ClassGraph()
           .verbose(false)
           .disableNestedJarScanning()
-          .enableAllInfo() // Scan classes, methods, fields, annotations
-          .acceptPackages(
-              "org.saturn.app.command.impl") // Scan `pkg` and subpackages (omit to scan all
-          // packages)
+          .enableAllInfo()
+          .acceptPackages("org.saturn.app.command.impl")
           .scan();
   private final EngineImpl engine;
   private final Map<ClassInfo, String[]> aliasesMappedByClassInfo;
 
-  public CommandFactory(
-      EngineImpl engine, String commandImplPackage, Class<? extends Annotation> commandAnnotation) {
+  public CommandFactory(EngineImpl engine, Class<? extends Annotation> commandAnnotation) {
     this.engine = engine;
     this.aliasesMappedByClassInfo = getAliases(commandAnnotation);
   }
@@ -48,7 +45,7 @@ public class CommandFactory {
     Optional<Map.Entry<ClassInfo, String[]>> first =
         aliasesMappedByClassInfo.entrySet().stream()
             .peek(e -> aliases.set(Arrays.asList(e.getValue())))
-            .filter(e -> Util.checkAnagrams(cmd, Arrays.asList(e.getValue()))) // anagram check.
+            .filter(e -> Util.checkAnagrams(cmd, Arrays.asList(e.getValue())))
             .findFirst();
 
     if (first.isEmpty()) {
@@ -62,17 +59,11 @@ public class CommandFactory {
       Class<?> cl = classLoader.loadClass(info.getName());
       Constructor<?> declaredConstructor = cl.getDeclaredConstructors()[0];
 
-      log.debug("Using implementation class, aliases: {}, [{}]", info.getName(), aliases.get());
+      log.debug("Found implementation class, aliases: {}, [{}]", info.getName(), aliases.get());
       return Optional.of(
           (UserCommand) declaredConstructor.newInstance(this.engine, message, aliases.get()));
 
-    } catch (ClassNotFoundException ex) {
-      throw new RuntimeException(ex);
-    } catch (InvocationTargetException ex) {
-      throw new RuntimeException(ex);
-    } catch (InstantiationException ex) {
-      throw new RuntimeException(ex);
-    } catch (IllegalAccessException ex) {
+    } catch (ClassNotFoundException | InvocationTargetException | InstantiationException | IllegalAccessException ex) {
       throw new RuntimeException(ex);
     }
   }
@@ -91,13 +82,11 @@ public class CommandFactory {
                   .map(v -> (String[]) v.getValue())
                   .toList();
 
-          String[] aliases = collect.get(0);
+          String[] aliases = collect.getFirst();
           aliasesMappedByClassInfo.put(routeClassInfo, aliases);
 
           if (engine.engineType.equals(EngineType.HOST)) {
-            log.info(
-                routeClassInfo.getName() + " is annotated with aliases: {}",
-                Arrays.toString(aliases));
+            log.info("{} is annotated with aliases: {}", routeClassInfo.getName(), Arrays.toString(aliases));
           }
         });
 

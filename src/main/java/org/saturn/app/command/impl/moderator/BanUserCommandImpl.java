@@ -16,22 +16,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @Slf4j
 @CommandAliases(aliases = {"ban"})
 public class BanUserCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public BanUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super.setAliases(aliases);
   }
 
   @Override
@@ -41,9 +28,8 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    String author = chatMessage.getNick();
-
-    Optional<String> target = getArguments().stream().findFirst();
+    final String author = chatMessage.getNick();
+    final Optional<String> target = getArguments().stream().findFirst();
     if (target.isEmpty()) {
       log.info("Executed [ban] command by user: {}, no target set", author);
       engine.outService.enqueueMessageForSending(

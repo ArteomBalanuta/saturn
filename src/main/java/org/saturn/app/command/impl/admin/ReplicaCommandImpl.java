@@ -20,28 +20,11 @@ import org.saturn.app.service.impl.OutService;
 @CommandAliases(aliases = {"replica", "bot", "agent"})
 public class ReplicaCommandImpl extends UserCommandBaseImpl {
   private final OutService outService;
-  private final List<String> aliases = new ArrayList<>();
 
   public ReplicaCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getWhiteListedTrips(engine));
-    super.setAliases(this.getAliases());
+    super.setAliases(aliases);
     this.outService = super.engine.outService;
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
-  }
-
-  @Override
-  public Role getAuthorizedRole() {
-    return Role.ADMIN;
   }
 
   @Override
@@ -55,7 +38,7 @@ public class ReplicaCommandImpl extends UserCommandBaseImpl {
       return Optional.of(Status.FAILED);
     }
 
-    String channel = arguments.get(0).trim();
+    String channel = arguments.getFirst().trim();
     if (channel.isBlank() || channel.equals(engine.channel)) {
       outService.enqueueMessageForSending(
           author,
