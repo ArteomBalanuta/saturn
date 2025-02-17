@@ -18,22 +18,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @Slf4j
 @CommandAliases(aliases = {"messages", "lastmessages"})
 public class LastMessagesCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public LastMessagesCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super.setAliases(aliases);
   }
 
   @Override
@@ -42,8 +29,8 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
   }
 
   public Optional<Status> execute() {
-    String author = chatMessage.getNick();
-    Optional<String> authorTrip = Optional.ofNullable(chatMessage.getTrip());
+    final String author = chatMessage.getNick();
+    final Optional<String> authorTrip = Optional.ofNullable(chatMessage.getTrip());
 
     List<String> arguments = getArguments();
     if (arguments.size() < 2) {
@@ -91,7 +78,7 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
     StringBuilder lastMessages = new StringBuilder();
     messages.forEach(
         message -> {
-          String msg = null;
+          String msg;
           /* We print first N characters of the message */
           if (message.message().length() > 200) {
             msg = getFrontCharacters(message.message(), 200);

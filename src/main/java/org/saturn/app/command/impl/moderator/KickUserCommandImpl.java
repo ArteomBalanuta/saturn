@@ -19,22 +19,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @Slf4j
 @CommandAliases(aliases = {"kick", "k", "out"})
 public class KickUserCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public KickUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super.setAliases(aliases);
   }
 
   @Override
@@ -44,10 +31,10 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    List<String> arguments = getArguments();
-    arguments = arguments.stream().map(arg -> arg.replace("@", "")).toList();
+    final List<String> arguments =
+        getArguments().stream().map(arg -> arg.replace("@", "")).toList();
 
-    String author = chatMessage.getNick();
+    final String author = chatMessage.getNick();
     if (arguments.isEmpty() && resurrectLastKicked(this.engine.channel)) {
       EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
       resurrect(kickedTo, lastKicked, this.engine.channel, slaveEngine);
@@ -62,7 +49,7 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
       return Optional.of(Status.FAILED);
     }
 
-    String flag = arguments.get(0);
+    String flag = arguments.getFirst();
 
     List<String> activeUsers =
         engine.currentChannelUsers.stream().map(User::getNick).collect(Collectors.toList());

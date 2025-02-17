@@ -49,7 +49,7 @@ public class UserJoinedListenerImpl implements Listener {
     engine.shareUserInfo(user);
     engine.kickIfShadowBanned(user);
     /* AutoMoveCommand has been triggered */
-    if (AutoMoveUserCommandImpl.isAutoMoveStatus()
+    if (AutoMoveUserCommandImpl.isAutoMoveEnabled()
         && engine.engineType.equals(EngineType.REPLICA)
         && SOURCE_CHANNELS.contains(engine.channel)) {
       log.warn("AutoMoveCommand feature flag is true");

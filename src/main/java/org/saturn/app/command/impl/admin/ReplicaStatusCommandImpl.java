@@ -19,28 +19,11 @@ import org.saturn.app.service.impl.OutService;
 @CommandAliases(aliases = {"replicastatus", "status"})
 public class ReplicaStatusCommandImpl extends UserCommandBaseImpl {
   private final OutService outService;
-  private final List<String> aliases = new ArrayList<>();
 
   public ReplicaStatusCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getWhiteListedTrips(engine));
-    super.setAliases(this.getAliases());
+    super.setAliases(aliases);
     this.outService = super.engine.outService;
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
-  }
-
-  @Override
-  public Role getAuthorizedRole() {
-    return Role.ADMIN;
   }
 
   @Override

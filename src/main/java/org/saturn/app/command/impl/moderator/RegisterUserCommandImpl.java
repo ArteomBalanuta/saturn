@@ -16,22 +16,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @Slf4j
 @CommandAliases(aliases = {"reg", "register"})
 public class RegisterUserCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public RegisterUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getWhiteListedTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super.setAliases(aliases);
   }
 
   @Override
@@ -41,8 +28,8 @@ public class RegisterUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    String author = chatMessage.getNick();
-    Optional<String> authorTrip = Optional.ofNullable(chatMessage.getTrip());
+    final String author = chatMessage.getNick();
+    final Optional<String> authorTrip = Optional.ofNullable(chatMessage.getTrip());
 
     List<String> arguments = getArguments();
     if (arguments.size() < 2) {

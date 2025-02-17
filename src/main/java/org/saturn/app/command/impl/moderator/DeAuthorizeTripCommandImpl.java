@@ -16,22 +16,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @Slf4j
 @CommandAliases(aliases = {"deauthorize", "deauth"})
 public class DeAuthorizeTripCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public DeAuthorizeTripCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super.setAliases(aliases);
   }
 
   @Override
@@ -41,9 +28,8 @@ public class DeAuthorizeTripCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    List<String> arguments = getArguments();
-
-    String author = chatMessage.getNick();
+    final List<String> arguments = getArguments();
+    final String author = chatMessage.getNick();
     if (arguments.isEmpty()) {
       log.info("Executed [deauthorizetrip] command by user: {}, no trip set", author);
       super.engine.outService.enqueueMessageForSending(

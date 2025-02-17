@@ -18,13 +18,11 @@ import org.saturn.app.util.Util;
 @CommandAliases(aliases = {"mem", "memory", "memstats"})
 public class MemoryCommandImpl extends UserCommandBaseImpl {
   private final OutService outService;
-  private final List<String> aliases = new ArrayList<>();
 
   public MemoryCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getWhiteListedTrips(engine));
-    super.setAliases(this.getAliases());
+    super.setAliases(aliases);
     this.outService = super.engine.outService;
-    this.aliases.addAll(aliases);
   }
 
   @Override
@@ -32,10 +30,10 @@ public class MemoryCommandImpl extends UserCommandBaseImpl {
     Runtime runtime = Runtime.getRuntime();
     runtime.gc();
 
-    long totalMemory = runtime.totalMemory(); // Total memory the JVM is using
-    long freeMemory = runtime.freeMemory(); // Free memory within the JVM
-    long usedMemory = totalMemory - freeMemory; // Memory used by the JVM
-    long maxMemory = runtime.maxMemory(); // Maximum memory the JVM can use
+    long totalMemory = runtime.totalMemory();
+    long freeMemory = runtime.freeMemory();
+    long usedMemory = totalMemory - freeMemory;
+    long maxMemory = runtime.maxMemory();
 
     String memPayload =
         "JVM Used Memory: "
@@ -55,12 +53,8 @@ public class MemoryCommandImpl extends UserCommandBaseImpl {
     String author = chatMessage.getNick();
 
     outService.enqueueMessageForSending(author, payload, isWhisper());
-
     log.info("Executed [memory] command by user: {}", author);
 
     return Optional.of(Status.SUCCESSFUL);
   }
-
-  // Print memory usage in megabytes
-
 }
