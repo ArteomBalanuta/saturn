@@ -29,22 +29,10 @@ import org.saturn.app.util.Util;
 @Slf4j
 @CommandAliases(aliases = {"time", "t"})
 public class TimeUserCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public TimeUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, List.of("x"));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
+    super.setAliases(aliases);
 
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
   }
 
   @Override

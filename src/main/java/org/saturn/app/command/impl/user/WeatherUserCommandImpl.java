@@ -17,22 +17,9 @@ import org.saturn.app.util.Util;
 @Slf4j
 @CommandAliases(aliases = {"weather", "w", "today"})
 public class WeatherUserCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public WeatherUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getWhiteListedTrips(engine));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super.setAliases(aliases);
   }
 
   @Override

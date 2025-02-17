@@ -26,26 +26,12 @@ import org.saturn.app.service.impl.OutService;
 @Slf4j
 @CommandAliases(aliases = {"list", "l"})
 public class ListUserCommandImpl extends UserCommandBaseImpl {
-
   private final OutService outService;
-
-  private final List<String> aliases = new ArrayList<>();
 
   public ListUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getWhiteListedTrips(engine));
-    super.setAliases(this.getAliases());
+    super.setAliases(aliases);
     this.outService = super.engine.outService;
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
   }
 
   @Override

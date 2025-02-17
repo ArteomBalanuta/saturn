@@ -14,22 +14,9 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @Slf4j
 @CommandAliases(aliases = {"crashcourse", "howto", "moderationcrashcourse", "hcguide"})
 public class HowToUserCommandImpl extends UserCommandBaseImpl {
-  private final List<String> aliases = new ArrayList<>();
-
   public HowToUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, List.of("x"));
-    super.setAliases(this.getAliases());
-    this.aliases.addAll(aliases);
-  }
-
-  @Override
-  public List<String> getAliases() {
-    return this.aliases;
-  }
-
-  @Override
-  public List<String> getArguments() {
-    return super.getArguments();
+    super.setAliases(aliases);
   }
 
   @Override
