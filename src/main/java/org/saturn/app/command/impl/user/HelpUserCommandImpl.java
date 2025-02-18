@@ -110,7 +110,8 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
           + "\u2009sub\u2009\u2009- you receive nick,hashes for joining users\\n"
           + "\u2009time,t <city|country>\u2009\u2009\u2009- time output \\n"
           + "\u2009unsub\u2009\u2009\u2009- cancels the subscription\\n"
-          + "\u2009weather <city>\u2009\u2009\u2009- weather data (Many thanks to API.OPEN-METEO.COM)\\n";
+          + "\u2009weather <city>\u2009\u2009\u2009- weather data (Many thanks to API.OPEN-METEO.COM)\\n"
+          + "\u2009version,v\u2009\u2009\u2009- prints the running version\\n";
 
   public static String helpExamples =
       "Examples:\\n"
