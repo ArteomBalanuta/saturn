@@ -32,7 +32,7 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
     if (arguments.isEmpty()) {
       log.info("Executed [active] command by user: {}, no target set", author);
       engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "online 8Wotmg", isWhisper());
+          author, "Example: " + engine.prefix + "active 8Wotmg", isWhisper());
       return Optional.of(Status.FAILED);
     }
 

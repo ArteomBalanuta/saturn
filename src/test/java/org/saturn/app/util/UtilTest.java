@@ -2,7 +2,7 @@ package org.saturn.app.util;
 
 import static org.saturn.app.command.impl.user.HelpUserCommandImpl.helpExamples;
 import static org.saturn.app.command.impl.user.HelpUserCommandImpl.helpHeader;
-import static org.saturn.app.command.impl.user.HelpUserCommandImpl.helpPayload;
+import static org.saturn.app.command.impl.user.HelpUserCommandImpl.userCommands;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +14,7 @@ class UtilTest {
     String prefix = "-";
 
     String header = String.format(helpHeader, prefix);
-    String payload = helpPayload;
+    String payload = userCommands;
     String examples = String.format(helpExamples, prefix, prefix, prefix, prefix, prefix, prefix);
 
     String input = header + payload + examples;

@@ -13,9 +13,9 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"banlist", "bannedusers"})
-public class BanList extends UserCommandBaseImpl {
-  public BanList(EngineImpl engine, ChatMessage message, List<String> aliases) {
+@CommandAliases(aliases = {"shadowbanlist","banlist", "bannedusers"})
+public class ShadowBanList extends UserCommandBaseImpl {
+  public ShadowBanList(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
     super.setAliases(aliases);
   }

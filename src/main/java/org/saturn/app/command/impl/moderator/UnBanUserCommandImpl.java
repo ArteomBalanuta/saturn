@@ -31,9 +31,9 @@ public class UnBanUserCommandImpl extends UserCommandBaseImpl {
 
     final Optional<String> target = getArguments().stream().findFirst();
     if (target.isEmpty()) {
-      log.info("Executed [unban] command by user: {}, no target set", author);
+      log.info("Executed [unban] command by user: {}, no hash set", author);
       engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "unban merc", isWhisper());
+          author, "Example: " + engine.prefix + "unban HjkUEWNlIRH35Xk", isWhisper());
       return Optional.of(Status.FAILED);
     }
     engine.modService.unban(target.get());
@@ -41,7 +41,7 @@ public class UnBanUserCommandImpl extends UserCommandBaseImpl {
         author, target.get() + " " + chatMessage.getHash() + " has been unbanned", isWhisper());
 
     log.info(
-        "Executed [unban] command by user: {}, trip: {}, target: {}",
+        "Executed [unban] command by user: {}, trip: {}, hash: {}",
         author,
         chatMessage.getTrip(),
         target.get());
