@@ -161,6 +161,12 @@
                             <relocations>
                                 <!-- Relocate packages if needed to avoid conflicts -->
                             </relocations>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                                    <resource>VERSION</resource>  <!-- The file you want to include -->
+                                    <file>${project.basedir}/VERSION</file> <!-- Path in your project -->
+                                </transformer>
+                            </transformers>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <minimizeJar>false</minimizeJar>
                             <finalName>saturn</finalName>
