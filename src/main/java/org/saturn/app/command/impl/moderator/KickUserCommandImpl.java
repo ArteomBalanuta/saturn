@@ -2,7 +2,6 @@ package org.saturn.app.command.impl.moderator;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;

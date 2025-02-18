@@ -29,17 +29,14 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
   }
 
   public boolean isUserAuthorized(UserCommand userCommand, ChatMessage chatMessage) {
-    if (isAllowedByApplicationConfig(userCommand, chatMessage)) {
+    if (isAllowedByApplicationConfig(userCommand, chatMessage)
+        || isAllowedByDb(userCommand, chatMessage)) {
       return true;
+    } else {
+      enqueueMessageForSending(
+          chatMessage.getNick(), "msg mercury for access.", chatMessage.isWhisper());
+      return false;
     }
-
-    if (isAllowedByDb(userCommand, chatMessage)) {
-      return true;
-    }
-
-    enqueueMessageForSending(
-        chatMessage.getNick(), "msg mercury for access.", chatMessage.isWhisper());
-    return false;
   }
 
   @Override

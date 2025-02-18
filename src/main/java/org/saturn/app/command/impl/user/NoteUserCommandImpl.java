@@ -1,9 +1,8 @@
 package org.saturn.app.command.impl.user;
 
-import static org.saturn.app.util.Util.getWhiteListedTrips;
+import static org.saturn.app.util.Util.getAdminAndUserTrips;
 import static org.saturn.app.util.Util.listToString;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +17,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @CommandAliases(aliases = {"note", "save"})
 public class NoteUserCommandImpl extends UserCommandBaseImpl {
   public NoteUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-    super(message, engine, getWhiteListedTrips(engine));
+    super(message, engine, getAdminAndUserTrips(engine));
     super.setAliases(aliases);
   }
 

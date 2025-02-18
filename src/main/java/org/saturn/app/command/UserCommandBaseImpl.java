@@ -73,28 +73,22 @@ public class UserCommandBaseImpl implements UserCommand {
     List<String> aliases = toLower(this.getAliases());
     Optional<UserCommand> cmd = engine.commandFactory.getCommand(this.chatMessage, aliases.get(0));
 
-    if (cmd.isPresent()
-        && engine.authorizationService.isUserAuthorized(cmd.get(), this.chatMessage)) {
+    if (cmd.isEmpty()
+        || !engine.authorizationService.isUserAuthorized(cmd.get(), this.chatMessage)) {
+      return Optional.empty();
+    } else {
       setupArguments(cmd.get());
-      String trip = null;
-      if (chatMessage.getTrip() != null) {
-        trip = chatMessage.getTrip();
-      }
 
-      String arguments = cmd.get().getArguments().toString();
-      Optional<Status> status = cmd.get().execute();
-
+      Optional<Status> executionStatus = cmd.get().execute();
       engine.logRepository.logCommand(
-          trip,
+          chatMessage.getTrip(),
           cmd.get().getAliases().toString(),
-          arguments,
-          status.get().name(),
+          cmd.get().getArguments().toString(),
+          executionStatus.get().name(),
           this.engine.channel,
           DateUtil.getTimestampNow());
-      return status;
+      return executionStatus;
     }
-
-    return Optional.empty();
   }
 
   private void setupArguments(UserCommand cmd) {

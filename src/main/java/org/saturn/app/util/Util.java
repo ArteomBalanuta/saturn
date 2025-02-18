@@ -41,7 +41,7 @@ public class Util {
     return l.stream().map(String::toLowerCase).collect(Collectors.toList());
   }
 
-  public static List<String> getWhiteListedTrips(EngineImpl engine) {
+  public static List<String> getAdminAndUserTrips(EngineImpl engine) {
     List<String> whiteListedTrips = new ArrayList<>();
     whiteListedTrips.addAll(Arrays.asList(engine.adminTrips.split(",")));
     whiteListedTrips.addAll(Arrays.asList(engine.userTrips.split(",")));
