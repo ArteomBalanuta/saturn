@@ -1,6 +1,5 @@
 package org.saturn.app.command.impl.user;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;

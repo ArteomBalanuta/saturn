@@ -19,7 +19,6 @@ import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.impl.MinerListenerImpl;
-import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.payload.ChatMessage;

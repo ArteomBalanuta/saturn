@@ -1,8 +1,7 @@
 package org.saturn.app.command.impl.user;
 
-import static org.saturn.app.util.Util.getWhiteListedTrips;
+import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +23,7 @@ import org.saturn.app.service.impl.OutService;
 public class MsgChannelCommandImpl extends UserCommandBaseImpl {
   private final OutService outService;
   public MsgChannelCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-    super(message, engine, getWhiteListedTrips(engine));
+    super(message, engine, getAdminAndUserTrips(engine));
     super.setAliases(aliases);
     this.outService = super.engine.outService;
   }

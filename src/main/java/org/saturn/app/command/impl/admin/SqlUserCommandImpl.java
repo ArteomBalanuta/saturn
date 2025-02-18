@@ -2,14 +2,12 @@ package org.saturn.app.command.impl.admin;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 

@@ -10,6 +10,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
+
 @Slf4j
 @CommandAliases(aliases = {"ape", "harambe"})
 public class ApeUserCommandImpl extends UserCommandBaseImpl {

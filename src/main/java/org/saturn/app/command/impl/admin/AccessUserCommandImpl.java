@@ -1,6 +1,6 @@
-package org.saturn.app.command.impl.internal;
+package org.saturn.app.command.impl.admin;
 
-import static org.saturn.app.util.Util.getWhiteListedTrips;
+import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +17,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 @CommandAliases(aliases = {"grant", "access"})
 public class AccessUserCommandImpl extends UserCommandBaseImpl {
   public AccessUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-    super(message, engine, getWhiteListedTrips(engine));
+    super(message, engine, getAdminAndUserTrips(engine));
     super.setAliases(aliases);
   }
 

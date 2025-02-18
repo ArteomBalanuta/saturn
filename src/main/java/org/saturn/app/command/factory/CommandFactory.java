@@ -59,7 +59,7 @@ public class CommandFactory {
       Class<?> cl = classLoader.loadClass(info.getName());
       Constructor<?> declaredConstructor = cl.getDeclaredConstructors()[0];
 
-      log.debug("Found implementation class, aliases: {}, [{}]", info.getName(), aliases.get());
+      log.debug("Found cmd implementation class, aliases: {}, [{}]", info.getName(), aliases.get());
       return Optional.of(
           (UserCommand) declaredConstructor.newInstance(this.engine, message, aliases.get()));
 
