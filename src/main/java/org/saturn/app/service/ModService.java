@@ -11,18 +11,19 @@ public interface ModService {
   void overflow(String target);
   void shadowBan(BanRecord banDto);
   void unshadowBan(String target);
-  void unShadowbanAll(String author);
+  void unshadowbanAll(String author);
+  void listShadowBanned(ChatMessage chatMessage);
   void ban(String target);
   void unban(String target);
   void unbanAll();
   void lock();
   void unlock();
   void enableCaptcha();
+  void disableCaptcha();
   void auth(String trip);
   void deauth(String trip);
-  void disableCaptcha();
-  void listBanned(ChatMessage chatMessage);
-
+  void mute(String target);
+  void unmute(String hash);
 
   Optional<BanRecord> isShadowBanned(User user);
 }

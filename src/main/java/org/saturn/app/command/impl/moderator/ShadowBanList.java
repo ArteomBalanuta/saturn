@@ -26,7 +26,7 @@ public class ShadowBanList extends UserCommandBaseImpl {
   }
 
   public Optional<Status> execute() {
-    engine.modService.listBanned(chatMessage);
+    engine.modService.listShadowBanned(chatMessage);
     log.info("Executed [banlist] command by user: {}", chatMessage.getNick());
     return Optional.of(Status.SUCCESSFUL);
   }
