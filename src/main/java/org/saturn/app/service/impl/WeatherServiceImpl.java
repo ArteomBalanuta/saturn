@@ -61,7 +61,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
                 + "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset,"
                 + "winddirection_10m_dominant,shortwave_radiation_sum,uv_index_max,uv_index_clear_sky_max,weather_code"
                 + "&hourly=pressure_msl,surface_pressure,soil_temperature_18cm,soil_moisture_3_to_9cm,visibility,diffuse_radiation,shortwave_radiation,apparent_temperature,relative_humidity_2m"
-                + "&timezone=GMT"
+                + "&timezone=auto"
                 + "&start_date=%s"
                 + "&end_date=%s",
             lat, lng, curr_date, curr_date);
@@ -81,18 +81,12 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     Weather.HourlyUnits hourlyUnits = weather.getHourly_units();
     Weather.CurrentWeather currentWeather = weather.getCurrent_weather();
     Weather.CurrentWeatherUnits currentWeatherUnits = weather.getCurrent_weather_units();
-
-    String timeZoneUri =
-        String.format(
-            "https://timeapi.io/api/Time/current/coordinate?latitude=%s&longitude=%s", lat, lng);
-    WeatherTime time = getTime(Util.getResponseByURL(timeZoneUri));
-
     return formatWeather(
         zone + ", " + country,
         daily,
         currentWeather,
         dailyUnits,
-        time,
+        weather,
         hourly,
         hourlyUnits,
         currentWeatherUnits);
@@ -103,20 +97,22 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
       Weather.Daily daily,
       Weather.CurrentWeather currentWeather,
       Weather.DailyUnits dailyUnits,
-      WeatherTime time,
+      Weather weather,
       Weather.Hourly hourly,
       Weather.HourlyUnits hourlyUnits,
       Weather.CurrentWeatherUnits currentWeatherUnits) {
 
+    String time = currentWeather.time;
+    String timeZone = weather.getTimezone();
     ZonedDateTime zonedDateTime =
-        Instant.ofEpochSecond(tsToSec8601(time.dateTime, time.timeZone))
-            .atZone(ZoneId.of(time.timeZone));
+        Instant.ofEpochSecond(tsToSec8601(time, timeZone))
+            .atZone(ZoneId.of(timeZone));
     ZonedDateTime sunriseDateTime =
         Instant.ofEpochSecond(tsToSec8601(daily.sunrise.get(0), null))
-            .atZone(ZoneId.of(time.timeZone));
+            .atZone(ZoneId.of(timeZone));
     ZonedDateTime sunsetDateTime =
         Instant.ofEpochSecond(tsToSec8601(daily.sunset.get(0), null))
-            .atZone(ZoneId.of(time.timeZone));
+            .atZone(ZoneId.of(timeZone));
 
     String currentTime =
         formatRfc1123(
