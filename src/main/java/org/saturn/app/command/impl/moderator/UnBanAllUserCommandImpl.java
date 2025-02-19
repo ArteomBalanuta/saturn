@@ -13,7 +13,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"unbanall,pardonall"})
+@CommandAliases(aliases = {"unbanall","pardonall"})
 public class UnBanAllUserCommandImpl extends UserCommandBaseImpl {
   public UnBanAllUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
