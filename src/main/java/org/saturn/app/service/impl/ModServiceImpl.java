@@ -119,6 +119,16 @@ public class ModServiceImpl extends OutService implements ModService {
   }
 
   @Override
+  public void mute(String target) {
+    enqueueRawMessageForSending(String.format("{ \"cmd\": \"mute\", \"nick\": \"%s\"}", target));
+  }
+
+  @Override
+  public void unmute(String hash) {
+    enqueueRawMessageForSending(String.format("{ \"cmd\": \"unmute\", \"hash\": \"%s\"}", hash));
+  }
+
+  @Override
   public void disableCaptcha() {
     enqueueRawMessageForSending("{ \"cmd\": \"disablecaptcha\"}");
   }
@@ -177,7 +187,7 @@ public class ModServiceImpl extends OutService implements ModService {
   }
 
   @Override
-  public void listBanned(ChatMessage chatMessage) {
+  public void listShadowBanned(ChatMessage chatMessage) {
     String author = chatMessage.getNick();
     List<BanRecord> bannedIds = this.getBannedUsers();
 
@@ -202,7 +212,7 @@ public class ModServiceImpl extends OutService implements ModService {
   }
 
   @Override
-  public void unShadowbanAll(String author) {
+  public void unshadowbanAll(String author) {
     List<BanRecord> bannedIds = this.getBannedUsers();
     if (bannedIds.isEmpty()) {
       enqueueMessageForSending(author, "No users has been banned.", false);
