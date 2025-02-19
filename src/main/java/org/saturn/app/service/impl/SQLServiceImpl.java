@@ -87,14 +87,11 @@ public class SQLServiceImpl extends OutService implements SQLService {
       return e.getMessage();
     }
 
-    String table =
-        StringEscapeUtils.escapeXml11(
-                StringEscapeUtils.escapeJson(generateTable(columnNames, listOfRows)))
-            .replace("`", "");
+    String table = generateTable(columnNames, listOfRows);
     string.append(table);
     string.append("\n ```");
 
-    return string.toString();
+    return StringEscapeUtils.escapeJava(string.toString());
   }
 
   @Override

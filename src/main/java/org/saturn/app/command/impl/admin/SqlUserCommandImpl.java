@@ -24,8 +24,7 @@ public class SqlUserCommandImpl extends UserCommandBaseImpl {
     String result = engine.sqlService.executeSql(cmd, true);
 
     engine.outService.enqueueMessageForSending(
-        chatMessage.getNick(),
-        StringEscapeUtils.escapeJava("Result: \n" + result.replace("\\n", "\n")),
+        chatMessage.getNick(), "Result: \\n" + result,
         isWhisper());
     return Optional.of(Status.SUCCESSFUL);
   }

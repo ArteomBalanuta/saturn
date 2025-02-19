@@ -13,7 +13,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"active"})
+@CommandAliases(aliases = {"active", "activity"})
 public class ActivityCommandImpl extends UserCommandBaseImpl {
   public ActivityCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
@@ -98,6 +98,5 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                     day_full AS day_of_week,
                     hour,
                     probability_percentage
-                FROM Probability where LOWER(trip) == LOWER('?')\s
-                ORDER BY trip, day_number, hour;""";
+                FROM Probability where LOWER(trip) == LOWER('?') ORDER BY trip, day_number, hour;""";
 }
