@@ -37,7 +37,7 @@ public class UnMuteUserCommandImpl extends UserCommandBaseImpl {
     }
     engine.modService.unmute(hash.get());
     engine.outService.enqueueMessageForSending(
-        author, hash.get() + " " + chatMessage.getHash() + " has been unmuted", isWhisper());
+        author, hash.get() + " has been unmuted", isWhisper());
 
     log.info(
         "Executed [unmute] command by user: {}, trip: {}, target: {}",
