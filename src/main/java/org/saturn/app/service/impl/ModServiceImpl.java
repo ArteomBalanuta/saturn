@@ -88,6 +88,11 @@ public class ModServiceImpl extends OutService implements ModService {
   }
 
   @Override
+  public void unbanAll() {
+    enqueueRawMessageForSending("{ \"cmd\": \"unbanall\"}");
+  }
+
+  @Override
   public void lock() {
     enqueueRawMessageForSending("{ \"cmd\": \"lockroom\"}");
   }
@@ -197,7 +202,7 @@ public class ModServiceImpl extends OutService implements ModService {
   }
 
   @Override
-  public void unbanAll(String author) {
+  public void unShadowbanAll(String author) {
     List<BanRecord> bannedIds = this.getBannedUsers();
     if (bannedIds.isEmpty()) {
       enqueueMessageForSending(author, "No users has been banned.", false);
