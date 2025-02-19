@@ -11,7 +11,7 @@ public class Weather {
   private String longitude;
   private String timezone;
   private String elevation;
-
+  private String timezone_abbreviation;
   private CurrentWeatherUnits current_weather_units;
   private CurrentWeather current_weather;
   private DailyUnits daily_units;
