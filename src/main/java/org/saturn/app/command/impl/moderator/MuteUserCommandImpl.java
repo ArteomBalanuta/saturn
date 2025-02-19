@@ -37,7 +37,7 @@ public class MuteUserCommandImpl extends UserCommandBaseImpl {
     }
     engine.modService.mute(target.get());
     engine.outService.enqueueMessageForSending(
-        author, target.get() + " " + chatMessage.getHash() + " has been muted", isWhisper());
+        author, target.get() + " " + engine.currentChannelUsers.stream().filter(u -> u.getNick().equals(target.get())).findFirst().get().getHash() + " has been muted", isWhisper());
 
     log.info(
         "Executed [mute] command by user: {}, trip: {}, target: {}",
