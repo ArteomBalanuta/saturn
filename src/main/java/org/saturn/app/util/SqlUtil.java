@@ -27,6 +27,14 @@ public final class SqlUtil {
             INNER JOIN names n on tn.name_id  = n.id\s
             INNER JOIN trips t on tn.trip_id = t.id\s
             WHERE LOWER(name) = ?;""";
+
+  public static final String SELECT_NAME_TRIP_REGISTERED =
+      """
+SELECT DISTINCT n.name,t.trip\s
+FROM trip_names tn\s
+INNER JOIN trips t on tn.trip_id = t.id\s
+INNER JOIN names n on tn.name_id = n.id ORDER BY t.trip DESC;
+""";
   public static final String SELECT_MAIL_BY_NICK_OR_TRIP =
       "SELECT id, owner, receiver, message, status, is_whisper, created_on FROM mail WHERE receiver LIKE ? AND status = 'PENDING';";
   public static final String UPDATE_MAIL_SET_STATUS_DELIVERED_WHERE_RECEIVER =
