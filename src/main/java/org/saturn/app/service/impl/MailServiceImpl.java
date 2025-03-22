@@ -29,10 +29,20 @@ public class MailServiceImpl extends OutService implements MailService {
   @Override
   public void executeMail(ChatMessage chatMessage, UserCommand command) {
     List<String> arguments = command.getArguments();
+    String author = chatMessage.getNick();
     String receiver = arguments.get(0).replace("@", "");
 
     /* check against trip_names table. */
     List<String> trips = this.getTripsByNick(receiver);
+    if (trips.isEmpty()) {
+      String registeredUsers = getRegisteredUsers();
+      enqueueMessageForSending(
+              author,
+              "User you specified is not registered. Please use a name from provided list to send a message to respective trip. \\n" + registeredUsers,
+              chatMessage.isWhisper());
+      return;
+    }
+
     receiver = Util.listToCommaString(trips);
 
     StringBuilder message = new StringBuilder();
@@ -41,7 +51,6 @@ public class MailServiceImpl extends OutService implements MailService {
       message.append(arguments.get(i)).append(" ");
     }
 
-    String author = chatMessage.getNick();
     this.orderMessageDelivery(
         message.toString(),
         author.concat("#") + chatMessage.getTrip(),
@@ -100,6 +109,25 @@ public class MailServiceImpl extends OutService implements MailService {
     }
 
     return trips;
+  }
+
+  public String getRegisteredUsers() {
+    StringBuilder b = new StringBuilder();
+    try {
+      PreparedStatement stm = connection.prepareStatement(SqlUtil.SELECT_NAME_TRIP_REGISTERED);
+      stm.execute();
+
+      ResultSet resultSet = stm.getResultSet();
+      while (resultSet.next()) {
+         b.append(resultSet.getString("name")).append(" ").append(resultSet.getString("trip")).append("\\n");
+      }
+      stm.close();
+      resultSet.close();
+    } catch (SQLException e) {
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace", e);
+    }
+    return b.toString();
   }
 
   @Override
