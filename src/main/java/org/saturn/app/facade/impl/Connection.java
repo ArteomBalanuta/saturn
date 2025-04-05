@@ -64,7 +64,8 @@ public class Connection {
                     Thread.currentThread().threadId());
               }
             }
-
+            /* Server doesn't respond in time to all the ping requests. Disabling 'lost connection' detection. */
+            client.setConnectionLostTimeout(0);
             client.sendPing();
             log.debug("Handshake Status: {}", serverHandshake.getHttpStatus());
             listeners.stream()
