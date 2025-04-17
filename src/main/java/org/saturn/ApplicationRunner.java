@@ -19,7 +19,7 @@ public class ApplicationRunner {
   private final Toml config;
   private EngineImpl host;
   private boolean autoReconnectEnabled;
-  private long healthCheckIntervalMs;
+  private long healthCheckInterval;
 
   public ApplicationRunner() {
     File tomlFile = new File("config.toml");
@@ -27,7 +27,7 @@ public class ApplicationRunner {
 
     try {
       this.autoReconnectEnabled = config.getBoolean("autoReconnect");
-      this.healthCheckIntervalMs = config.getLong("healthCheckInterval");
+      this.healthCheckInterval = config.getLong("healthCheckInterval");
     } catch (Exception e) {
       log.info("Error: {}", e.getMessage());
       log.error("Stack trace", e);
@@ -56,9 +56,9 @@ public class ApplicationRunner {
 
   private void start() {
     if (autoReconnectEnabled) {
-      log.info("Scheduling health check every 5 minutes");
+      log.info("Scheduling health check every: {} minutes", healthCheckInterval);
       healthCheckScheduler.scheduleAtFixedRate(
-          this::healthCheck, 0, healthCheckIntervalMs, TimeUnit.MINUTES);
+          this::healthCheck, 0, healthCheckInterval, TimeUnit.MINUTES);
     } else {
       log.warn("AutoReconnect is disabled..");
       log.info("Starting application manually");
