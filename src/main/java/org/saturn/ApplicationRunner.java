@@ -14,10 +14,10 @@ import org.saturn.app.service.impl.DataBaseServiceImpl;
 
 @Slf4j
 public class ApplicationRunner {
-  private final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
+  private static final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
   private final DataBaseService dbService;
   private final Toml config;
-  private EngineImpl host;
+  private static EngineImpl host;
   private boolean autoReconnectEnabled;
   private long healthCheckInterval;
 
