@@ -93,7 +93,8 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
           + "\u2009unbanall \u2009- lifts the ban for all previously banned users\\n"
           + "\u2009mute <nick>\u2009- mutes the user\\n"
           + "\u2009unmute <hash>\u2009- unmutes the user by hash\\n"
-          + "\u2009shadowbanlist\u2009- prints banned users\\n";
+          + "\u2009color <name> <color>\u2009- changes user's color\\n"
+          + "\u2009flair <name> <flair>\u2009- changes user's flair\\n";
 
   public static String userCommands =
       "\u2009help,h\u2009- prints this output \\n"
