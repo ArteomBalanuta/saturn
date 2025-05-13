@@ -24,6 +24,8 @@ public interface ModService {
   void deauth(String trip);
   void mute(String target);
   void unmute(String hash);
+  void forceFlair(String target, String flair);
+  void forceColor(String target, String hexcolor);
 
   Optional<BanRecord> isShadowBanned(User user);
 }
