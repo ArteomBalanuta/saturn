@@ -28,37 +28,22 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     String author = chatMessage.getNick();
-    String header = "\\n Regular users: \\n ";
-    String users =
-        "merc | 8Wotmg\\n"
-            + "wwandrew | pwnuUa\\n"
-            + "perge_sequar | VirtuS\\n"
-            + "bacon | 4bR/CS\\n"
-            + "MinusGix | Rdais/\\n"
-            + "ultra_weeb | Rdais/\\n"
-            + "nathan | datura\\n"
-            + "insane | +/xKF+\\n"
-            + "3xi573n7ivli5783vR | ztnKBB\\n"
-            + "jetty | 7a5Ev9\\n"
-            + "Roslot | Roslot\\n"
-            + "0x17 | 6gIBvG \\n"
-            + "Rut | //////\\n"
-            + "Zed | GODZed\\n"
-            + "Cereals | TeaJjh\\n"
-            + "jill | Zvoxsl\\n"
-            + "Regret_ | cmdTV+\\n"
-            + "AnnikaV9 | hACkeR\\n"
-            + "usv2 | hACkeR\\n"
-            + "Meth | Methjw\\n"
-            + "xyz | XYZ+bX\\n"
-            + "titZ_beta | nntitZ\\n"
-            + "EntertainmentOne | XalBBq\\n"
-            + "lol | xhvbdp";
+//    String header = "\\n Regular users: \\n ";
+    final String result = engine.sqlService.executeFormatted(SQL_PRINT_REGISTERED_USERS);
+    engine.outService.enqueueMessageForSending(author, "Users: \\n" + result, isWhisper());
 
-    String formattedUsers = Util.alignWithWhiteSpace(users, "|", "\u2009", true);
-    engine.outService.enqueueMessageForSending(author, header + formattedUsers, isWhisper());
+//    String formattedUsers = Util.alignWithWhiteSpace(users, "|", "\u2009", true);
+//    engine.outService.enqueueMessageForSending(author, header + formattedUsers, isWhisper());
     log.info("Executed [users] command by user: {}", author);
 
     return Optional.of(Status.SUCCESSFUL);
   }
+
+  public static final String SQL_PRINT_REGISTERED_USERS =
+      """
+        select distinct t.trip, n.name 
+        from trip_names tn 
+        inner join names n on tn.name_id  = n.id 
+        inner join trips t on tn.trip_id = t.id order by n.name desc;
+      """;
 }
