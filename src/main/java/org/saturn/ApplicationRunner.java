@@ -4,6 +4,7 @@ import static java.util.concurrent.Executors.newScheduledThreadPool;
 
 import com.moandjiezana.toml.Toml;
 import java.io.File;
+import java.util.HashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +15,8 @@ import org.saturn.app.service.impl.DataBaseServiceImpl;
 
 @Slf4j
 public class ApplicationRunner {
-  private static final ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
+  public static ApplicationRunner applicationRunner;
+  private static ScheduledExecutorService healthCheckScheduler = newScheduledThreadPool(1);
   private final DataBaseService dbService;
   private final Toml config;
   private static EngineImpl host;
@@ -39,7 +41,7 @@ public class ApplicationRunner {
   }
 
   public static void main(String[] args) {
-    ApplicationRunner applicationRunner = new ApplicationRunner();
+    applicationRunner = new ApplicationRunner();
     log.warn("Running at user dir: {}", System.getProperty("user.dir"));
     applicationRunner.start();
 
@@ -49,14 +51,19 @@ public class ApplicationRunner {
             new Thread(
                 () -> {
                   log.info("Shutdown initiated... Stopping services.");
-                  applicationRunner.stop();
+                  applicationRunner.stopApplication();
                   log.info("Shutdown complete.");
                 }));
   }
 
-  private void start() {
+  public void start() {
     if (autoReconnectEnabled) {
       log.info("Scheduling health check every: {} minutes", healthCheckInterval);
+      if (healthCheckScheduler.isShutdown()) {
+        healthCheckScheduler = newScheduledThreadPool(1);
+        log.info("Set new scheduler");
+      }
+
       healthCheckScheduler.scheduleAtFixedRate(
           this::healthCheck, 0, healthCheckInterval, TimeUnit.MINUTES);
     } else {
@@ -109,8 +116,8 @@ public class ApplicationRunner {
   }
 
   // Stop method to gracefully shut down the application
-  private void stop() {
-    log.info("Stop: Stopping the host and health check scheduler...");
+  public void stopBot() {
+    log.info("Stop: Disconnecting the bot");
 
     // Stop the host
     if (host != null) {
@@ -120,13 +127,17 @@ public class ApplicationRunner {
         host = null;
         Runtime.getRuntime().gc();
 
-        log.info("Stop: Stopped the host.");
+        log.info("Stop: Stopped the bot");
       } catch (Exception e) {
-        log.error("Error while stopping the host: ", e);
+        log.error("Error while stopping the bot: ", e);
       }
     } else {
-      log.warn("Stop: Bot is not set...");
+      log.warn("Stop: Engine reference is nullified.");
     }
+  }
+
+  public void stopApplication() {
+    log.info("Stop: Stopping the health check scheduler and application..");
 
     // Shut down the scheduler
     healthCheckScheduler.shutdown();
@@ -136,6 +147,9 @@ public class ApplicationRunner {
         healthCheckScheduler.shutdownNow();
       }
       log.info("Stop: Scheduler stopped.");
+
+      stopBot();
+
     } catch (InterruptedException e) {
       log.info("Error: {}", e.getMessage());
       log.error("Stack trace", e);

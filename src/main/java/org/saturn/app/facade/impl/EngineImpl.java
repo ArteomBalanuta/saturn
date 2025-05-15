@@ -69,8 +69,7 @@ public class EngineImpl extends Base implements Engine {
       }
     }
 
-    this.commandFactory =
-        new CommandFactory(this, CommandAliases.class);
+    this.commandFactory = new CommandFactory(this, CommandAliases.class);
   }
 
   public void setHostRef(EngineImpl hostRef) {
@@ -168,14 +167,27 @@ public class EngineImpl extends Base implements Engine {
 
   @Override
   public void stop() {
-    log.debug("Closing the WS connection...");
+    if (!this.replicasMappedByChannel.isEmpty()) {
+      this.replicasMappedByChannel.forEach(
+          (channel, replica) -> {
+            log.warn("Shutting down replica in channel: {}", channel);
+            try {
+              replica.hcConnection.close();
+            } catch (InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    }
+
     try {
       if (hcConnection != null) {
+        log.debug("Closing the host WS connection...");
         this.hcConnection.close();
         log.debug("Closed the WS connection...");
       } else {
         log.debug("WS Connection is already closed");
       }
+
     } catch (Exception e) {
       log.info("Error: {}", e.getMessage());
       log.error("Exception: ", e);

@@ -59,11 +59,11 @@ Example:
 
 `adminTrips = "g0KY09"` Trip codes that are granted ADMIN role, full access.
 
-`autoReconnect = false` Enable/disable reconnect feature.
+`autoReconnect = true` Enable/disable reconnect feature.
 
-`healthCheckIntervalMs = 300000 ` Setting the health check interval in milliseconds.
+`healthCheckInterval = 5 ` Setting the health check interval in minutes.
 
-`autorunCommands = "/whisper alphaBot *replica lounge, /whisper alphaBot *say hello lads!"` Autorun commands to be executed on bot's startup.
+`autorunCommands = "replica lounge, say hello lads!"` Autorun commands to be executed on bot's startup (example uses: replica, say commands without prefix used).
 
 ### 4. Run the bot:
 
