@@ -72,10 +72,10 @@ CREATE TABLE "trip_names" (
 
 ## DML, useful
 
-select t.trip, n.name
+select distinct t.trip, n.name
 from trip_names tn
 inner join names n on tn.name_id  = n.id
-inner join trips t on tn.trip_id = t.id;
+inner join trips t on tn.trip_id = t.id order by n.name desc;
 
 
 select t.trip
