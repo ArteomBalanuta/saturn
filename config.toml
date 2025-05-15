@@ -8,5 +8,5 @@ userTrips = ""
 adminTrips = "g0KY09"
 proxies = ""
 autoReconnect = false
-healthCheckInterval = 15000
-autorunCommands = "/whisper alphaBot *replica lounge, /whisper alphaBot *say hello lads!"
+healthCheckInterval = 15
+autorunCommands = "replica lounge, say hello lads!"
