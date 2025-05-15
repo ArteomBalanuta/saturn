@@ -31,22 +31,20 @@ public class RemoveUserCommandImpl extends UserCommandBaseImpl {
     final Optional<String> authorTrip = Optional.ofNullable(chatMessage.getTrip());
 
     List<String> arguments = getArguments();
-    if (arguments.size() < 2) {
+    if (arguments.isEmpty()) {
       log.info(
           "Executed [remove] command by user: {}, trip: {}, no arguments present",
           author,
           authorTrip);
       engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "remove merc g0KY09", isWhisper());
+          author, "Example: " + engine.prefix + "remove [merc|g0KY09]", isWhisper());
       return Optional.of(Status.FAILED);
     }
 
-    String name = arguments.get(0);
-    String trip = arguments.get(1);
+    String value = arguments.getFirst();
 
-    /* new nick and trip */
-    if (engine.userService.isNameRegistered(name) || engine.userService.isTripRegistered(trip)) {
-      int code = engine.userService.delete(name, trip);
+    if (engine.userService.isNameRegistered(value) || engine.userService.isTripRegistered(value)) {
+      int code = engine.userService.delete(value, value);
       if (code == 1) {
         engine.outService.enqueueMessageForSending(author, "Something went wrong deleting the user", isWhisper());
         return Optional.of(Status.FAILED);
