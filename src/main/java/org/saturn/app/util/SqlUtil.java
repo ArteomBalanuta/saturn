@@ -5,6 +5,26 @@ public final class SqlUtil {
       "INSERT INTO trips('type', 'trip', 'created_on') VALUES (?, ?, ?);";
   public static final String UPDATE_TRIPS_SET_TYPE_WHERE_TRIP =
       "UPDATE trips SET type=? WHERE trip=?;";
+
+  public static final String DELETE_TRIP_NAMES =
+      """
+    DELETE FROM trip_names WHERE trip_id IN (
+            SELECT id FROM trips WHERE trip = ?
+    ) OR name_id IN (
+    SELECT id FROM names WHERE name = ?
+    );
+    """;
+
+  public static final String DELETE_TRIP =
+      """
+    DELETE FROM trips WHERE trip = ?;
+    """;
+
+  public static final String DELETE_NAME =
+      """
+    DELETE FROM names WHERE name = ?;
+    """;
+
   public static final String INSERT_NAMES =
       "INSERT INTO names (name, created_on) VALUES (?, strftime('%s', 'now'))";
   public static final String INSERT_TRIPS =

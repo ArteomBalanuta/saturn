@@ -93,6 +93,24 @@ INSERT INTO trips (type, trip, created_on) VALUES ('MODERATOR','//////',strftime
 
 INSERT INTO trip_names (trip_id,name_id) VALUES (20, 13);
 
+
+-- Delete from trip_names first due to foreign key constraints
+DELETE FROM trip_names
+WHERE trip_id IN (
+    SELECT id FROM trips WHERE trip = 'TARGET_TRIP'
+) OR name_id IN (
+    SELECT id FROM names WHERE name = 'TARGET_NAME'
+);
+
+-- Delete from trips
+DELETE FROM trips
+WHERE trip = 'TARGET_TRIP';
+
+-- Delete from names
+DELETE FROM names
+WHERE name = 'TARGET_NAME';
+
+
 UPDATE sqlite_sequence
 SET seq = 0
 WHERE name = 'trip_names';

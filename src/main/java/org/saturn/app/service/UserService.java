@@ -6,6 +6,8 @@ import org.saturn.app.model.dto.Message;
 public interface UserService {
   String lastOnline(String tripOrNick);
 
+  int delete(String name, String trip);
+
   int register(String name, String trip, String role);
 
   boolean isNameRegistered(String name);
