@@ -3,6 +3,9 @@ package org.saturn.app.service.impl;
 import static org.apache.commons.text.StringEscapeUtils.escapeJson;
 import static org.saturn.app.util.DateUtil.formatRfc1123;
 import static org.saturn.app.util.DateUtil.getDifference;
+import static org.saturn.app.util.SqlUtil.DELETE_NAME;
+import static org.saturn.app.util.SqlUtil.DELETE_TRIP;
+import static org.saturn.app.util.SqlUtil.DELETE_TRIP_NAMES;
 import static org.saturn.app.util.SqlUtil.INSERT_NAMES;
 import static org.saturn.app.util.SqlUtil.INSERT_TRIPS;
 import static org.saturn.app.util.SqlUtil.INSERT_TRIP_NAME;
@@ -102,6 +105,48 @@ public class UserServiceImpl extends OutService implements UserService {
         + " \\n Last message: "
         + dto.getLastMessage()
         + "\\n";
+  }
+
+  @Override
+  public int delete(String name, String trip) {
+    try {
+      connection.setAutoCommit(false); // Begin transaction
+
+      // Delete from name_trips
+      try (PreparedStatement pstmtNames = connection.prepareStatement(DELETE_TRIP_NAMES)) {
+        pstmtNames.setString(1, trip);
+        pstmtNames.setString(2, name);
+        pstmtNames.executeUpdate();
+
+        // Delete from trips
+        try (PreparedStatement pstmtTrips = connection.prepareStatement(DELETE_TRIP)) {
+          pstmtTrips.setString(1, trip);
+          pstmtTrips.executeUpdate();
+
+          // Delete from names
+          try (PreparedStatement pstmtTripNames = connection.prepareStatement(DELETE_NAME)) {
+            pstmtTripNames.setString(1, name);
+            pstmtTripNames.executeUpdate();
+          }
+        }
+      }
+      connection.commit(); // Commit transaction
+      connection.setAutoCommit(true);
+    } catch (SQLException e) {
+      try {
+        connection.rollback();
+      } catch (SQLException ex) {
+        log.info("Error: {}", e.getMessage());
+        log.error("Stack trace: ", e);
+        throw new RuntimeException(ex);
+      }
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace: ", e);
+
+      return 1;
+    }
+
+    return 0;
   }
 
   @Override

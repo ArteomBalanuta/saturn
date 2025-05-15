@@ -60,12 +60,12 @@ public class RegisterUserCommandImpl extends UserCommandBaseImpl {
       /* new name, trip exists */
       engine.userService.registerNameByTrip(name, trip);
       engine.outService.enqueueMessageForSending(
-          author, "New name has been registered successfully. Name: " + name, isWhisper());
+          author, "New name: " + name + ", assigned to trip: " + trip, isWhisper());
     } else if (!engine.userService.isTripRegistered(name)) {
       /* new trip, nick exists */
       engine.userService.registerTripByName(name, trip);
       engine.outService.enqueueMessageForSending(
-          author, "New trip has been registered successfully. Trip: " + trip, isWhisper());
+          author, "New trip: " + trip + ", assigned to user named: " + name, isWhisper());
     }
 
     log.info("Executed [register] command by user: {}, arguments: {}", author, arguments);
