@@ -71,7 +71,9 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
           + "\u2009msgroom <room> <text>\u2009\u2009- sends the mail to specified room\\n"
           + "\u2009replica <channel>\u2009\u2009\u2009- runs an instance in specified room\\n"
           + "\u2009replicaoff <channel>\u2009\u2009\u2009- shut downs the replica in channel\\n"
-          + "\u2009replicastatus\u2009\u2009\u2009- prints basic info about running replicas\\n";
+          + "\u2009replicastatus\u2009\u2009\u2009- prints basic info about running replicas\\n"
+          + "\u2009restart \u2009\u2009\u2009- restarts the bot if autoReconnect is enabled \\n"
+          + "\u2009shutdown \u2009\u2009\u2009- shut downs the application\\n";
 
   public static String moderatorCommands =
       "\u2009activity <trip>\u2009\u2009- prints some funny data on users recent activity\\n"
@@ -84,6 +86,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
           + "\u2009lock <on|off>\u2009\u2009\u2009- enables/disables the lock on the current room\\n"
           + "\u2009overflow,shoot <nick>\u2009\u2009- self explanatory. \\n"
           + "\u2009register,reg <nick> <trip>\u2009\u2009- registers the user into bots catalog. \\n"
+          + "\u2009remove <name|trip> \u2009- removes the user from registry\\n"
           + "\u2009move <name> <from> <to>\u2009\u2009\u2009- moves the user to specified room\\n"
           + "\u2009resurrect\u2009- moves last kicked user back.\\n"
           + "\u2009shadowban <nick|trip|hash>\u2009- bans the user by either nick,trip or hash\\n"
