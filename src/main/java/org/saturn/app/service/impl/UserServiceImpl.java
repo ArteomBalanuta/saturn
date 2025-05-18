@@ -69,7 +69,7 @@ public class UserServiceImpl extends OutService implements UserService {
           "\\n @"
               + user.getNick()
               + ", has been seen online as: "
-              + names.toString()
+              + names.toString().replace("[","").replace("]","")
               + " in last 15 minutes. "
               + "\\n");
     }
