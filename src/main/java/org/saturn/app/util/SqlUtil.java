@@ -88,7 +88,7 @@ INNER JOIN names n on tn.name_id = n.id ORDER BY t.trip DESC;
     This query will return all rows where the created_on timestamp is within the last 15 minutes.
   */
   public static final String SELECT_SEEN_RECENTLY_AS =
-      "SELECT distinct name FROM messages WHERE (hash = ? or trip = ?) and (message in ('LEFT','JOINED')) and created_on >= (strftime('%s', 'now') - 900) * 1000 limit 5";
+      "SELECT distinct name FROM messages WHERE (hash = ? or (trip = ? and (trip IS NOT NULL and trip != '' and trip != 'null'))) and (message in ('LEFT','JOINED')) and created_on >= (strftime('%s', 'now') - 900) * 1000 limit 5";
 
   public static final String SELECT_LAST_N_MESSAGES =
       "SELECT name,message,created_on FROM messages WHERE (name = ? or trip = ?) and (message not in ('LEFT','JOINED')) order by created_on desc limit ?;";
