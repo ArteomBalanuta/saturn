@@ -62,7 +62,7 @@ public class UserServiceImpl extends OutService implements UserService {
       log.error("Stack trace: ", e);
     }
 
-    if (names.isEmpty()) {
+    if (names.isEmpty() || (names.size() == 1 && names.getFirst().equalsIgnoreCase(user.getNick()))) {
       return Optional.empty();
     } else {
       return Optional.of(
