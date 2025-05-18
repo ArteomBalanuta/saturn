@@ -21,11 +21,13 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.dto.LastSeenDto;
 import org.saturn.app.model.dto.Message;
+import org.saturn.app.model.dto.User;
 import org.saturn.app.service.UserService;
 import org.saturn.app.util.DateUtil;
 import org.saturn.app.util.SqlUtil;
@@ -37,6 +39,40 @@ public class UserServiceImpl extends OutService implements UserService {
   public UserServiceImpl(Connection connection, BlockingQueue<String> queue) {
     super(queue);
     this.connection = connection;
+  }
+
+  @Override
+  public Optional<String> isSeenRecently(User user) {
+    List<String> names = new ArrayList<>();
+    try {
+      PreparedStatement statement = connection.prepareStatement(SqlUtil.SELECT_SEEN_RECENTLY_AS);
+      statement.setString(1, user.getHash());
+      statement.setString(2, user.getTrip());
+      statement.execute();
+
+      ResultSet resultSet = statement.getResultSet();
+      while (resultSet.next()) {
+        names.add(resultSet.getString("name"));
+      }
+
+      statement.close();
+      resultSet.close();
+    } catch (SQLException e) {
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace: ", e);
+    }
+
+    if (names.isEmpty()) {
+      return Optional.empty();
+    } else {
+      return Optional.of(
+          "\\n @"
+              + user.getNick()
+              + ", has been seen online as: "
+              + names.toString()
+              + " in last 15 minutes. "
+              + "\\n");
+    }
   }
 
   @Override

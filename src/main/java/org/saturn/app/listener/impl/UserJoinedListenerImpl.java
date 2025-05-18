@@ -48,6 +48,10 @@ public class UserJoinedListenerImpl implements Listener {
     engine.addActiveUser(user);
     engine.shareUserInfo(user);
     engine.kickIfShadowBanned(user);
+
+    /* Notify if user been online recently */
+    engine.userService.isSeenRecently(user).ifPresent(engine.outService::enqueueMessageForSending);
+
     /* AutoMoveCommand has been triggered */
     if (AutoMoveUserCommandImpl.isAutoMoveEnabled()
         && engine.engineType.equals(EngineType.REPLICA)
