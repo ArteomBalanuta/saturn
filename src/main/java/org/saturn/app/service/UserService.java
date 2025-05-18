@@ -1,9 +1,14 @@
 package org.saturn.app.service;
 
 import java.util.List;
+import java.util.Optional;
+
 import org.saturn.app.model.dto.Message;
+import org.saturn.app.model.dto.User;
 
 public interface UserService {
+
+  Optional<String> isSeenRecently(User user);
   String lastOnline(String tripOrNick);
 
   int delete(String name, String trip);
