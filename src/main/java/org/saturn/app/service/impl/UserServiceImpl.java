@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.dto.LastSeenDto;
 import org.saturn.app.model.dto.Message;
@@ -65,11 +67,18 @@ public class UserServiceImpl extends OutService implements UserService {
     if (names.isEmpty() || (names.size() == 1 && names.getFirst().equalsIgnoreCase(user.getNick()))) {
       return Optional.empty();
     } else {
+      String aliases =
+          names.stream()
+              .filter(n -> !n.equalsIgnoreCase(user.getNick()))
+              .toList()
+              .toString()
+              .replace("[", "")
+              .replace("]", "");
       return Optional.of(
           "\\n @"
               + user.getNick()
               + ", has been seen online as: "
-              + names.toString().replace("[","").replace("]","")
+              + aliases
               + " in last 15 minutes. "
               + "\\n");
     }
