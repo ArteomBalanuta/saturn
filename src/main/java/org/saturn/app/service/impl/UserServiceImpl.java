@@ -77,9 +77,9 @@ public class UserServiceImpl extends OutService implements UserService {
       return Optional.of(
           "\\n @"
               + user.getNick()
-              + ", has been seen online as: "
+              + ", has been seen as: _"
               + aliases
-              + " in last 15 minutes. "
+              + "_ in the last 15 minutes. "
               + "\\n");
     }
   }
