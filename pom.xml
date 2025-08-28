@@ -22,7 +22,7 @@
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <sqlite-jdbc.version>3.41.2.2</sqlite-jdbc.version>
         <log4j-api.version>2.23.1</log4j-api.version>
-        <lombok.version>1.18.36</lombok.version>
+        <lombok.version>1.18.38</lombok.version>
         <Java-WebSocket.version>1.5.3</Java-WebSocket.version>
         <classgraph.version>4.8.179</classgraph.version>
         <mockito-junit-jupiter.version>5.15.2</mockito-junit-jupiter.version>
