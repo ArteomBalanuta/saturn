@@ -19,9 +19,8 @@ RUN dos2unix /app/deploy/*.sh
 RUN chmod +x /app/deploy/create_db.sh && /app/deploy/create_db.sh
 
 # Package the Maven project
-#RUN mvn clean package
+RUN mvn clean package
 
 # Run the bot
 CMD ["java", "-Dlog4j.configurationFile=./log4j2.xml", "-jar", "target/saturn.jar"]
 
-#CMD ["ls", "/database"]
