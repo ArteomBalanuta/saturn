@@ -92,9 +92,11 @@ public class UserMessageListenerImpl implements Listener {
             .get();
     /* Check if user is afk */
     engine.notifyUserNotAfkAnymore(user);
-
     /* notify mentioned user is afk currently */
     engine.notifyIsAfkIfUserIsMentioned(message.getNick(), message.getText());
+
+    /* print YT pic and title */
+    engine.printYoutubeThumbnailAndDetails(message.getNick(), message.getText());
 
     if (message.getText().toLowerCase().contains("has cern ended the universe")) {
       engine.outService.enqueueMessageForSending("no");

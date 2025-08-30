@@ -1,4 +1,4 @@
-dbPath = "../database/database.db"
+dbPath = "database/database.db"
 wsUrl = "wss://hack.chat/chat-ws"
 cmdPrefix = "-"
 channel = "programming"
@@ -9,4 +9,4 @@ adminTrips = "k28Dv/"
 proxies = ""
 autoReconnect = false
 healthCheckInterval = 15
-autorunCommands = "replica lounge, say hello lads!"
+autorunCommands = "replica lounge,say hello lads!"
