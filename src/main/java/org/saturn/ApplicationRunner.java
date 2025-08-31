@@ -24,6 +24,7 @@ public class ApplicationRunner {
   private long healthCheckInterval;
 
   public ApplicationRunner() {
+    log.info("Running at user dir: {}", System.getProperty("user.dir"));
     File tomlFile = new File("config.toml");
     this.config = new Toml().read(tomlFile);
 
@@ -31,7 +32,7 @@ public class ApplicationRunner {
       this.autoReconnectEnabled = config.getBoolean("autoReconnect");
       this.healthCheckInterval = config.getLong("healthCheckInterval");
     } catch (Exception e) {
-      log.info("Error: {}", e.getMessage());
+      log.warn("Error: {}", e.getMessage());
       log.error("Stack trace", e);
 
       System.exit(1);
@@ -42,7 +43,6 @@ public class ApplicationRunner {
 
   public static void main(String[] args) {
     applicationRunner = new ApplicationRunner();
-    log.warn("Running at user dir: {}", System.getProperty("user.dir"));
     applicationRunner.start();
 
     // Register a shutdown hook for graceful shutdown

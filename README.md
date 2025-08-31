@@ -89,11 +89,12 @@ You must keep the following files together when deploying:
 #### Build the Image
 
 ```bash
-  docker build -t saturn-app .
+  docker build -t saturn .
 ```
 
 #### Run the Container
 
+In case you want to use your db, map it:
 ```bash
   docker run -d \
       --name saturn \
@@ -118,19 +119,17 @@ services:
     restart: unless-stopped
 ```
 
-Run the app:
-
 ```bash
   docker compose up --build -d
 ```
 
+- Be aware **DB** will be setup automatically and will be **empty** withing the container.
+
 ---
 
 ## Notes
-
-- Saturn produces a **fat JAR** at: `target/saturn.jar`.
 - Configurations are handled through `config.toml`.
-- Database setup is required before running.
+- Database setup is required before running locally.
 - Docker support is provided for easier deployment.
 
 ---

@@ -7,4 +7,3 @@ services:
     build: .
     environment:
       - JAVA_OPTS=-Xms128m -Xmx256m
-    restart: unless-stopped

@@ -5,8 +5,8 @@ echo "Current directory: $(pwd)"
 # Kill any running Java processes
 echo "Recreating sqlite3 database file..."
 
-mkdir -p ../database
-sqlite3 ../database/database.db <<EOF
+mkdir -p ./database
+sqlite3 ./database/database.db <<EOF
 CREATE TABLE banned_users (
 	"id" INTEGER PRIMARY KEY AUTOINCREMENT,
 	"trip" TEXT,
