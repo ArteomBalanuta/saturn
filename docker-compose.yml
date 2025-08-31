@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  saturn:
+    image: saturn:latest
+    container_name: saturn
+    build: .
+    environment:
+      - JAVA_OPTS=-Xms128m -Xmx256m
+    restart: unless-stopped

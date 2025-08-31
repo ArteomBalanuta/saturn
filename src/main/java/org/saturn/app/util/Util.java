@@ -27,9 +27,9 @@ import org.saturn.app.model.dto.User;
 public class Util {
   public static Gson gson = new Gson();
 
-  public static String extractCmdFromJson(String jsonText) {
+  public static String extractFieldFromJson(String jsonText, String fieldName) {
     JsonElement element = JsonParser.parseString(jsonText);
-    JsonElement listingElement = element.getAsJsonObject().get("cmd");
+    JsonElement listingElement = element.getAsJsonObject().get(fieldName);
     return gson.fromJson(listingElement, String.class);
   }
 

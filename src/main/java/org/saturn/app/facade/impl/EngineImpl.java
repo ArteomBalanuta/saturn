@@ -4,9 +4,11 @@ import static org.saturn.app.util.Constants.CHAT_JSON;
 import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.DateUtil.getDifference;
 import static org.saturn.app.util.DateUtil.toZoneDateTimeUTC;
-import static org.saturn.app.util.Util.extractCmdFromJson;
+import static org.saturn.app.util.Util.extractFieldFromJson;
 
 import com.moandjiezana.toml.Toml;
+
+import java.io.IOException;
 import java.sql.Connection;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -20,6 +22,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.command.factory.CommandFactory;
 import org.saturn.app.facade.Base;
@@ -197,7 +206,7 @@ public class EngineImpl extends Base implements Engine {
   public final void dispatchMessage(String jsonText) {
     try {
       log.debug("Dispatching message: {}", jsonText);
-      String cmd = extractCmdFromJson(jsonText);
+      String cmd = extractFieldFromJson(jsonText, "cmd");
       switch (cmd) {
         case "join" -> {}
         case "onlineSet" -> onlineSetListener.notify(jsonText);
@@ -325,6 +334,62 @@ public class EngineImpl extends Base implements Engine {
       afkUsers.remove(user.getTrip());
       log.debug("Removed user: {}, trip: {}, from afk list", user.getNick(), user.getTrip());
     }
+  }
+
+  public void printYoutubeThumbnailAndDetails(String author, String messageText) {
+    String endingChar = getGetEndingChar(messageText);
+    if (messageText.contains("watch?v=")) {
+      String id = StringUtils.substringBetween(messageText, "watch?v=", endingChar);
+      String youtubeVidDetails = getYoutubeVidDetails(id);
+      String title = extractFieldFromJson(youtubeVidDetails, "title");
+
+      String url = "![" + title + "](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)";
+      String urlFormatted = url.replace("VIDEO_ID", id);
+
+      outService.enqueueMessageForSending(author, "Title: " + title + "\\n" + urlFormatted, false);
+    }
+  }
+
+  private String getGetEndingChar(String messageText) {
+    String ending = " ";
+    messageText += ending;
+    int idIndex = messageText.indexOf("watch?v=\"");
+    int optIndex = messageText.indexOf('&');
+    if (optIndex > idIndex) {
+      ending = "&";
+    }
+    return ending;
+  }
+
+  private String getYoutubeVidDetails(String videoId) {
+    CloseableHttpClient httpClient = HttpClients.createDefault();
+
+    String uri =
+        String.format(
+            "https://www.youtube.com/oembed?format=text&url=https://youtube.com/watch?v=%s",
+            videoId);
+    HttpGet request = new HttpGet(uri);
+
+    // add request headers
+    request.addHeader(HttpHeaders.USER_AGENT, "Firefox 59.9.0");
+
+    try (CloseableHttpResponse response = httpClient.execute(request)) {
+      String result = null;
+      HttpEntity entity = response.getEntity();
+      if (entity != null) {
+        // return it as a String
+        result = EntityUtils.toString(entity);
+      }
+
+      if (response.getStatusLine().getStatusCode() != 200) {
+        result = "Oopsie.";
+      }
+      return result;
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    return null;
   }
 
   public void notifyIsAfkIfUserIsMentioned(String author, String messageText) {
