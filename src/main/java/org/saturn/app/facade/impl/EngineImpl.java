@@ -336,23 +336,40 @@ public class EngineImpl extends Base implements Engine {
     }
   }
 
+  /* TODO: clean up this mess */
   public void printYoutubeThumbnailAndDetails(String author, String messageText) {
     String endingChar = getGetEndingChar(messageText);
     if (messageText.contains("watch?v=")) {
+      messageText += " ";
       String id = StringUtils.substringBetween(messageText, "watch?v=", endingChar);
-      String youtubeVidDetails = getYoutubeVidDetails(id);
-      String title = extractFieldFromJson(youtubeVidDetails, "title");
+      shareYoutubeThumbnailAndDetails(author, id);
+      return;
+    }
 
-      String url = "![" + title + "](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)";
-      String urlFormatted = url.replace("VIDEO_ID", id);
-
-      outService.enqueueMessageForSending(author, "Title: " + title + "\\n" + urlFormatted, false);
+    if (messageText.contains("youtu.be/")) {
+      String id;
+      if (messageText.contains("?list")) {
+        id = StringUtils.substringBetween(messageText, "youtu.be/", "?list");
+      } else {
+        messageText += " ";
+        id = StringUtils.substringBetween(messageText, "youtu.be/", " ");
+      }
+      shareYoutubeThumbnailAndDetails(author, id);
     }
   }
+  /* TODO: clean up this mess */
+  private void shareYoutubeThumbnailAndDetails(String author, String id) {
+    String youtubeVidDetails = getYoutubeVidDetails(id);
+    String title = extractFieldFromJson(youtubeVidDetails, "title");
 
+    String url = "![" + title + "](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)";
+    String urlFormatted = url.replace("VIDEO_ID", id);
+
+    outService.enqueueMessageForSending(author, "Title: " + title + "\\n" + urlFormatted, false);
+  }
+  /* TODO: clean up this mess */
   private String getGetEndingChar(String messageText) {
     String ending = " ";
-    messageText += ending;
     int idIndex = messageText.indexOf("watch?v=\"");
     int optIndex = messageText.indexOf('&');
     if (optIndex > idIndex) {
@@ -360,10 +377,9 @@ public class EngineImpl extends Base implements Engine {
     }
     return ending;
   }
-
+  /* TODO: clean up this mess */
   private String getYoutubeVidDetails(String videoId) {
     CloseableHttpClient httpClient = HttpClients.createDefault();
-
     String uri =
         String.format(
             "https://www.youtube.com/oembed?format=text&url=https://youtube.com/watch?v=%s",
