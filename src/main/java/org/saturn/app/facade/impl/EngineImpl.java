@@ -337,24 +337,37 @@ public class EngineImpl extends Base implements Engine {
   }
 
   public void printYoutubeThumbnailAndDetails(String author, String messageText) {
-    messageText += " ";
+    String endingChar = getGetEndingChar(messageText);
     if (messageText.contains("watch?v=")) {
-      String id = StringUtils.substringBetween(messageText, "watch?v=", " ");
+      String id = StringUtils.substringBetween(messageText, "watch?v=", endingChar);
       String youtubeVidDetails = getYoutubeVidDetails(id);
       String title = extractFieldFromJson(youtubeVidDetails, "title");
 
-      String imgLink =
-          "!["
-              + title
-              + "](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)".replace("VIDEO_ID", id);
-      outService.enqueueMessageForSending(author, "Title: " + title + "\\n" + imgLink, false);
+      String url = "![" + title + "](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)";
+      String urlFormatted = url.replace("VIDEO_ID", id);
+
+      outService.enqueueMessageForSending(author, "Title: " + title + "\\n" + urlFormatted, false);
     }
+  }
+
+  private String getGetEndingChar(String messageText) {
+    String ending = " ";
+    messageText += ending;
+    int idIndex = messageText.indexOf("watch?v=\"");
+    int optIndex = messageText.indexOf('&');
+    if (optIndex > idIndex) {
+      ending = "&";
+    }
+    return ending;
   }
 
   private String getYoutubeVidDetails(String videoId) {
     CloseableHttpClient httpClient = HttpClients.createDefault();
 
-    String uri = String.format("https://www.youtube.com/oembed?format=text&url=https://youtube.com/watch?v=%s", videoId);
+    String uri =
+        String.format(
+            "https://www.youtube.com/oembed?format=text&url=https://youtube.com/watch?v=%s",
+            videoId);
     HttpGet request = new HttpGet(uri);
 
     // add request headers

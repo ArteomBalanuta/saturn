@@ -21,6 +21,8 @@ RUN chmod +x /app/deploy/create_db.sh && /app/deploy/create_db.sh
 # Package the Maven project
 RUN mvn clean package
 
+RUN mv target/saturn.jar saturn.jar
+
 # Run the bot
-CMD ["java", "-Dlog4j.configurationFile=./log4j2.xml", "-jar", "target/saturn.jar"]
+CMD ["java", "-Dlog4j.configurationFile=./log4j2.xml", "-jar", "saturn.jar"]
 
