@@ -117,7 +117,11 @@ public abstract class Base {
       this.password = config.getString("trip");
     }
 
-    if (engineType.equals(EngineType.REPLICA)) {
+    if (this.password.isEmpty()) {
+      this.password = System.getenv("TOKEN");
+    }
+
+      if (engineType.equals(EngineType.REPLICA)) {
       log.warn("Base threadId: {}", Thread.currentThread().threadId());
       if (ThreadContext.get("instanceType") != null) {
         log.warn(
