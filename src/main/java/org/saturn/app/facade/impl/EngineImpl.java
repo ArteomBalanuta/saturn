@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -364,8 +365,8 @@ public class EngineImpl extends Base implements Engine {
 
     String url = "![" + title + "](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)";
     String urlFormatted = url.replace("VIDEO_ID", id);
-
-    outService.enqueueMessageForSending(author, "Title: " + title + "\\n" + urlFormatted, false);
+    String payload = "Title: " + StringEscapeUtils.escapeJava(title) + "\\n" + urlFormatted;
+    outService.enqueueMessageForSending(author,  payload, false);
   }
   /* TODO: clean up this mess */
   private String getGetEndingChar(String messageText) {
