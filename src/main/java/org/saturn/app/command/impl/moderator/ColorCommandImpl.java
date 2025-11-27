@@ -36,13 +36,6 @@ public class ColorCommandImpl extends UserCommandBaseImpl {
         getArguments().stream().map(arg -> arg.replace("@", "")).toList();
 
     final String author = chatMessage.getNick();
-    if (arguments.isEmpty() && resurrectLastKicked(this.engine.channel)) {
-      EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
-      resurrect(kickedTo, lastKicked, this.engine.channel, slaveEngine);
-      log.info("Executed [color] command by user: {}", author);
-      return Optional.of(Status.SUCCESSFUL);
-    }
-
     if (arguments.size() < 2) {
       log.info("Executed [color] command by user: {}, no username parameter specified", author);
       engine.outService.enqueueMessageForSending(
