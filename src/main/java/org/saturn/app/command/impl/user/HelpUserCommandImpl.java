@@ -82,6 +82,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
           + "\u2009auth <trip>\u2009\u2009- authorizes the list. \\n"
           + "\u2009deauth <trip>\u2009\u2009- removes authorized trip. \\n"
           + "\u2009kick,out <nick>\u2009\u2009- self explanatory. \\n"
+          + "\u2009nuke <room>\u2009\u2009- kicks users form the room and locks it. \\n"
           + "\u2009lastmessages <trip> <count>\u2009\u2009- prints users last messages\\n"
           + "\u2009lock <on|off>\u2009\u2009\u2009- enables/disables the lock on the current room\\n"
           + "\u2009overflow,shoot <nick>\u2009\u2009- self explanatory. \\n"
