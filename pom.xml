@@ -17,9 +17,9 @@
         <maven.compiler.target>23</maven.compiler.target>
 
         <commons-configuration2.version>2.10.1</commons-configuration2.version>
-        <commons-beanutils.version>1.9.4</commons-beanutils.version>
+        <commons-beanutils.version>1.11.0</commons-beanutils.version>
         <gson.version>2.10.1</gson.version>
-        <commons-lang3.version>3.18.0</commons-lang3.version>
+        <commons-lang3.version>3.20.0</commons-lang3.version>
         <sqlite-jdbc.version>3.41.2.2</sqlite-jdbc.version>
         <log4j-api.version>2.23.1</log4j-api.version>
         <lombok.version>1.18.38</lombok.version>
