@@ -1,9 +1,12 @@
 package org.saturn.app.command.impl.moderator;
 
 import static org.saturn.app.util.Util.getAdminTrips;
+import static org.saturn.app.util.Util.sleep;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
@@ -54,7 +57,7 @@ public class NukeCommandImpl extends UserCommandBaseImpl {
         new EngineImpl(
             null,
             super.engine.getConfig(),
-            EngineType.LIST_CMD); // no db connection, nor config for this one is required
+            EngineType.REPLICA); // no db connection, nor config for this one is required
     setupListBot(room, slaveEngine);
 
     JoinChannelListener joinChannelListener =
@@ -67,9 +70,14 @@ public class NukeCommandImpl extends UserCommandBaseImpl {
           engine.outService.enqueueMessageForSending(
               author, "\\n Kicking and locking room ?" + room + ", users: " + users, isWhisper());
 
-          slaveEngine.currentChannelUsers.forEach(u -> slaveEngine.modService.kick(u.getNick()));
-          slaveEngine.modService.lock();
+          slaveEngine.currentChannelUsers.forEach(
+              u -> {
+                slaveEngine.modService.ban(u.getNick());
+                sleep(200, TimeUnit.MILLISECONDS);
+                slaveEngine.shareMessages();
+              });
 
+          slaveEngine.modService.lock();
           slaveEngine.shareMessages();
 
           log.info("Executed [nuke] command by user: {}, room: {}", author, room);

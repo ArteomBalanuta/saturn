@@ -47,8 +47,8 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
     Toml main = engine.getConfig();
     EngineImpl replica = new EngineImpl(engine.getDbConnection(), main, EngineType.AGENT);
     replica.setChannel(channel);
-    replica.setNick("thePirate");
-    replica.setPassword("blah");
+    replica.setNick("portal");
+    replica.setPassword("portal");
 
     /* register replica */
     engine.addReplica(replica);
