@@ -6,8 +6,10 @@ import static org.saturn.app.util.Util.gson;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommand;
 import org.saturn.app.command.UserCommandBaseImpl;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
@@ -54,6 +56,15 @@ public class UserMessageListenerImpl implements Listener {
 
     boolean isBotMessage = engine.nick.equals(message.getNick());
     if (isBotMessage) {
+      return;
+    }
+
+    if (engine.engineType.equals(EngineType.AGENT)) {
+      EngineImpl hostRef = engine.getHostRef();
+
+      /* share through the host */
+      hostRef.outService.enqueueMessageForSending(message.getNick() + ": " + StringEscapeUtils.escapeJava(message.getText()));
+      hostRef.shareMessages();
       return;
     }
 

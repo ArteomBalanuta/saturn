@@ -6,6 +6,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.facade.EngineType;
@@ -29,7 +31,23 @@ public class OnlineSetListenerImpl implements Listener {
   @Override
   public void notify(String jsonText) {
     JsonElement e = JsonParser.parseString(jsonText);
-    JsonElement listingElement = e.getAsJsonObject().get("users");
+
+    JsonElement listingElement = null;
+    if (engine.engineType.equals(EngineType.AGENT)) {
+      List<JsonElement> nicks = e.getAsJsonObject().getAsJsonArray("nicks").asList();
+      Set<User> users =
+          nicks.stream()
+              .map(
+                  n -> {
+                    return new User(n.getAsString());
+                  })
+              .collect(Collectors.toSet());
+      engine.setActiveUsers(users.stream().toList());
+      return;
+    } else {
+      listingElement = e.getAsJsonObject().get("users");
+    }
+
     User[] users = gson.fromJson(listingElement, User[].class);
     engine.setActiveUsers(Arrays.asList(users));
     if (engine.engineType.equals(EngineType.HOST)) {

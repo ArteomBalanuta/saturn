@@ -117,11 +117,23 @@ public abstract class Base {
       this.password = config.getString("trip");
     }
 
+    if (engineType.equals(EngineType.AGENT)) {
+      this.prefix = config.getString("cmdPrefix");
+      this.channel = config.getString("channel");
+      this.nick = "thepirate";
+      this.password = "";
+      this.userTrips = config.getString("userTrips");
+      this.adminTrips = config.getString("adminTrips");
+      this.dbPath = config.getString("dbPath");
+      this.baseWsURL = "wss://bellawhiskey.ca/trollegle/chatbox-ws/?support";
+      this.proxies = config.getString("proxies");
+    }
+
     if (this.password.isEmpty()) {
       this.password = System.getenv("TOKEN");
     }
 
-      if (engineType.equals(EngineType.REPLICA)) {
+      if (engineType.equals(EngineType.REPLICA) || engineType.equals(EngineType.AGENT)) {
       log.warn("Base threadId: {}", Thread.currentThread().threadId());
       if (ThreadContext.get("instanceType") != null) {
         log.warn(
@@ -129,7 +141,7 @@ public abstract class Base {
             channel,
             Thread.currentThread().threadId());
       } else {
-        ThreadContext.put("instanceType", "REPLICA:" + channel);
+        ThreadContext.put("instanceType", "AGENT:" + channel);
         log.warn(
             "set instanceType for REPLICA: {}, threadId: {}",
             channel,
