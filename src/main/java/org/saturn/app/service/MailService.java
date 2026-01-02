@@ -10,7 +10,7 @@ public interface MailService {
 
   void orderMessageDelivery(String message, String owner, String receiver, String isWhisper);
 
-  List<String> getTripsByNick(String nick);
+  List<String> getTripsByNickOrTrip(String nick);
 
   List<Mail> getMailByTrip(String trip);
 

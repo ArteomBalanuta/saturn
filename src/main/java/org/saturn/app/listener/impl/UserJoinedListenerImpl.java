@@ -13,8 +13,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.impl.moderator.AutoMoveUserCommandImpl;
 import org.saturn.app.facade.EngineType;
@@ -52,7 +50,8 @@ public class UserJoinedListenerImpl implements Listener {
     engine.kickIfShadowBanned(user);
 
     /* Notify if user been online recently */
-    boolean isReplica = engine.getHostRef().replicasMappedByChannel.values().stream()
+    boolean isReplica =
+        engine.getHostRef().replicasMappedByChannel.values().stream()
             .anyMatch(engine -> engine.nick.equalsIgnoreCase(user.getNick()));
     boolean isHost = user.getNick().equalsIgnoreCase(engine.nick);
     if (!user.isIsMe() && !isHost && !isReplica) {

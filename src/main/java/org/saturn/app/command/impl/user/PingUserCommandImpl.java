@@ -17,7 +17,7 @@ public class PingUserCommandImpl extends UserCommandBaseImpl {
     super(message, engine, List.of("x"));
     super.setAliases(aliases);
   }
-  
+
   @Override
   public Role getAuthorizedRole() {
     return Role.REGULAR;

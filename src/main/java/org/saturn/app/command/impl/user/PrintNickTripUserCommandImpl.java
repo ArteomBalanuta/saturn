@@ -9,7 +9,6 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.util.Util;
 
 @Slf4j
 @CommandAliases(aliases = {"users", "whitelist", "blacklist", "offenders", "knownoffenders"})
@@ -28,12 +27,12 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     String author = chatMessage.getNick();
-//    String header = "\\n Regular users: \\n ";
+    //    String header = "\\n Regular users: \\n ";
     final String result = engine.sqlService.executeFormatted(SQL_PRINT_REGISTERED_USERS);
     engine.outService.enqueueMessageForSending(author, "Users: \\n" + result, isWhisper());
 
-//    String formattedUsers = Util.alignWithWhiteSpace(users, "|", "\u2009", true);
-//    engine.outService.enqueueMessageForSending(author, header + formattedUsers, isWhisper());
+    //    String formattedUsers = Util.alignWithWhiteSpace(users, "|", "\u2009", true);
+    //    engine.outService.enqueueMessageForSending(author, header + formattedUsers, isWhisper());
     log.info("Executed [users] command by user: {}", author);
 
     return Optional.of(Status.SUCCESSFUL);
@@ -41,9 +40,9 @@ public class PrintNickTripUserCommandImpl extends UserCommandBaseImpl {
 
   public static final String SQL_PRINT_REGISTERED_USERS =
       """
-        select distinct t.trip, n.name 
-        from trip_names tn 
-        inner join names n on tn.name_id  = n.id 
+        select distinct t.trip, n.name
+        from trip_names tn
+        inner join names n on tn.name_id  = n.id
         inner join trips t on tn.trip_id = t.id order by n.name desc;
       """;
 }

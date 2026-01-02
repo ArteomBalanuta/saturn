@@ -133,7 +133,7 @@ public abstract class Base {
       this.password = System.getenv("TOKEN");
     }
 
-      if (engineType.equals(EngineType.REPLICA) || engineType.equals(EngineType.AGENT)) {
+    if (engineType.equals(EngineType.REPLICA) || engineType.equals(EngineType.AGENT)) {
       log.warn("Base threadId: {}", Thread.currentThread().threadId());
       if (ThreadContext.get("instanceType") != null) {
         log.warn(
@@ -141,7 +141,7 @@ public abstract class Base {
             channel,
             Thread.currentThread().threadId());
       } else {
-        ThreadContext.put("instanceType", "AGENT:" + channel);
+        ThreadContext.put("instanceType", "REPLICA:" + channel);
         log.warn(
             "set instanceType for REPLICA: {}, threadId: {}",
             channel,

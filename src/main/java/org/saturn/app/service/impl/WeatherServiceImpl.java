@@ -1,6 +1,5 @@
 package org.saturn.app.service.impl;
 
-import static org.saturn.app.model.dto.Weather.getTime;
 import static org.saturn.app.util.DateUtil.formatRfc1123;
 import static org.saturn.app.util.DateUtil.tsToSec8601;
 
@@ -16,7 +15,6 @@ import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.WmoWeatherInterpCodes;
 import org.saturn.app.model.dto.Weather;
-import org.saturn.app.model.dto.WeatherTime;
 import org.saturn.app.service.WeatherService;
 import org.saturn.app.util.Util;
 
@@ -105,14 +103,11 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     String time = currentWeather.time;
     String timeZone = weather.getTimezone();
     ZonedDateTime zonedDateTime =
-        Instant.ofEpochSecond(tsToSec8601(time, timeZone))
-            .atZone(ZoneId.of(timeZone));
+        Instant.ofEpochSecond(tsToSec8601(time, timeZone)).atZone(ZoneId.of(timeZone));
     ZonedDateTime sunriseDateTime =
-        Instant.ofEpochSecond(tsToSec8601(daily.sunrise.get(0), null))
-            .atZone(ZoneId.of(timeZone));
+        Instant.ofEpochSecond(tsToSec8601(daily.sunrise.get(0), null)).atZone(ZoneId.of(timeZone));
     ZonedDateTime sunsetDateTime =
-        Instant.ofEpochSecond(tsToSec8601(daily.sunset.get(0), null))
-            .atZone(ZoneId.of(timeZone));
+        Instant.ofEpochSecond(tsToSec8601(daily.sunset.get(0), null)).atZone(ZoneId.of(timeZone));
 
     String currentTime =
         formatRfc1123(

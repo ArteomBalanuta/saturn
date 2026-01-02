@@ -33,9 +33,9 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
 
     String channel = arguments.getFirst().trim();
     if (engine.replicasMappedByChannel.get(channel) == null) {
-      log.debug("Registering agent for channel: {}", channel);
+      log.debug("Registering replica for channel: {}", channel);
       registerReplica(engine, chatMessage, author, channel);
-      log.info("Successfully started agent for channel: {}", channel);
+      log.info("Successfully started replica for channel: {}", channel);
     }
 
     log.info("Executed [whiskey] command by user: {}, channel: {}", author, channel);
@@ -59,7 +59,7 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         author,
         "started replica at whiskey channel: "
             + channel
-            + " successfully. Number of agents: "
+            + " successfully. Number of replicas: "
             + engine.replicasMappedByChannel.size(),
         chatMessage.isWhisper());
   }

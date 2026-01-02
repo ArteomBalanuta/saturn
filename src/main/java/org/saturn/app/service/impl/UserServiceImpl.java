@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.dto.LastSeenDto;
 import org.saturn.app.model.dto.Message;
@@ -64,7 +62,8 @@ public class UserServiceImpl extends OutService implements UserService {
       log.error("Stack trace: ", e);
     }
 
-    if (names.isEmpty() || (names.size() == 1 && names.getFirst().equalsIgnoreCase(user.getNick()))) {
+    if (names.isEmpty()
+        || (names.size() == 1 && names.getFirst().equalsIgnoreCase(user.getNick()))) {
       return Optional.empty();
     } else {
       String aliases =

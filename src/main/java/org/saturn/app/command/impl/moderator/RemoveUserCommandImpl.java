@@ -46,14 +46,13 @@ public class RemoveUserCommandImpl extends UserCommandBaseImpl {
     if (engine.userService.isNameRegistered(value) || engine.userService.isTripRegistered(value)) {
       int code = engine.userService.delete(value, value);
       if (code == 1) {
-        engine.outService.enqueueMessageForSending(author, "Something went wrong deleting the user", isWhisper());
+        engine.outService.enqueueMessageForSending(
+            author, "Something went wrong deleting the user", isWhisper());
         return Optional.of(Status.FAILED);
       }
 
       engine.outService.enqueueMessageForSending(
-          author,
-          "User has been removed successfully",
-          isWhisper());
+          author, "User has been removed successfully", isWhisper());
     }
 
     log.info("Executed [remove] command by user: {}, arguments: {}", author, arguments);

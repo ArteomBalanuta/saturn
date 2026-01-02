@@ -40,13 +40,13 @@ public final class SqlUtil {
       INSERT_INTO_MAIL_OWNER_RECEIVER_MESSAGE_STATUS_IS_WHISPER_CREATED_ON_VALUES =
           "INSERT INTO mail ('owner','receiver','message','status','is_whisper', 'created_on') VALUES (?, ?, ?, ?, ?, ?);";
 
-  public static final String GET_TRIP_BY_NICK_REGISTERED =
+  public static final String GET_TRIP_BY_NICK_REGISTERED_OR_TRIP =
       """
             SELECT t.trip\s
             FROM trip_names tn\s
             INNER JOIN names n on tn.name_id  = n.id\s
             INNER JOIN trips t on tn.trip_id = t.id\s
-            WHERE LOWER(name) = ?;""";
+            WHERE LOWER(name) = ? OR LOWER(t.trip) = ?;""";
 
   public static final String SELECT_NAME_TRIP_REGISTERED =
       """

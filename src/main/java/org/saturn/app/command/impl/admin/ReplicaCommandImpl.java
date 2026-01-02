@@ -73,7 +73,7 @@ public class ReplicaCommandImpl extends UserCommandBaseImpl {
         author,
         "started replica in channel: "
             + channel
-            + " successfully. Number of agents: "
+            + " successfully. Number of replicas: "
             + engine.replicasMappedByChannel.size(),
         chatMessage.isWhisper());
   }

@@ -130,12 +130,16 @@ public class ModServiceImpl extends OutService implements ModService {
 
   @Override
   public void forceFlair(String target, String flair) {
-    enqueueRawMessageForSending(String.format("{ \"cmd\": \"forceflair\", \"nick\": \"%s\", \"flair\": \"%s\" }", target, flair));
+    enqueueRawMessageForSending(
+        String.format(
+            "{ \"cmd\": \"forceflair\", \"nick\": \"%s\", \"flair\": \"%s\" }", target, flair));
   }
 
   @Override
   public void forceColor(String target, String hexcolor) {
-    enqueueRawMessageForSending(String.format("{ \"cmd\": \"forcecolor\", \"nick\": \"%s\", \"color\": \"%s\" }", target, hexcolor));
+    enqueueRawMessageForSending(
+        String.format(
+            "{ \"cmd\": \"forcecolor\", \"nick\": \"%s\", \"color\": \"%s\" }", target, hexcolor));
   }
 
   @Override

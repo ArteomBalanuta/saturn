@@ -22,6 +22,7 @@ import org.saturn.app.service.impl.OutService;
 @CommandAliases(aliases = {"msgchannel", "msgroom"})
 public class MsgChannelCommandImpl extends UserCommandBaseImpl {
   private final OutService outService;
+
   public MsgChannelCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminAndUserTrips(engine));
     super.setAliases(aliases);

@@ -14,7 +14,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"ws","wsay"})
+@CommandAliases(aliases = {"ws", "wsay"})
 public class WhiskeySayUserCommandImpl extends UserCommandBaseImpl {
   public WhiskeySayUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminAndUserTrips(engine));
@@ -46,7 +46,8 @@ public class WhiskeySayUserCommandImpl extends UserCommandBaseImpl {
     String message = String.valueOf(stringBuilder);
 
     EngineImpl support = engine.replicasMappedByChannel.get("support");
-    support.outService.enqueueMessageForSending(author + ": " + StringEscapeUtils.escapeJava(message));
+    support.outService.enqueueMessageForSending(
+        author + ": " + StringEscapeUtils.escapeJava(message));
     support.shareMessages();
 
     log.info("Executed [whiskeysay] command by user: {}, argument: {}", author, message);

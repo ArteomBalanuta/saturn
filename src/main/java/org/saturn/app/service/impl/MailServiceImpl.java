@@ -33,13 +33,14 @@ public class MailServiceImpl extends OutService implements MailService {
     String receiver = arguments.get(0).replace("@", "");
 
     /* check against trip_names table. */
-    List<String> trips = this.getTripsByNick(receiver);
+    List<String> trips = this.getTripsByNickOrTrip(receiver);
     if (trips.isEmpty()) {
       String registeredUsers = getRegisteredUsers();
       enqueueMessageForSending(
-              author,
-              "User you specified is not registered. Please use a name from provided list to send a message to respective trip. \\n" + registeredUsers,
-              chatMessage.isWhisper());
+          author,
+          "User you specified is not registered. Please use a name from provided list to send a message to respective trip. \\n"
+              + registeredUsers,
+          chatMessage.isWhisper());
       return;
     }
 
@@ -90,11 +91,13 @@ public class MailServiceImpl extends OutService implements MailService {
   }
 
   @Override
-  public List<String> getTripsByNick(String nick) {
+  public List<String> getTripsByNickOrTrip(String nickOrTrip) {
     List<String> trips = new ArrayList<>();
     try {
-      PreparedStatement trip = connection.prepareStatement(SqlUtil.GET_TRIP_BY_NICK_REGISTERED);
-      trip.setString(1, nick.toLowerCase());
+      PreparedStatement trip =
+          connection.prepareStatement(SqlUtil.GET_TRIP_BY_NICK_REGISTERED_OR_TRIP);
+      trip.setString(1, nickOrTrip.toLowerCase());
+      trip.setString(2, nickOrTrip.toLowerCase());
       trip.execute();
 
       ResultSet resultSet = trip.getResultSet();
@@ -119,7 +122,10 @@ public class MailServiceImpl extends OutService implements MailService {
 
       ResultSet resultSet = stm.getResultSet();
       while (resultSet.next()) {
-         b.append(resultSet.getString("name")).append(" ").append(resultSet.getString("trip")).append("\\n");
+        b.append(resultSet.getString("name"))
+            .append(" ")
+            .append(resultSet.getString("trip"))
+            .append("\\n");
       }
       stm.close();
       resultSet.close();

@@ -63,7 +63,8 @@ public class UserMessageListenerImpl implements Listener {
       EngineImpl hostRef = engine.getHostRef();
 
       /* share through the host */
-      hostRef.outService.enqueueMessageForSending(message.getNick() + ": " + StringEscapeUtils.escapeJava(message.getText()));
+      hostRef.outService.enqueueMessageForSending(
+          message.getNick() + ": " + StringEscapeUtils.escapeJava(message.getText()));
       hostRef.shareMessages();
       return;
     }
