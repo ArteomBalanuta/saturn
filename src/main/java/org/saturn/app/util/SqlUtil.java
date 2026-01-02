@@ -48,6 +48,12 @@ public final class SqlUtil {
             INNER JOIN trips t on tn.trip_id = t.id\s
             WHERE LOWER(name) = ? OR LOWER(t.trip) = ?;""";
 
+  public static final String GET_NICKS_BY_TRIP =
+      """
+                SELECT DISTINCT name\s
+                FROM messages \s
+                WHERE LOWER(trip) = ?;""";
+
   public static final String SELECT_NAME_TRIP_REGISTERED =
       """
 SELECT DISTINCT n.name,t.trip\s

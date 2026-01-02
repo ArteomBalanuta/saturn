@@ -422,6 +422,28 @@ public class UserServiceImpl extends OutService implements UserService {
     }
   }
 
+  @Override
+  public List<String> getNicksByTrip(String trip) {
+    List<String> trips = new ArrayList<>();
+    try {
+      PreparedStatement nicks = connection.prepareStatement(SqlUtil.GET_NICKS_BY_TRIP);
+      nicks.setString(1, trip.toLowerCase());
+      nicks.execute();
+
+      ResultSet resultSet = nicks.getResultSet();
+      while (resultSet.next()) {
+        trips.add(resultSet.getString("name"));
+      }
+      nicks.close();
+      resultSet.close();
+    } catch (SQLException e) {
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace", e);
+    }
+
+    return trips;
+  }
+
   public void setSessionDurationAndJoinedDateTime(LastSeenDto dto) {
     String joinedAt = null;
     try {

@@ -24,4 +24,6 @@ public interface UserService {
   void registerTripByName(String name, String trip);
 
   List<Message> lastMessages(String name, String trip, int count);
+
+  List<String> getNicksByTrip(String trip);
 }
