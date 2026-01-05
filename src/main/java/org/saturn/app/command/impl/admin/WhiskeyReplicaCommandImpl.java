@@ -32,9 +32,10 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
     List<String> arguments = this.getArguments();
 
     String channel = arguments.getFirst().trim();
+    String name = arguments.get(1);
     if (engine.replicasMappedByChannel.get(channel) == null) {
       log.debug("Registering replica for channel: {}", channel);
-      registerReplica(engine, chatMessage, author, channel);
+      registerReplica(engine, chatMessage, author, channel, name == null ? "portal" : name);
       log.info("Successfully started replica for channel: {}", channel);
     }
 
@@ -43,12 +44,11 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
   }
 
   public static void registerReplica(
-      EngineImpl engine, ChatMessage chatMessage, String author, String channel) {
+      EngineImpl engine, ChatMessage chatMessage, String author, String channel, String name) {
     Toml main = engine.getConfig();
     EngineImpl replica = new EngineImpl(engine.getDbConnection(), main, EngineType.AGENT);
     replica.setChannel(channel);
-    replica.setNick("portal");
-    replica.setPassword("portal");
+    replica.setNick(name);
 
     /* register replica */
     engine.addReplica(replica);

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.ThreadContext;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.AuthorizationService;
+import org.saturn.app.service.DBZService;
 import org.saturn.app.service.LogRepository;
 import org.saturn.app.service.MailService;
 import org.saturn.app.service.ModService;
@@ -20,6 +21,7 @@ import org.saturn.app.service.SearchService;
 import org.saturn.app.service.UserService;
 import org.saturn.app.service.WeatherService;
 import org.saturn.app.service.impl.AuthorizationServiceImpl;
+import org.saturn.app.service.impl.DBZImpl;
 import org.saturn.app.service.impl.LogRepositoryImpl;
 import org.saturn.app.service.impl.MailServiceImpl;
 import org.saturn.app.service.impl.ModServiceImpl;
@@ -57,6 +59,7 @@ public abstract class Base {
   public final WeatherService weatherService;
   public final AuthorizationService authorizationService;
   public final UserService userService;
+  public final DBZService dbzService;
 
   private final Connection dbConnection;
   public final EngineType engineType;
@@ -79,6 +82,7 @@ public abstract class Base {
     this.userService = new UserServiceImpl(connection, outgoingMessageQueue);
     this.weatherService = new WeatherServiceImpl(outgoingMessageQueue);
     this.authorizationService = new AuthorizationServiceImpl(connection, outgoingMessageQueue);
+    this.dbzService = new DBZImpl(connection, outgoingMessageQueue);
     this.engineType = engineType;
     this.config = config;
 
@@ -120,9 +124,8 @@ public abstract class Base {
     if (engineType.equals(EngineType.AGENT)) {
       this.prefix = config.getString("cmdPrefix");
       this.channel = config.getString("channel");
-      this.nick = "thepirate";
-      this.password = "";
       this.userTrips = config.getString("userTrips");
+      this.password = "";
       this.adminTrips = config.getString("adminTrips");
       this.dbPath = config.getString("dbPath");
       this.baseWsURL = "wss://bellawhiskey.ca/trollegle/chatbox-ws/?support";
