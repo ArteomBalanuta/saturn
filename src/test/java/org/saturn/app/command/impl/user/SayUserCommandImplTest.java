@@ -1,42 +1,21 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.SayUserCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.support.TestSupport;
 
 class SayUserCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTest() {
-    // Setup
-    doReturn("*say hello world").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    doReturn("testTrip").when(message).getTrip();
-    
-    SayUserCommandImpl cmd = new SayUserCommandImpl(engine, message, List.of());
+  void executeEnqueuesRenderedMessage() {
+    var engine = TestSupport.engine();
+    var message = TestSupport.chatMessage("*say hello world", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new SayUserCommandImpl(engine, message, List.of("say", "echo"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        "hello world", 
-        eq(false)
-    );
+    assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
+    assertEquals("hello world ", engine.outgoingMessageQueue.poll());
   }
 }

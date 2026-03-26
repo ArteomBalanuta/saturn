@@ -1,41 +1,24 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.HowToUserCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.support.TestSupport;
 
 class HowToUserCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTest() {
-    // Setup
-    doReturn("*howto").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    
-    HowToUserCommandImpl cmd = new HowToUserCommandImpl(engine, message, List.of());
+  void executeQueuesModerationGuide() {
+    var engine = TestSupport.engine();
+    var message = TestSupport.chatMessage("*howto", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new HowToUserCommandImpl(engine, message, List.of("howto", "hcguide"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
+    String payload = engine.outgoingMessageQueue.poll();
+    assertTrue(payload.startsWith("@testAuthor hack.chat moderation guide"));
+    assertTrue(payload.contains("youtu.be/E_Yl9ul3Ulw"));
   }
 }

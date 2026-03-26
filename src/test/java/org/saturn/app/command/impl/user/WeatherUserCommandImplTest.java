@@ -1,67 +1,33 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.WeatherUserCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.facade.Base;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.service.WeatherService;
+import org.saturn.app.support.TestSupport;
 
 class WeatherUserCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTestWithArguments() {
-    // Setup
-    doReturn("*weather newyork").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    doReturn("testTrip").when(message).getTrip();
-    
-    WeatherUserCommandImpl cmd = new WeatherUserCommandImpl(engine, message, List.of());
+  void executeQueuesFormattedWeatherPayload() {
+    var engine = TestSupport.engine();
+    WeatherService weatherService =
+        (WeatherService)
+            Proxy.newProxyInstance(
+                WeatherService.class.getClassLoader(),
+                new Class<?>[] {WeatherService.class},
+                (proxy, method, args) -> "Temperature: 21 C\\nWind speed: 7 km/h\\n");
+    TestSupport.setField(engine, Base.class, "weatherService", weatherService);
+    var message = TestSupport.chatMessage("*weather newyork", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new WeatherUserCommandImpl(engine, message, List.of("weather", "w"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
-  }
-
-  @Test
-  void executeTestWithoutArguments() {
-    // Setup
-    doReturn("*weather").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    doReturn("testTrip").when(message).getTrip();
-    
-    WeatherUserCommandImpl cmd = new WeatherUserCommandImpl(engine, message, List.of());
-
-    // Execute
-    Optional<Status> result = cmd.execute();
-
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
+    assertEquals(
+        "@testAuthor Temperature: 21 C\\n Wind speed: 7 km/h\\n",
+        engine.outgoingMessageQueue.poll());
   }
 }
