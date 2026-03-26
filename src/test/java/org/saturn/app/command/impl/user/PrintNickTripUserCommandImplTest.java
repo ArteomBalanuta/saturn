@@ -26,6 +26,6 @@ class PrintNickTripUserCommandImplTest {
     var cmd = new PrintNickTripUserCommandImpl(engine, message, List.of("users"));
 
     assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
-    assertEquals("@testAuthor Users: \\ntrip-a | merc", engine.outgoingMessageQueue.poll());
+    assertEquals("@testAuthor Users: \ntrip-a | merc", engine.outgoingMessageQueue.poll());
   }
 }

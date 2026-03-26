@@ -15,7 +15,7 @@ public final class JsonPayloads {
 
   public static String command(
       String cmd, String firstKey, String firstValue, String secondKey, String secondValue) {
-    return "{ \"cmd\": \"%s\", \"%s\": \"%s\", \"%s\":\"%s\"}"
+    return "{ \"cmd\": \"%s\", \"%s\": \"%s\", \"%s\": \"%s\" }"
         .formatted(
             escape(cmd),
             escape(firstKey),

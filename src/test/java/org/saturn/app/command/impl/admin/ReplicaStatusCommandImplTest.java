@@ -18,7 +18,7 @@ class ReplicaStatusCommandImplTest {
 
     assertEquals(Status.SUCCESSFUL, command.execute().orElseThrow());
     assertEquals(
-        "@admin Host room:programming, replicas active: 0 \\nServing channels: none",
+        "@admin Host room:programming, replicas active: 0 \nServing channels: none",
         engine.outgoingMessageQueue.poll());
   }
 
@@ -37,7 +37,7 @@ class ReplicaStatusCommandImplTest {
 
     assertEquals(Status.SUCCESSFUL, command.execute().orElseThrow());
     String payload = engine.outgoingMessageQueue.poll();
-    assertTrue(payload.startsWith("@admin Host room:programming, replicas active: 2 \\nServing channels: "));
+    assertTrue(payload.startsWith("@admin Host room:programming, replicas active: 2 \nServing channels: "));
     assertTrue(payload.contains("lounge"));
     assertTrue(payload.contains("music"));
   }

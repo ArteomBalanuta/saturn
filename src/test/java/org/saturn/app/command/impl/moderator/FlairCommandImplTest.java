@@ -16,7 +16,7 @@ class FlairCommandImplTest {
     var command = new FlairCommandImpl(engine, message, List.of("flair"));
 
     assertEquals(Status.FAILED, command.execute().orElseThrow());
-    assertEquals("@mod \\n Example: *flair merc trusted", engine.outgoingMessageQueue.poll());
+    assertEquals("@mod \n Example: *flair merc trusted", engine.outgoingMessageQueue.poll());
   }
 
   @Test
@@ -44,6 +44,6 @@ class FlairCommandImplTest {
     assertEquals(
         "{ \"cmd\": \"forceflair\", \"nick\": \"merc\", \"flair\": \"trusted\" }",
         engine.outgoingRawMessageQueue.poll());
-    assertEquals("@mod \\n Flair set successfully!", engine.outgoingMessageQueue.poll());
+    assertEquals("@mod \n Flair set successfully!", engine.outgoingMessageQueue.poll());
   }
 }

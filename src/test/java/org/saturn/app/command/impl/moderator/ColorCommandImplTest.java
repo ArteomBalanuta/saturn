@@ -16,7 +16,7 @@ class ColorCommandImplTest {
     var command = new ColorCommandImpl(engine, message, List.of("color"));
 
     assertEquals(Status.FAILED, command.execute().orElseThrow());
-    assertEquals("@mod \\n Example: *color merc 00ff00", engine.outgoingMessageQueue.poll());
+    assertEquals("@mod \n Example: *color merc 00ff00", engine.outgoingMessageQueue.poll());
   }
 
   @Test

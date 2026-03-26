@@ -18,7 +18,7 @@ class InfoUserCommandImplTest {
 
     assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
     assertEquals(
-        "@testAuthor \\n User trip: trip-a\\n User hash: hash-a",
+        "@testAuthor \n User trip: trip-a\n User hash: hash-a",
         engine.outgoingMessageQueue.poll());
   }
 }

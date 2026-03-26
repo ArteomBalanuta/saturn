@@ -37,6 +37,6 @@ class LastOnlineUserCommandImplTest {
     var cmd = new LastOnlineUserCommandImpl(engine, message, List.of("lastseen", "seen"));
 
     assertEquals(Status.FAILED, cmd.execute().orElseThrow());
-    assertEquals("@testAuthor \\n Example: *lastseen merc", engine.outgoingMessageQueue.poll());
+    assertEquals("@testAuthor \n Example: *lastseen merc", engine.outgoingMessageQueue.poll());
   }
 }

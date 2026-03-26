@@ -16,6 +16,6 @@ class JsonPayloadsTest {
   void commandEscapesMultipleValues() {
     String payload = JsonPayloads.command("kick", "nick", "me\\", "to", "x\"y");
 
-    assertEquals("{ \"cmd\": \"kick\", \"nick\": \"me\\\\\", \"to\":\"x\\\"y\"}", payload);
+    assertEquals("{ \"cmd\": \"kick\", \"nick\": \"me\\\\\", \"to\": \"x\\\"y\" }", payload);
   }
 }

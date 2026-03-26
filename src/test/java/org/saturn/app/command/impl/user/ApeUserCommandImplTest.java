@@ -19,6 +19,6 @@ class ApeUserCommandImplTest {
     assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
     String payload = engine.outgoingMessageQueue.poll();
     assertTrue(payload.startsWith("@testAuthor "));
-    assertTrue(payload.contains("\\n"));
+    assertTrue(payload.contains("\n"));
   }
 }

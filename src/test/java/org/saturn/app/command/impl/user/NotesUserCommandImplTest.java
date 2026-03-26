@@ -16,6 +16,6 @@ class NotesUserCommandImplTest {
     var cmd = new NotesUserCommandImpl(engine, message, List.of("notes"));
 
     assertEquals(Status.FAILED, cmd.execute().orElseThrow());
-    assertEquals("@testAuthor \\n Set your trip first. Example: *notes", engine.outgoingMessageQueue.poll());
+    assertEquals("@testAuthor \n Set your trip first. Example: *notes", engine.outgoingMessageQueue.poll());
   }
 }
