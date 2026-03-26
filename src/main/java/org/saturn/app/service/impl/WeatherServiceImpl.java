@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -118,57 +119,50 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
             .getWeatherEmoji();
 
     log.warn("Using weather emoji: {}", weatherEmoji);
-    return """
-        Weather forecast for today: **%s**\\n
-        Temperature: %s %s\\n
-        Feels temp: %s %s\\n
-        Air Humidity: %s %s\\n
-        Precipitation: %s\\n
-        Wind speed: %s %s\\n
-        Pressure surface: %s %s\\n
-        Pressure sea level: %s %s\\n
-        \u200B\u200B\u200B \\n
-        UV day max index: %s %s\\n
-        Short wave radiation day sum: %s %s\\n
-        ShortWave rad: %s %s\\n
-        Diffuse rad: %s %s\\n
-        \u200B\u200B\u200B \\n
-        Time: %s\\n
-        Sun rise: %s\\n
-        Sun set: %s\\n
-        \u200B\u200B\u200B \\n
-        Soil temp 18cm: %s %s\\n
-        Soil moist 3-9cm: %s %s\\n
-        """
-        .formatted(
-            area,
-            currentWeather.temperature,
-            currentWeatherUnits.temperature,
-            hourly.apparent_temperature.get(zonedDateTime.getHour()),
-            hourlyUnits.apparent_temperature,
-            hourly.relative_humidity_2m.get(zonedDateTime.getHour()),
-            hourlyUnits.relative_humidity_2m,
-            weatherEmoji,
-            currentWeather.windspeed,
-            currentWeatherUnits.windspeed,
-            hourly.surface_pressure.get(zonedDateTime.getHour()),
-            hourlyUnits.surface_pressure,
-            hourly.pressure_msl.get(zonedDateTime.getHour()),
-            hourlyUnits.pressure_msl,
-            daily.uv_index_max.get(0),
-            dailyUnits.uv_index_max,
-            daily.shortwave_radiation_sum.get(0),
-            dailyUnits.shortwave_radiation_sum,
-            hourly.shortwave_radiation.get(zonedDateTime.getHour()),
-            hourlyUnits.shortwave_radiation,
-            hourly.diffuse_radiation.get(zonedDateTime.getHour()),
-            hourlyUnits.diffuse_radiation,
-            currentTime.replace(":", "-"),
-            sunriseTime.replace(":", "-"),
-            sunsetTime.replace(":", "-"),
-            hourly.soil_temperature_18cm.get(zonedDateTime.getHour()),
-            hourlyUnits.soil_temperature_18cm,
+    List<String> lines = new ArrayList<>();
+    lines.add("Weather forecast for today: **%s**".formatted(area));
+    lines.add(
+        "Temperature: %s %s".formatted(
+            currentWeather.temperature, currentWeatherUnits.temperature));
+    lines.add(
+        "Feels temp: %s %s".formatted(
+            hourly.apparent_temperature.get(zonedDateTime.getHour()), hourlyUnits.apparent_temperature));
+    lines.add(
+        "Air Humidity: %s %s".formatted(
+            hourly.relative_humidity_2m.get(zonedDateTime.getHour()), hourlyUnits.relative_humidity_2m));
+    lines.add("Precipitation: %s".formatted(weatherEmoji));
+    lines.add(
+        "Wind speed: %s %s".formatted(currentWeather.windspeed, currentWeatherUnits.windspeed));
+    lines.add(
+        "Pressure surface: %s %s".formatted(
+            hourly.surface_pressure.get(zonedDateTime.getHour()), hourlyUnits.surface_pressure));
+    lines.add(
+        "Pressure sea level: %s %s".formatted(
+            hourly.pressure_msl.get(zonedDateTime.getHour()), hourlyUnits.pressure_msl));
+    lines.add("\u200B\u200B\u200B ");
+    lines.add(
+        "UV day max index: %s %s".formatted(daily.uv_index_max.get(0), dailyUnits.uv_index_max));
+    lines.add(
+        "Short wave radiation day sum: %s %s".formatted(
+            daily.shortwave_radiation_sum.get(0), dailyUnits.shortwave_radiation_sum));
+    lines.add(
+        "ShortWave rad: %s %s".formatted(
+            hourly.shortwave_radiation.get(zonedDateTime.getHour()), hourlyUnits.shortwave_radiation));
+    lines.add(
+        "Diffuse rad: %s %s".formatted(
+            hourly.diffuse_radiation.get(zonedDateTime.getHour()), hourlyUnits.diffuse_radiation));
+    lines.add("\u200B\u200B\u200B ");
+    lines.add("Time: %s".formatted(currentTime.replace(":", "-")));
+    lines.add("Sun rise: %s".formatted(sunriseTime.replace(":", "-")));
+    lines.add("Sun set: %s".formatted(sunsetTime.replace(":", "-")));
+    lines.add("\u200B\u200B\u200B ");
+    lines.add(
+        "Soil temp 18cm: %s %s".formatted(
+            hourly.soil_temperature_18cm.get(zonedDateTime.getHour()), hourlyUnits.soil_temperature_18cm));
+    lines.add(
+        "Soil moist 3-9cm: %s %s".formatted(
             hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour()),
-            hourlyUnits.soil_moisture_3_to_9cm);
+            hourlyUnits.soil_moisture_3_to_9cm));
+    return String.join("\\n", lines) + "\\n";
   }
 }
