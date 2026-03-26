@@ -25,6 +25,7 @@ java --version
 ```bash
 git clone https://github.com/ArteomBalanuta/saturn.git
 cd saturn
+cp config.example.toml config.toml
 make fresh-db
 ./mvnw package
 java -Dlog4j.configurationFile=./log4j2.xml -jar target/saturn.jar
@@ -34,7 +35,13 @@ java -Dlog4j.configurationFile=./log4j2.xml -jar target/saturn.jar
 
 ## Configuration
 
-Main configuration lives in `config.toml`.
+Main runtime configuration lives in `config.toml`.
+
+Start from the template:
+
+```bash
+cp config.example.toml config.toml
+```
 
 Example:
 
@@ -62,6 +69,8 @@ Important fields:
 - `adminTrips`: comma-separated admin trips
 - `autoReconnect`: enables health-check restart behavior
 - `autorunCommands`: commands executed after startup
+
+`config.example.toml` is tracked in git. Your local `config.toml` is intentionally ignored.
 
 ---
 
@@ -105,6 +114,7 @@ When running outside Docker, keep these files available together:
 
 - `target/saturn.jar`
 - `config.toml`
+- `config.example.toml` (optional, as a template)
 - `log4j2.xml`
 - `database/database.db`
 
