@@ -15,6 +15,7 @@ COPY log4j2.xml .
 
 COPY deploy deploy
 COPY VERSION .
+COPY config.example.toml .
 
 # Fix line endings for shell scripts
 RUN dos2unix deploy/*.sh
@@ -32,8 +33,7 @@ WORKDIR /app
 COPY --from=build /app/target/saturn.jar .
 COPY --from=build /app/database/database.db database/database.db
 COPY --from=build /app/log4j2.xml .
-COPY config.toml .
+COPY --from=build /app/config.example.toml ./config.toml
 
 # Run
 CMD ["java", "-Dlog4j.configurationFile=log4j2.xml", "-jar", "saturn.jar"]
-
