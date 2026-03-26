@@ -98,6 +98,13 @@ class EngineImplTest {
     assertEquals("{\"cmd\":\"onlineSet\",\"users\":[]}", listener.lastMessage());
   }
 
+  @Test
+  void buildChatPayloadEscapesTrailingBackslash() {
+    String payload = EngineImpl.buildChatPayload("@ab $\\");
+
+    assertEquals("{\"cmd\":\"chat\",\"text\":\"@ab $\\\\\"}", payload);
+  }
+
   private static final class CountingListener implements Listener {
     private int notifications;
     private String lastMessage;

@@ -67,6 +67,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
               "\u2009sql <SQL>\u2009\u2009\u2009\u2009- runs SQL against the bot database",
               "\u2009mine <room> <start|stop>\u2009- controls the trip miner in a room",
               "\u2009mem,memory\u2009\u2009\u2009- shows JVM memory usage",
+              "\u2009prefix <char>\u2009\u2009\u2009- changes the live command prefix",
               "\u2009msgroom,msgchannel <room> <text>\u2009- sends a message to another room",
               "\u2009replica,bot <channel>\u2009- starts a replica in a room",
               "\u2009replicaoff <channel>\u2009- stops a running replica",

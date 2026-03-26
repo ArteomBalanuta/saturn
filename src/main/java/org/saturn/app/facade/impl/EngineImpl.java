@@ -1,11 +1,10 @@
 package org.saturn.app.facade.impl;
 
-import static org.saturn.app.util.Constants.CHAT_JSON;
-import static org.saturn.app.util.Constants.JOIN_JSON;
 import static org.saturn.app.util.DateUtil.getDifference;
 import static org.saturn.app.util.DateUtil.toZoneDateTimeUTC;
 import static org.saturn.app.util.Util.extractFieldFromJson;
 
+import com.google.gson.JsonObject;
 import com.moandjiezana.toml.Toml;
 import java.io.IOException;
 import java.sql.Connection;
@@ -160,14 +159,14 @@ public class EngineImpl extends Base implements Engine {
   }
 
   public void sendJoinMessage() {
-    String joinPayload = String.format(JOIN_JSON, channel, nick, password);
+    String joinPayload = buildJoinPayload(channel, nick, password);
     hcConnection.write(joinPayload);
     log.debug("Sent join payload: {}", joinPayload);
   }
 
   public void shareMessages() {
     if (!outgoingMessageQueue.isEmpty()) {
-      String chatPayload = String.format(CHAT_JSON, outgoingMessageQueue.poll());
+      String chatPayload = buildChatPayload(outgoingMessageQueue.poll());
       flushMessage(chatPayload);
     }
     if (!outgoingRawMessageQueue.isEmpty()) {
@@ -187,6 +186,21 @@ public class EngineImpl extends Base implements Engine {
     } else {
       log.debug("Message can't be null");
     }
+  }
+
+  static String buildChatPayload(String message) {
+    JsonObject payload = new JsonObject();
+    payload.addProperty("cmd", "chat");
+    payload.addProperty("text", message);
+    return payload.toString();
+  }
+
+  static String buildJoinPayload(String channel, String nick, String password) {
+    JsonObject payload = new JsonObject();
+    payload.addProperty("cmd", "join");
+    payload.addProperty("channel", channel);
+    payload.addProperty("nick", "%s#%s".formatted(nick, password));
+    return payload.toString();
   }
 
   @Override
