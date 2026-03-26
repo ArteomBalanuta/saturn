@@ -1,0 +1,12 @@
+dbPath = "database/database.db"
+wsUrl = "wss://hack.chat/chat-ws"
+cmdPrefix = "*"
+channel = "programming"
+nick = "alphaBot"
+trip = "secret13"
+userTrips = ""
+adminTrips = "g0KY09"
+proxies = ""
+autoReconnect = true
+healthCheckInterval = 5
+autorunCommands = "replica lounge, say hello lads!!"
