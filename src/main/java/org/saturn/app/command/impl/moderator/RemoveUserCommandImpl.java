@@ -27,35 +27,33 @@ public class RemoveUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final String author = chatMessage.getNick();
-    final Optional<String> authorTrip = Optional.ofNullable(chatMessage.getTrip());
-
     List<String> arguments = getArguments();
     if (arguments.isEmpty()) {
       log.info(
           "Executed [remove] command by user: {}, trip: {}, no arguments present",
-          author,
-          authorTrip);
-      engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "remove [merc|g0KY09]", isWhisper());
-      return Optional.of(Status.FAILED);
+          author(),
+          Optional.ofNullable(chatMessage.getTrip()));
+      return failWithUsage("remove [merc|g0KY09]");
     }
 
     String value = arguments.getFirst();
-
-    if (engine.userService.isNameRegistered(value) || engine.userService.isTripRegistered(value)) {
-      int code = engine.userService.delete(value, value);
-      if (code == 1) {
-        engine.outService.enqueueMessageForSending(
-            author, "Something went wrong deleting the user", isWhisper());
-        return Optional.of(Status.FAILED);
-      }
-
-      engine.outService.enqueueMessageForSending(
-          author, "User has been removed successfully", isWhisper());
+    if (!isRegistered(value)) {
+      replyToAuthor("No registered user found for: %s".formatted(value));
+      log.info("Executed [remove] command by user: {}, no user found for: {}", author(), value);
+      return Optional.of(Status.FAILED);
     }
 
-    log.info("Executed [remove] command by user: {}, arguments: {}", author, arguments);
-    return Optional.of(Status.SUCCESSFUL);
+    int code = engine.userService.delete(value, value);
+    if (code == 1) {
+      return fail("Something went wrong deleting the user");
+    }
+
+    replyToAuthor("User has been removed successfully");
+    log.info("Executed [remove] command by user: {}, arguments: {}", author(), arguments);
+    return successful();
+  }
+
+  private boolean isRegistered(String value) {
+    return engine.userService.isNameRegistered(value) || engine.userService.isTripRegistered(value);
   }
 }

@@ -8,6 +8,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Optional;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -24,6 +25,8 @@ import org.saturn.app.listener.Listener;
 public class Connection {
   private final WebSocketClient client;
   private boolean isError;
+  private final Listener connectionListener;
+  private final Listener incomingMessageListener;
 
   public Connection(
       String address,
@@ -31,6 +34,8 @@ public class Connection {
       org.saturn.app.model.dto.Proxy proxy,
       EngineImpl engine)
       throws URISyntaxException {
+    this.connectionListener = getRequiredListener(listeners, "connectionListener");
+    this.incomingMessageListener = getRequiredListener(listeners, "incomingMessageListener");
     URI uri = new URI(address);
     client =
         new WebSocketClient(uri) {
@@ -68,16 +73,12 @@ public class Connection {
             client.setConnectionLostTimeout(0);
             client.sendPing();
             log.debug("Handshake Status: {}", serverHandshake.getHttpStatus());
-            listeners.stream()
-                .filter(listener -> "connectionListener".equals(listener.getListenerName()))
-                .forEach(listener -> listener.notify("connected"));
+            connectionListener.notify("connected");
           }
 
           @Override
           public void onMessage(String s) {
-            listeners.stream()
-                .filter(listener -> "incomingMessageListener".equals(listener.getListenerName()))
-                .forEach(listener -> listener.notify(s));
+            incomingMessageListener.notify(s);
           }
 
           @Override
@@ -146,5 +147,14 @@ public class Connection {
 
   public boolean isConnected() {
     return (client.isOpen() && !client.isClosing() && !client.isFlushAndClose()) && !isError;
+  }
+
+  private static Listener getRequiredListener(List<Listener> listeners, String name) {
+    Optional<Listener> listener =
+        listeners.stream().filter(candidate -> name.equals(candidate.getListenerName())).findFirst();
+    if (listener.isEmpty()) {
+      throw new IllegalArgumentException("Missing listener: " + name);
+    }
+    return listener.get();
   }
 }

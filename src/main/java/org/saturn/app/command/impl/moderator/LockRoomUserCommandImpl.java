@@ -27,27 +27,27 @@ public class LockRoomUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments = getArguments();
-    final String author = chatMessage.getNick();
+    List<String> arguments = getArguments();
     if (arguments.isEmpty()) {
-      log.info("Executed [lock] command by user: {}, flag: not set", author);
-      super.engine.outService.enqueueMessageForSending(
-          author, engine.prefix + "lock on", isWhisper());
+      log.info("Executed [lock] command by user: {}, flag: not set", author());
+      replyToAuthor("%slock [on|off]".formatted(engine.prefix));
       return Optional.of(Status.FAILED);
     }
 
-    Optional<String> argument = arguments.stream().findFirst();
-
-    if ("on".equals(argument.get())) {
+    String argument = arguments.getFirst();
+    if ("on".equals(argument)) {
       engine.modService.lock();
-      super.engine.outService.enqueueMessageForSending(author, " Room locked!", isWhisper());
-      return Optional.of(Status.SUCCESSFUL);
-    } else if ("off".equals(argument.get())) {
-      engine.modService.unlock();
-      super.engine.outService.enqueueMessageForSending(author, " Room unlocked!", isWhisper());
-      return Optional.of(Status.SUCCESSFUL);
+      replyToAuthor(" Room locked!");
+      return successful();
     }
 
+    if ("off".equals(argument)) {
+      engine.modService.unlock();
+      replyToAuthor(" Room unlocked!");
+      return successful();
+    }
+
+    replyToAuthor("%slock [on|off]".formatted(engine.prefix));
     return Optional.of(Status.FAILED);
   }
 }

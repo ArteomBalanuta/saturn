@@ -1,137 +1,176 @@
-## Saturn Project
+## Saturn
 
-**Saturn** is a Moderator Bot built for the [Hack.Chat](https://github.com/hack-chat) project.
+**Saturn** is a moderator bot for [Hack.Chat](https://github.com/hack-chat).
 
----
-
-### Getting Started
-
-#### 1. Clone the Project
-```bash
-  git clone https://github.com/ArteomBalanuta/saturn.git
-  cd saturn
-```
-
-Make sure **JDK 24 or above** is installed:
-```bash
-  java --version
-```
+It supports moderation commands, user utilities, room replicas, persistence with SQLite, and Docker-based deployment.
 
 ---
 
-#### 2. Database Setup
-Before proceeding, ensure `sqlite3` is installed and available in your terminal.
+## Requirements
 
-Run the database setup script:
+- JDK 24+
+- `sqlite3`
+- Docker (optional, for containerized runs)
+
+Check your Java version:
+
 ```bash
-  /bin/bash deploy/create_db.sh
+java --version
 ```
 
-Afterwards, confirm that `database.db` was created inside the `database/' directory.  
+---
 
-In the root `config.toml` file, set the database path:
+## Quick Start
+
+```bash
+git clone https://github.com/ArteomBalanuta/saturn.git
+cd saturn
+make fresh-db
+./mvnw package
+java -Dlog4j.configurationFile=./log4j2.xml -jar target/saturn.jar
+```
+
+---
+
+## Configuration
+
+Main configuration lives in `config.toml`.
+
+Example:
+
 ```toml
 dbPath = "database/database.db"
+wsUrl = "wss://hack.chat/chat-ws"
+cmdPrefix = "*"
+channel = "programming"
+nick = "alphaBot"
+trip = "secret13"
+userTrips = ""
+adminTrips = "g0KY09"
+autoReconnect = true
+healthCheckInterval = 5
+autorunCommands = "replica lounge, say hello lads!!"
 ```
+
+Important fields:
+
+- `dbPath`: path to the SQLite database
+- `cmdPrefix`: command prefix used in chat
+- `channel`: room Saturn joins on startup
+- `trip`: bot trip password
+- `userTrips`: comma-separated trips with basic access
+- `adminTrips`: comma-separated admin trips
+- `autoReconnect`: enables health-check restart behavior
+- `autorunCommands`: commands executed after startup
 
 ---
 
-#### 3. Building the Application
+## Local Development
 
-*Linux:*
+### Create a Fresh Database
+
 ```bash
-  ./mvnw package
+make fresh-db
 ```
 
-*Windows:*
-```commandline
+This recreates `database/database.db` from `schema.sql` and applies SQL migrations from `database/migrations/`.
+
+### Build
+
+Linux/macOS:
+
+```bash
+./mvnw package
+```
+
+Windows:
+
+```powershell
 mvnw.cmd package
 ```
 
-After the build, the Fat/Uber JAR will be generated at: target/saturn.jar
+The build output is:
 
----
-#### 4. Configuration (`config.toml`)
-
-Example configuration:
-
-```toml
-dbPath = "database/database.db"          # Path to the database file
-wsUrl = "wss://hack.chat/chat-ws"         # Chat's WebSocket address
-cmdPrefix = "*"                       # Command prefix used to trigger the bot
-channel = "programming"                ## Channel where the bot will join
-nick = "alphaBot"                  # Bot nickname
-trip = "secret13"                   # Trip password (used for server-side trip code)
-userTrips = ""                     # List of trips with basic command access
-adminTrips = "g0KY09"               # Trips with ADMIN role
-autoReconnect = true               # Enable/disable auto-reconnect
-healthCheckInterval = 5            # Interval (minutes) for health checks
-autorunCommands = "replica lounge, say hello lads!!"  # Commands run on startup
+```text
+target/saturn.jar
 ```
 
-#### 5. Running the Bot
+### Run
 
-Run directly with Java:
 ```bash
- java -Dlog4j.configurationFile=./log4j2.xml -jar target/saturn.jar
+java -Dlog4j.configurationFile=./log4j2.xml -jar target/saturn.jar
 ```
 
-You must keep the following files together when deploying:
-- `saturn.jar`
+When running outside Docker, keep these files available together:
+
+- `target/saturn.jar`
 - `config.toml`
-- `log4j2.xml` ( optional )
-- `database.db`
+- `log4j2.xml`
+- `database/database.db`
 
 ---
 
-## [<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/docker/docker-original.svg" alt="docker" width="40" height="40"/>](https://hub.docker.com/r/yourusername/saturn) Running with Docker
+## Docker
 
-#### Build the Image
+The easiest Docker workflow uses the included `Makefile`.
 
-```bash
-  docker build -t saturn .
-```
-
-#### Run the Container
-
-In case you want to use your db, map it:
-```bash
-  docker run -d \
-      --name saturn \
-      -v $(pwd)/config.toml:/app/config.toml \
-      -v $(pwd)/database:/app/database \
-      saturn
-```
-
-#### Run with Docker Compose
-This `docker-compose.yml` should be present:
-
-```yaml
-version: "3.9"
-
-services:
-  saturn:
-    image: saturn:latest
-    container_name: saturn
-    build: .
-    environment:
-      - JAVA_OPTS=-Xms128m -Xmx256m
-    restart: unless-stopped
-```
+### First Run
 
 ```bash
-  docker compose up --build -d
+make fresh-db
+make rebuild
+make logs
 ```
 
-- Be aware **DB** will be setup automatically and will be **empty** withing the container.
+### Common Commands
+
+```bash
+make build      # build the image
+make run        # recreate and run the container
+make rebuild    # clean, build, and run
+make stop       # stop the container
+make rm         # remove the container
+make rmi        # remove the image
+make clean      # remove both container and image
+make logs       # follow container logs
+make shell      # open a shell in the container
+make status     # show container status
+make help       # list all targets
+```
+
+`make run` and `make rebuild` mount:
+
+- `./config.toml` to `/app/config.toml`
+- `./database` to `/app/database`
+
+### Manual Docker Commands
+
+```bash
+docker build -t saturn .
+
+docker run -d \
+  --name saturn \
+  -v $(pwd)/config.toml:/app/config.toml \
+  -v $(pwd)/database:/app/database \
+  saturn
+```
+
+### Docker Compose
+
+```bash
+docker compose up --build -d
+```
+
+If you use the local bind-mounted setup, the container will use your local `config.toml` and `database/`.
 
 ---
 
-## Notes
-- Configurations are handled through `config.toml`.
-- Database setup is required before running locally.
-- Docker support is provided for easier deployment.
+## Project Notes
+
+- SQLite is used for persistence.
+- The local database is not recreated automatically unless you run `make fresh-db`.
+- Docker image builds also create a database inside the image, but your local mounted `database/` overrides it at runtime.
 
 ---
 
-# _Have fun!_
+## Have Fun

@@ -10,11 +10,9 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommand;
 import org.saturn.app.facade.EngineType;
@@ -31,21 +29,22 @@ public class CommandFactory {
           .enableAllInfo()
           .acceptPackages("org.saturn.app.command.impl")
           .scan();
+  private static final Object commandCatalogMonitor = new Object();
+  private static volatile List<CommandDefinition> commandCatalog;
+  private static volatile boolean catalogLogged;
   private final EngineImpl engine;
-  private final Map<ClassInfo, String[]> aliasesMappedByClassInfo;
+  private final List<CommandDefinition> commandDefinitions;
 
   public CommandFactory(EngineImpl engine, Class<? extends Annotation> commandAnnotation) {
     this.engine = engine;
-    this.aliasesMappedByClassInfo = getAliases(commandAnnotation);
+    this.commandDefinitions = getCommandCatalog(commandAnnotation);
+    logCatalogIfNeeded();
   }
 
   public Optional<UserCommand> getCommand(ChatMessage message, String cmd) {
-    AtomicReference<List<String>> aliases = new AtomicReference<>();
-
-    Optional<Map.Entry<ClassInfo, String[]>> first =
-        aliasesMappedByClassInfo.entrySet().stream()
-            .peek(e -> aliases.set(Arrays.asList(e.getValue())))
-            .filter(e -> Util.checkAnagrams(cmd, Arrays.asList(e.getValue())))
+    Optional<CommandDefinition> first =
+        commandDefinitions.stream()
+            .filter(definition -> Util.checkAnagrams(cmd, definition.aliases()))
             .findFirst();
 
     if (first.isEmpty()) {
@@ -53,26 +52,39 @@ public class CommandFactory {
       return Optional.empty();
     }
 
-    ClassInfo info = first.get().getKey();
     try {
-      ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-      Class<?> cl = classLoader.loadClass(info.getName());
-      Constructor<?> declaredConstructor = cl.getDeclaredConstructors()[0];
-
-      log.debug("Found cmd implementation class, aliases: {}, [{}]", info.getName(), aliases.get());
+      CommandDefinition definition = first.get();
+      Constructor<? extends UserCommand> constructor = definition.constructor();
+      log.debug(
+          "Found cmd implementation class, aliases: {}, [{}]",
+          definition.className(),
+          definition.aliases());
       return Optional.of(
-          (UserCommand) declaredConstructor.newInstance(this.engine, message, aliases.get()));
+          constructor.newInstance(this.engine, message, definition.aliases()));
 
-    } catch (ClassNotFoundException
-        | InvocationTargetException
+    } catch (InvocationTargetException
         | InstantiationException
         | IllegalAccessException ex) {
       throw new RuntimeException(ex);
     }
   }
 
-  protected Map<ClassInfo, String[]> getAliases(Class<? extends Annotation> annotation) {
-    Map<ClassInfo, String[]> aliasesMappedByClassInfo = new HashMap<>();
+  protected List<CommandDefinition> getCommandCatalog(Class<? extends Annotation> annotation) {
+    List<CommandDefinition> cached = commandCatalog;
+    if (cached != null) {
+      return cached;
+    }
+
+    synchronized (commandCatalogMonitor) {
+      if (commandCatalog == null) {
+        commandCatalog = loadCommandCatalog(annotation);
+      }
+      return commandCatalog;
+    }
+  }
+
+  private List<CommandDefinition> loadCommandCatalog(Class<? extends Annotation> annotation) {
+    List<CommandDefinition> definitions = new ArrayList<>();
     ClassInfoList classesWithAnnotation = scanResult.getClassesWithAnnotation(annotation);
 
     classesWithAnnotation.forEach(
@@ -85,17 +97,47 @@ public class CommandFactory {
                   .map(v -> (String[]) v.getValue())
                   .toList();
 
-          String[] aliases = collect.getFirst();
-          aliasesMappedByClassInfo.put(routeClassInfo, aliases);
-
-          if (engine.engineType.equals(EngineType.HOST)) {
-            log.info(
-                "{} is annotated with aliases: {}",
-                routeClassInfo.getName(),
-                Arrays.toString(aliases));
+          try {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            @SuppressWarnings("unchecked")
+            Class<? extends UserCommand> commandClass =
+                (Class<? extends UserCommand>) classLoader.loadClass(routeClassInfo.getName());
+            @SuppressWarnings("unchecked")
+            Constructor<? extends UserCommand> constructor =
+                (Constructor<? extends UserCommand>) commandClass.getDeclaredConstructors()[0];
+            definitions.add(
+                new CommandDefinition(
+                    routeClassInfo.getName(), Arrays.asList(collect.getFirst()), constructor));
+          } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
           }
         });
 
-    return aliasesMappedByClassInfo;
+    return List.copyOf(definitions);
   }
+
+  private void logCatalogIfNeeded() {
+    if (!engine.engineType.equals(EngineType.HOST) || catalogLogged) {
+      return;
+    }
+
+    synchronized (commandCatalogMonitor) {
+      if (catalogLogged) {
+        return;
+      }
+
+      commandDefinitions.forEach(
+          definition ->
+              log.info(
+                  "{} is annotated with aliases: {}",
+                  definition.className(),
+                  definition.aliases()));
+      catalogLogged = true;
+    }
+  }
+
+  private record CommandDefinition(
+      String className,
+      List<String> aliases,
+      Constructor<? extends UserCommand> constructor) {}
 }

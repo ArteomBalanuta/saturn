@@ -4,10 +4,9 @@ import static org.saturn.app.util.Util.gson;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.facade.EngineType;
@@ -35,14 +34,11 @@ public class OnlineSetListenerImpl implements Listener {
     JsonElement listingElement = null;
     if (engine.engineType.equals(EngineType.AGENT)) {
       List<JsonElement> nicks = e.getAsJsonObject().getAsJsonArray("nicks").asList();
-      Set<User> users =
-          nicks.stream()
-              .map(
-                  n -> {
-                    return new User(n.getAsString());
-                  })
-              .collect(Collectors.toSet());
-      engine.setActiveUsers(users.stream().toList());
+      List<User> users = new ArrayList<>(nicks.size());
+      for (JsonElement nick : nicks) {
+        users.add(new User(nick.getAsString()));
+      }
+      engine.setActiveUsers(users);
       return;
     } else {
       listingElement = e.getAsJsonObject().get("users");
@@ -61,12 +57,11 @@ public class OnlineSetListenerImpl implements Listener {
       log.warn("Startup commands to be executed: {}", engine.autorunCmds);
 
       List<String> autorunCommands = List.of(engine.autorunCmds.split(","));
-      autorunCommands.forEach(
-          command -> {
-            log.warn("Executing autorun command: {}", command);
-            engine.outService.enqueueMessageForSending(
-                "/whisper " + engine.nick + " " + engine.getPrefix() + command);
-          });
+      for (String command : autorunCommands) {
+        log.warn("Executing autorun command: {}", command);
+        engine.outService.enqueueMessageForSending(
+            "/whisper " + engine.nick + " " + engine.getPrefix() + command);
+      }
     }
   }
 }

@@ -2,9 +2,9 @@ package org.saturn.app.command.impl.moderator;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
@@ -31,78 +31,78 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     List<String> arguments = getArguments();
-    String author = super.chatMessage.getNick();
+    String author = author();
 
     if (arguments.isEmpty()) {
       log.info("Executed [shadow ban] command by user: {}, no target set", author);
-      engine.outService.enqueueMessageForSending(
-          author, "Example:" + engine.prefix + "shadowban merc", isWhisper());
-      return Optional.of(Status.FAILED);
+      return fail("Example:%sshadowban merc".formatted(engine.prefix));
     }
 
-    if (arguments.stream().anyMatch(arg -> arg.equals("-c"))) {
-      String pattern = arguments.get(1);
-      log.info("Shadow Banning usernames containing following string: {}", pattern);
-      List<User> users =
-          super.engine.currentChannelUsers.stream()
-              .filter(user -> user.getNick().contains(pattern))
-              .toList();
-
-      List<String> userNames = users.stream().map(User::getNick).collect(Collectors.toList());
-      log.info("Matching users: {}", userNames);
-
-      /* TODO: parse reason */
-      users.forEach(
-          user -> {
-            BanRecord dto = new BanRecord(user.getTrip(), user.getNick(), user.getHash(), null);
-            super.engine.modService.shadowBan(dto);
-            log.info(
-                "Shadow Banned nick: {}, hash: {}, trip: {}",
-                user.getNick(),
-                user.getHash(),
-                user.getTrip());
-            engine.modService.kick(user.getNick());
-            log.info("User: {}, has been kicked", user.getNick());
-          });
-
+    if (isContainsMode(arguments)) {
+      shadowBanUsersMatching(arguments.get(1));
       log.info("Executed [shadow ban] command by user: {}", author);
-      return Optional.of(Status.SUCCESSFUL);
+      return successful();
     }
 
-    String target = getBanningUser(arguments);
-
-    engine.currentChannelUsers.stream()
-        .filter(activeUser -> target.equals(activeUser.getNick()))
-        .findFirst()
-        .ifPresentOrElse(
-            user -> {
-              BanRecord dto = new BanRecord(user.getTrip(), user.getNick(), user.getHash(), null);
-              engine.modService.shadowBan(dto);
-              log.warn(
-                  "Shadow Banned nick: {}, hash: {}, trip: {}",
-                  user.getNick(),
-                  user.getHash(),
-                  user.getTrip());
-              engine.outService.enqueueMessageForSending(
-                  author,
-                  "banned: " + target + " trip: " + user.getTrip() + " hash: " + user.getHash(),
-                  isWhisper());
-              engine.modService.kick(target);
-              log.info("User: {}, has been kicked", target);
-            },
-            () -> {
-              /* target isn't in the room */
-              BanRecord dto = new BanRecord(null, target, null, null);
-              engine.modService.shadowBan(dto);
-              log.info("Target isn't in the room, banned username: {}", target);
-              engine.outService.enqueueMessageForSending(author, "banned: " + target, isWhisper());
-            });
-
+    String target = normalizeTarget(arguments.getFirst());
+    shadowBanSingleTarget(author, target);
     log.info("Executed [shadow ban] command by user: {}", author);
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
   }
 
-  private static String getBanningUser(List<String> arguments) {
-    return arguments.stream().map(target -> target.replace("@", "")).findAny().get();
+  private boolean isContainsMode(List<String> arguments) {
+    return arguments.size() > 1 && arguments.contains("-c");
+  }
+
+  private void shadowBanUsersMatching(String pattern) {
+    log.info("Shadow Banning usernames containing following string: {}", pattern);
+    List<User> matchingUsers = new ArrayList<>();
+    for (User user : engine.currentChannelUsers) {
+      if (user.getNick().contains(pattern)) {
+        matchingUsers.add(user);
+      }
+    }
+
+    List<String> userNames = new ArrayList<>(matchingUsers.size());
+    for (User user : matchingUsers) {
+      userNames.add(user.getNick());
+      shadowBanPresentUser(user);
+    }
+    log.info("Matching users: {}", userNames);
+  }
+
+  private void shadowBanSingleTarget(String author, String target) {
+    for (User activeUser : engine.currentChannelUsers) {
+      if (!target.equals(activeUser.getNick())) {
+        continue;
+      }
+
+      shadowBanPresentUser(activeUser);
+      replyToAuthor(
+          "shadow_banned: %s trip: %s hash: %s"
+              .formatted(target, activeUser.getTrip(), activeUser.getHash()));
+      return;
+    }
+
+    BanRecord dto = new BanRecord(null, target, null, null);
+    engine.modService.shadowBan(dto);
+    log.info("Target isn't in the room, banned username: {}", target);
+    replyToAuthor("banned: %s".formatted(target));
+  }
+
+  private void shadowBanPresentUser(User user) {
+    BanRecord dto = new BanRecord(user.getTrip(), user.getNick(), user.getHash(), null);
+    engine.modService.shadowBan(dto);
+    log.warn(
+        "Shadow Banned nick: {}, hash: {}, trip: {}",
+        user.getNick(),
+        user.getHash(),
+        user.getTrip());
+    engine.modService.kick(user.getNick());
+    log.info("User: {}, has been kicked", user.getNick());
+  }
+
+  private String normalizeTarget(String argument) {
+    return argument.replace("@", "");
   }
 }

@@ -27,50 +27,28 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
     return Role.MODERATOR;
   }
 
+  @Override
   public Optional<Status> execute() {
-    final String author = chatMessage.getNick();
-    final Optional<String> authorTrip = Optional.ofNullable(chatMessage.getTrip());
-
     List<String> arguments = getArguments();
     if (arguments.size() < 2) {
-      log.info(
-          "Executed [lastmessages] command by user: {}, trip: {}, no arguments present",
-          author,
-          authorTrip);
-      engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "lastmessages g0KY09 3", isWhisper());
-      return Optional.of(Status.FAILED);
+      logMissingArguments();
+      return failWithUsage("lastmessages g0KY09 3");
     }
 
     String trip = arguments.get(0);
-    String count = arguments.get(1);
-
-    int numberOfMessages;
-    try {
-      numberOfMessages = Integer.parseInt(count);
-    } catch (NumberFormatException e) {
-      log.info(
-          "Executed [lastmessages] command by user: {}, trip: {}, no arguments present",
-          author,
-          authorTrip);
-      engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "lastmessages g0KY09 3", isWhisper());
-      return Optional.of(Status.FAILED);
+    Optional<Integer> requestedCount = parseRequestedCount(arguments.get(1));
+    if (requestedCount.isEmpty()) {
+      logMissingArguments();
+      return failWithUsage("lastmessages g0KY09 3");
     }
 
-    if (numberOfMessages > 30) {
-      engine.outService.enqueueMessageForSending(
-          author, "Retrieving at max 30 messages! ", isWhisper());
-      numberOfMessages = 30;
-    }
-
+    int numberOfMessages = clampMessageCount(requestedCount.get());
     List<Message> messages = engine.userService.lastMessages(null, trip, numberOfMessages);
     String payload = formatLastMessages(messages);
-    engine.outService.enqueueMessageForSending(
-        author, StringEscapeUtils.escapeJava(payload), isWhisper());
+    replyToAuthor(StringEscapeUtils.escapeJava(payload));
 
-    log.info("Executed [lastmessages] command by user: {}, target: {}", author, trip);
-    return Optional.of(Status.SUCCESSFUL);
+    log.info("Executed [lastmessages] command by user: {}, target: {}", author(), trip);
+    return successful();
   }
 
   private String formatLastMessages(List<Message> messages) {
@@ -91,13 +69,31 @@ public class LastMessagesCommandImpl extends UserCommandBaseImpl {
     return lastMessages.toString();
   }
 
-  protected static String getFrontCharacters(String message, int length) {
-    StringBuilder cut = new StringBuilder();
-    for (int i = 0; i < length; i++) {
-      cut.append(message.charAt(i));
+  private void logMissingArguments() {
+    log.info(
+        "Executed [lastmessages] command by user: {}, trip: {}, no arguments present",
+        author(),
+        Optional.ofNullable(chatMessage.getTrip()));
+  }
+
+  private Optional<Integer> parseRequestedCount(String count) {
+    try {
+      return Optional.of(Integer.parseInt(count));
+    } catch (NumberFormatException e) {
+      return Optional.empty();
+    }
+  }
+
+  private int clampMessageCount(int requestedCount) {
+    if (requestedCount <= 30) {
+      return requestedCount;
     }
 
-    cut.append("...");
-    return cut.toString();
+    replyToAuthor("Retrieving at max 30 messages! ");
+    return 30;
+  }
+
+  protected static String getFrontCharacters(String message, int length) {
+    return message.substring(0, length) + "...";
   }
 }

@@ -34,12 +34,9 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
    */
   @Override
   public String getWeather(List<String> arguments) {
-    StringBuilder zoneB = new StringBuilder();
-    arguments.forEach(a -> zoneB.append(" ").append(a));
+    String zone = String.join(" ", arguments).trim();
 
-    String zone = zoneB.toString().trim();
-
-    String uri = String.format(apiGeoNames, zone.trim().replace(" ", "%20"));
+    String uri = apiGeoNames.formatted(zone.trim().replace(" ", "%20"));
     String body = Util.getResponseByURL(uri);
     String coordinates = Util.extractCoordinates(body);
     String country = Util.extractCountryName(body);
@@ -51,18 +48,11 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     String curr_date = simpleDateFormat.format(calendar.getTime());
 
     String weatherApi =
-        String.format(
-            "https://api.open-meteo.com/v1/forecast?"
-                + "latitude=%s"
-                + "&longitude=%s"
-                + "&current_weather=true"
-                + "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset,"
-                + "winddirection_10m_dominant,shortwave_radiation_sum,uv_index_max,uv_index_clear_sky_max,weather_code"
-                + "&hourly=pressure_msl,surface_pressure,soil_temperature_18cm,soil_moisture_3_to_9cm,visibility,diffuse_radiation,shortwave_radiation,apparent_temperature,relative_humidity_2m"
-                + "&timezone=auto"
-                + "&start_date=%s"
-                + "&end_date=%s",
-            lat, lng, curr_date, curr_date);
+        """
+        https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&current_weather=true&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset,winddirection_10m_dominant,shortwave_radiation_sum,uv_index_max,uv_index_clear_sky_max,weather_code&hourly=pressure_msl,surface_pressure,soil_temperature_18cm,soil_moisture_3_to_9cm,visibility,diffuse_radiation,shortwave_radiation,apparent_temperature,relative_humidity_2m&timezone=auto&start_date=%s&end_date=%s
+        """
+            .formatted(lat, lng, curr_date, curr_date)
+            .strip();
 
     log.debug("Getting: {}", weatherApi);
 
@@ -128,83 +118,57 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
             .getWeatherEmoji();
 
     log.warn("Using weather emoji: {}", weatherEmoji);
-    return "Weather forecast for today: **"
-        + area
-        + "**\\n"
-        + "Temperature: "
-        + currentWeather.temperature
-        + " "
-        + currentWeatherUnits.temperature
-        + "\\n"
-        + "Feels temp: "
-        + hourly.apparent_temperature.get(zonedDateTime.getHour())
-        + " "
-        + hourlyUnits.apparent_temperature
-        + "\\n"
-        + "Air Humidity: "
-        + hourly.relative_humidity_2m.get(zonedDateTime.getHour())
-        + " "
-        + hourlyUnits.relative_humidity_2m
-        + "\\n"
-        + "Precipitation: "
-        + weatherEmoji
-        + "\\n"
-        + "Wind speed: "
-        + currentWeather.windspeed
-        + " "
-        + currentWeatherUnits.windspeed
-        + "\\n"
-        + "Pressure surface: "
-        + hourly.surface_pressure.get(zonedDateTime.getHour())
-        + " "
-        + hourlyUnits.surface_pressure
-        + "\\n"
-        + "Pressure sea level: "
-        + hourly.pressure_msl.get(zonedDateTime.getHour())
-        + " "
-        + hourlyUnits.pressure_msl
-        + "\\n"
-        + "\u200B\u200B\u200B \\n"
-        + "UV day max index: "
-        + daily.uv_index_max.get(0)
-        + " "
-        + dailyUnits.uv_index_max
-        + "\\n"
-        + "Short wave radiation day sum: "
-        + daily.shortwave_radiation_sum.get(0)
-        + " "
-        + dailyUnits.shortwave_radiation_sum
-        + "\\n"
-        + "ShortWave rad: "
-        + hourly.shortwave_radiation.get(zonedDateTime.getHour())
-        + " "
-        + hourlyUnits.shortwave_radiation
-        + "\\n"
-        + "Diffuse rad: "
-        + hourly.diffuse_radiation.get(zonedDateTime.getHour())
-        + " "
-        + hourlyUnits.diffuse_radiation
-        + "\\n"
-        + "\u200B\u200B\u200B \\n"
-        + "Time: "
-        + currentTime.replace(":", "-")
-        + "\\n"
-        + "Sun rise: "
-        + sunriseTime.replace(":", "-")
-        + "\\n"
-        + "Sun set: "
-        + sunsetTime.replace(":", "-")
-        + "\\n"
-        + "\u200B\u200B\u200B \\n"
-        + "Soil temp 18cm: "
-        + hourly.soil_temperature_18cm.get(zonedDateTime.getHour())
-        + " "
-        + hourlyUnits.soil_temperature_18cm
-        + "\\n"
-        + "Soil moist 3-9cm: "
-        + hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour())
-        + " "
-        + hourlyUnits.soil_moisture_3_to_9cm
-        + "\\n";
+    return """
+        Weather forecast for today: **%s**\\n
+        Temperature: %s %s\\n
+        Feels temp: %s %s\\n
+        Air Humidity: %s %s\\n
+        Precipitation: %s\\n
+        Wind speed: %s %s\\n
+        Pressure surface: %s %s\\n
+        Pressure sea level: %s %s\\n
+        \u200B\u200B\u200B \\n
+        UV day max index: %s %s\\n
+        Short wave radiation day sum: %s %s\\n
+        ShortWave rad: %s %s\\n
+        Diffuse rad: %s %s\\n
+        \u200B\u200B\u200B \\n
+        Time: %s\\n
+        Sun rise: %s\\n
+        Sun set: %s\\n
+        \u200B\u200B\u200B \\n
+        Soil temp 18cm: %s %s\\n
+        Soil moist 3-9cm: %s %s\\n
+        """
+        .formatted(
+            area,
+            currentWeather.temperature,
+            currentWeatherUnits.temperature,
+            hourly.apparent_temperature.get(zonedDateTime.getHour()),
+            hourlyUnits.apparent_temperature,
+            hourly.relative_humidity_2m.get(zonedDateTime.getHour()),
+            hourlyUnits.relative_humidity_2m,
+            weatherEmoji,
+            currentWeather.windspeed,
+            currentWeatherUnits.windspeed,
+            hourly.surface_pressure.get(zonedDateTime.getHour()),
+            hourlyUnits.surface_pressure,
+            hourly.pressure_msl.get(zonedDateTime.getHour()),
+            hourlyUnits.pressure_msl,
+            daily.uv_index_max.get(0),
+            dailyUnits.uv_index_max,
+            daily.shortwave_radiation_sum.get(0),
+            dailyUnits.shortwave_radiation_sum,
+            hourly.shortwave_radiation.get(zonedDateTime.getHour()),
+            hourlyUnits.shortwave_radiation,
+            hourly.diffuse_radiation.get(zonedDateTime.getHour()),
+            hourlyUnits.diffuse_radiation,
+            currentTime.replace(":", "-"),
+            sunriseTime.replace(":", "-"),
+            sunsetTime.replace(":", "-"),
+            hourly.soil_temperature_18cm.get(zonedDateTime.getHour()),
+            hourlyUnits.soil_temperature_18cm,
+            hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour()),
+            hourlyUnits.soil_moisture_3_to_9cm);
   }
 }

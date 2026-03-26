@@ -27,24 +27,18 @@ public class AuthorizeTripCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments = getArguments();
-
-    final String author = chatMessage.getNick();
+    List<String> arguments = getArguments();
     if (arguments.isEmpty()) {
-      log.info("Executed [authorizetrip] command by user: {}, no trip set", author);
-      super.engine.outService.enqueueMessageForSending(
-          author, " example: *auth cmdTV+", isWhisper());
+      log.info("Executed [authorizetrip] command by user: {}, no trip set", author());
+      replyToAuthor(" example: %sauth cmdTV+".formatted(engine.prefix));
       return Optional.of(Status.FAILED);
     }
 
-    Optional<String> argument = arguments.stream().findFirst();
-
-    String trip = argument.get();
+    String trip = arguments.getFirst();
     engine.modService.auth(trip);
-    super.engine.outService.enqueueMessageForSending(
-        author, " authorized trip: " + trip, isWhisper());
-    log.info("Executed [authorizetrip] command by user: {}, trip: {}}", author, trip);
+    replyToAuthor(" authorized trip: %s".formatted(trip));
+    log.info("Executed [authorizetrip] command by user: {}, trip: {}", author(), trip);
 
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
   }
 }

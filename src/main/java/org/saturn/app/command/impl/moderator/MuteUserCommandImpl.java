@@ -27,32 +27,31 @@ public class MuteUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final String author = chatMessage.getNick();
-    final Optional<String> target = getArguments().stream().findFirst();
+    final String author = author();
+    final Optional<String> target = firstArgument();
     if (target.isEmpty()) {
-      engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "mute merc", isWhisper());
       log.info("Executed [mute] command by user: {}, no target set", author);
-      return Optional.of(Status.FAILED);
+      return failWithUsage("mute merc");
     }
+
+    Optional<String> hash =
+        engine.currentChannelUsers.stream()
+            .filter(u -> u.getNick().equals(target.get()))
+            .map(u -> u.getHash())
+            .findFirst();
+    if (hash.isEmpty()) {
+      log.info("Executed [mute] command by user: {}, target missing from room: {}", author, target.get());
+      return fail(target.get() + " is not in the room");
+    }
+
     engine.modService.mute(target.get());
-    engine.outService.enqueueMessageForSending(
-        author,
-        target.get()
-            + " "
-            + engine.currentChannelUsers.stream()
-                .filter(u -> u.getNick().equals(target.get()))
-                .findFirst()
-                .get()
-                .getHash()
-            + " has been muted",
-        isWhisper());
+    replyToAuthor(target.get() + " " + hash.get() + " has been muted");
 
     log.info(
         "Executed [mute] command by user: {}, trip: {}, target: {}",
         author,
         chatMessage.getTrip(),
         target.get());
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
   }
 }

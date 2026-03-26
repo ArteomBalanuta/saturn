@@ -13,6 +13,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.impl.OutService;
+import org.saturn.app.service.impl.DataBaseServiceImpl;
 
 @Slf4j
 @CommandAliases(aliases = {"whiskey"})
@@ -46,7 +47,8 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
   public static void registerReplica(
       EngineImpl engine, ChatMessage chatMessage, String author, String channel, String name) {
     Toml main = engine.getConfig();
-    EngineImpl replica = new EngineImpl(engine.getDbConnection(), main, EngineType.AGENT);
+    EngineImpl replica =
+        new EngineImpl(new DataBaseServiceImpl(engine.dbPath).getConnection(), main, EngineType.AGENT);
     replica.setChannel(channel);
     replica.setNick(name);
 

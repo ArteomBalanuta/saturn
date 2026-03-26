@@ -74,12 +74,8 @@ public class UserServiceImpl extends OutService implements UserService {
               .replace("[", "")
               .replace("]", "");
       return Optional.of(
-          "\\n @"
-              + user.getNick()
-              + ", has been seen as: _"
-              + aliases
-              + "_ in the last 15 minutes. "
-              + "\\n");
+          "\\n @%s, has been seen as: _%s_ in the last 15 minutes. \\n"
+              .formatted(user.getNick(), aliases));
     }
   }
 
@@ -135,115 +131,91 @@ public class UserServiceImpl extends OutService implements UserService {
         dto.getTimeSinceSeen(),
         dto.getSessionDuration(),
         dto.getLastMessage());
-    return "\\n Nick|Trip: "
-        + tripOrNick
-        + "\\n Joined: "
-        + dto.getJoinedAtRfc1123()
-        + "\\n Last seen: "
-        + dto.getLastSeenRfc1123()
-        + "\\n Seen active: "
-        + dto.getTimeSinceSeen()
-        + " ago."
-        + "\\n Session duration: "
-        + dto.getSessionDuration()
-        + " \\n Last message: "
-        + dto.getLastMessage()
-        + "\\n";
+    return """
+        \\n Nick|Trip: %s
+        \\n Joined: %s
+        \\n Last seen: %s
+        \\n Seen active: %s ago.
+        \\n Session duration: %s \\n Last message: %s
+        \\n
+        """
+        .formatted(
+            tripOrNick,
+            dto.getJoinedAtRfc1123(),
+            dto.getLastSeenRfc1123(),
+            dto.getTimeSinceSeen(),
+            dto.getSessionDuration(),
+            dto.getLastMessage());
   }
 
   @Override
   public int delete(String name, String trip) {
     try {
-      connection.setAutoCommit(false); // Begin transaction
+      runInTransaction(
+          () -> {
+            try (PreparedStatement pstmtNames = connection.prepareStatement(DELETE_TRIP_NAMES)) {
+              pstmtNames.setString(1, trip);
+              pstmtNames.setString(2, name);
+              pstmtNames.executeUpdate();
+            }
 
-      // Delete from name_trips
-      try (PreparedStatement pstmtNames = connection.prepareStatement(DELETE_TRIP_NAMES)) {
-        pstmtNames.setString(1, trip);
-        pstmtNames.setString(2, name);
-        pstmtNames.executeUpdate();
+            try (PreparedStatement pstmtTrips = connection.prepareStatement(DELETE_TRIP)) {
+              pstmtTrips.setString(1, trip);
+              pstmtTrips.executeUpdate();
+            }
 
-        // Delete from trips
-        try (PreparedStatement pstmtTrips = connection.prepareStatement(DELETE_TRIP)) {
-          pstmtTrips.setString(1, trip);
-          pstmtTrips.executeUpdate();
-
-          // Delete from names
-          try (PreparedStatement pstmtTripNames = connection.prepareStatement(DELETE_NAME)) {
-            pstmtTripNames.setString(1, name);
-            pstmtTripNames.executeUpdate();
-          }
-        }
-      }
-      connection.commit(); // Commit transaction
-      connection.setAutoCommit(true);
+            try (PreparedStatement pstmtTripNames = connection.prepareStatement(DELETE_NAME)) {
+              pstmtTripNames.setString(1, name);
+              pstmtTripNames.executeUpdate();
+            }
+          });
+      return 0;
     } catch (SQLException e) {
-      try {
-        connection.rollback();
-      } catch (SQLException ex) {
-        log.info("Error: {}", e.getMessage());
-        log.error("Stack trace: ", e);
-        throw new RuntimeException(ex);
-      }
       log.info("Error: {}", e.getMessage());
       log.error("Stack trace: ", e);
-
       return 1;
     }
-
-    return 0;
   }
 
   @Override
   public int register(String name, String trip, String role) {
     try {
-      connection.setAutoCommit(false); // Begin transaction
+      runInTransaction(
+          () -> {
+            int nameId;
+            try (PreparedStatement pstmtNames =
+                    connection.prepareStatement(INSERT_NAMES, Statement.RETURN_GENERATED_KEYS);
+                ResultSet rsNames = executeInsertReturningKeys(pstmtNames, statement -> statement.setString(1, name))) {
+              rsNames.next();
+              nameId = rsNames.getInt(1);
+            }
 
-      // Insert into names table
-      try (PreparedStatement pstmtNames =
-          connection.prepareStatement(INSERT_NAMES, Statement.RETURN_GENERATED_KEYS)) {
-        pstmtNames.setString(1, name);
-        pstmtNames.executeUpdate();
+            int tripId;
+            try (PreparedStatement pstmtTrips =
+                    connection.prepareStatement(INSERT_TRIPS, Statement.RETURN_GENERATED_KEYS);
+                ResultSet rsTrips =
+                    executeInsertReturningKeys(
+                        pstmtTrips,
+                        statement -> {
+                          statement.setString(1, role);
+                          statement.setString(2, trip);
+                        })) {
+              rsTrips.next();
+              tripId = rsTrips.getInt(1);
+            }
 
-        ResultSet rsNames = pstmtNames.getGeneratedKeys();
-        rsNames.next();
-        int nameId = rsNames.getInt(1);
-
-        // Insert into trips table
-        try (PreparedStatement pstmtTrips =
-            connection.prepareStatement(INSERT_TRIPS, Statement.RETURN_GENERATED_KEYS)) {
-          pstmtTrips.setString(1, role);
-          pstmtTrips.setString(2, trip);
-          pstmtTrips.executeUpdate();
-
-          ResultSet rsTrips = pstmtTrips.getGeneratedKeys();
-          rsTrips.next();
-          int tripId = rsTrips.getInt(1);
-
-          // Insert into trip_names table
-          try (PreparedStatement pstmtTripNames = connection.prepareStatement(INSERT_TRIP_NAME)) {
-            pstmtTripNames.setInt(1, tripId);
-            pstmtTripNames.setInt(2, nameId);
-            pstmtTripNames.executeUpdate();
-          }
-        }
-      }
-      connection.commit(); // Commit transaction
-      connection.setAutoCommit(true);
+            try (PreparedStatement pstmtTripNames = connection.prepareStatement(INSERT_TRIP_NAME)) {
+              pstmtTripNames.setInt(1, tripId);
+              pstmtTripNames.setInt(2, nameId);
+              pstmtTripNames.executeUpdate();
+            }
+          });
+      return 0;
     } catch (SQLException e) {
-      try {
-        connection.rollback();
-      } catch (SQLException ex) {
-        log.info("Error: {}", e.getMessage());
-        log.error("Stack trace: ", e);
-        throw new RuntimeException(ex);
-      }
       log.info("Error: {}", e.getMessage());
       log.error("Stack trace: ", e);
-
       return 1;
     }
-
-    return 0;
   }
 
   @Override
@@ -292,44 +264,38 @@ public class UserServiceImpl extends OutService implements UserService {
   @Override
   public void registerTripByName(String name, String trip) {
     String insertTripSql =
-        "INSERT INTO trips (type, trip, created_on) VALUES ('MODERATOR', ?, strftime('%s', 'now'))";
+        "INSERT INTO trips (type, trip, created_on) VALUES ('REGULAR', ?, ?)";
     String insertTripNamesSql =
         "INSERT INTO trip_names (trip_id, name_id) SELECT ?, id FROM names WHERE name = ?";
     try {
-      connection.setAutoCommit(false); // Begin transaction
-      // First statement: Insert into trips and get the generated ID
-      int tripId;
-      try (PreparedStatement pstmtInsertTrip =
-          connection.prepareStatement(insertTripSql, Statement.RETURN_GENERATED_KEYS)) {
-        pstmtInsertTrip.setString(1, trip); // Set the trip parameter
-        pstmtInsertTrip.executeUpdate();
+      runInTransaction(
+          () -> {
+            int tripId;
+            try (PreparedStatement pstmtInsertTrip =
+                    connection.prepareStatement(insertTripSql, Statement.RETURN_GENERATED_KEYS);
+                ResultSet rs =
+                    executeInsertReturningKeys(
+                        pstmtInsertTrip,
+                        statement -> {
+                          statement.setString(1, trip);
+                          statement.setLong(2, DateUtil.getTimestampNow());
+                        })) {
+              if (rs.next()) {
+                tripId = rs.getInt(1);
+              } else {
+                throw new SQLException("Failed to retrieve generated ID");
+              }
+            }
 
-        ResultSet rs = pstmtInsertTrip.getGeneratedKeys();
-        if (rs.next()) {
-          tripId = rs.getInt(1); // Retrieve the generated ID
-        } else {
-          throw new SQLException("Failed to retrieve generated ID");
-        }
-      }
-
-      // Second statement: Insert into trip_names using the ID from the first insert
-      try (PreparedStatement pstmtInsertTripNames =
-          connection.prepareStatement(insertTripNamesSql)) {
-        pstmtInsertTripNames.setInt(1, tripId); // Use the retrieved trip ID
-        pstmtInsertTripNames.setString(2, name); // Set the name parameter
-        pstmtInsertTripNames.executeUpdate();
-      }
-
-      connection.commit(); // Commit transaction
+            try (PreparedStatement pstmtInsertTripNames =
+                connection.prepareStatement(insertTripNamesSql)) {
+              pstmtInsertTripNames.setInt(1, tripId);
+              pstmtInsertTripNames.setString(2, name);
+              pstmtInsertTripNames.executeUpdate();
+            }
+          });
       log.info("Registered new trip: {}, for name: {}", trip, name);
     } catch (SQLException e) {
-      try {
-        connection.rollback(); // Rollback in case of error
-      } catch (SQLException ex) {
-        log.info("Error: {}", e.getMessage());
-        log.error("Stack trace: ", e);
-        throw new RuntimeException(ex);
-      }
       log.info("Error: {}", e.getMessage());
       log.error("Stack trace: ", e);
     }
@@ -376,47 +342,40 @@ public class UserServiceImpl extends OutService implements UserService {
 
   @Override
   public void registerNameByTrip(String name, String trip) {
-    String insertNameSql = "INSERT INTO names (name, created_on) VALUES (?, strftime('%s', 'now'))";
+    String insertNameSql = "INSERT INTO names (name, created_on) VALUES (?, ?)";
     String insertTripNamesSql =
         "INSERT INTO trip_names (trip_id, name_id) SELECT id, ? FROM trips WHERE trip = ?";
 
     try {
-      connection.setAutoCommit(false); // Begin transaction
-      // First statement: Insert into names and get the generated ID
-      int nameId;
-      try (PreparedStatement pstmtInsertName =
-          connection.prepareStatement(insertNameSql, Statement.RETURN_GENERATED_KEYS)) {
-        pstmtInsertName.setString(1, name); // Set the name parameter
-        pstmtInsertName.executeUpdate();
+      runInTransaction(
+          () -> {
+            int nameId;
+            try (PreparedStatement pstmtInsertName =
+                    connection.prepareStatement(insertNameSql, Statement.RETURN_GENERATED_KEYS);
+                ResultSet rs =
+                    executeInsertReturningKeys(
+                        pstmtInsertName,
+                        statement -> {
+                          statement.setString(1, name);
+                          statement.setLong(2, DateUtil.getTimestampNow());
+                        })) {
+              if (rs.next()) {
+                nameId = rs.getInt(1);
+              } else {
+                log.error("Failed to retrieve generated ID");
+                throw new SQLException("Failed to retrieve generated ID");
+              }
+            }
 
-        ResultSet rs = pstmtInsertName.getGeneratedKeys();
-        if (rs.next()) {
-          nameId = rs.getInt(1); // Retrieve the generated ID
-        } else {
-          log.error("Failed to retrieve generated ID");
-          throw new SQLException("Failed to retrieve generated ID");
-        }
-      }
-
-      // Second statement: Insert into trip_names using the ID from the first insert
-      try (PreparedStatement pstmtInsertTripNames =
-          connection.prepareStatement(insertTripNamesSql)) {
-        pstmtInsertTripNames.setInt(1, nameId); // Use the retrieved ID
-        pstmtInsertTripNames.setString(2, trip); // Set the trip parameter
-        pstmtInsertTripNames.executeUpdate();
-      }
-
-      connection.commit(); // Commit transaction
-
+            try (PreparedStatement pstmtInsertTripNames =
+                connection.prepareStatement(insertTripNamesSql)) {
+              pstmtInsertTripNames.setInt(1, nameId);
+              pstmtInsertTripNames.setString(2, trip);
+              pstmtInsertTripNames.executeUpdate();
+            }
+          });
       log.info("Registered new name: {}, for trip: {}", name, trip);
     } catch (SQLException e) {
-      try {
-        connection.rollback(); // Rollback in case of error
-      } catch (SQLException ex) {
-        log.info("Error: {}", e.getMessage());
-        log.error("Stack trace: ", e);
-        throw new RuntimeException(ex);
-      }
       log.info("Error: {}", e.getMessage());
       log.error("Stack trace: ", e);
     }
@@ -475,5 +434,36 @@ public class UserServiceImpl extends OutService implements UserService {
       dto.setJoinedAtRfc1123(
           DateUtil.formatRfc1123(Long.parseLong(joinedAt), TimeUnit.MILLISECONDS, utc.toString()));
     }
+  }
+
+  private void runInTransaction(SqlWork work) throws SQLException {
+    boolean initialAutoCommit = connection.getAutoCommit();
+    connection.setAutoCommit(false);
+    try {
+      work.run();
+      connection.commit();
+    } catch (SQLException e) {
+      connection.rollback();
+      throw e;
+    } finally {
+      connection.setAutoCommit(initialAutoCommit);
+    }
+  }
+
+  private ResultSet executeInsertReturningKeys(
+      PreparedStatement statement, SqlStatementBinder binder) throws SQLException {
+    binder.bind(statement);
+    statement.executeUpdate();
+    return statement.getGeneratedKeys();
+  }
+
+  @FunctionalInterface
+  private interface SqlWork {
+    void run() throws SQLException;
+  }
+
+  @FunctionalInterface
+  private interface SqlStatementBinder {
+    void bind(PreparedStatement statement) throws SQLException;
   }
 }

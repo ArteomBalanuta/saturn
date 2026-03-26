@@ -24,9 +24,10 @@ public class OutService {
       throw new RuntimeException("Author should not be blank!");
     }
     if (isWhisper) {
-      message = StringUtils.prependIfMissingIgnoreCase(message, "/whisper @" + author + " ");
+      message =
+          StringUtils.prependIfMissingIgnoreCase(message, "/whisper @%s ".formatted(author));
     } else {
-      message = "@" + author + " " + message;
+      message = "@%s %s".formatted(author, message);
     }
 
     /* TODO: remove all the manual escaping and use `StringEscapeUtils.escapeJava(message)` */

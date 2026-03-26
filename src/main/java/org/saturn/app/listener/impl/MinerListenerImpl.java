@@ -6,9 +6,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
@@ -38,17 +35,18 @@ public class MinerListenerImpl implements Listener {
       throw new RuntimeException("Shouldn't be used with main threat!");
     }
 
-    Set<User> result =
-        users.stream()
-            .filter(user -> Objects.equals(user.getNick(), engine.nick))
-            .collect(Collectors.toSet());
-
-    Optional<User> first = result.stream().findFirst();
-    if (first.isEmpty()) {
+    User joinedUser = null;
+    for (User user : users) {
+      if (Objects.equals(user.getNick(), engine.nick)) {
+        joinedUser = user;
+        break;
+      }
+    }
+    if (joinedUser == null) {
       throw new RuntimeException("Didn't join");
     }
 
-    String raw = "Password: " + engine.password + " trip: " + first.get().getTrip() + " \r\n";
+    String raw = "Password: " + engine.password + " trip: " + joinedUser.getTrip() + " \r\n";
     try {
       Files.write(Paths.get(fileName), raw.getBytes(), StandardOpenOption.APPEND);
     } catch (IOException e) {
