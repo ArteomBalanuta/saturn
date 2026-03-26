@@ -128,6 +128,10 @@ public class User {
     this.isBot = isBot;
   }
 
+  public User(String nick) {
+    this.nick = nick;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;

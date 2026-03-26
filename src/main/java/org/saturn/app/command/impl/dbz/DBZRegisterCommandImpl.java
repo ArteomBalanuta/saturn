@@ -1,4 +1,6 @@
-package org.saturn.app.command.impl.user;
+package org.saturn.app.command.impl.dbz;
+
+import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,10 +13,10 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"ping", "p"})
-public class PingUserCommandImpl extends UserCommandBaseImpl {
-  public PingUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
-    super(message, engine, List.of("x"));
+@CommandAliases(aliases = {"dbzregister", "dreg", "dr"})
+public class DBZRegisterCommandImpl extends UserCommandBaseImpl {
+  public DBZRegisterCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
+    super(message, engine, getAdminAndUserTrips(engine));
     super.setAliases(aliases);
   }
 
@@ -26,9 +28,12 @@ public class PingUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     String author = chatMessage.getNick();
-    engine.pingService.executePing(author);
 
-    log.info("Executed [ping] command by user: {}, value", author);
+    engine.dbzService.register(author);
+
+    engine.outService.enqueueMessageForSending("Successfully registered character: " + author);
+    log.info("Executed [dbz_register] command by user: {}", author);
+
     return Optional.of(Status.SUCCESSFUL);
   }
 }

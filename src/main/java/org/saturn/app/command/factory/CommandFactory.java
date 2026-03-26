@@ -63,7 +63,10 @@ public class CommandFactory {
       return Optional.of(
           (UserCommand) declaredConstructor.newInstance(this.engine, message, aliases.get()));
 
-    } catch (ClassNotFoundException | InvocationTargetException | InstantiationException | IllegalAccessException ex) {
+    } catch (ClassNotFoundException
+        | InvocationTargetException
+        | InstantiationException
+        | IllegalAccessException ex) {
       throw new RuntimeException(ex);
     }
   }
@@ -86,7 +89,10 @@ public class CommandFactory {
           aliasesMappedByClassInfo.put(routeClassInfo, aliases);
 
           if (engine.engineType.equals(EngineType.HOST)) {
-            log.info("{} is annotated with aliases: {}", routeClassInfo.getName(), Arrays.toString(aliases));
+            log.info(
+                "{} is annotated with aliases: {}",
+                routeClassInfo.getName(),
+                Arrays.toString(aliases));
           }
         });
 

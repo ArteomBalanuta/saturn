@@ -31,7 +31,6 @@ public class TimeUserCommandImpl extends UserCommandBaseImpl {
   public TimeUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, List.of("x"));
     super.setAliases(aliases);
-
   }
 
   @Override

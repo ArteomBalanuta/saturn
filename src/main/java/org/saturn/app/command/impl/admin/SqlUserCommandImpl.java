@@ -4,7 +4,6 @@ import static org.saturn.app.util.Util.getAdminTrips;
 
 import java.util.List;
 import java.util.Optional;
-import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -24,8 +23,7 @@ public class SqlUserCommandImpl extends UserCommandBaseImpl {
     String result = engine.sqlService.executeSql(cmd, true);
 
     engine.outService.enqueueMessageForSending(
-        chatMessage.getNick(), "Result: \\n" + result,
-        isWhisper());
+        chatMessage.getNick(), "Result: \\n" + result, isWhisper());
     return Optional.of(Status.SUCCESSFUL);
   }
 }

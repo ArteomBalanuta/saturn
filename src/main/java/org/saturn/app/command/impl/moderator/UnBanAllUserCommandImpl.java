@@ -13,7 +13,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"unbanall","pardonall"})
+@CommandAliases(aliases = {"unbanall", "pardonall"})
 public class UnBanAllUserCommandImpl extends UserCommandBaseImpl {
   public UnBanAllUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
@@ -30,13 +30,9 @@ public class UnBanAllUserCommandImpl extends UserCommandBaseImpl {
     final String author = chatMessage.getNick();
 
     engine.modService.unbanAll();
-    engine.outService.enqueueMessageForSending(
-        author, "mercy.", isWhisper());
+    engine.outService.enqueueMessageForSending(author, "mercy.", isWhisper());
 
-    log.info(
-        "Executed [unbanall] command by user: {}, trip: {}",
-        author,
-        chatMessage.getTrip());
+    log.info("Executed [unbanall] command by user: {}, trip: {}", author, chatMessage.getTrip());
     return Optional.of(Status.SUCCESSFUL);
   }
 }

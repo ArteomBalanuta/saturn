@@ -13,7 +13,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"mute","dumb"})
+@CommandAliases(aliases = {"mute", "dumb"})
 public class MuteUserCommandImpl extends UserCommandBaseImpl {
   public MuteUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));
@@ -37,7 +37,16 @@ public class MuteUserCommandImpl extends UserCommandBaseImpl {
     }
     engine.modService.mute(target.get());
     engine.outService.enqueueMessageForSending(
-        author, target.get() + " " + engine.currentChannelUsers.stream().filter(u -> u.getNick().equals(target.get())).findFirst().get().getHash() + " has been muted", isWhisper());
+        author,
+        target.get()
+            + " "
+            + engine.currentChannelUsers.stream()
+                .filter(u -> u.getNick().equals(target.get()))
+                .findFirst()
+                .get()
+                .getHash()
+            + " has been muted",
+        isWhisper());
 
     log.info(
         "Executed [mute] command by user: {}, trip: {}, target: {}",

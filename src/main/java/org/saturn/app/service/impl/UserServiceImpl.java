@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.model.dto.LastSeenDto;
 import org.saturn.app.model.dto.Message;
@@ -64,7 +62,8 @@ public class UserServiceImpl extends OutService implements UserService {
       log.error("Stack trace: ", e);
     }
 
-    if (names.isEmpty() || (names.size() == 1 && names.getFirst().equalsIgnoreCase(user.getNick()))) {
+    if (names.isEmpty()
+        || (names.size() == 1 && names.getFirst().equalsIgnoreCase(user.getNick()))) {
       return Optional.empty();
     } else {
       String aliases =
@@ -421,6 +420,28 @@ public class UserServiceImpl extends OutService implements UserService {
       log.info("Error: {}", e.getMessage());
       log.error("Stack trace: ", e);
     }
+  }
+
+  @Override
+  public List<String> getNicksByTrip(String trip) {
+    List<String> trips = new ArrayList<>();
+    try {
+      PreparedStatement nicks = connection.prepareStatement(SqlUtil.GET_NICKS_BY_TRIP);
+      nicks.setString(1, trip.toLowerCase());
+      nicks.execute();
+
+      ResultSet resultSet = nicks.getResultSet();
+      while (resultSet.next()) {
+        trips.add(resultSet.getString("name"));
+      }
+      nicks.close();
+      resultSet.close();
+    } catch (SQLException e) {
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace", e);
+    }
+
+    return trips;
   }
 
   public void setSessionDurationAndJoinedDateTime(LastSeenDto dto) {

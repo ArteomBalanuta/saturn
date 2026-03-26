@@ -70,6 +70,26 @@ CREATE TABLE "trip_names" (
     UNIQUE ("trip_id", "name_id")
 );
 
+CREATE TABLE "dbz_characters" (
+	"id"	INTEGER PRIMARY KEY AUTOINCREMENT,
+	"name"	TEXT,
+	"level"	INTEGER,
+	"created_on" INTEGER NOT NULL
+);
+
+CREATE TABLE "dbz_stats" (
+	"id"	INTEGER PRIMARY KEY AUTOINCREMENT,
+	"char_id" INTEGER NOT NULL,
+	"str"	INTEGER,
+	"agi"	INTEGER,
+	"vit"	INTEGER,
+	"ene"	INTEGER,
+	"free_stats" INTEGER,
+	"created_on" INTEGER NOT NULL,
+	FOREIGN KEY ("char_id") REFERENCES "dbz_characters" ("id")
+);
+
+
 ## DML, useful
 
 select distinct t.trip, n.name

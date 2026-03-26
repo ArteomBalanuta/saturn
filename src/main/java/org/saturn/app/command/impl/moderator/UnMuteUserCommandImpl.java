@@ -13,7 +13,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"unmute","undumb"})
+@CommandAliases(aliases = {"unmute", "undumb"})
 public class UnMuteUserCommandImpl extends UserCommandBaseImpl {
   public UnMuteUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminTrips(engine));

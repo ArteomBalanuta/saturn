@@ -4,7 +4,6 @@ import static java.util.concurrent.Executors.newScheduledThreadPool;
 
 import com.moandjiezana.toml.Toml;
 import java.io.File;
-import java.util.HashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;

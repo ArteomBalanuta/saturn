@@ -1,6 +1,5 @@
 package org.saturn.app.command.impl.user;
 
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;

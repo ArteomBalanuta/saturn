@@ -22,6 +22,7 @@ import org.saturn.app.listener.impl.MinerListenerImpl;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.payload.ChatMessage;
+
 // vim clear proxy value
 // %s/proxies= "\zs.*\ze"/
 //  awk '$4 ~ /^[0-9]+$/ {print $4}' trips.txt | sort

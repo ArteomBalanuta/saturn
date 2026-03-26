@@ -7,7 +7,6 @@ import static org.saturn.app.util.DateUtil.toZoneDateTimeUTC;
 import static org.saturn.app.util.Util.extractFieldFromJson;
 
 import com.moandjiezana.toml.Toml;
-
 import java.io.IOException;
 import java.sql.Connection;
 import java.time.ZonedDateTime;
@@ -358,16 +357,18 @@ public class EngineImpl extends Base implements Engine {
       shareYoutubeThumbnailAndDetails(author, id);
     }
   }
+
   /* TODO: clean up this mess */
   private void shareYoutubeThumbnailAndDetails(String author, String id) {
     String youtubeVidDetails = getYoutubeVidDetails(id);
-    String title = extractFieldFromJson(youtubeVidDetails, "title");
+    String title = StringEscapeUtils.escapeJava(extractFieldFromJson(youtubeVidDetails, "title"));
 
     String url = "![" + title + "](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)";
     String urlFormatted = url.replace("VIDEO_ID", id);
-    String payload = "Title: " + StringEscapeUtils.escapeJava(title) + "\\n" + urlFormatted;
-    outService.enqueueMessageForSending(author,  payload, false);
+    String payload = "Title: " + title + "\n" + urlFormatted;
+    outService.enqueueMessageForSending(author, StringEscapeUtils.escapeJava(payload), false);
   }
+
   /* TODO: clean up this mess */
   private String getGetEndingChar(String messageText) {
     String ending = " ";
@@ -378,6 +379,7 @@ public class EngineImpl extends Base implements Engine {
     }
     return ending;
   }
+
   /* TODO: clean up this mess */
   private String getYoutubeVidDetails(String videoId) {
     CloseableHttpClient httpClient = HttpClients.createDefault();

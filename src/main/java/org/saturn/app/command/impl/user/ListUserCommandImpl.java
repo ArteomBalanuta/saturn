@@ -3,6 +3,7 @@ package org.saturn.app.command.impl.user;
 import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
 import com.moandjiezana.toml.Toml;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -84,18 +85,21 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
       String author, List<User> users, OutService outService, boolean isWhisper) {
     Set<User> unique = new HashSet<>(users);
     StringBuilder output = new StringBuilder();
-    unique.forEach(
-        user ->
-            output
-                .append(user.getHash())
-                .append(" - ")
-                .append(
-                    user.getTrip() == null || Objects.equals(user.getTrip(), "")
-                        ? "------"
-                        : user.getTrip())
-                .append(" - ")
-                .append(user.getNick())
-                .append("\\n"));
+
+    unique.stream()
+        .sorted(Comparator.comparing(User::getHash))
+        .forEach(
+            user ->
+                output
+                    .append(user.getHash())
+                    .append(" - ")
+                    .append(
+                        user.getTrip() == null || Objects.equals(user.getTrip(), "")
+                            ? "------"
+                            : user.getTrip())
+                    .append(" - ")
+                    .append(user.getNick())
+                    .append("\\n"));
 
     outService.enqueueMessageForSending(author, "\\nUsers online: \\n" + output + "\\n", isWhisper);
   }
