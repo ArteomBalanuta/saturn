@@ -1,7 +1,6 @@
 package org.saturn.app.service.impl;
 
-import static org.mockito.Mockito.mock;
-
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -11,8 +10,8 @@ import org.junit.jupiter.api.Test;
 */
 
 class OutServiceTest {
-  BlockingQueue<String> queue = mock(BlockingQueue.class);
-  BlockingQueue<String> raw = mock(BlockingQueue.class);
+  BlockingQueue<String> queue = new ArrayBlockingQueue<>(8);
+  BlockingQueue<String> raw = new ArrayBlockingQueue<>(8);
   OutService outService = new OutService(queue, raw);
 
   @Test
@@ -21,5 +20,21 @@ class OutServiceTest {
     String actual = outService.enqueueMessageForSending("author", "test_text_123", true);
 
     Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  void enqueueMessageForSendingEscapesRawNewLines() {
+    String actual = outService.enqueueMessageForSending("author", "line1\nline2\r\nline3\rline4", true);
+
+    Assertions.assertEquals("/whisper @author line1\\nline2\\nline3\\nline4", actual);
+    Assertions.assertEquals(actual, queue.poll());
+  }
+
+  @Test
+  void enqueueBareMessageEscapesRawNewLines() {
+    String actual = outService.enqueueMessageForSending("line1\nline2");
+
+    Assertions.assertEquals("line1\\nline2", actual);
+    Assertions.assertEquals(actual, queue.poll());
   }
 }
