@@ -105,6 +105,13 @@ class EngineImplTest {
     assertEquals("{\"cmd\":\"chat\",\"text\":\"@ab $\\\\\"}", payload);
   }
 
+  @Test
+  void buildChatPayloadEscapesRealNewlinesAsJson() {
+    String payload = EngineImpl.buildChatPayload("@ab line1\nline2");
+
+    assertEquals("{\"cmd\":\"chat\",\"text\":\"@ab line1\\nline2\"}", payload);
+  }
+
   private static final class CountingListener implements Listener {
     private int notifications;
     private String lastMessage;

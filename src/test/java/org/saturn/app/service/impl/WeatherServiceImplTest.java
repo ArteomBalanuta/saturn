@@ -9,7 +9,7 @@ import org.saturn.app.model.dto.Weather;
 class WeatherServiceImplTest {
 
   @Test
-  void formatWeatherUsesEscapedLineBreaksOnly() {
+  void formatWeatherUsesThinSpaceSeparators() {
     WeatherServiceImpl service = new WeatherServiceImpl(new ArrayBlockingQueue<>(8));
 
     Weather.Daily daily = new Weather.Daily();
@@ -71,10 +71,11 @@ class WeatherServiceImplTest {
             hourlyUnits,
             currentWeatherUnits);
 
-    Assertions.assertFalse(formatted.contains("\n"));
     Assertions.assertTrue(formatted.contains("\\n"));
     Assertions.assertTrue(formatted.startsWith("Weather forecast for today: **London, United Kingdom**\\n"));
     Assertions.assertTrue(formatted.contains("Temperature: 21 C\\n"));
+    Assertions.assertTrue(formatted.contains("\u2009\u2009\u2009 \\n"));
+    Assertions.assertFalse(formatted.contains("\u200B"));
     Assertions.assertTrue(formatted.contains("Time:"));
   }
 
