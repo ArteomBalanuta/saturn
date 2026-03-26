@@ -27,27 +27,28 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments = getArguments();
-    final String author = chatMessage.getNick();
+    List<String> arguments = getArguments();
     if (arguments.isEmpty()) {
-      log.info("Executed [active] command by user: {}, no target set", author);
-      engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "active 8Wotmg", isWhisper());
+      log.info("Executed [active] command by user: {}, no target set", author());
+      replyToAuthor("Example: %sactive 8Wotmg".formatted(engine.prefix));
       return Optional.of(Status.FAILED);
     }
 
-    final String target = arguments.getFirst();
-    final String result =
+    String target = sanitizeTarget(arguments.getFirst());
+    String result =
         engine.sqlService.executeFormatted(
-            SQL_STATS_PER_HOUR_OF_WEEK.replace(
-                "?", target.trim().replace("'", "").replace("\"", "")));
-    engine.outService.enqueueMessageForSending(author, "Stats: \\n" + result, isWhisper());
+            SQL_STATS_PER_HOUR_OF_WEEK.replace("?", target));
+    replyToAuthor("Stats: \\n%s".formatted(result));
     log.info(
         "Executed [active] command by user: {}, trip: {}, target: {}",
-        author,
+        author(),
         chatMessage.getTrip(),
         target);
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
+  }
+
+  private String sanitizeTarget(String target) {
+    return target.trim().replace("'", "").replace("\"", "");
   }
 
   public static final String SQL_STATS_PER_HOUR_OF_WEEK =

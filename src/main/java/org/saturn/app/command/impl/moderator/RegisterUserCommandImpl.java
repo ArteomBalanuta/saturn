@@ -27,48 +27,50 @@ public class RegisterUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final String author = chatMessage.getNick();
-    final Optional<String> authorTrip = Optional.ofNullable(chatMessage.getTrip());
-
     List<String> arguments = getArguments();
     if (arguments.size() < 2) {
       log.info(
           "Executed [register] command by user: {}, trip: {}, no arguments present",
-          author,
-          authorTrip);
-      engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "reg merc g0KY09", isWhisper());
-      return Optional.of(Status.FAILED);
+          author(),
+          Optional.ofNullable(chatMessage.getTrip()));
+      return failWithUsage("reg merc g0KY09");
     }
 
     String name = arguments.get(0);
     String trip = arguments.get(1);
+    boolean nameRegistered = engine.userService.isNameRegistered(name);
+    boolean tripRegistered = engine.userService.isTripRegistered(trip);
 
-    /* new nick and trip */
-    if (!engine.userService.isNameRegistered(name) && !engine.userService.isTripRegistered(trip)) {
-      int code = engine.userService.register(name, trip, Role.REGULAR.name());
-      if (code == 1) {
-        engine.outService.enqueueMessageForSending(author, "Something went wrong", isWhisper());
-        return Optional.of(Status.FAILED);
-      }
-
-      engine.outService.enqueueMessageForSending(
-          author,
-          "User has been registered successfully, now you can msg him by name: " + name,
-          isWhisper());
-    } else if (!engine.userService.isNameRegistered(name)) {
-      /* new name, trip exists */
-      engine.userService.registerNameByTrip(name, trip);
-      engine.outService.enqueueMessageForSending(
-          author, "New name: " + name + ", assigned to trip: " + trip, isWhisper());
-    } else if (!engine.userService.isTripRegistered(name)) {
-      /* new trip, nick exists */
-      engine.userService.registerTripByName(name, trip);
-      engine.outService.enqueueMessageForSending(
-          author, "New trip: " + trip + ", assigned to user named: " + name, isWhisper());
+    if (!nameRegistered && !tripRegistered) {
+      return registerNewIdentity(name, trip);
     }
 
-    log.info("Executed [register] command by user: {}, arguments: {}", author, arguments);
-    return Optional.of(Status.SUCCESSFUL);
+    if (!nameRegistered) {
+      engine.userService.registerNameByTrip(name, trip);
+      replyToAuthor("New name: %s, assigned to trip: %s".formatted(name, trip));
+      log.info("Executed [register] command by user: {}, arguments: {}", author(), arguments);
+      return successful();
+    }
+
+    if (!tripRegistered) {
+      engine.userService.registerTripByName(name, trip);
+      replyToAuthor("New trip: %s, assigned to user named: %s".formatted(trip, name));
+      log.info("Executed [register] command by user: {}, arguments: {}", author(), arguments);
+      return successful();
+    }
+
+    replyToAuthor("Name %s and trip %s are already registered.".formatted(name, trip));
+    log.info("Executed [register] command by user: {}, arguments: {}", author(), arguments);
+    return Optional.of(Status.FAILED);
+  }
+
+  private Optional<Status> registerNewIdentity(String name, String trip) {
+    int code = engine.userService.register(name, trip, Role.REGULAR.name());
+    if (code == 1) {
+      return fail("Something went wrong");
+    }
+
+    replyToAuthor("User has been registered successfully, now you can msg him by name: %s".formatted(name));
+    return successful();
   }
 }

@@ -45,88 +45,107 @@ public class AutoMoveUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments = getArguments();
-    final String author = chatMessage.getNick();
-
+    List<String> arguments = getArguments();
     if (arguments.isEmpty()) {
-      engine.outService.enqueueMessageForSending(
-          author, engine.prefix + "automove [on|off]", isWhisper());
-      engine.outService.enqueueMessageForSending(
-          author,
-          "Current status: "
-              + AUTO_MOVE_STATUS
-              + " , Source rooms: "
-              + SOURCE_CHANNELS
-              + " , Destination room: "
-              + DESTINATION_CHANNEL,
-          isWhisper());
-      engine.outService.enqueueMessageForSending(
-          author,
-          "To set source: hell, destination: heaven - use: "
-              + engine.getPrefix()
-              + "automove hell heaven",
-          isWhisper());
-      log.info("Executed [automove] command by user: {} - missing required parameters", author);
-      return Optional.of(Status.FAILED);
+      return showUsage();
     }
 
-    String firstArgument = arguments.get(0).trim();
+    String firstArgument = arguments.getFirst().trim();
+    Optional<Status> status = handleToggle(firstArgument);
+    if (status.isPresent()) {
+      log.info("Executed [automove] command by user: {}, arguments: {}", author(), firstArgument);
+      return status;
+    }
+
+    if (arguments.size() == 2) {
+      configureChannels(firstArgument, arguments.get(1).trim());
+      log.info("Executed [automove] command by user: {}, arguments: {}", author(), arguments);
+      return successful();
+    }
+
+    return showUsage();
+  }
+
+  private Optional<Status> showUsage() {
+    replyToAuthor("%sautomove [on|off]".formatted(engine.prefix));
+    replyToAuthor(
+        "Current status: %s , Source rooms: %s , Destination room: %s"
+            .formatted(AUTO_MOVE_STATUS, SOURCE_CHANNELS, DESTINATION_CHANNEL));
+    replyToAuthor(
+        "To set source: hell, destination: heaven - use: %sautomove hell heaven"
+            .formatted(engine.getPrefix()));
+    log.info("Executed [automove] command by user: {} - missing required parameters", author());
+    return Optional.of(Status.FAILED);
+  }
+
+  private Optional<Status> handleToggle(String argument) {
+    if ("on".equalsIgnoreCase(argument)) {
+      enableAutoMove();
+      return successful();
+    }
+
+    if ("off".equalsIgnoreCase(argument)) {
+      disableAutoMove();
+      return successful();
+    }
+
+    return Optional.empty();
+  }
+
+  private void enableAutoMove() {
+    AUTO_MOVE_STATUS = true;
     EngineImpl hostRef = engine.getHostRef();
-    if (firstArgument.equalsIgnoreCase("on")) {
-      AUTO_MOVE_STATUS = true;
-      if (hostRef != null) {
-        Set<String> replicaChannels = hostRef.replicasMappedByChannel.keySet();
-        SOURCE_CHANNELS.forEach(
-            source -> {
-              if (replicaChannels.contains(source)) {
-                log.info("Channel: {}, is served by a replica", source);
-              } else {
-                /* run replica for this channel */
-                log.warn(
-                    "Channel: {}, [IS NOT] server by a replica, launching one automatically.",
-                    source);
-
-                engine.outService.enqueueMessageForSending(
-                    author,
-                    "Channel: "
-                        + source
-                        + ", [IS NOT] server by a replica, launching one automatically.",
-                    isWhisper());
-                registerReplica(engine, chatMessage, author, source);
-              }
-            });
-      }
-      engine.outService.enqueueMessageForSending(
-          author, " " + engine.prefix + "automove is enabled", isWhisper());
-    } else if (firstArgument.equalsIgnoreCase("off")) {
-      AUTO_MOVE_STATUS = false;
-      if (hostRef != null) {
-        log.info("Stopping replicas in: {}, channels", SOURCE_CHANNELS);
-        SOURCE_CHANNELS.forEach(
-            channel -> {
-              /* stop replica */
-              log.info("Stopping replica in channel: {}", channel);
-              hostRef.replicasMappedByChannel.get(channel).stop();
-              hostRef.replicasMappedByChannel.remove(channel);
-            });
-      }
-      engine.outService.enqueueMessageForSending(
-          author, " " + engine.prefix + "automove is disabled", isWhisper());
-    } else if (arguments.size() == 2) {
-      String secondArgument = arguments.get(1).trim();
-      SOURCE_CHANNELS.add(firstArgument);
-      DESTINATION_CHANNEL = secondArgument;
-      engine.outService.enqueueMessageForSending(
-          author,
-          "Set source channel: "
-              + SOURCE_CHANNELS
-              + " , destination channel: "
-              + DESTINATION_CHANNEL
-              + ". Make sure bot's REPLICA is serving source channels.",
-          isWhisper());
+    if (hostRef != null) {
+      ensureReplicasForSourceChannels(hostRef);
     }
 
-    log.info("Executed [automove] command by user: {}, arguments: {}", author, firstArgument);
-    return Optional.of(Status.SUCCESSFUL);
+    replyToAuthor(" %sautomove is enabled".formatted(engine.prefix));
+  }
+
+  private void ensureReplicasForSourceChannels(EngineImpl hostRef) {
+    Set<String> replicaChannels = hostRef.replicasMappedByChannel.keySet();
+    for (String source : SOURCE_CHANNELS) {
+      if (replicaChannels.contains(source)) {
+        log.info("Channel: {}, is served by a replica", source);
+        continue;
+      }
+
+      log.warn("Channel: {}, [IS NOT] server by a replica, launching one automatically.", source);
+      replyToAuthor(
+          "Channel: %s, [IS NOT] server by a replica, launching one automatically."
+              .formatted(source));
+      registerReplica(engine, chatMessage, author(), source);
+    }
+  }
+
+  private void disableAutoMove() {
+    AUTO_MOVE_STATUS = false;
+    EngineImpl hostRef = engine.getHostRef();
+    if (hostRef != null) {
+      stopSourceChannelReplicas(hostRef);
+    }
+
+    replyToAuthor(" %sautomove is disabled".formatted(engine.prefix));
+  }
+
+  private void stopSourceChannelReplicas(EngineImpl hostRef) {
+    log.info("Stopping replicas in: {}, channels", SOURCE_CHANNELS);
+    for (String channel : SOURCE_CHANNELS) {
+      EngineImpl replica = hostRef.replicasMappedByChannel.remove(channel);
+      if (replica == null) {
+        continue;
+      }
+
+      log.info("Stopping replica in channel: {}", channel);
+      replica.stop();
+    }
+  }
+
+  private void configureChannels(String source, String destination) {
+    SOURCE_CHANNELS.add(source);
+    DESTINATION_CHANNEL = destination;
+    replyToAuthor(
+        "Set source channel: %s , destination channel: %s. Make sure bot's REPLICA is serving source channels."
+            .formatted(SOURCE_CHANNELS, DESTINATION_CHANNEL));
   }
 }

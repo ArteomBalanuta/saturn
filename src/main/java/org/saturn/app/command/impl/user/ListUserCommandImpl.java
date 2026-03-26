@@ -2,7 +2,6 @@ package org.saturn.app.command.impl.user;
 
 import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
-import com.moandjiezana.toml.Toml;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -21,17 +20,13 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.service.impl.OutService;
 
 @Slf4j
 @CommandAliases(aliases = {"list", "l"})
 public class ListUserCommandImpl extends UserCommandBaseImpl {
-  private final OutService outService;
-
   public ListUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminAndUserTrips(engine));
     super.setAliases(aliases);
-    this.outService = super.engine.outService;
   }
 
   @Override
@@ -41,48 +36,40 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    String author = super.chatMessage.getNick();
-
-    List<String> arguments = this.getArguments();
+    List<String> arguments = getArguments();
     if (arguments.isEmpty()) {
-      printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
-      outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "list programming", isWhisper());
+      printUsers(author(), engine.currentChannelUsers, isWhisper());
+      replyToAuthor("Example: %slist programming".formatted(engine.prefix));
+      log.info("Executed [list] command by user: {} - missing channel, listed current room", author());
       return Optional.of(Status.FAILED);
     }
 
-    String channel = arguments.get(0).trim();
+    String channel = arguments.getFirst().trim();
     if (channel.isBlank() || channel.equals(engine.channel)) {
-      /* parse nicks from current channel */
-      printUsers(author, engine.currentChannelUsers, engine.outService, chatMessage.isWhisper());
-    } else {
-      /* ListCommandListenerImpl will make sure to close the connection */
-      joinChannel(author, channel);
+      printUsers(author(), engine.currentChannelUsers, isWhisper());
+      log.info("Executed [list] command by user: {}, channel: {}", author(), engine.channel);
+      return successful();
     }
 
-    log.info("Executed [list] command by user: {}, channel: {}", author, channel);
-    return Optional.of(Status.SUCCESSFUL);
+    joinChannel(channel);
+    log.info("Executed [list] command by user: {}, channel: {}", author(), channel);
+    return successful();
   }
 
-  public void joinChannel(String author, String channel) {
-    Toml main = super.engine.getConfig();
-    EngineImpl slaveEngine =
-        new EngineImpl(
-            null, main, EngineType.LIST_CMD); // no db connection, nor config for this one is needed
+  public void joinChannel(String channel) {
+    EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
     setupEngine(channel, slaveEngine);
 
     JoinChannelListener onlineSetListener =
         new ListCommandListenerImpl(
-            new JoinChannelListenerDto(this.engine, slaveEngine, author, channel));
+            new JoinChannelListenerDto(this.engine, slaveEngine, author(), channel));
     onlineSetListener.setChatMessage(chatMessage);
 
     slaveEngine.setOnlineSetListener(onlineSetListener);
-
     slaveEngine.start();
   }
 
-  public void printUsers(
-      String author, List<User> users, OutService outService, boolean isWhisper) {
+  public void printUsers(String author, List<User> users, boolean isWhisper) {
     Set<User> unique = new HashSet<>(users);
     StringBuilder output = new StringBuilder();
 
@@ -101,6 +88,6 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
                     .append(user.getNick())
                     .append("\\n"));
 
-    outService.enqueueMessageForSending(author, "\\nUsers online: \\n" + output + "\\n", isWhisper);
+    engine.outService.enqueueMessageForSending(author, "\\nUsers online: \\n%s\\n".formatted(output), isWhisper);
   }
 }

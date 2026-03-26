@@ -31,32 +31,29 @@ public class FlairCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments =
-        getArguments().stream().map(arg -> arg.replace("@", "")).toList();
-
-    final String author = chatMessage.getNick();
+    List<String> arguments = getArguments().stream().map(arg -> arg.replace("@", "")).toList();
     if (arguments.size() < 2) {
-      log.info("Executed [flair] command by user: {}, no username parameter specified", author);
-      engine.outService.enqueueMessageForSending(
-          author, "\\n Example: " + engine.prefix + "flair merc", isWhisper());
+      log.info("Executed [flair] command by user: {}, no username parameter specified", author());
+      replyToAuthor("\\n Example: %sflair merc trusted".formatted(engine.prefix));
       return Optional.of(Status.FAILED);
     }
 
     String target = arguments.getFirst();
     String flair = arguments.get(1);
-    List<String> activeUsers = engine.currentChannelUsers.stream().map(User::getNick).toList();
-
-    if (activeUsers.contains(target)) {
-      engine.modService.forceFlair(target, flair);
-      log.info("Applied flair: {}, to user: {}", flair, target);
-    } else {
+    if (!isUserActive(target)) {
+      replyToAuthor("User %s is not in the room, flair was not applied.".formatted(target));
       log.info("User: {} is not in the room, can't apply flair", target);
+      return Optional.of(Status.FAILED);
     }
 
-    engine.outService.enqueueMessageForSending(author, "\\n Flair set successfully!", isWhisper());
+    engine.modService.forceFlair(target, flair);
+    replyToAuthor("\\n Flair set successfully!");
+    log.info("Applied flair: {}, to user: {}", flair, target);
+    log.info("Executed forceFlair command by user: {}", author());
+    return successful();
+  }
 
-    log.info("Executed forceFlair command by user: {}", author);
-
-    return Optional.of(Status.SUCCESSFUL);
+  private boolean isUserActive(String target) {
+    return engine.currentChannelUsers.stream().map(User::getNick).anyMatch(target::equals);
   }
 }

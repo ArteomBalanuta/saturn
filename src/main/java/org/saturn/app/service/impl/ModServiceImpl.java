@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.model.dto.BanRecord;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -43,7 +44,7 @@ public class ModServiceImpl extends OutService implements ModService {
           connection.prepareStatement(
               SqlUtil.INSERT_INTO_BANNED_USERS_TRIP_NAME_HASH_REASON_CREATED_ON_VALUES);
 
-      if (banDto.trip() != null) {
+      if (banDto.trip() != null && StringUtils.isNotBlank(banDto.trip())) {
         statement.setString(1, banDto.trip());
       } else {
         statement.setNull(1, Types.VARCHAR);
@@ -278,33 +279,31 @@ public class ModServiceImpl extends OutService implements ModService {
 
   @Override
   public Optional<BanRecord> isShadowBanned(User target) {
-    Optional<BanRecord> bannedUser = Optional.empty();
     if (target == null) {
-      return bannedUser;
-    }
-    List<BanRecord> bannedIds = getBannedUsers();
-    for (BanRecord banned : bannedIds) {
-      if (target.getTrip() != null
-          && banned.trip() != null
-          && target.getTrip().equals(banned.trip())) {
-        bannedUser = Optional.of(banned);
-        log.warn("User's trip is banned: {}", banned.trip());
-      }
-      if (target.getNick() != null
-          && banned.name() != null
-          && target.getNick().equals(banned.name())) {
-        bannedUser = Optional.of(banned);
-        log.warn("User's nick is banned: {}", banned.name());
-      }
-
-      if (target.getHash() != null
-          && banned.hash() != null
-          && target.getHash().equals(banned.hash())) {
-        bannedUser = Optional.of(banned);
-        log.warn("User's hash is banned: {}", banned.hash());
-      }
+      return Optional.empty();
     }
 
-    return bannedUser;
+    return getBannedUsers().stream()
+            .filter(banned -> isMatch(target, banned))
+            .findFirst();
+  }
+
+  private boolean isMatch(User target, BanRecord banned) {
+    // Check Trip
+    if (StringUtils.isNotBlank(target.getTrip()) && target.getTrip().equals(banned.trip())) {
+      log.warn("User's trip is banned: {}", banned.trip());
+      return true;
+    }
+    // Check Nick/Name
+    if (Objects.equals(target.getNick(), banned.name()) && target.getNick() != null) {
+      log.warn("User's nick is banned: {}", banned.name());
+      return true;
+    }
+    // Check Hash
+    if (Objects.equals(target.getHash(), banned.hash()) && target.getHash() != null) {
+      log.warn("User's hash is banned: {}", banned.hash());
+      return true;
+    }
+    return false;
   }
 }

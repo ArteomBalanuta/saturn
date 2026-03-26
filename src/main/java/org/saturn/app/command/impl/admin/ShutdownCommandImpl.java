@@ -5,7 +5,7 @@ import static org.saturn.app.util.Util.getAdminAndUserTrips;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.ApplicationRunner;
+import org.saturn.ApplicationLifecycle;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -25,7 +25,7 @@ public class ShutdownCommandImpl extends UserCommandBaseImpl {
     String author = chatMessage.getNick();
 
     try {
-      ApplicationRunner.applicationRunner.stopApplication();
+      ApplicationLifecycle.getInstance().shutdown();
       log.info("Executed [shutdown] command by user: {}", author);
     } catch (Exception e) {
       log.info("Error: {}", e.getMessage());

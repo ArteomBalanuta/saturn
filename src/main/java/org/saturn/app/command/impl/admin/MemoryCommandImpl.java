@@ -35,18 +35,17 @@ public class MemoryCommandImpl extends UserCommandBaseImpl {
     long maxMemory = runtime.maxMemory();
 
     String memPayload =
-        "JVM Used Memory: "
-            + (usedMemory / (1024 * 1024))
-            + " MB \\n"
-            + "JVM Free Memory: "
-            + (freeMemory / (1024 * 1024))
-            + " MB \\n"
-            + "JVM Total Memory: "
-            + (totalMemory / (1024 * 1024))
-            + " MB \\n"
-            + "JVM Max Memory: "
-            + (maxMemory / (1024 * 1024))
-            + " MB \\n";
+        """
+        JVM Used Memory: %d MB \\n
+        JVM Free Memory: %d MB \\n
+        JVM Total Memory: %d MB \\n
+        JVM Max Memory: %d MB \\n
+        """
+            .formatted(
+                usedMemory / (1024 * 1024),
+                freeMemory / (1024 * 1024),
+                totalMemory / (1024 * 1024),
+                maxMemory / (1024 * 1024));
 
     String payload = Util.alignWithWhiteSpace(memPayload, ":", "\u2009", false);
     String author = chatMessage.getNick();

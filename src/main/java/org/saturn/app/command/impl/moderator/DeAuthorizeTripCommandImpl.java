@@ -27,23 +27,18 @@ public class DeAuthorizeTripCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments = getArguments();
-    final String author = chatMessage.getNick();
+    List<String> arguments = getArguments();
     if (arguments.isEmpty()) {
-      log.info("Executed [deauthorizetrip] command by user: {}, no trip set", author);
-      super.engine.outService.enqueueMessageForSending(
-          author, " example: *deauth cmdTV+", isWhisper());
+      log.info("Executed [deauthorizetrip] command by user: {}, no trip set", author());
+      replyToAuthor(" example: %sdeauth cmdTV+".formatted(engine.prefix));
       return Optional.of(Status.FAILED);
     }
 
-    Optional<String> argument = arguments.stream().findFirst();
-
-    String trip = argument.get();
+    String trip = arguments.getFirst();
     engine.modService.deauth(trip);
-    super.engine.outService.enqueueMessageForSending(
-        author, " deauthorized trip: " + trip, isWhisper());
-    log.info("Executed [deauthorizetrip] command by user: {}, trip: {}}", author, trip);
+    replyToAuthor(" deauthorized trip: %s".formatted(trip));
+    log.info("Executed [deauthorizetrip] command by user: {}, trip: {}", author(), trip);
 
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
   }
 }

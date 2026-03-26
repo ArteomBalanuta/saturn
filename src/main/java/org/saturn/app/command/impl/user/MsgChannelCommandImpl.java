@@ -5,7 +5,6 @@ import static org.saturn.app.util.Util.getAdminAndUserTrips;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.EngineType;
@@ -21,12 +20,9 @@ import org.saturn.app.service.impl.OutService;
 @Slf4j
 @CommandAliases(aliases = {"msgchannel", "msgroom"})
 public class MsgChannelCommandImpl extends UserCommandBaseImpl {
-  private final OutService outService;
-
   public MsgChannelCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminAndUserTrips(engine));
     super.setAliases(aliases);
-    this.outService = super.engine.outService;
   }
 
   @Override
@@ -36,60 +32,30 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    String author = super.chatMessage.getNick();
-
-    List<String> arguments = this.getArguments();
-    if (arguments.isEmpty()) {
-      outService.enqueueMessageForSending(
-          author, " Example: " + engine.prefix + "msgroom your-room 1984", isWhisper());
-      log.info("Executed [msgchannel] command buy user: {}", author);
+    List<String> arguments = getArguments();
+    if (arguments.size() < 2) {
+      replyToAuthor(" Example: %smsgroom your-room your message".formatted(engine.prefix));
+      log.info("Executed [msgchannel] command by user: {} - missing room or message", author());
       return Optional.of(Status.FAILED);
     }
 
-    StringBuilder message = new StringBuilder();
-    for (int i = 1; i < arguments.size(); i++) {
-      message.append(' ').append(arguments.get(i));
+    String room = normalizeRoom(arguments.getFirst());
+    if (room.isBlank()) {
+      replyToAuthor("Room name cannot be blank.");
+      log.info("Executed [msgchannel] command by user: {} - blank room", author());
+      return Optional.of(Status.FAILED);
     }
 
-    String room = arguments.getFirst().replace("?", "");
-    log.info("Delivering Message: {}, Room: {}", message, room);
+    String message = renderMessage(arguments);
+    log.info("Delivering message: {}, room: {}", message, room);
 
     if (room.equals(engine.channel)) {
-      /* msg current room */
-      outService.enqueueMessageForSending(
-          author + " ", formatMessage(message.toString()), isWhisper());
-      log.info("Messaging current room: {}", room);
-    } else {
-      /* JoinChannelListener will make sure to close the connection */
-      EngineImpl slaveEngine =
-          new EngineImpl(
-              null,
-              super.engine.getConfig(),
-              EngineType.LIST_CMD); // no db connection, nor config for this one is required
-      setupListBot(room, slaveEngine);
-
-      JoinChannelListener joinChannelListener =
-          new MsgChannelCommandListenerImpl(
-              new JoinChannelListenerDto(this.engine, slaveEngine, author, room));
-
-      joinChannelListener.setAction(
-          () -> {
-            slaveEngine.outService.enqueueMessageForSending(
-                "*", formatMessage(message.toString()), false);
-            slaveEngine.shareMessages();
-            outService.enqueueMessageForSending(author, "sent successfully.", isWhisper());
-            log.info(
-                "Executed [msgchannel] command by user: {}, room: {}, message: {}",
-                author,
-                room,
-                message);
-          });
-
-      slaveEngine.setOnlineSetListener(joinChannelListener);
-      slaveEngine.start();
+      deliverToCurrentRoom(message);
+      return successful();
     }
 
-    return Optional.of(Status.SUCCESSFUL);
+    deliverToRemoteRoom(room, message);
+    return successful();
   }
 
   private String formatMessage(String message) {
@@ -99,13 +65,40 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
     return "anonymous mail from: ?" + engine.channel + " message: " + message;
   }
 
-  private void setupListBot(String channel, EngineImpl listBot) {
-    listBot.setChannel(channel);
-    int length = 8;
-    boolean useLetters = true;
-    boolean useNumbers = true;
-    String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
-    listBot.setNick(generatedNick);
-    listBot.setPassword(engine.password);
+  private String normalizeRoom(String room) {
+    return room.replace("?", "").trim();
+  }
+
+  private String renderMessage(List<String> arguments) {
+    return String.join(" ", arguments.subList(1, arguments.size())).trim();
+  }
+
+  private void deliverToCurrentRoom(String message) {
+    engine.outService.enqueueMessageForSending(author() + " ", formatMessage(message), isWhisper());
+    log.info("Messaging current room: {}", engine.channel);
+  }
+
+  private void deliverToRemoteRoom(String room, String message) {
+    EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
+    setupEngine(room, slaveEngine);
+
+    JoinChannelListener joinChannelListener =
+        new MsgChannelCommandListenerImpl(
+            new JoinChannelListenerDto(this.engine, slaveEngine, author(), room));
+
+    joinChannelListener.setAction(
+        () -> {
+          slaveEngine.outService.enqueueMessageForSending("*", formatMessage(message), false);
+          slaveEngine.shareMessages();
+          replyToAuthor("sent successfully.");
+          log.info(
+              "Executed [msgchannel] command by user: {}, room: {}, message: {}",
+              author(),
+              room,
+              message);
+        });
+
+    slaveEngine.setOnlineSetListener(joinChannelListener);
+    slaveEngine.start();
   }
 }

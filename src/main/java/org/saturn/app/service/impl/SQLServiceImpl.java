@@ -5,6 +5,7 @@ import static org.saturn.app.util.SeparatorFormatter.addSeparator;
 import static org.saturn.app.util.Util.setToList;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -99,22 +100,15 @@ public class SQLServiceImpl extends OutService implements SQLService {
     Set<String> hashes = new HashSet<>();
     Set<String> nicks = new HashSet<>();
     try {
-      Statement statement = connection.createStatement();
-
-      String sql =
-          SqlUtil.SELECT_DISTINCT_HASH_NAME_FROM_MESSAGES_WHERE_TRIP + trip + "' limit 30;";
-      if (trip == null || trip.trim().isEmpty()) {
-        sql = SqlUtil.SELECT_DISTINCT_HASH_NAME_FROM_MESSAGES_WHERE_HASH + hash + "' limit 30;";
-      }
-      statement.execute(sql);
-      ResultSet resultSet = statement.getResultSet();
-
       StringBuilder result = new StringBuilder();
-      while (resultSet.next()) {
-        Optional.ofNullable(resultSet.getString(1))
-            .ifPresent(s_hash -> hashes.add(escapeJson(s_hash).trim()));
-        Optional.ofNullable(resultSet.getString(2))
-            .ifPresent(s_nick -> nicks.add(escapeJson(s_nick)));
+      try (PreparedStatement statement = prepareBasicUserDataStatement(hash, trip);
+          ResultSet resultSet = statement.executeQuery()) {
+        while (resultSet.next()) {
+          Optional.ofNullable(resultSet.getString(1))
+              .ifPresent(s_hash -> hashes.add(escapeJson(s_hash).trim()));
+          Optional.ofNullable(resultSet.getString(2))
+              .ifPresent(s_nick -> nicks.add(escapeJson(s_nick)));
+        }
       }
 
       List<String> formattedHashes = addSeparator(setToList(hashes), ',');
@@ -135,6 +129,21 @@ public class SQLServiceImpl extends OutService implements SQLService {
     }
 
     return null;
+  }
+
+  private PreparedStatement prepareBasicUserDataStatement(String hash, String trip)
+      throws SQLException {
+    if (trip == null || trip.trim().isEmpty()) {
+      PreparedStatement statement =
+          connection.prepareStatement("select distinct hash,name from messages where hash = ? limit 30;");
+      statement.setString(1, hash);
+      return statement;
+    }
+
+    PreparedStatement statement =
+        connection.prepareStatement("select distinct hash,name from messages where trip = ? limit 30;");
+    statement.setString(1, trip);
+    return statement;
   }
 
   private String generateTable(List<String> columnNames, List<List<String>> listOfRows) {

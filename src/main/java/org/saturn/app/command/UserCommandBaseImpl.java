@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -126,6 +127,45 @@ public class UserCommandBaseImpl implements UserCommand {
   @Override
   public boolean isWhisper() {
     return chatMessage.isWhisper();
+  }
+
+  protected String author() {
+    return chatMessage.getNick();
+  }
+
+  protected boolean hasArguments() {
+    return !getArguments().isEmpty();
+  }
+
+  protected Optional<String> firstArgument() {
+    return getArguments().stream().findFirst();
+  }
+
+  protected void replyToAuthor(String message) {
+    engine.outService.enqueueMessageForSending(author(), message, isWhisper());
+  }
+
+  protected Optional<Status> fail(String message) {
+    replyToAuthor(message);
+    return Optional.of(Status.FAILED);
+  }
+
+  protected Optional<Status> failWithUsage(String usage) {
+    return fail("Example: " + engine.prefix + usage);
+  }
+
+  protected Optional<Status> successful() {
+    return Optional.of(Status.SUCCESSFUL);
+  }
+
+  protected String renderArguments(boolean preserveSpecialCharacters) {
+    return getArguments().stream()
+        .map(
+            argument ->
+                preserveSpecialCharacters
+                    ? argument
+                    : argument.replaceAll("[^A-Za-z0-9 ]", ""))
+        .collect(Collectors.joining(" ", "", " "));
   }
 
   public void resurrect(String channel, String nick, String targetChannel, EngineImpl slaveEngine) {

@@ -29,51 +29,67 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments = getArguments();
-    final String author = chatMessage.getNick();
-
-    if (arguments.isEmpty() && resurrectLastKicked(this.engine.channel)) {
-      EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
-      resurrect(kickedTo, lastKicked, this.engine.channel, slaveEngine);
-      log.info("Executed [move] command by user: {} - resurrected last moved user", author);
-      return Optional.of(Status.SUCCESSFUL);
+    List<String> arguments = getArguments();
+    if (arguments.isEmpty()) {
+      return resurrectLastMovedUser();
     }
 
     if (arguments.size() != 3) {
-      super.engine.outService.enqueueMessageForSending(
-          author, " " + engine.prefix + "move <nick> <from> <to>", isWhisper());
-      log.info("Executed [move] command by user: {} - missing required parameters", author);
+      replyToAuthor(" %smove <nick> <from> <to>".formatted(engine.prefix));
+      log.info("Executed [move] command by user: {} - missing required parameters", author());
       return Optional.of(Status.FAILED);
     }
 
-    String from = arguments.get(1);
     String target = arguments.get(0).replace("@", "");
+    String from = arguments.get(1);
     String to = arguments.get(2);
+    moveUser(target, from, to);
+    log.info("Executed [move] command by user: {}, target: {}", author(), target);
+    return successful();
+  }
 
-    log.info("Moving user: {}, from: {}, to: {}", target, from, to);
-
-    if (super.engine.replicasMappedByChannel.containsKey(from)
-        || super.engine.getHostRef().channel.equals(from)) {
-      /* got an instance in the room already or host room */
-      EngineImpl replica = null;
-      boolean isReplicaPresent = super.engine.replicasMappedByChannel.containsKey(from);
-      if (!isReplicaPresent) {
-        /* using host */
-        replica = super.engine.getHostRef();
-      } else {
-        replica = super.engine.replicasMappedByChannel.get(from);
-      }
-
-      replica.outService.enqueueRawMessageForSending(
-          String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", target, to));
-      replica.shareMessages();
-    } else {
-      Toml main = super.engine.getConfig();
-      EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD);
-      resurrect(from, target, to, slaveEngine);
+  private Optional<Status> resurrectLastMovedUser() {
+    if (!resurrectLastKicked(this.engine.channel)) {
+      log.info("Executed [move] command by user: {} - no last moved user available", author());
+      return Optional.of(Status.FAILED);
     }
 
-    log.info("Executed [move] command by user: {}, target: {}", author, target);
-    return Optional.of(Status.SUCCESSFUL);
+    EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
+    resurrect(kickedTo, lastKicked, this.engine.channel, slaveEngine);
+    log.info("Executed [move] command by user: {} - resurrected last moved user", author());
+    return successful();
+  }
+
+  private void moveUser(String target, String from, String to) {
+    log.info("Moving user: {}, from: {}, to: {}", target, from, to);
+    EngineImpl activeEngine = findEngineServing(from);
+    if (activeEngine != null) {
+      kickUserToChannel(activeEngine, target, to);
+      return;
+    }
+
+    Toml main = super.engine.getConfig();
+    EngineImpl slaveEngine = new EngineImpl(null, main, EngineType.LIST_CMD);
+    resurrect(from, target, to, slaveEngine);
+  }
+
+  private EngineImpl findEngineServing(String channel) {
+    EngineImpl replica = super.engine.replicasMappedByChannel.get(channel);
+    if (replica != null) {
+      return replica;
+    }
+
+    EngineImpl hostRef = super.engine.getHostRef();
+    if (hostRef != null && channel.equals(hostRef.channel)) {
+      return hostRef;
+    }
+
+    return null;
+  }
+
+  private void kickUserToChannel(EngineImpl sourceEngine, String target, String destination) {
+    sourceEngine.outService.enqueueRawMessageForSending(
+        "{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}".formatted(target, destination));
+    sourceEngine.shareMessages();
   }
 }
