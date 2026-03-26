@@ -1,7 +1,7 @@
 IMAGE_NAME ?= saturn
 CONTAINER_NAME ?= saturn
 APP_DIR ?= /app
-CONFIG_FILE ?= $(CURDIR)/config.toml
+CONFIG_FILE ?= $(shell if [ -f "$(CURDIR)/config.toml" ]; then printf "%s" "$(CURDIR)/config.toml"; else printf "%s" "$(CURDIR)/config.example.toml"; fi)
 DATABASE_DIR ?= $(CURDIR)/database
 DATABASE_FILE ?= $(DATABASE_DIR)/database.db
 MIGRATIONS_DIR ?= $(DATABASE_DIR)/migrations
@@ -12,6 +12,7 @@ help:
 	@printf "%s\n" \
 		"make build    - Build the Docker image" \
 		"make run      - Recreate and run the container in detached mode" \
+		"               Uses config.toml if it is a file, otherwise config.example.toml" \
 		"make start    - Start the existing container" \
 		"make stop     - Stop the container if it exists" \
 		"make restart  - Stop and run the container again" \
@@ -29,6 +30,10 @@ build:
 	docker build -t $(IMAGE_NAME) .
 
 run: rm
+	@if [ -e "$(CURDIR)/config.toml" ] && [ ! -f "$(CURDIR)/config.toml" ]; then \
+		echo "config.toml exists but is not a file: $(CURDIR)/config.toml"; \
+		echo "Using $(CONFIG_FILE) instead. Remove or rename that directory if it is accidental."; \
+	fi
 	docker run -d \
 		--name $(CONTAINER_NAME) \
 		-v $(CONFIG_FILE):$(APP_DIR)/config.toml \
