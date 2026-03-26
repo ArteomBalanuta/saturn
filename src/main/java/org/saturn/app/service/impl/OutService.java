@@ -23,6 +23,7 @@ public class OutService {
       log.error("Author should not be blank!");
       throw new RuntimeException("Author should not be blank!");
     }
+    message = normalizeForChatPayload(message);
     if (isWhisper) {
       message =
           StringUtils.prependIfMissingIgnoreCase(message, "/whisper @%s ".formatted(author));
@@ -36,6 +37,7 @@ public class OutService {
   }
 
   public String enqueueMessageForSending(String message) {
+    message = normalizeForChatPayload(message);
     queue.add(message);
     return message;
   }
@@ -43,5 +45,13 @@ public class OutService {
   public void enqueueRawMessageForSending(String message) {
     log.debug("raw payload sent: {}", message);
     rawMessages.add(message);
+  }
+
+  static String normalizeForChatPayload(String message) {
+    if (message == null) {
+      return null;
+    }
+
+    return message.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n");
   }
 }
