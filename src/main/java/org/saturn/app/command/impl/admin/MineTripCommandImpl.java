@@ -55,11 +55,7 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
   public Optional<Status> execute() {
     List<String> arguments = this.getArguments();
     if (arguments.size() < 2) {
-      super.engine.outService.enqueueMessageForSending(
-          chatMessage.getNick(),
-          " Example: " + engine.prefix + "mine <room> <start|stop>",
-          isWhisper());
-      return Optional.of(Status.FAILED);
+      return fail(" Example: %smine <room> <start|stop>".formatted(engine.prefix));
     }
 
     String channel = arguments.get(0);
@@ -72,77 +68,87 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
       return Optional.of(Status.FAILED);
     }
 
-    if ("count".equals(cmd)) {
-      int activeCount = executorService.getActiveCount();
-      long completedTaskCount = executorService.getCompletedTaskCount();
-      long taskCount = executorService.getTaskCount();
-      super.engine.outService.enqueueMessageForSending(
-          chatMessage.getNick(),
-          " TaskCount: "
-              + taskCount
-              + ", Completed: "
-              + completedTaskCount
-              + ", Active: "
-              + activeCount,
-          isWhisper());
-      return Optional.of(Status.SUCCESSFUL);
-    }
-
-    if ("start".equals(cmd)) {
-      long initialDelay = 5;
-      String delay = arguments.get(2);
-      if (delay == null || delay.isBlank()) {
-        delay = String.valueOf(35);
-      }
-
-      if (!portMappedByIp.isEmpty()) {
-        for (Map.Entry<String, Proxy> ipnProxy : portMappedByIp.entrySet()) {
-          executorService.scheduleWithFixedDelay(
-              () -> joinChannel(channel, ipnProxy.getValue()),
-              initialDelay,
-              Long.parseLong(delay),
-              TimeUnit.SECONDS);
-          System.out.println(
-              "Started miner, initial delay: "
-                  + initialDelay
-                  + ", room: "
-                  + channel
-                  + ", delay: "
-                  + delay
-                  + ", proxy: "
-                  + ipnProxy.getValue().getIp()
-                  + ":"
-                  + ipnProxy.getValue().getPort());
-        }
-      } else {
-        executorService.scheduleWithFixedDelay(
-            () -> joinChannel(channel, null),
-            initialDelay,
-            Long.parseLong(delay),
-            TimeUnit.SECONDS);
-        System.out.println(
-            "Started miner, initial delay: "
-                + initialDelay
-                + ", room: "
-                + channel
-                + ", delay: "
-                + delay);
-      }
-    } else if ("stop".equals(cmd)) {
-      executorService.shutdownNow();
-      System.out.println("Stopped mining, room: " + channel);
-      try {
-        System.out.println("Awaiting termination: " + executorService.isTerminated());
-        boolean b = executorService.awaitTermination(10, TimeUnit.SECONDS);
-        System.out.println("Miner service is terminated: " + b);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+    Optional<Status> result = handleCommand(arguments, channel, cmd);
+    if (result.isPresent()) {
+      return result;
     }
 
     executorServiceTaskChecker.scheduleWithFixedDelay(
         MineTripCommandImpl::check, 1, 5, TimeUnit.SECONDS);
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
+  }
+
+  private Optional<Status> handleCommand(List<String> arguments, String channel, String command) {
+    if ("count".equals(command)) {
+      printTaskCount();
+      return successful();
+    }
+    if ("start".equals(command)) {
+      startMining(channel, parseDelay(arguments));
+      return Optional.empty();
+    }
+    if ("stop".equals(command)) {
+      stopMining(channel);
+      return successful();
+    }
+    return Optional.of(Status.FAILED);
+  }
+
+  private void printTaskCount() {
+    int activeCount = executorService.getActiveCount();
+    long completedTaskCount = executorService.getCompletedTaskCount();
+    long taskCount = executorService.getTaskCount();
+    replyToAuthor(
+        " TaskCount: %d, Completed: %d, Active: %d"
+            .formatted(taskCount, completedTaskCount, activeCount));
+  }
+
+  private long parseDelay(List<String> arguments) {
+    if (arguments.size() < 3 || arguments.get(2) == null || arguments.get(2).isBlank()) {
+      return 35L;
+    }
+    return Long.parseLong(arguments.get(2));
+  }
+
+  private void startMining(String channel, long delaySeconds) {
+    long initialDelay = 5L;
+    if (!portMappedByIp.isEmpty()) {
+      for (Map.Entry<String, Proxy> ipAndProxy : portMappedByIp.entrySet()) {
+        scheduleMiningTask(channel, ipAndProxy.getValue(), initialDelay, delaySeconds);
+      }
+      return;
+    }
+    scheduleMiningTask(channel, null, initialDelay, delaySeconds);
+  }
+
+  private void scheduleMiningTask(
+      String channel, Proxy proxy, long initialDelaySeconds, long delaySeconds) {
+    executorService.scheduleWithFixedDelay(
+        () -> joinChannel(channel, proxy), initialDelaySeconds, delaySeconds, TimeUnit.SECONDS);
+
+    if (proxy != null) {
+      System.out.println(
+          "Started miner, initial delay: %d, room: %s, delay: %d, proxy: %s:%s"
+              .formatted(
+                  initialDelaySeconds, channel, delaySeconds, proxy.getIp(), proxy.getPort()));
+      return;
+    }
+
+    System.out.println(
+        "Started miner, initial delay: %d, room: %s, delay: %d"
+            .formatted(initialDelaySeconds, channel, delaySeconds));
+  }
+
+  private void stopMining(String channel) {
+    executorService.shutdownNow();
+    System.out.println("Stopped mining, room: %s".formatted(channel));
+    try {
+      System.out.println("Awaiting termination: %s".formatted(executorService.isTerminated()));
+      boolean terminated = executorService.awaitTermination(10, TimeUnit.SECONDS);
+      System.out.println("Miner service is terminated: %s".formatted(terminated));
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static void check() {

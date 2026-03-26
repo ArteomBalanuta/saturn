@@ -2,6 +2,7 @@ package org.saturn.app.facade;
 
 import com.moandjiezana.toml.Toml;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -190,5 +191,20 @@ public abstract class Base {
 
   public Connection getDbConnection() {
     return this.dbConnection;
+  }
+
+  protected void closeDbConnection() {
+    if (dbConnection == null) {
+      return;
+    }
+
+    try {
+      if (!dbConnection.isClosed()) {
+        dbConnection.close();
+      }
+    } catch (SQLException e) {
+      log.info("Error: {}", e.getMessage());
+      log.error("Stack trace:", e);
+    }
   }
 }

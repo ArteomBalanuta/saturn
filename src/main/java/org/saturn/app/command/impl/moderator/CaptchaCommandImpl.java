@@ -27,30 +27,30 @@ public class CaptchaCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments = getArguments();
-    final String author = chatMessage.getNick();
+    List<String> arguments = getArguments();
     if (arguments.isEmpty()) {
-      engine.modService.lock();
-      log.info("Executed [captcha] command by user: {} - captcha: enabled", author);
-      super.engine.outService.enqueueMessageForSending(author, " Captcha enabled!", isWhisper());
-      return Optional.of(Status.FAILED);
-    }
-
-    Optional<String> argument = arguments.stream().findFirst();
-    if ("on".equals(argument.get())) {
       engine.modService.enableCaptcha();
-      super.engine.outService.enqueueMessageForSending(author, " Captcha enabled!", isWhisper());
-      log.info("Executed [captcha] command by user: {}, captcha: enabled", author);
-
-      return Optional.of(Status.SUCCESSFUL);
-    } else if ("off".equals(argument.get())) {
-      engine.modService.disableCaptcha();
-      super.engine.outService.enqueueMessageForSending(author, " Captcha disabled!", isWhisper());
-      log.info("Executed [captcha] command by user: {}, captcha: disabled", author);
-
-      return Optional.of(Status.SUCCESSFUL);
+      replyToAuthor(" Captcha enabled!");
+      log.info("Executed [captcha] command by user: {} - captcha: enabled", author());
+      return successful();
     }
 
+    String argument = arguments.getFirst();
+    if ("on".equals(argument)) {
+      engine.modService.enableCaptcha();
+      replyToAuthor(" Captcha enabled!");
+      log.info("Executed [captcha] command by user: {}, captcha: enabled", author());
+      return successful();
+    }
+
+    if ("off".equals(argument)) {
+      engine.modService.disableCaptcha();
+      replyToAuthor(" Captcha disabled!");
+      log.info("Executed [captcha] command by user: {}, captcha: disabled", author());
+      return successful();
+    }
+
+    replyToAuthor("%scaptcha [on|off]".formatted(engine.prefix));
     return Optional.of(Status.FAILED);
   }
 }

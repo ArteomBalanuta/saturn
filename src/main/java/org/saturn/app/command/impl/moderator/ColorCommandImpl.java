@@ -31,30 +31,28 @@ public class ColorCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments =
-        getArguments().stream().map(arg -> arg.replace("@", "")).toList();
-
-    final String author = chatMessage.getNick();
+    List<String> arguments = getArguments().stream().map(arg -> arg.replace("@", "")).toList();
     if (arguments.size() < 2) {
-      log.info("Executed [color] command by user: {}, no username parameter specified", author);
-      engine.outService.enqueueMessageForSending(
-          author, "\\n Example: " + engine.prefix + "color merc 00ff00", isWhisper());
+      log.info("Executed [color] command by user: {}, no username parameter specified", author());
+      replyToAuthor("\\n Example: %scolor merc 00ff00".formatted(engine.prefix));
       return Optional.of(Status.FAILED);
     }
 
     String target = arguments.getFirst();
     String color = arguments.get(1);
-    List<String> activeUsers = engine.currentChannelUsers.stream().map(User::getNick).toList();
-
-    if (activeUsers.contains(target)) {
-      engine.modService.forceColor(target, color);
-      log.info("Applied color: {}, to user: {}", color, target);
-    } else {
+    if (!isUserActive(target)) {
+      replyToAuthor("User %s is not in the room, color was not applied.".formatted(target));
       log.info("User: {} is not in the room, can't apply color", target);
+      return Optional.of(Status.FAILED);
     }
 
-    log.info("Executed forceColor command by user: {}", author);
+    engine.modService.forceColor(target, color);
+    log.info("Applied color: {}, to user: {}", color, target);
+    log.info("Executed forceColor command by user: {}", author());
+    return successful();
+  }
 
-    return Optional.of(Status.SUCCESSFUL);
+  private boolean isUserActive(String target) {
+    return engine.currentChannelUsers.stream().map(User::getNick).anyMatch(target::equals);
   }
 }

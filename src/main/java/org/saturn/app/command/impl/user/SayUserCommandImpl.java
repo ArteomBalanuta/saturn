@@ -27,26 +27,14 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    String author = chatMessage.getNick();
+    String author = author();
     Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
-
-    StringBuilder stringBuilder = new StringBuilder();
-    if (trip.isPresent() && List.of(engine.adminTrips.split(",")).contains(trip.get())) {
-      this.getArguments().forEach(argument -> stringBuilder.append(argument).append(" "));
-    } else {
-      this.getArguments()
-          .forEach(
-              argument -> {
-                String sanitizedArgument = argument.replaceAll("[^A-Za-z0-9 ]", "");
-                stringBuilder.append(sanitizedArgument).append(" ");
-              });
-    }
-
-    String message = String.valueOf(stringBuilder);
+    boolean isAdmin = trip.isPresent() && List.of(engine.adminTrips.split(",")).contains(trip.get());
+    String message = renderArguments(isAdmin);
 
     engine.outService.enqueueMessageForSending(message);
     log.info("Executed [say] command by user: {}, argument: {}", author, message);
 
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
   }
 }

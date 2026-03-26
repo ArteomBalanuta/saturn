@@ -53,7 +53,7 @@ public class TimeUserCommandImpl extends UserCommandBaseImpl {
     if (arguments.isEmpty()) {
       log.info("Executed [time] command by user: {}, trip: {}", author, trip);
       engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.getPrefix() + "time Tokyo", isWhisper());
+          author, "Example: %stime Tokyo".formatted(engine.getPrefix()), isWhisper());
       return Optional.of(Status.FAILED);
     }
 
@@ -75,7 +75,7 @@ public class TimeUserCommandImpl extends UserCommandBaseImpl {
 
     TimeResponse timeResponse = gson.fromJson(responseByURL, TimeResponse.class);
 
-    String header = "\\n Time: **" + zone + ", " + country + "** \\n ";
+    String header = "\\n Time: **%s, %s** \\n ".formatted(zone, country);
     TimeResponse.StringDto time = timeResponse.getResults();
 
     String timeZoneUri = String.format(apiTimeIo, lat, lng);
@@ -87,25 +87,27 @@ public class TimeUserCommandImpl extends UserCommandBaseImpl {
     if (offsetHours == 0) {
       offsetH = "0";
     } else if (offsetHours > 0) {
-      offsetH = "+" + offsetHours;
+      offsetH = "+%d".formatted(offsetHours);
     } else {
-      offsetH = "-" + offsetHours;
+      offsetH = "-%d".formatted(offsetHours);
     }
 
     String payload =
-        "today: %s \\n"
-            + "time: %s \\n"
-            + "zone: %s \\n"
-            + "UTC offset: %s \\n"
-            + "sun rise: %s \\n"
-            + "sun set: %s \\n"
-            + "first light: %s \\n"
-            + "last light: %s \\n"
-            + "dawn: %s \\n"
-            + "dusk: %s \\n"
-            + "solar noon: %s \\n"
-            + "golden hour: %s \\n"
-            + "day length: %s";
+        """
+        today: %s \\n
+        time: %s \\n
+        zone: %s \\n
+        UTC offset: %s \\n
+        sun rise: %s \\n
+        sun set: %s \\n
+        first light: %s \\n
+        last light: %s \\n
+        dawn: %s \\n
+        dusk: %s \\n
+        solar noon: %s \\n
+        golden hour: %s \\n
+        day length: %s
+        """;
 
     String formattedPayload =
         String.format(

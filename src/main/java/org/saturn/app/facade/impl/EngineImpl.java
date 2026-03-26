@@ -10,6 +10,7 @@ import com.moandjiezana.toml.Toml;
 import java.io.IOException;
 import java.sql.Connection;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
@@ -58,6 +58,7 @@ public class EngineImpl extends Base implements Engine {
   protected org.saturn.app.facade.impl.Connection hcConnection;
   public final Set<String> subscribers = new HashSet<>();
   public final Map<String, Afk> afkUsers = new HashMap<>();
+  private final Map<String, Listener> payloadListeners = new HashMap<>();
   private Listener onlineSetListener = new OnlineSetListenerImpl(this);
   private final Listener userJoinedListener = new UserJoinedListenerImpl(this);
   private final Listener userLeftListener = new UserLeftListenerImpl(this);
@@ -68,6 +69,7 @@ public class EngineImpl extends Base implements Engine {
 
   public void setOnlineSetListener(Listener listener) {
     this.onlineSetListener = listener;
+    registerPayloadListener("onlineSet", listener);
   }
 
   public EngineImpl(Connection dbConnection, Toml config, EngineType engineType) {
@@ -78,7 +80,20 @@ public class EngineImpl extends Base implements Engine {
       }
     }
 
+    registerDefaultPayloadListeners();
     this.commandFactory = new CommandFactory(this, CommandAliases.class);
+  }
+
+  private void registerDefaultPayloadListeners() {
+    registerPayloadListener("onlineSet", onlineSetListener);
+    registerPayloadListener("onlineAdd", userJoinedListener);
+    registerPayloadListener("onlineRemove", userLeftListener);
+    registerPayloadListener("chat", chatMessageListener);
+    registerPayloadListener("info", infoMessageListener);
+  }
+
+  public void registerPayloadListener(String command, Listener listener) {
+    payloadListeners.put(command, listener);
   }
 
   public void setHostRef(EngineImpl hostRef) {
@@ -176,19 +191,8 @@ public class EngineImpl extends Base implements Engine {
 
   @Override
   public void stop() {
-    if (!this.replicasMappedByChannel.isEmpty()) {
-      this.replicasMappedByChannel.forEach(
-          (channel, replica) -> {
-            log.warn("Shutting down replica in channel: {}", channel);
-            try {
-              replica.hcConnection.close();
-            } catch (InterruptedException e) {
-              throw new RuntimeException(e);
-            }
-          });
-    }
-
     try {
+      stopReplicas();
       if (hcConnection != null) {
         log.debug("Closing the host WS connection...");
         this.hcConnection.close();
@@ -200,6 +204,23 @@ public class EngineImpl extends Base implements Engine {
     } catch (Exception e) {
       log.info("Error: {}", e.getMessage());
       log.error("Exception: ", e);
+    } finally {
+      closeDbConnection();
+    }
+  }
+
+  private void stopReplicas() {
+    if (replicasMappedByChannel.isEmpty()) {
+      return;
+    }
+
+    List<Map.Entry<String, EngineImpl>> replicas = new ArrayList<>(replicasMappedByChannel.entrySet());
+    replicasMappedByChannel.clear();
+    for (Map.Entry<String, EngineImpl> replicaEntry : replicas) {
+      String channel = replicaEntry.getKey();
+      EngineImpl replica = replicaEntry.getValue();
+      log.warn("Shutting down replica in channel: {}", channel);
+      replica.stop();
     }
   }
 
@@ -207,15 +228,17 @@ public class EngineImpl extends Base implements Engine {
     try {
       log.debug("Dispatching message: {}", jsonText);
       String cmd = extractFieldFromJson(jsonText, "cmd");
-      switch (cmd) {
-        case "join" -> {}
-        case "onlineSet" -> onlineSetListener.notify(jsonText);
-        case "onlineAdd" -> userJoinedListener.notify(jsonText);
-        case "onlineRemove" -> userLeftListener.notify(jsonText);
-        case "chat" -> chatMessageListener.notify(jsonText);
-        case "info" -> infoMessageListener.notify(jsonText);
-        default -> log.warn("Non functional payload: {}", jsonText);
+      if ("join".equals(cmd)) {
+        return;
       }
+
+      Listener listener = payloadListeners.get(cmd);
+      if (listener == null) {
+        log.warn("Non functional payload: {}", jsonText);
+        return;
+      }
+
+      listener.notify(jsonText);
     } catch (Exception e) {
       log.error("Warning: {}", e.getMessage());
       log.error("Stack trace:", e);
@@ -230,16 +253,17 @@ public class EngineImpl extends Base implements Engine {
   public void shareUserInfo(User user) {
     String joinedUserData = sqlService.getBasicUserData(user.getHash(), user.getTrip());
     for (String subTrip : subscribers) {
-      List<User> tripUsers =
-          currentChannelUsers.stream().filter(u -> u.getTrip().equalsIgnoreCase(subTrip)).toList();
-      tripUsers.forEach(
-          u -> {
-            log.warn(
-                "Sharing hash, nick lists with subscriber: {}, trip: {} ",
-                u.getNick(),
-                u.getTrip());
-            outService.enqueueMessageForSending(u.getNick(), " -\\n\\n" + joinedUserData, true);
-          });
+      for (User currentUser : currentChannelUsers) {
+        if (!subTrip.equalsIgnoreCase(currentUser.getTrip())) {
+          continue;
+        }
+        log.warn(
+            "Sharing hash, nick lists with subscriber: {}, trip: {} ",
+            currentUser.getNick(),
+            currentUser.getTrip());
+        outService.enqueueMessageForSending(
+            currentUser.getNick(), " -\\n\\n%s".formatted(joinedUserData), true);
+      }
     }
   }
 
@@ -319,18 +343,12 @@ public class EngineImpl extends Base implements Engine {
   //            // executeSearch(author, cmd);
 
   public void notifyUserNotAfkAnymore(User user) {
-    Optional<Afk> afk = Optional.empty();
-    for (String trip : afkUsers.keySet()) {
-      if (trip.equals(user.getTrip())) {
-        afk = Optional.ofNullable(afkUsers.get(trip));
-        break;
-      }
-    }
-
-    if (afk.isPresent()) {
-      String ago = "was afk for " + getDifference(ZonedDateTime.now(), afk.get().getAfkOn());
-      String reason = afk.get().getReason();
-      outService.enqueueMessageForSending(user.getNick(), ago + "\\n reason: " + reason, false);
+    Afk afk = afkUsers.get(user.getTrip());
+    if (afk != null) {
+      String ago = "was afk for %s".formatted(getDifference(ZonedDateTime.now(), afk.getAfkOn()));
+      String reason = afk.getReason();
+      outService.enqueueMessageForSending(
+          user.getNick(), "%s\\n reason: %s".formatted(ago, reason), false);
       afkUsers.remove(user.getTrip());
       log.debug("Removed user: {}, trip: {}, from afk list", user.getNick(), user.getTrip());
     }
@@ -363,9 +381,9 @@ public class EngineImpl extends Base implements Engine {
     String youtubeVidDetails = getYoutubeVidDetails(id);
     String title = StringEscapeUtils.escapeJava(extractFieldFromJson(youtubeVidDetails, "title"));
 
-    String url = "![" + title + "](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)";
+    String url = "![%s](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)".formatted(title);
     String urlFormatted = url.replace("VIDEO_ID", id);
-    String payload = "Title: " + title + "\n" + urlFormatted;
+    String payload = "Title: %s%n%s".formatted(title, urlFormatted);
     outService.enqueueMessageForSending(author, StringEscapeUtils.escapeJava(payload), false);
   }
 
@@ -412,25 +430,20 @@ public class EngineImpl extends Base implements Engine {
   }
 
   public void notifyIsAfkIfUserIsMentioned(String author, String messageText) {
-    afkUsers.forEach(
-        (trip, afk) -> {
-          List<User> users = afk.getUsers();
-          List<String> afkNicks = users.stream().map(User::getNick).toList();
-          for (User user : users) {
-            if (isUserMentioned(messageText, user)) {
-              outService.enqueueMessageForSending(
-                  author,
-                  "Users:"
-                      + afkNicks
-                      + ", trip: "
-                      + user.getTrip()
-                      + " are currently away from keyboard! Reason: "
-                      + afk.getReason(),
-                  false);
-              return;
-            }
-          }
-        });
+    for (Afk afk : afkUsers.values()) {
+      List<User> users = afk.getUsers();
+      for (User user : users) {
+        if (!isUserMentioned(messageText, user)) {
+          continue;
+        }
+        outService.enqueueMessageForSending(
+            author,
+            "Users:%s, trip: %s are currently away from keyboard! Reason: %s"
+                .formatted(extractNicknames(users), user.getTrip(), afk.getReason()),
+            false);
+        return;
+      }
+    }
   }
 
   public boolean isUserMentioned(String message, User user) {
@@ -454,47 +467,57 @@ public class EngineImpl extends Base implements Engine {
       return;
     }
 
-    List<Mail> whisperMails = getMail(messages, true);
+    List<Mail> whisperMails = new java.util.ArrayList<>();
+    List<Mail> publicMessages = new java.util.ArrayList<>();
+    for (Mail mail : messages) {
+      if (Boolean.parseBoolean(mail.isWhisper)) {
+        whisperMails.add(mail);
+      } else {
+        publicMessages.add(mail);
+      }
+    }
+
     if (!whisperMails.isEmpty()) {
       log.info("User: {}, got pending whisper messages", author);
       String whisperMailPayload = formatMail(whisperMails);
-      outService.enqueueMessageForSending(author, " new mail: \\n " + whisperMailPayload, true);
+      outService.enqueueMessageForSending(
+          author, " new mail: \\n %s".formatted(whisperMailPayload), true);
     }
 
-    List<Mail> publicMessages = getMail(messages, false);
     if (!publicMessages.isEmpty()) {
       log.info("User: {}, got pending messages", author);
       String publicMailPayload = formatMail(publicMessages);
-      outService.enqueueMessageForSending(author, " new mail: \\n " + publicMailPayload, false);
+      outService.enqueueMessageForSending(
+          author, " new mail: \\n %s".formatted(publicMailPayload), false);
     }
 
-    messages.forEach(
-        m -> {
-          mailService.updateMailStatus(m.id);
-          log.debug("Updated message status with ID: {}, to 'DELIVERED'", m.id);
-        });
-  }
-
-  private static List<Mail> getMail(List<Mail> messages, boolean isWhisper) {
-    return messages.stream()
-        .filter(m -> String.valueOf(isWhisper).equals(m.isWhisper))
-        .collect(Collectors.toList());
+    for (Mail mail : messages) {
+      mailService.updateMailStatus(mail.id);
+      log.debug("Updated message status with ID: {}, to 'DELIVERED'", mail.id);
+    }
   }
 
   private String formatMail(List<Mail> messages) {
     StringBuilder whisperStrings = new StringBuilder();
-    messages.forEach(
-        mail -> {
-          String header =
-              DateUtil.formatRfc1123(mail.createdDate, TimeUnit.MILLISECONDS, "UTC")
-                  + ". "
-                  + getDifference(ZonedDateTime.now(), toZoneDateTimeUTC(mail.createdDate))
-                  + " ago.";
-          String body = mail.owner + ": " + mail.message;
-          whisperStrings.append(header).append("\\n").append(body).append("\\n &nbsp; \\n");
-        });
+    for (Mail mail : messages) {
+      String header =
+          "%s. %s ago."
+              .formatted(
+                  DateUtil.formatRfc1123(mail.createdDate, TimeUnit.MILLISECONDS, "UTC"),
+                  getDifference(ZonedDateTime.now(), toZoneDateTimeUTC(mail.createdDate)));
+      String body = "%s: %s".formatted(mail.owner, mail.message);
+      whisperStrings.append(header).append("\\n").append(body).append("\\n &nbsp; \\n");
+    }
 
     return whisperStrings.toString();
+  }
+
+  private List<String> extractNicknames(List<User> users) {
+    List<String> nicknames = new java.util.ArrayList<>(users.size());
+    for (User user : users) {
+      nicknames.add(user.getNick());
+    }
+    return nicknames;
   }
 
   public boolean isConnected() {

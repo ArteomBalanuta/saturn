@@ -27,23 +27,20 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final String author = chatMessage.getNick();
-    final Optional<String> target = getArguments().stream().findFirst();
+    final String author = author();
+    final Optional<String> target = firstArgument();
     if (target.isEmpty()) {
       log.info("Executed [ban] command by user: {}, no target set", author);
-      engine.outService.enqueueMessageForSending(
-          author, "Example: " + engine.prefix + "ban merc", isWhisper());
-      return Optional.of(Status.FAILED);
+      return failWithUsage("ban merc");
     }
     engine.modService.ban(target.get());
-    engine.outService.enqueueMessageForSending(
-        author, target.get() + " " + chatMessage.getHash() + " has been banned", isWhisper());
+    replyToAuthor(target.get() + " has been banned");
 
     log.info(
         "Executed [ban] command by user: {}, trip: {}, target: {}",
         author,
         chatMessage.getTrip(),
         target.get());
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
   }
 }

@@ -28,28 +28,31 @@ public class NotesUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
-    String author = chatMessage.getNick();
+    String author = author();
 
-    if (getArguments().isEmpty() && trip.isEmpty()) {
-      engine.outService.enqueueMessageForSending(
-          author, "\\n Set your trip first. Example: " + engine.prefix + "notes", isWhisper());
+    if (trip.isEmpty()) {
+      replyToAuthor("\\n Set your trip first. Example: %snotes".formatted(engine.prefix));
       log.info("Executed [notes] command by user: {}, trip is not present", author);
       return Optional.of(Status.FAILED);
     }
 
-    if (getArguments().isEmpty() && trip.isPresent()) {
+    if (!hasArguments()) {
       engine.noteService.executeListNotes(author, trip.get());
       log.info("Executed [notes] command by user: {}", author);
-      return Optional.of(Status.FAILED);
+      return successful();
     }
 
-    String argument = getArguments().stream().findFirst().get();
-    if (argument.equals("purge") || argument.equals("clear")) {
+    String argument = firstArgument().orElseThrow();
+    if (isPurgeCommand(argument)) {
       engine.noteService.executeNotesPurge(author, chatMessage.getTrip());
       log.info("Executed [notes purge] command by user: {}", author);
-      return Optional.of(Status.SUCCESSFUL);
+      return successful();
     }
 
     return Optional.of(Status.FAILED);
+  }
+
+  private boolean isPurgeCommand(String argument) {
+    return "purge".equals(argument) || "clear".equals(argument);
   }
 }

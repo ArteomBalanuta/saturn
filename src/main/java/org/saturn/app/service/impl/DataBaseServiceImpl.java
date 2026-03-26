@@ -3,20 +3,22 @@ package org.saturn.app.service.impl;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.service.DataBaseService;
 
 @Slf4j
 public class DataBaseServiceImpl implements DataBaseService {
-  private String databasePath;
-  private Connection connection;
+  private static final String ENABLE_FOREIGN_KEYS = "PRAGMA foreign_keys = ON";
+  private static final String ENABLE_WAL = "PRAGMA journal_mode = WAL";
+  private static final String SET_BUSY_TIMEOUT = "PRAGMA busy_timeout = 5000";
+  private final String databasePath;
 
   public DataBaseServiceImpl(String path) {
+    this.databasePath = path;
     try {
       validateDbPath(path);
-      this.databasePath = path;
-      this.connection = setUpConnection();
     } catch (Exception e) {
       log.error("Error: {}", e.getMessage());
       log.error("Stack trace:", e);
@@ -35,11 +37,29 @@ public class DataBaseServiceImpl implements DataBaseService {
   private Connection setUpConnection() throws SQLException {
     String jdbcUrl = "jdbc:sqlite:" + databasePath;
     log.debug("Using JDBC connection string: {}", jdbcUrl);
-    return DriverManager.getConnection(jdbcUrl);
+    Connection connection = DriverManager.getConnection(jdbcUrl);
+    configureConnection(connection);
+    return connection;
+  }
+
+  private void configureConnection(Connection connection) throws SQLException {
+    executePragma(connection, ENABLE_FOREIGN_KEYS);
+    executePragma(connection, ENABLE_WAL);
+    executePragma(connection, SET_BUSY_TIMEOUT);
+  }
+
+  private void executePragma(Connection connection, String pragma) throws SQLException {
+    try (PreparedStatement statement = connection.prepareStatement(pragma)) {
+      statement.execute();
+    }
   }
 
   @Override
   public Connection getConnection() {
-    return this.connection;
+    try {
+      return setUpConnection();
+    } catch (SQLException e) {
+      throw new RuntimeException("Failed to open database connection", e);
+    }
   }
 }

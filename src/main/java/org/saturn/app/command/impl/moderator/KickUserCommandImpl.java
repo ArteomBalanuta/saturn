@@ -4,7 +4,6 @@ import static org.saturn.app.util.Util.getAdminTrips;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
@@ -30,56 +29,60 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments =
-        getArguments().stream().map(arg -> arg.replace("@", "")).toList();
+    final List<String> arguments = sanitizeArguments(getArguments());
+    final String author = author();
 
-    final String author = chatMessage.getNick();
-    if (arguments.isEmpty() && resurrectLastKicked(this.engine.channel)) {
+    if (arguments.isEmpty()) {
+      return handleEmptyKickRequest(author);
+    }
+
+    String mode = arguments.getFirst();
+    List<String> activeUsers = getActiveUserNicks();
+    executeKickMode(mode, arguments, activeUsers);
+
+    log.info("Executed kick command by user: {}", author);
+    return successful();
+  }
+
+  private Optional<Status> handleEmptyKickRequest(String author) {
+    if (resurrectLastKicked(this.engine.channel)) {
       EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
       resurrect(kickedTo, lastKicked, this.engine.channel, slaveEngine);
       log.info("Executed [kick] command by user: {} - resurrected last kicked user", author);
-      return Optional.of(Status.SUCCESSFUL);
+      return successful();
     }
 
-    if (arguments.isEmpty() && (lastKicked == null && kickedTo == null)) {
-      log.info("Executed [kick] command by user: {}, no username parameter specified", author);
-      engine.outService.enqueueMessageForSending(
-          author, "\\n Example: " + engine.prefix + "kick merc", isWhisper());
-      return Optional.of(Status.FAILED);
-    }
+    log.info("Executed [kick] command by user: {}, no username parameter specified", author);
+    return fail("\\n Example: %skick merc".formatted(engine.prefix));
+  }
 
-    String flag = arguments.getFirst();
-
-    List<String> activeUsers =
-        engine.currentChannelUsers.stream().map(User::getNick).collect(Collectors.toList());
-
-    switch (flag) {
+  private void executeKickMode(String mode, List<String> arguments, List<String> activeUsers) {
+    switch (mode) {
       case "-m" -> {
-        List<String> usernames = arguments.stream().skip(1).toList();
-        for (String target : usernames) {
+        for (int i = 1; i < arguments.size(); i++) {
+          String target = arguments.get(i);
           kickUserIfPresent(target, activeUsers);
         }
       }
       case "-c" -> {
+        if (arguments.size() < 2) {
+          return;
+        }
         String value = arguments.get(1);
-        List<String> usernames =
-            activeUsers.stream()
-                .filter(username -> username.contains(value))
-                .collect(Collectors.toList());
-
+        List<String> usernames = new java.util.ArrayList<>();
+        for (String username : activeUsers) {
+          if (username.contains(value)) {
+            usernames.add(username);
+          }
+        }
         log.info("Kicking users: {}", usernames);
-
         for (String target : usernames) {
           engine.modService.kick(target);
           log.info("Kicked: {}", target);
         }
       }
-      default -> kickUserIfPresent(flag, activeUsers);
+      default -> kickUserIfPresent(mode, activeUsers);
     }
-
-    log.info("Executed kick command by user: {}", author);
-
-    return Optional.of(Status.SUCCESSFUL);
   }
 
   private void kickUserIfPresent(String target, List<String> activeUsers) {
@@ -90,5 +93,21 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
     } else {
       log.info("User: {} is not in the room", target);
     }
+  }
+
+  private List<String> sanitizeArguments(List<String> arguments) {
+    List<String> sanitizedArguments = new java.util.ArrayList<>(arguments.size());
+    for (String argument : arguments) {
+      sanitizedArguments.add(argument.replace("@", ""));
+    }
+    return sanitizedArguments;
+  }
+
+  private List<String> getActiveUserNicks() {
+    List<String> activeUsers = new java.util.ArrayList<>(engine.currentChannelUsers.size());
+    for (User user : engine.currentChannelUsers) {
+      activeUsers.add(user.getNick());
+    }
+    return activeUsers;
   }
 }

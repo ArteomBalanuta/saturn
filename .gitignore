@@ -13,4 +13,11 @@ hackchat.db
 /hc.log
 /dependency-reduced-pom.xml
 /logs/
-/database/database.db
+/config.toml
+/database/*
+!/database/migrations/
+!/database/migrations/*.sql
+!/database/.gitkeep
+*.db
+*.db-shm
+*.db-wal

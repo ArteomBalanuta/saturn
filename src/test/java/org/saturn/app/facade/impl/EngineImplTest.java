@@ -2,18 +2,44 @@ package org.saturn.app.facade.impl;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 import com.moandjiezana.toml.Toml;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.facade.EngineType;
+import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 
 class EngineImplTest {
-  private final EngineImpl engine =
-      new EngineImpl(mock(Connection.class), mock(Toml.class), EngineType.HOST);
+  private final EngineImpl engine = new EngineImpl(noopConnection(), buildConfig(), EngineType.HOST);
+
+  private static Toml buildConfig() {
+    return new Toml()
+        .read(
+            """
+            cmdPrefix = "*"
+            channel = "programming"
+            nick = "saturn"
+            trip = "secret13"
+            userTrips = ""
+            adminTrips = ""
+            dbPath = "database/database.db"
+            wsUrl = "wss://hack.chat/chat-ws"
+            proxies = ""
+            autorunCommands = ""
+            """);
+  }
+
+  private static Connection noopConnection() {
+    return (Connection)
+        Proxy.newProxyInstance(
+            Connection.class.getClassLoader(),
+            new Class<?>[] {Connection.class},
+            (proxy, method, args) -> null);
+  }
 
   @Test
   public void isUserMentioned() {
@@ -48,5 +74,51 @@ class EngineImplTest {
         () -> assertFalse(engine.isUserMentioned(" merc2 ", user), "8"),
         () -> assertFalse(engine.isUserMentioned(" merc1 ", user), "9"),
         () -> assertFalse(engine.isUserMentioned("a asdmerc", user), "10"));
+  }
+
+  @Test
+  void dispatchMessageUsesRegisteredPayloadListener() {
+    CountingListener listener = new CountingListener();
+    engine.registerPayloadListener("testCmd", listener);
+
+    engine.dispatchMessage("{\"cmd\":\"testCmd\",\"text\":\"hello\"}");
+
+    assertEquals(1, listener.notifications());
+    assertEquals("{\"cmd\":\"testCmd\",\"text\":\"hello\"}", listener.lastMessage());
+  }
+
+  @Test
+  void setOnlineSetListenerUpdatesPayloadRegistry() {
+    CountingListener listener = new CountingListener();
+    engine.setOnlineSetListener(listener);
+
+    engine.dispatchMessage("{\"cmd\":\"onlineSet\",\"users\":[]}");
+
+    assertEquals(1, listener.notifications());
+    assertEquals("{\"cmd\":\"onlineSet\",\"users\":[]}", listener.lastMessage());
+  }
+
+  private static final class CountingListener implements Listener {
+    private int notifications;
+    private String lastMessage;
+
+    @Override
+    public String getListenerName() {
+      return "test";
+    }
+
+    @Override
+    public void notify(String message) {
+      notifications++;
+      lastMessage = message;
+    }
+
+    int notifications() {
+      return notifications;
+    }
+
+    String lastMessage() {
+      return lastMessage;
+    }
   }
 }

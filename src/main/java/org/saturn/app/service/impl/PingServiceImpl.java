@@ -41,6 +41,6 @@ public class PingServiceImpl extends OutService implements PingService {
     }
 
     log.info("response latency: {}", timeToRespond);
-    enqueueMessageForSending(author, "response time: " + timeToRespond + " milliseconds", false);
+    enqueueMessageForSending(author, "response time: %d milliseconds".formatted(timeToRespond), false);
   }
 }

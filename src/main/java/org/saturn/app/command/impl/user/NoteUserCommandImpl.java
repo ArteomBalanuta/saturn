@@ -29,19 +29,15 @@ public class NoteUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
-    boolean isEmpty = getArguments().stream().findFirst().isEmpty();
-    if (isEmpty) {
-      engine.outService.enqueueMessageForSending(
-          chatMessage.getNick(), engine.prefix + "note Jedi am I?!", isWhisper());
-      log.info("Executed [note] command by user: {}", chatMessage.getNick());
-      return Optional.of(Status.FAILED);
+    if (!hasArguments()) {
+      log.info("Executed [note] command by user: {}", author());
+      return fail("Example: " + engine.prefix + "note Jedi am I?!");
     }
 
     trip.ifPresent(s -> engine.noteService.save(s, listToString(getArguments())));
 
-    engine.outService.enqueueMessageForSending(
-        chatMessage.getNick(), "note successfully saved!", isWhisper());
-    log.info("Executed [note] command by user: {}", chatMessage.getNick());
-    return Optional.of(Status.SUCCESSFUL);
+    replyToAuthor("note successfully saved!");
+    log.info("Executed [note] command by user: {}", author());
+    return successful();
   }
 }

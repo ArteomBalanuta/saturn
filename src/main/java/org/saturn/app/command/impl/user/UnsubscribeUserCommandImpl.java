@@ -27,24 +27,19 @@ public class UnsubscribeUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    String author = chatMessage.getNick();
+    String author = author();
     String trip = chatMessage.getTrip();
-    if (trip == null && !engine.subscribers.contains(trip)) {
-      engine.outService.enqueueMessageForSending(
-          author,
-          "you are not subscribed, please set your trip and use " + engine.prefix + " sub command.",
-          false);
+    if (trip == null || !engine.subscribers.contains(trip)) {
+      replyToAuthor(
+          "you are not subscribed, please set your trip and use " + engine.prefix + " sub command.");
       log.info("User: {} failed unsubscribing", author);
       return Optional.of(Status.FAILED);
     }
     engine.subscribers.remove(trip);
     log.info("User: {}, trip: {}, unsubscribed", author, trip);
-    engine.outService.enqueueMessageForSending(
-        author,
-        "your trip will no longer receive hashes and " + "nicks for each new joining user. ",
-        true);
+    replyToAuthor("your trip will no longer receive hashes and nicks for each new joining user. ");
 
     log.info("Executed [unsubscribe] command by user: {}, trip: {}", author, trip);
-    return Optional.of(Status.SUCCESSFUL);
+    return successful();
   }
 }
