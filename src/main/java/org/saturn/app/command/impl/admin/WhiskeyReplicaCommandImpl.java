@@ -2,6 +2,7 @@ package org.saturn.app.command.impl.admin;
 
 import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.EngineType;
@@ -63,16 +64,35 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         replica.setChannel(channel);
         replica.setNick(name);
 
-        /* register replica */
-        engine.addReplica(replica);
-
         if (!portMappedByIp.isEmpty()) {
-            for (Map.Entry<String, Proxy> ipAndProxy : portMappedByIp.entrySet()) {
-                var proxy = ipAndProxy.getValue();
-                replica.start(proxy);
+            if (portMappedByIp.size() == 1) {
+                for (Map.Entry<String, Proxy> ipAndProxy : portMappedByIp.entrySet()) {
+                    var proxy = ipAndProxy.getValue();
+                    replica.start(proxy);
+                    engine.outService.enqueueMessageForSending(
+                            author,
+                            "started replica at whiskey channel using SOCKS5 proxy: "
+                                    + channel
+                                    + " successfully. Number of replicas: "
+                                    + engine.replicasMappedByChannel.size(),
+                            chatMessage.isWhisper());
+                }
+            } else {
+                for (Map.Entry<String, Proxy> ipAndProxy : portMappedByIp.entrySet()) {
+                    var proxy = ipAndProxy.getValue();
+
+                    int length = 8;
+                    boolean useLetters = true;
+                    boolean useNumbers = true;
+                    String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
+
+                    replica.setNick(generatedNick);
+                    replica.start(proxy);
+                }
+
                 engine.outService.enqueueMessageForSending(
                         author,
-                        "started replica at whiskey channel using SOCKS5 proxy: "
+                        "started replicas at whiskey channel using " + portMappedByIp.size() + " SOCKS5 proxies: "
                                 + channel
                                 + " successfully. Number of replicas: "
                                 + engine.replicasMappedByChannel.size(),
@@ -88,7 +108,5 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
                             + engine.replicasMappedByChannel.size(),
                     chatMessage.isWhisper());
         }
-
-
     }
 }
