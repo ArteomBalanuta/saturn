@@ -78,16 +78,24 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
                             chatMessage.isWhisper());
                 }
             } else {
+
                 for (Map.Entry<String, Proxy> ipAndProxy : portMappedByIp.entrySet()) {
-                    var proxy = ipAndProxy.getValue();
+
+                    EngineImpl proxyReplica =
+                            new EngineImpl(new DataBaseServiceImpl(engine.dbPath).getConnection(), main, EngineType.AGENT);
+                    proxyReplica.setChannel(channel);
 
                     int length = 8;
                     boolean useLetters = true;
                     boolean useNumbers = true;
                     String generatedNick = RandomStringUtils.random(length, useLetters, useNumbers);
 
-                    replica.setNick(generatedNick);
-                    replica.start(proxy);
+                    proxyReplica.setNick(generatedNick);
+
+                    var proxy = ipAndProxy.getValue();
+
+                    proxyReplica.setNick(generatedNick);
+                    proxyReplica.start(proxy);
                 }
 
                 engine.outService.enqueueMessageForSending(
