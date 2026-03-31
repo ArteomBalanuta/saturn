@@ -48,7 +48,11 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         String name = arguments.get(1);
         if (engine.replicasMappedByChannel.get(channel) == null) {
             log.debug("Registering replica for channel: {}", channel);
-            registerReplica(engine, chatMessage, author, channel, name == null ? "portal" : name);
+            try {
+                registerReplica(engine, chatMessage, author, channel, name == null ? "portal" : name);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             log.info("Successfully started replica for channel: {}", channel);
         }
 
@@ -57,7 +61,7 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
     }
 
     public static void registerReplica(
-            EngineImpl engine, ChatMessage chatMessage, String author, String channel, String name) {
+            EngineImpl engine, ChatMessage chatMessage, String author, String channel, String name) throws InterruptedException {
         Toml main = engine.getConfig();
         EngineImpl replica =
                 new EngineImpl(new DataBaseServiceImpl(engine.dbPath).getConnection(), main, EngineType.AGENT);
@@ -69,18 +73,25 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
                 for (Map.Entry<String, Proxy> ipAndProxy : portMappedByIp.entrySet()) {
                     var proxy = ipAndProxy.getValue();
                     replica.start(proxy);
-                    engine.outService.enqueueMessageForSending(
-                            author,
-                            "started replica at whiskey channel using SOCKS5 proxy: "
-                                    + channel
-                                    + " successfully. Number of replicas: "
-                                    + engine.replicasMappedByChannel.size(),
-                            chatMessage.isWhisper());
+                    Thread.sleep(5_000);
+                    if (replica.isConnected()) {
+                        engine.outService.enqueueMessageForSending(
+                                author,
+                                "started replica at whiskey channel using SOCKS5 proxy: "
+                                        + channel
+                                        + " successfully. Number of replicas: "
+                                        + engine.replicasMappedByChannel.size(),
+                                chatMessage.isWhisper());
+                    } else {
+                        engine.outService.enqueueMessageForSending(
+                                author,
+                                "couldn't connect replica to whiskey channel using SOCKS5 proxy: "
+                                        + channel,
+                                chatMessage.isWhisper());
+                    }
                 }
             } else {
-
                 for (Map.Entry<String, Proxy> ipAndProxy : portMappedByIp.entrySet()) {
-
                     EngineImpl proxyReplica =
                             new EngineImpl(new DataBaseServiceImpl(engine.dbPath).getConnection(), main, EngineType.AGENT);
                     proxyReplica.setChannel(channel);
@@ -96,6 +107,20 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
 
                     proxyReplica.setNick(generatedNick);
                     proxyReplica.start(proxy);
+                    Thread.sleep(5_000);
+                    if (proxyReplica.isConnected()) {
+                        engine.outService.enqueueMessageForSending(
+                                author,
+                                "started replica at whiskey channel using SOCKS5 proxy: "
+                                        + channel
+                                        + " successfully. Number of replicas: "
+                                        + engine.replicasMappedByChannel.size(),
+                                chatMessage.isWhisper());
+
+                        /* register replica */
+                        engine.addReplica(proxyReplica);
+                        return;
+                    }
                 }
 
                 engine.outService.enqueueMessageForSending(
