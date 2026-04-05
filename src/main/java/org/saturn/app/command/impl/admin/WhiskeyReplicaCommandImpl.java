@@ -103,20 +103,28 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
 
         List<CompletableFuture<EngineImpl>> futures = new ArrayList<>();
         List<EngineImpl> replicas = new ArrayList<>();
-
-        int n = 0;
+        var latch = new CountDownLatch(portMappedByIp.size());
+        String baseName = name == null ? generateRandomNick(8, true, true) : name;
+        ThreadLocal<String> currentName = new ThreadLocal<>();
+        
         for (Map.Entry<String, Proxy> ipAndProxy : portMappedByIp.entrySet()) {
-            EngineImpl replica = createAndStartReplica(engine, chatMessage, author, channel, name + n++);
+            EngineImpl replica = createAndStartReplica(engine, chatMessage, author, channel, baseName);
             replicas.add(replica);
-
             var proxy = ipAndProxy.getValue();
+
             futures.add(CompletableFuture.supplyAsync(() -> {
                 try {
+                    currentName.set(replica.getNick());
                     replica.start(proxy);
+                    latch.countDown();
                     Thread.sleep(5000);
-                    return replica;
+                    if (replica.isConnected()) {
+                        return replica;
+                    }
+                    return null;
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    latch.countDown();
                     return null;
                 }
             }));
@@ -125,36 +133,36 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
         allFutures.get();
 
-        // Process results
-        final EngineImpl[] successfulReplica = {null};
+        // Find first successful replica
+        EngineImpl successfulReplica = null;
         for (int i = 0; i < futures.size(); i++) {
             CompletableFuture<EngineImpl> future = futures.get(i);
             EngineImpl replica = replicas.get(i);
 
-            int finalI = i;
             future.whenComplete((result, error) -> {
                 if (error != null || result == null) {
-                    log.error("Failed to connect replica using proxy: " + portMappedByIp.get(finalI).getIp());
+                    log.error("Failed to connect replica using proxy: {} (name: {})",
+                            portMappedByIp.get(i).getIp(), currentName.get());
                     return;
                 }
 
-                if (result.isConnected()) {
-                    if (successfulReplica[0] == null) {
-                        successfulReplica[0] = result;
-                        engine.addReplica(result);
-                        engine.outService.enqueueMessageForSending(
-                                author,
-                                "started replica at whiskey channel using proxy: " + portMappedByIp.get(finalI).getIp() + " successfully",
-                                chatMessage.isWhisper());
-                    } else {
-                        // Close unused replicas
-                        result.stop();
+                if (result.isConnected() && successfulReplica == null) {
+                    successfulReplica = result;
+                    engine.addReplica(result);
+                    engine.outService.enqueueMessageForSending(
+                            author,
+                            "started replica at whiskey channel using proxy: " + portMappedByIp.get(i).getIp() + " successfully",
+                            chatMessage.isWhisper());
+                    
+                    // Cancel remaining futures
+                    for (CompletableFuture<?> future : futures) {
+                        future.cancel(true);
                     }
                 }
             });
         }
 
-        if (successfulReplica[0] == null) {
+        if (successfulReplica == null) {
             engine.outService.enqueueMessageForSending(
                     author,
                     "Failed to establish any replica connection for channel: " + channel,
@@ -162,7 +170,8 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         } else {
             engine.outService.enqueueMessageForSending(
                     author,
-                    "Successfully connected " + engine.replicasMappedByChannel.size() + " replicas for channel: " + channel,
+                    "Successfully connected replica using proxy: " + successfulReplica.getProxy().getIp() + 
+                    " for channel: " + channel,
                     chatMessage.isWhisper());
         }
     }
