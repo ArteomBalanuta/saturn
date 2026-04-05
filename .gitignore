@@ -21,3 +21,4 @@ hackchat.db
 *.db
 *.db-shm
 *.db-wal
+.aider*
