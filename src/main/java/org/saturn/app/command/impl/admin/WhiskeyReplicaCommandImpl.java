@@ -2,7 +2,6 @@ package org.saturn.app.command.impl.admin;
 
 import com.moandjiezana.toml.Toml;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.EngineType;
@@ -20,7 +19,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
@@ -30,8 +28,6 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
     private final OutService outService;
     private static final Map<String, Proxy> PORT_MAPPED_BY_IP = new ConcurrentHashMap<>();
     private static final int REPLICA_STARTUP_WAIT_MS = 5000;
-    private static final int RANDOM_NICK_LENGTH = 8;
-    private static final AtomicInteger CHANNEL_COUNTER = new AtomicInteger(0);
 
     public WhiskeyReplicaCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
         super(message, engine, getAdminAndUserTrips(engine));
@@ -88,14 +84,6 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         return Optional.of(Status.SUCCESSFUL);
     }
 
-    private static String generateRandomNick() {
-        return RandomStringUtils.random(RANDOM_NICK_LENGTH, true, true);
-    }
-
-    private static String generateTestChannel(String baseChannel, int proxyIndex) {
-        return baseChannel + "_test_" + proxyIndex + "_" + System.currentTimeMillis();
-    }
-
     private static EngineImpl createReplica(EngineImpl engine, String channel, String name) {
         Toml main = engine.getConfig();
         EngineImpl replica = new EngineImpl(
@@ -134,10 +122,9 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         List<CompletableFuture<ProxyTestResult>> futures = new ArrayList<>();
         List<Proxy> proxies = new ArrayList<>(PORT_MAPPED_BY_IP.values());
 
-        // Test each proxy with a DIFFERENT test channel
         for (int i = 0; i < proxies.size(); i++) {
             Proxy proxy = proxies.get(i);
-            String testChannel = generateTestChannel(targetChannel, i);
+            String testChannel = targetChannel + "_test_" + i + "_" + System.currentTimeMillis();
             String testName = baseName + "_test_" + i;
 
             EngineImpl testReplica = createReplica(engine, testChannel, testName);
@@ -149,15 +136,12 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
             futures.add(future);
         }
 
-        // Find the first healthy proxy connection
         ProxyTestResult healthyResult = awaitFirstHealthyProxy(futures);
 
         if (healthyResult != null) {
-            // Now connect to the ORIGINAL target channel using the healthy proxy
             connectToTargetChannel(engine, author, targetChannel, baseName, healthyResult);
         } else {
             sendErrorMessage(author, "Failed to establish any replica connection for channel: " + targetChannel);
-            // Clean up any partially started test replicas
             futures.forEach(future -> future.cancel(true));
         }
     }
@@ -183,9 +167,7 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
             log.error("Exception while testing proxy: {}", proxy.getIp(), e);
             return new ProxyTestResult(proxy, null, false, proxyIndex);
         } finally {
-            // Clean up test replica if it's not the one we'll use
             if (testReplica.isConnected()) {
-                // Don't clean up yet - we might use this replica
                 log.debug("Keeping test replica for potential reuse");
             } else {
                 testReplica.stop();
@@ -199,7 +181,6 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
             log.info("Using healthy proxy {} to connect to target channel: {}",
                     healthyResult.proxy.getIp(), targetChannel);
 
-            // Create a NEW replica for the target channel using the healthy proxy
             EngineImpl targetReplica = createReplica(engine, targetChannel, baseName);
             targetReplica.start(healthyResult.proxy);
             Thread.sleep(REPLICA_STARTUP_WAIT_MS);
@@ -211,7 +192,6 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
                         targetChannel, healthyResult.proxy.getIp()
                 ));
 
-                // Clean up the test replica since we're using a new one
                 if (healthyResult.testReplica != null && healthyResult.testReplica.isConnected()) {
                     healthyResult.testReplica.stop();
                     log.debug("Cleaned up test replica for channel: {}", healthyResult.testReplica.channel);
@@ -222,7 +202,6 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
                         healthyResult.proxy.getIp(), targetChannel
                 ));
 
-                // Fallback: try to use the test replica if it's still connected and reconfigure it
                 if (healthyResult.testReplica != null && healthyResult.testReplica.isConnected()) {
                     log.info("Fallback: Reconfiguring test replica for target channel");
                     healthyResult.testReplica.setChannel(targetChannel);
@@ -242,27 +221,11 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
     private ProxyTestResult awaitFirstHealthyProxy(List<CompletableFuture<ProxyTestResult>> futures)
             throws InterruptedException, ExecutionException {
 
-        while (!futures.isEmpty()) {
-            CompletableFuture<ProxyTestResult> anyFuture = CompletableFuture.anyOf(
-                    futures.toArray(new CompletableFuture[0])
-            ).thenApply(result -> (ProxyTestResult) result);
-
-            try {
-                ProxyTestResult result = anyFuture.get();
-                if (result != null && result.success) {
-                    // Cancel all other test futures
-                    futures.forEach(future -> future.cancel(true));
-                    return result;
-                } else {
-                    // Remove failed future and continue waiting
-                    futures.removeIf(future -> future.isDone());
-                }
-            } catch (ExecutionException e) {
-                // Remove failed futures and continue
-                futures.removeIf(CompletableFuture::isDone);
-                if (futures.isEmpty()) {
-                    throw e;
-                }
+        for (CompletableFuture<ProxyTestResult> future : futures) {
+            ProxyTestResult result = future.get();
+            if (result != null && result.success) {
+                futures.forEach(f -> f.cancel(true));
+                return result;
             }
         }
 
@@ -277,7 +240,6 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         outService.enqueueMessageForSending(recipient, "Error: " + message, chatMessage.isWhisper());
     }
 
-    // Helper class to store proxy test results
     private static class ProxyTestResult {
         final Proxy proxy;
         final EngineImpl testReplica;
