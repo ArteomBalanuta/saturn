@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
@@ -136,14 +137,16 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
             futures.add(future);
         }
 
-        ProxyTestResult healthyResult = awaitFirstHealthyProxy(futures);
+        List<ProxyTestResult> healthyProxies = awaitHealthyProxies(futures);
 
-        if (healthyResult != null) {
-            connectToTargetChannel(engine, author, targetChannel, baseName, healthyResult);
-        } else {
+        if (healthyProxies.isEmpty()) {
             sendErrorMessage(author, "Failed to establish any replica connection for channel: " + targetChannel);
-            futures.forEach(future -> future.cancel(true));
+            return;
         }
+
+        // Use the first healthy proxy for the target channel
+        ProxyTestResult primaryResult = healthyProxies.get(0);
+        connectToTargetChannel(engine, author, targetChannel, baseName, primaryResult, healthyProxies.subList(1, healthyProxies.size()));
     }
 
     private ProxyTestResult testProxyConnection(EngineImpl testReplica, Proxy proxy, String testChannel, int proxyIndex) {
@@ -176,7 +179,8 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
     }
 
     private void connectToTargetChannel(EngineImpl engine, String author, String targetChannel,
-                                        String baseName, ProxyTestResult healthyResult) {
+                                        String baseName, ProxyTestResult healthyResult,
+                                        List<ProxyTestResult> backupProxies) {
         try {
             log.info("Using healthy proxy {} to connect to target channel: {}",
                     healthyResult.proxy.getIp(), targetChannel);
@@ -192,9 +196,16 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
                         targetChannel, healthyResult.proxy.getIp()
                 ));
 
+                // Store backup proxies for later use when primary disconnects
+                if (!backupProxies.isEmpty()) {
+                    engine.backupProxiesByChannel.put(targetChannel, backupProxies);
+                    log.info("Stored {} backup proxies for channel {}", backupProxies.size(), targetChannel);
+                }
+
+                // Keep the primary test replica as a backup instead of stopping it
                 if (healthyResult.testReplica != null && healthyResult.testReplica.isConnected()) {
-                    healthyResult.testReplica.stop();
-                    log.debug("Cleaned up test replica for channel: {}", healthyResult.testReplica.channel);
+                    log.info("Keeping test replica {} as backup for channel {}",
+                            healthyResult.testReplica.channel, targetChannel);
                 }
             } else {
                 sendErrorMessage(author, String.format(
@@ -218,18 +229,57 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         }
     }
 
-    private ProxyTestResult awaitFirstHealthyProxy(List<CompletableFuture<ProxyTestResult>> futures)
+    private List<ProxyTestResult> awaitHealthyProxies(List<CompletableFuture<ProxyTestResult>> futures)
             throws InterruptedException, ExecutionException {
 
+        List<ProxyTestResult> healthyProxies = new ArrayList<>();
         for (CompletableFuture<ProxyTestResult> future : futures) {
             ProxyTestResult result = future.get();
             if (result != null && result.success) {
-                futures.forEach(f -> f.cancel(true));
-                return result;
+                healthyProxies.add(result);
+            } else {
+                // Cancel failed futures
+                future.cancel(true);
             }
         }
 
-        return null;
+        return healthyProxies;
+    }
+
+    public static CompletableFuture<Void> reconnectWithBackupProxy(EngineImpl engine, String author, String targetChannel, String baseName) {
+        return CompletableFuture.runAsync(() -> reconnectWithBackupProxyInternal(engine, author, targetChannel, baseName));
+    }
+
+    private static void reconnectWithBackupProxyInternal(EngineImpl engine, String author, String targetChannel, String baseName) {
+        List<ProxyTestResult> backupProxies = engine.backupProxiesByChannel.get(targetChannel);
+        if (backupProxies == null || backupProxies.isEmpty()) {
+            log.warn("No backup proxies available for channel {}", targetChannel);
+            return;
+        }
+
+        ProxyTestResult backupResult = backupProxies.remove(0);
+        engine.backupProxiesByChannel.put(targetChannel, backupProxies);
+
+        try {
+            log.info("Reconnecting to channel {} using backup proxy {}", targetChannel, backupResult.proxy.getIp());
+            EngineImpl targetReplica = createReplica(engine, targetChannel, baseName);
+            targetReplica.start(backupResult.proxy);
+            Thread.sleep(REPLICA_STARTUP_WAIT_MS);
+
+            if (targetReplica.isConnected()) {
+                engine.addReplica(targetReplica);
+                log.info("Successfully reconnected to channel {} via backup proxy {}",
+                        targetChannel, backupResult.proxy.getIp());
+            } else {
+                log.warn("Backup proxy {} failed to connect to channel {}",
+                        backupResult.proxy.getIp(), targetChannel);
+                targetReplica.stop();
+                reconnectWithBackupProxyInternal(engine, author, targetChannel, baseName);
+            }
+        } catch (Exception e) {
+            log.error("Failed to reconnect using backup proxy: {}", backupResult.proxy.getIp(), e);
+            reconnectWithBackupProxyInternal(engine, author, targetChannel, baseName);
+        }
     }
 
     private void sendMessage(String recipient, String message) {
@@ -240,13 +290,13 @@ public class WhiskeyReplicaCommandImpl extends UserCommandBaseImpl {
         outService.enqueueMessageForSending(recipient, "Error: " + message, chatMessage.isWhisper());
     }
 
-    private static class ProxyTestResult {
+    public static class ProxyTestResult {
         final Proxy proxy;
         final EngineImpl testReplica;
         final boolean success;
         final int proxyIndex;
 
-        ProxyTestResult(Proxy proxy, EngineImpl testReplica, boolean success, int proxyIndex) {
+        public ProxyTestResult(Proxy proxy, EngineImpl testReplica, boolean success, int proxyIndex) {
             this.proxy = proxy;
             this.testReplica = testReplica;
             this.success = success;

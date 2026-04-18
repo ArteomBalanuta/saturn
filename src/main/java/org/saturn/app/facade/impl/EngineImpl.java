@@ -17,8 +17,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.saturn.app.command.impl.admin.WhiskeyReplicaCommandImpl.ProxyTestResult;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
@@ -52,6 +54,7 @@ import org.saturn.app.util.DateUtil;
 public class EngineImpl extends Base implements Engine {
   private static EngineImpl hostRef = null;
   public final Map<String, EngineImpl> replicasMappedByChannel = new HashMap<>();
+  public final Map<String, List<ProxyTestResult>> backupProxiesByChannel = new HashMap<>();
   public List<String> proxies;
   public final CommandFactory commandFactory;
   protected org.saturn.app.facade.impl.Connection hcConnection;
@@ -235,6 +238,14 @@ public class EngineImpl extends Base implements Engine {
       EngineImpl replica = replicaEntry.getValue();
       log.warn("Shutting down replica in channel: {}", channel);
       replica.stop();
+      // Trigger reconnection with backup proxy if available (async)
+      CompletableFuture.runAsync(() -> {
+        try {
+          org.saturn.app.command.impl.admin.WhiskeyReplicaCommandImpl.reconnectWithBackupProxy(this, "system", channel, "portal");
+        } catch (Exception e) {
+          log.error("Failed to trigger reconnection for channel: {}", channel, e);
+        }
+      });
     }
   }
 
