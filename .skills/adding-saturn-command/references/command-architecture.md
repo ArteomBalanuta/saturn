@@ -44,7 +44,7 @@ Use this complete checklist for a persistent command:
 - [ ] Write a failing direct command or service test before implementation, then a persistence integration test that proves the SQL behavior.
 - [ ] Define a service interface in `src/main/java/org/saturn/app/service/` and implementation in `service/impl/`; wire it in `Base` with its `Connection` and queues.
 - [ ] Add prepared-statement SQL constants to `src/main/java/org/saturn/app/util/SqlUtil.java`; bind values rather than concatenating user input.
-- [ ] For a persisted counter, increment atomically in one SQL statement (for example, `SET value = value + 1` or a SQLite upsert); never `SELECT` a value into Java and then write an incremented replacement. Test consecutive increments against real SQLite and assert the stored total.
+- [ ] For a persisted counter, increment atomically in one SQL statement (for example, `SET value = value + 1` or a SQLite upsert); never `SELECT` a value into Java and then write an incremented replacement. In a real-SQLite test, create a concurrent or deliberately interleaved lost-update race, preferably with separate connections, and assert the final stored total includes every increment; serial increments alone do not prove atomicity.
 - [ ] Add a DTO under `src/main/java/org/saturn/app/model/dto/` only when data crosses the command/service boundary as a model.
 - [ ] Add the current table definition and needed indexes to `schema.sql` for a fresh database.
 - [ ] Add an idempotent, dated migration under `database/migrations/` for existing databases. Migrations run after `schema.sql` through `make fresh-db`.
