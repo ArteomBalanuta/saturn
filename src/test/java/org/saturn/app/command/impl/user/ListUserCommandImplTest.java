@@ -24,7 +24,7 @@ class ListUserCommandImplTest {
 
     assertEquals(Status.SUCCESSFUL, result);
     assertEquals(
-        "@testAuthor \\nUsers online: \\nhash-a - trip-a - alice\\nhash-b - ------ - bob\\n\\n",
+        "@testAuthor \nUsers online: \nhash-a - trip-a - alice\nhash-b - ------ - bob\n\n",
         engine.outgoingMessageQueue.poll());
   }
 
@@ -40,7 +40,7 @@ class ListUserCommandImplTest {
 
     assertEquals(Status.FAILED, result);
     assertEquals(
-        "@testAuthor \\nUsers online: \\nhash-a - trip-a - alice\\n\\n",
+        "@testAuthor \nUsers online: \nhash-a - trip-a - alice\n\n",
         engine.outgoingMessageQueue.poll());
     assertEquals("@testAuthor Example: *list programming", engine.outgoingMessageQueue.poll());
   }

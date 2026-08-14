@@ -20,6 +20,7 @@ import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.ModService;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.JsonPayloads;
 import org.saturn.app.util.SqlUtil;
 
 @Slf4j
@@ -80,72 +81,68 @@ public class ModServiceImpl extends OutService implements ModService {
 
   @Override
   public void ban(String target) {
-    enqueueRawMessageForSending(String.format("{ \"cmd\": \"ban\", \"nick\": \"%s\"}", target));
+    enqueueRawMessageForSending(JsonPayloads.command("ban", "nick", target));
   }
 
   @Override
   public void unban(String target) {
-    enqueueRawMessageForSending(String.format("{ \"cmd\": \"unban\", \"hash\": \"%s\"}", target));
+    enqueueRawMessageForSending(JsonPayloads.command("unban", "hash", target));
   }
 
   @Override
   public void unbanAll() {
-    enqueueRawMessageForSending("{ \"cmd\": \"unbanall\"}");
+    enqueueRawMessageForSending(JsonPayloads.command("unbanall"));
   }
 
   @Override
   public void lock() {
-    enqueueRawMessageForSending("{ \"cmd\": \"lockroom\"}");
+    enqueueRawMessageForSending(JsonPayloads.command("lockroom"));
   }
 
   @Override
   public void unlock() {
-    enqueueRawMessageForSending("{ \"cmd\": \"unlockroom\"}");
+    enqueueRawMessageForSending(JsonPayloads.command("unlockroom"));
   }
 
   @Override
   public void enableCaptcha() {
-    enqueueRawMessageForSending("{ \"cmd\": \"enablecaptcha\"}");
+    enqueueRawMessageForSending(JsonPayloads.command("enablecaptcha"));
   }
 
   @Override
   public void auth(String trip) {
-    enqueueRawMessageForSending(String.format("{ \"cmd\": \"authtrip\", \"trip\": \"%s\"}", trip));
+    enqueueRawMessageForSending(JsonPayloads.command("authtrip", "trip", trip));
   }
 
   @Override
   public void deauth(String trip) {
-    enqueueRawMessageForSending(
-        String.format("{ \"cmd\": \"deauthtrip\", \"trip\": \"%s\"}", trip));
+    enqueueRawMessageForSending(JsonPayloads.command("deauthtrip", "trip", trip));
   }
 
   @Override
   public void mute(String target) {
-    enqueueRawMessageForSending(String.format("{ \"cmd\": \"mute\", \"nick\": \"%s\"}", target));
+    enqueueRawMessageForSending(JsonPayloads.command("mute", "nick", target));
   }
 
   @Override
   public void unmute(String hash) {
-    enqueueRawMessageForSending(String.format("{ \"cmd\": \"unmute\", \"hash\": \"%s\"}", hash));
+    enqueueRawMessageForSending(JsonPayloads.command("unmute", "hash", hash));
   }
 
   @Override
   public void forceFlair(String target, String flair) {
-    enqueueRawMessageForSending(
-        String.format(
-            "{ \"cmd\": \"forceflair\", \"nick\": \"%s\", \"flair\": \"%s\" }", target, flair));
+    enqueueRawMessageForSending(JsonPayloads.command("forceflair", "nick", target, "flair", flair));
   }
 
   @Override
   public void forceColor(String target, String hexcolor) {
     enqueueRawMessageForSending(
-        String.format(
-            "{ \"cmd\": \"forcecolor\", \"nick\": \"%s\", \"color\": \"%s\" }", target, hexcolor));
+        JsonPayloads.command("forcecolor", "nick", target, "color", hexcolor));
   }
 
   @Override
   public void disableCaptcha() {
-    enqueueRawMessageForSending("{ \"cmd\": \"disablecaptcha\"}");
+    enqueueRawMessageForSending(JsonPayloads.command("disablecaptcha"));
   }
 
   @Override
@@ -262,19 +259,17 @@ public class ModServiceImpl extends OutService implements ModService {
 
   @Override
   public void kick(String target) {
-    enqueueRawMessageForSending(String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\"}", target));
+    enqueueRawMessageForSending(JsonPayloads.command("kick", "nick", target));
   }
 
   @Override
   public void kickTo(String target, String channel) {
-    enqueueRawMessageForSending(
-        String.format("{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", target, channel));
+    enqueueRawMessageForSending(JsonPayloads.command("kick", "nick", target, "to", channel));
   }
 
   @Override
   public void overflow(String target) {
-    enqueueRawMessageForSending(
-        String.format("{ \"cmd\": \"overflow\", \"nick\": \"%s\"}", target));
+    enqueueRawMessageForSending(JsonPayloads.command("overflow", "nick", target));
   }
 
   @Override

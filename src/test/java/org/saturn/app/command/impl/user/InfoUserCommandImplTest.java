@@ -1,34 +1,24 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.InfoUserCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.support.TestSupport;
 
 class InfoUserCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTest() {
-    // Basic test to verify command instantiation and execution doesn't throw exception
-    doReturn("*info testUser").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    doReturn("testTrip").when(message).getTrip();
-    
-    InfoUserCommandImpl cmd = new InfoUserCommandImpl(engine, message, List.of());
+  void executeReturnsUserTripAndHash() {
+    var engine = TestSupport.engine();
+    engine.currentChannelUsers.add(TestSupport.user("merc", "trip-a", "hash-a"));
+    var message = TestSupport.chatMessage("*info merc", "testAuthor", "testTrip");
 
-    // Execute - Should not throw exception
-    Optional<Status> result = cmd.execute();
+    var cmd = new InfoUserCommandImpl(engine, message, List.of("info", "whois"));
 
-    // Verify - At least we can verify execution doesn't crash
-    assertNotNull(result);
+    assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
+    assertEquals(
+        "@testAuthor \n User trip: trip-a\n User hash: hash-a",
+        engine.outgoingMessageQueue.poll());
   }
 }

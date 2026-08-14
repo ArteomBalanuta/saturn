@@ -139,7 +139,7 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     lines.add(
         "Pressure sea level: %s %s".formatted(
             hourly.pressure_msl.get(zonedDateTime.getHour()), hourlyUnits.pressure_msl));
-    lines.add("\u200B\u200B\u200B ");
+    lines.add("\u2009\u2009\u2009 ");
     lines.add(
         "UV day max index: %s %s".formatted(daily.uv_index_max.get(0), dailyUnits.uv_index_max));
     lines.add(
@@ -151,11 +151,11 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     lines.add(
         "Diffuse rad: %s %s".formatted(
             hourly.diffuse_radiation.get(zonedDateTime.getHour()), hourlyUnits.diffuse_radiation));
-    lines.add("\u200B\u200B\u200B ");
+    lines.add("\u2009\u2009\u2009 ");
     lines.add("Time: %s".formatted(currentTime.replace(":", "-")));
     lines.add("Sun rise: %s".formatted(sunriseTime.replace(":", "-")));
     lines.add("Sun set: %s".formatted(sunsetTime.replace(":", "-")));
-    lines.add("\u200B\u200B\u200B ");
+    lines.add("\u2009\u2009\u2009 ");
     lines.add(
         "Soil temp 18cm: %s %s".formatted(
             hourly.soil_temperature_18cm.get(zonedDateTime.getHour()), hourlyUnits.soil_temperature_18cm));

@@ -23,18 +23,18 @@ class OutServiceTest {
   }
 
   @Test
-  void enqueueMessageForSendingEscapesRawNewLines() {
+  void enqueueMessageForSendingNormalizesLineBreaksToRealNewLines() {
     String actual = outService.enqueueMessageForSending("author", "line1\nline2\r\nline3\rline4", true);
 
-    Assertions.assertEquals("/whisper @author line1\\nline2\\nline3\\nline4", actual);
+    Assertions.assertEquals("/whisper @author line1\nline2\nline3\nline4", actual);
     Assertions.assertEquals(actual, queue.poll());
   }
 
   @Test
-  void enqueueBareMessageEscapesRawNewLines() {
-    String actual = outService.enqueueMessageForSending("line1\nline2");
+  void enqueueBareMessageNormalizesEscapedNewLines() {
+    String actual = outService.enqueueMessageForSending("line1\\nline2");
 
-    Assertions.assertEquals("line1\\nline2", actual);
+    Assertions.assertEquals("line1\nline2", actual);
     Assertions.assertEquals(actual, queue.poll());
   }
 }

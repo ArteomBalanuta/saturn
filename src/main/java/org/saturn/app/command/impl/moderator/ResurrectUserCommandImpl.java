@@ -13,6 +13,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.JsonPayloads;
 
 @Slf4j
 @CommandAliases(aliases = {"move", "recover", "heal", "resurrect"})
@@ -89,7 +90,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
 
   private void kickUserToChannel(EngineImpl sourceEngine, String target, String destination) {
     sourceEngine.outService.enqueueRawMessageForSending(
-        "{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}".formatted(target, destination));
+        JsonPayloads.command("kick", "nick", target, "to", destination));
     sourceEngine.shareMessages();
   }
 }

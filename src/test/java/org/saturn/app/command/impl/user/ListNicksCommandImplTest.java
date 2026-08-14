@@ -1,42 +1,36 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.ListNicksCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.facade.Base;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.service.UserService;
+import org.saturn.app.support.TestSupport;
 
 class ListNicksCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTest() {
-    // Setup
-    doReturn("*listnicks").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    doReturn("testTrip").when(message).getTrip();
-    
-    ListNicksCommandImpl cmd = new ListNicksCommandImpl(engine, message, List.of());
+  void executeListsKnownNicksForTrip() {
+    var engine = TestSupport.engine();
+    UserService userService =
+        (UserService)
+            Proxy.newProxyInstance(
+                UserService.class.getClassLoader(),
+                new Class<?>[] {UserService.class},
+                (proxy, method, args) -> {
+                  if ("getNicksByTrip".equals(method.getName())) {
+                    return List.of("merc", "saturn");
+                  }
+                  return null;
+                });
+    TestSupport.setField(engine, Base.class, "userService", userService);
+    var message = TestSupport.chatMessage("*t2n trip-a", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new ListNicksCommandImpl(engine, message, List.of("nicks", "t2n"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
+    assertEquals("@testAuthor merc,saturn", engine.outgoingMessageQueue.poll());
   }
 }

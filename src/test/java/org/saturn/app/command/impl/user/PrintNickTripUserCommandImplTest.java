@@ -1,42 +1,31 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.PrintNickTripUserCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.facade.Base;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.service.SQLService;
+import org.saturn.app.support.TestSupport;
 
 class PrintNickTripUserCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTest() {
-    // Setup
-    doReturn("*printnicktrip").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    doReturn("testTrip").when(message).getTrip();
-    
-    PrintNickTripUserCommandImpl cmd = new PrintNickTripUserCommandImpl(engine, message, List.of());
+  void executeQueuesRegisteredUsersPayload() {
+    var engine = TestSupport.engine();
+    SQLService sqlService =
+        (SQLService)
+            Proxy.newProxyInstance(
+                SQLService.class.getClassLoader(),
+                new Class<?>[] {SQLService.class},
+                (proxy, method, args) -> "trip-a | merc");
+    TestSupport.setField(engine, Base.class, "sqlService", sqlService);
+    var message = TestSupport.chatMessage("*users", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new PrintNickTripUserCommandImpl(engine, message, List.of("users"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
+    assertEquals("@testAuthor Users: \ntrip-a | merc", engine.outgoingMessageQueue.poll());
   }
 }

@@ -1,41 +1,24 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.WhiskeySayUserCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.support.TestSupport;
 
 class WhiskeySayUserCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTest() {
-    // Setup
-    doReturn("*whiskeysay test message").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    
-    WhiskeySayUserCommandImpl cmd = new WhiskeySayUserCommandImpl(engine, message, List.of());
+  void executeForwardsMessageToSupportReplica() {
+    var engine = TestSupport.engine();
+    var support = TestSupport.engine();
+    support.channel = "support";
+    engine.addReplica(support);
+    var message = TestSupport.chatMessage("*ws test message", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new WhiskeySayUserCommandImpl(engine, message, List.of("ws", "wsay"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
+    assertEquals(0, support.outgoingMessageQueue.size());
   }
 }

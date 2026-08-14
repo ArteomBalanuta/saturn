@@ -1,65 +1,42 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.LastOnlineUserCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.facade.Base;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.service.UserService;
+import org.saturn.app.support.TestSupport;
 
 class LastOnlineUserCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTestWithArguments() {
-    // Setup
-    doReturn("*lastonline merc").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    
-    LastOnlineUserCommandImpl cmd = new LastOnlineUserCommandImpl(engine, message, List.of());
+  void executeWithArgumentsQueuesLastSeenMessage() {
+    var engine = TestSupport.engine();
+    UserService userService =
+        (UserService)
+            Proxy.newProxyInstance(
+                UserService.class.getClassLoader(),
+                new Class<?>[] {UserService.class},
+                (proxy, method, args) -> "merc was online 1 minute ago");
+    TestSupport.setField(engine, Base.class, "userService", userService);
+    var message = TestSupport.chatMessage("*lastseen merc", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new LastOnlineUserCommandImpl(engine, message, List.of("lastseen", "seen"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
+    assertEquals("@testAuthor merc was online 1 minute ago", engine.outgoingMessageQueue.poll());
   }
 
   @Test
-  void executeTestWithoutArguments() {
-    // Setup
-    doReturn("*lastonline").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    
-    LastOnlineUserCommandImpl cmd = new LastOnlineUserCommandImpl(engine, message, List.of());
+  void executeWithoutArgumentsReturnsFailure() {
+    var engine = TestSupport.engine();
+    var message = TestSupport.chatMessage("*lastseen", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new LastOnlineUserCommandImpl(engine, message, List.of("lastseen", "seen"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.FAILED, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertEquals(Status.FAILED, cmd.execute().orElseThrow());
+    assertEquals("@testAuthor \n Example: *lastseen merc", engine.outgoingMessageQueue.poll());
   }
 }

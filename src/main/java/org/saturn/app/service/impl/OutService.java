@@ -52,6 +52,6 @@ public class OutService {
       return null;
     }
 
-    return message.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n");
+    return message.replace("\r\n", "\n").replace("\r", "\n").replace("\\n", "\n");
   }
 }

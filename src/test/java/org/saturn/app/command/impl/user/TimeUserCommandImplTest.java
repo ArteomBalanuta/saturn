@@ -1,67 +1,34 @@
 package org.saturn.app.command.impl.user;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.command.impl.user.TimeUserCommandImpl;
-import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.model.dto.WeatherTime;
+import org.saturn.app.support.TestSupport;
 
 class TimeUserCommandImplTest {
-  private final EngineImpl engine = mock(EngineImpl.class);
-  private final ChatMessage message = mock(ChatMessage.class);
-
   @Test
-  void executeTestWithArguments() {
-    // Setup
-    doReturn("*time newyork").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    doReturn("testTrip").when(message).getTrip();
-    
-    TimeUserCommandImpl cmd = new TimeUserCommandImpl(engine, message, List.of());
+  void executeWithoutArgumentsReturnsFailure() {
+    var engine = TestSupport.engine();
+    var message = TestSupport.chatMessage("*time", "testAuthor", "testTrip");
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    var cmd = new TimeUserCommandImpl(engine, message, List.of("time", "t"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertEquals(Status.FAILED, cmd.execute().orElseThrow());
+    assertEquals("@testAuthor Example: *time Tokyo", engine.outgoingMessageQueue.poll());
   }
 
   @Test
-  void executeTestWithoutArguments() {
-    // Setup
-    doReturn("*time").when(message).getText();
-    doReturn("*").when(engine).getPrefix();
-    doReturn("testAuthor").when(message).getNick();
-    doReturn("testTrip").when(message).getTrip();
-    
-    TimeUserCommandImpl cmd = new TimeUserCommandImpl(engine, message, List.of());
+  void getCurrentTimeAtUsesWeatherTimeZone() {
+    var engine = TestSupport.engine();
+    var message = TestSupport.chatMessage("*time", "testAuthor", "testTrip");
+    var cmd = new TimeUserCommandImpl(engine, message, List.of("time", "t"));
 
-    // Execute
-    Optional<Status> result = cmd.execute();
+    String currentTime = cmd.getCurrentTimeAt(new WeatherTime("UTC", "", "", "", "2026-03-27T10:15"));
 
-    // Verify
-    assertTrue(result.isPresent());
-    assertEquals(Status.SUCCESSFUL, result.get());
-    
-    // Verify that the correct service method was called with proper arguments
-    verify(engine.outService).enqueueMessageForSending(
-        "testAuthor", 
-        anyString(), 
-        eq(false)
-    );
+    assertTrue(currentTime.contains("GMT"));
   }
 }

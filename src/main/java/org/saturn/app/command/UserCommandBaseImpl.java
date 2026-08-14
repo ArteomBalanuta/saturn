@@ -19,6 +19,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.JsonPayloads;
 
 @Slf4j
 public class UserCommandBaseImpl implements UserCommand {
@@ -182,8 +183,7 @@ public class UserCommandBaseImpl implements UserCommand {
     onlineSetListener.setAction(
         () -> {
           slaveEngine.outService.enqueueRawMessageForSending(
-              String.format(
-                  "{ \"cmd\": \"kick\", \"nick\": \"%s\", \"to\":\"%s\"}", nick, targetChannel));
+              JsonPayloads.command("kick", "nick", nick, "to", targetChannel));
           slaveEngine.shareMessages();
           log.info("user: {}, has been moved to: {}", nick, targetChannel);
         });
