@@ -10,7 +10,7 @@
 ## Java And Commands
 
 - Keep source compatible with Java 23, as configured in `pom.xml`, and follow the existing Google Java Format style.
-- For any command addition or change, read and follow [`.skills/adding-saturn-command/SKILL.md`](.skills/adding-saturn-command/SKILL.md) before editing. It owns the command-specific recipe; do not duplicate it here.
+- For any command addition, change, review, or debugging work, read and follow [`.skills/adding-saturn-command/SKILL.md`](.skills/adding-saturn-command/SKILL.md) before editing or reporting findings. It owns the command-specific recipe; do not duplicate it here.
 - Use TDD: add the smallest focused failing test, run it, implement, then rerun it. Run focused tests with `./mvnw -Dtest=<TestClass> test`, then `./mvnw spotless:check`, `./mvnw test`, and `./mvnw package` when an assembled artifact is relevant.
 
 ## Persistence

@@ -38,7 +38,8 @@ Run a fresh-agent read-only scenario asking for the exact changes needed by a pe
 Run:
 
 ```bash
-python3 /Users/ab/.codex/skills/.system/skill-creator/scripts/init_skill.py \
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+python3 "$CODEX_HOME/skills/.system/skill-creator/scripts/init_skill.py" \
   adding-saturn-command \
   --path .skills \
   --resources references \
@@ -53,8 +54,8 @@ Expected: the skill directory contains `SKILL.md`, `agents/openai.yaml`, and `re
 
 Replace the generated `SKILL.md` with frontmatter whose name is `adding-saturn-command` and whose description starts with `Use when`. Define this ordered contract:
 
-1. Classify the command as pure, service-backed, persistent, external-API, or protocol-event-driven.
-2. Write focused failing tests before implementation.
+1. Classify the command with every applicable trait: pure, service-backed, persistent, external-API, or protocol-event-driven; the traits compose rather than selecting one exclusive type.
+2. Write focused failing tests before implementation, then broaden to success, missing or invalid input, authorization, public output, whisper output, and meaningful side effects.
 3. Add the role-appropriate command with unique aliases, the reflective constructor `(EngineImpl, ChatMessage, List<String>)`, explicit role authorization, argument validation, output helpers, and command logging.
 4. Add only the conditional service, facade, listener, persistence, configuration, and DTO integration identified during classification.
 5. Update user-facing help while retaining `\u2009` and newline conventions.
@@ -82,7 +83,8 @@ Include one compact decision table and one complete persistent-command checklist
 Run:
 
 ```bash
-python3 /Users/ab/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+python3 "$CODEX_HOME/skills/.system/skill-creator/scripts/quick_validate.py" \
   .skills/adding-saturn-command
 ```
 

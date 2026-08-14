@@ -1,6 +1,6 @@
 # Saturn Command Architecture
 
-Read this reference before changing a command. Paths and symbols below reflect the current repository.
+Read this reference before adding, changing, reviewing, or debugging a command. Paths and symbols below reflect the current repository.
 
 ## Command Discovery and Dispatch
 
@@ -21,19 +21,21 @@ Read this reference before changing a command. Paths and symbols below reflect t
 
 ## Integration Decision Table
 
+Treat these as composable traits rather than mutually exclusive command types. A persistent or external-API command is normally also service-backed; combine the rows that apply.
+
 | Command type | Add only when needed | Do not add |
 | --- | --- | --- |
 | Pure | Command, focused test, help | Service, listener, schema |
-| Service-backed | Interface in `service/`, implementation in `service/impl/`, `Base` construction, tests | Schema unless state is persisted |
+| Service-backed | Interface in `service/`, implementation in `service/impl/`, `Base` construction with only needed dependencies, tests | Schema unless state is persisted |
 | Persistent | Service boundary, `SqlUtil`, DTO if needed, `schema.sql`, idempotent migration, indexes, cleanup, persistence tests | A new listener for a normal command |
-| External-API | Configuration, DTOs, parsing with Gson/`Util.gson`, response/error tests | Database work unless it persists data |
+| External-API | Service interface/implementation for HTTP or other I/O, configuration, DTOs, parsing with Gson/`Util.gson`, response/error tests | HTTP logic in commands; database work unless it persists data |
 | Protocol-event-driven | Listener/handler and `EngineImpl.registerPayloadListener`, DTO and tests | A command alias unless users invoke it |
 
 ## Services, Protocol, and Configuration
 
-- `src/main/java/org/saturn/app/facade/Base.java` constructs every service with shared database connection and outgoing queues. When adding a service, add its interface and implementation, then construct and expose it in `Base` with the dependencies it actually needs.
+- `src/main/java/org/saturn/app/facade/Base.java` constructs shared services. When adding a service, add its interface and implementation, then construct and expose it in `Base` with only the dependencies it actually needs.
 - Services that write user-visible text commonly extend `OutService` and receive an outgoing message queue. Raw hack.chat protocol commands use `JsonPayloads` and the raw queue; see `ModServiceImpl` and `src/main/java/org/saturn/app/util/JsonPayloads.java`.
-- Use `EngineImpl` when the command needs engine state, replicas, payload-listener registration, active users, or output queues. Use a service for independently testable business or persistence behavior.
+- Use `EngineImpl` when the command needs engine state, replicas, payload-listener registration, active users, or output queues. Put reusable or domain behavior and external I/O, including HTTP, behind a service interface and implementation; commands should orchestrate rather than perform that work directly.
 - Put request/response models under `src/main/java/org/saturn/app/model/dto/` or its `payload/` subpackage. Gson is shared as `Util.gson`; follow existing parsing rather than hand-building JSON. `JsonPayloads` escapes protocol-command values.
 - Add a config key to `config.example.toml` and use `Base` configuration only when the classification requires a configurable external/API behavior.
 
@@ -42,7 +44,7 @@ Read this reference before changing a command. Paths and symbols below reflect t
 Use this complete checklist for a persistent command:
 
 - [ ] Write a failing direct command or service test before implementation, then a persistence integration test that proves the SQL behavior.
-- [ ] Define a service interface in `src/main/java/org/saturn/app/service/` and implementation in `service/impl/`; wire it in `Base` with its `Connection` and queues.
+- [ ] Define a service interface in `src/main/java/org/saturn/app/service/` and implementation in `service/impl/`; wire it in `Base` with only the dependencies it actually needs, rather than unconditionally passing a `Connection` and queues.
 - [ ] Add prepared-statement SQL constants to `src/main/java/org/saturn/app/util/SqlUtil.java`; bind values rather than concatenating user input.
 - [ ] For a persisted counter, increment atomically in one SQL statement (for example, `SET value = value + 1` or a SQLite upsert); never `SELECT` a value into Java and then write an incremented replacement. In a real-SQLite test, create a concurrent or deliberately interleaved lost-update race, preferably with separate connections, and assert the final stored total includes every increment; serial increments alone do not prove atomicity.
 - [ ] Add a DTO under `src/main/java/org/saturn/app/model/dto/` only when data crosses the command/service boundary as a model.
@@ -58,5 +60,5 @@ Use this complete checklist for a persistent command:
 - Preserve the Java `\\n` separators and `\u2009` thin spaces in `HelpUserCommandImpl`; `Util.alignWithWhiteSpace` formats the help sections and prefix examples are runtime-formatted with `engine.getPrefix()`.
 - Follow the complete newline lifecycle: `OutService.normalizeForChatPayload` converts Java `\\n` separators to real line-feed characters before adding text to `outgoingMessageQueue`; `EngineImpl.buildChatPayload`/Gson JSON-encodes those real line feeds for the socket. Never leave escaped backslash-n text in the outgoing queue or socket payload, and do not replace the `\u2009` thin spaces.
 - Direct command tests live beside commands under `src/test/java/org/saturn/app/command/impl/...`; use `src/test/java/org/saturn/app/support/TestSupport.java` or the local `CommandTestSupport` pattern to create an engine and message.
-- Add factory/discovery coverage when aliases change, direct command tests for validation/replies/status, and service integration tests for persistence or external boundaries.
+- Start with the narrowest focused test. Then cover a matrix of success, missing or invalid input, authorization, public output, whisper output, and meaningful side effects; add factory/discovery coverage when aliases change and service integration tests for persistence or external boundaries.
 - Validate with the focused test first, then `./mvnw spotless:check` and `./mvnw test`. Use `./mvnw package` when the change needs an assembled artifact.
