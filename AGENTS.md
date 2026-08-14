@@ -3,8 +3,8 @@
 ## Project Map
 
 - `src/main/java/org/saturn/app/command/` contains command contracts, discovery, and role-specific implementations; keep command orchestration there.
-- `src/main/java/org/saturn/app/service/` and `service/impl/` hold business and persistence boundaries; `facade/Base.java` wires shared services and `facade/impl/EngineImpl.java` owns runtime state and protocol queues.
-- `src/main/java/org/saturn/app/listener/` handles inbound protocol events, `model/dto/` contains data models, and `util/` contains shared utilities and SQL constants.
+- `src/main/java/org/saturn/app/service/` and `src/main/java/org/saturn/app/service/impl/` hold business and persistence boundaries; `src/main/java/org/saturn/app/facade/Base.java` wires shared services and `src/main/java/org/saturn/app/facade/impl/EngineImpl.java` owns runtime state and protocol queues.
+- `src/main/java/org/saturn/app/listener/` handles inbound protocol events, `src/main/java/org/saturn/app/model/dto/` contains data models, and `src/main/java/org/saturn/app/util/` contains shared utilities and SQL constants.
 - Tests mirror production code under `src/test/java/`. Fresh schema lives in `schema.sql`, upgrades in `database/migrations/`, and `deploy/create_db.sh` maintains a separate deployment schema.
 
 ## Java And Commands
