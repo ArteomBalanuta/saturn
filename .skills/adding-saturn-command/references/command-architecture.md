@@ -1,0 +1,60 @@
+# Saturn Command Architecture
+
+Read this reference before changing a command. Paths and symbols below reflect the current repository.
+
+## Command Discovery and Dispatch
+
+- Command classes live in `src/main/java/org/saturn/app/command/impl/{admin,moderator,user,dbz}/` and use `org.saturn.app.command.annotation.CommandAliases`.
+- `src/main/java/org/saturn/app/command/factory/CommandFactory.java` ClassGraph-scans `org.saturn.app.command.impl` for `@CommandAliases`, caches the catalog, and instantiates the first declared constructor with `(EngineImpl, ChatMessage, List<String>)`.
+- `CommandFactory.getCommand` matches aliases through `Util.checkAnagrams`. Choose aliases that are unique and not anagrams of an existing alias; test factory/discovery whenever aliases change.
+- `src/main/java/org/saturn/app/command/UserCommandBaseImpl.java` strips the configured prefix, parses arguments, invokes the factory, authorizes the resolved command, executes it, and writes to `logRepository.logCommand`.
+- Chat commands arrive through `UserMessageListenerImpl` and its chain ending in `DispatchUserCommandHandler`. Whispers arrive through `InfoMessageListenerImpl` and its chain ending in `DispatchWhisperCommandHandler`. An ordinary command needs no new listener.
+- `src/main/java/org/saturn/app/facade/impl/EngineImpl.java` owns `payloadListeners` and registers `onlineSet`, `onlineAdd`, `onlineRemove`, `chat`, and `info`. Register a payload listener only for a new inbound protocol event, not for a normal command alias.
+
+## Command Shape and Authorization
+
+- Extend `UserCommandBaseImpl`; representative commands are `NoteUserCommandImpl`, `BanUserCommandImpl`, and `HelpUserCommandImpl`.
+- Use the constructor shape `(EngineImpl, ChatMessage, List<String>)`, call `super(message, engine, authorizedTrips)`, and then `super.setAliases(aliases)`.
+- Place commands in the role package that matches access: `admin`, `moderator`, `user`, or `dbz`. Override `getAuthorizedRole()` explicitly with the intended `Role`.
+- `UserCommandBaseImpl` exposes `hasArguments()`, `firstArgument()`, `author()`, `replyToAuthor()`, `fail()`, `failWithUsage()`, and `successful()`. Validate before side effects and return `Status` deliberately.
+- The base dispatcher performs central authorization and execution logging. Keep the command's `@Slf4j` execution logging specific enough to identify user, target, and failed validation where useful.
+
+## Integration Decision Table
+
+| Command type | Add only when needed | Do not add |
+| --- | --- | --- |
+| Pure | Command, focused test, help | Service, listener, schema |
+| Service-backed | Interface in `service/`, implementation in `service/impl/`, `Base` construction, tests | Schema unless state is persisted |
+| Persistent | Service boundary, `SqlUtil`, DTO if needed, `schema.sql`, idempotent migration, indexes, cleanup, persistence tests | A new listener for a normal command |
+| External-API | Configuration, DTOs, parsing with Gson/`Util.gson`, response/error tests | Database work unless it persists data |
+| Protocol-event-driven | Listener/handler and `EngineImpl.registerPayloadListener`, DTO and tests | A command alias unless users invoke it |
+
+## Services, Protocol, and Configuration
+
+- `src/main/java/org/saturn/app/facade/Base.java` constructs every service with shared database connection and outgoing queues. When adding a service, add its interface and implementation, then construct and expose it in `Base` with the dependencies it actually needs.
+- Services that write user-visible text commonly extend `OutService` and receive an outgoing message queue. Raw hack.chat protocol commands use `JsonPayloads` and the raw queue; see `ModServiceImpl` and `src/main/java/org/saturn/app/util/JsonPayloads.java`.
+- Use `EngineImpl` when the command needs engine state, replicas, payload-listener registration, active users, or output queues. Use a service for independently testable business or persistence behavior.
+- Put request/response models under `src/main/java/org/saturn/app/model/dto/` or its `payload/` subpackage. Gson is shared as `Util.gson`; follow existing parsing rather than hand-building JSON. `JsonPayloads` escapes protocol-command values.
+- Add a config key to `config.example.toml` and use `Base` configuration only when the classification requires a configurable external/API behavior.
+
+## Persistence Checklist
+
+Use this complete checklist for a persistent command:
+
+- [ ] Write a failing direct command or service test before implementation, then a persistence integration test that proves the SQL behavior.
+- [ ] Define a service interface in `src/main/java/org/saturn/app/service/` and implementation in `service/impl/`; wire it in `Base` with its `Connection` and queues.
+- [ ] Add prepared-statement SQL constants to `src/main/java/org/saturn/app/util/SqlUtil.java`; bind values rather than concatenating user input.
+- [ ] Add a DTO under `src/main/java/org/saturn/app/model/dto/` only when data crosses the command/service boundary as a model.
+- [ ] Add the current table definition and needed indexes to `schema.sql` for a fresh database.
+- [ ] Add an idempotent, dated migration under `database/migrations/` for existing databases. Migrations run after `schema.sql` through `make fresh-db`.
+- [ ] Inspect `deploy/create_db.sh`: it contains a separate, hand-maintained schema duplicate and currently does not source `schema.sql` or apply migrations. Update it for schema changes, or intentionally replace its duplicate behavior, then validate the deployment-created database.
+- [ ] Close `PreparedStatement` and `ResultSet` resources on every path; prefer structured cleanup when modifying code. Add indexes for new query patterns and test the service against real SQLite where possible.
+- [ ] Run `make fresh-db`, verify migration idempotence, run relevant service integration tests, and run the full Maven suite.
+
+## Help and Tests
+
+- Help constants are in `src/main/java/org/saturn/app/command/impl/user/HelpUserCommandImpl.java`. Add the alias/argument synopsis and short description to the right role section.
+- Preserve literal Java `\\n` separators and `\u2009` thin spaces; `Util.alignWithWhiteSpace` formats the help sections. Prefix examples are runtime-formatted with `engine.getPrefix()`.
+- Direct command tests live beside commands under `src/test/java/org/saturn/app/command/impl/...`; use `src/test/java/org/saturn/app/support/TestSupport.java` or the local `CommandTestSupport` pattern to create an engine and message.
+- Add factory/discovery coverage when aliases change, direct command tests for validation/replies/status, and service integration tests for persistence or external boundaries.
+- Validate with the focused test first, then `./mvnw spotless:check` and `./mvnw test`. Use `./mvnw package` when the change needs an assembled artifact.
