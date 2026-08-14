@@ -54,7 +54,8 @@ Use this complete checklist for a persistent command:
 ## Help and Tests
 
 - Help constants are in `src/main/java/org/saturn/app/command/impl/user/HelpUserCommandImpl.java`. Add the alias/argument synopsis and short description to the right role section.
-- Preserve literal Java `\\n` separators and `\u2009` thin spaces; `Util.alignWithWhiteSpace` formats the help sections. Prefix examples are runtime-formatted with `engine.getPrefix()`.
+- Preserve the Java `\\n` separators and `\u2009` thin spaces in `HelpUserCommandImpl`; `Util.alignWithWhiteSpace` formats the help sections and prefix examples are runtime-formatted with `engine.getPrefix()`.
+- Follow the complete newline lifecycle: `OutService.normalizeForChatPayload` converts Java `\\n` separators to real line-feed characters before adding text to `outgoingMessageQueue`; `EngineImpl.buildChatPayload`/Gson JSON-encodes those real line feeds for the socket. Never leave escaped backslash-n text in the outgoing queue or socket payload, and do not replace the `\u2009` thin spaces.
 - Direct command tests live beside commands under `src/test/java/org/saturn/app/command/impl/...`; use `src/test/java/org/saturn/app/support/TestSupport.java` or the local `CommandTestSupport` pattern to create an engine and message.
 - Add factory/discovery coverage when aliases change, direct command tests for validation/replies/status, and service integration tests for persistence or external boundaries.
 - Validate with the focused test first, then `./mvnw spotless:check` and `./mvnw test`. Use `./mvnw package` when the change needs an assembled artifact.
