@@ -31,6 +31,7 @@
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <httpclient.version>4.5.14</httpclient.version>
+        <jsqlparser.version>5.3</jsqlparser.version>
         <toml.version>0.7.3</toml.version>
         <spotless.version>2.44.2</spotless.version>
     </properties>
@@ -65,6 +66,11 @@
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
             <version>${sqlite-jdbc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>${jsqlparser.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>

@@ -10,3 +10,28 @@ proxies = ""
 autoReconnect = true
 healthCheckInterval = 5
 autorunCommands = "replica lounge, say hello lads!!"
+
+[agent]
+enabled = true
+endpoint = "http://83.218.196.156:16261"
+# Leave empty when the endpoint chooses the model.
+model = ""
+apiKeyEnv = "SATURN_AGENT_API_KEY"
+timeoutSeconds = 30
+maxConcurrentRequests = 2
+maxToolCalls = 4
+maxCallsPerTool = 2
+maxToolFailures = 2
+maxPromptChars = 8000
+maxOutputChars = 8000
+memoryTurns = 10
+memoryTtlHours = 168
+maxRetries = 2
+retryBackoffMillis = 250
+dynamicSqlEnabled = true
+dynamicSqlMaxSqlChars = 4000
+dynamicSqlMaxRows = 50
+dynamicSqlMaxColumns = 32
+dynamicSqlMaxCellChars = 2000
+dynamicSqlMaxResultChars = 32000
+dynamicSqlTimeoutMillis = 1000
