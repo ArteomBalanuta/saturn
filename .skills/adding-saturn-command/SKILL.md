@@ -5,7 +5,7 @@ description: Use when adding, changing, reviewing, or debugging a Saturn bot com
 
 # Adding a Saturn Command
 
-Read [the command architecture reference](references/command-architecture.md) before adding, changing, reviewing, or debugging a command. It maps the current source of truth, including the deployment schema duplicate that persistent changes must not overlook.
+Read [the command architecture reference](references/command-architecture.md) before adding, changing, reviewing, or debugging a command. It maps the current H2 persistence source of truth.
 
 ## Workflow
 
@@ -22,7 +22,7 @@ Apply every trait that fits; a command can be both persistent and service-backed
 
 - **Pure:** command state and existing `EngineImpl` helpers are sufficient; add no new service or listener.
 - **Service-backed:** keep command orchestration thin and add reusable or domain behavior behind a service interface and implementation.
-- **Persistent:** use prepared SQL, schema and migration work, indexes as needed, cleanup, and persistence tests. Also inspect the hand-maintained schema in `deploy/create_db.sh`.
+- **Persistent:** use prepared SQL, H2 schema/bootstrap upgrades, indexes as needed, cleanup, and persistence tests.
 - **External-API:** keep HTTP and other external I/O in a service implementation; add configuration and DTO parsing only when required, use repository JSON conventions, and test failure paths.
 - **Protocol-event-driven:** register a payload listener only for a new inbound protocol `cmd`; normal commands continue through existing chat/whisper handler chains.
 
@@ -31,7 +31,7 @@ Apply every trait that fits; a command can be both persistent and service-backed
 - Aliases are discovered reflectively and matched with an anagram check. Check for exact and anagram collisions across all command aliases.
 - `UserCommandBaseImpl` parses space-separated arguments and treats literal `\\n` specially. Validate inputs before side effects and return an explicit `Status`.
 - The shared base dispatcher checks authorization and writes `executed_commands`; individual commands should still log enough context to diagnose an outcome.
-- Treat `schema.sql` as the fresh-database source, migrations as upgrades for existing databases, and `deploy/create_db.sh` as a separate duplicated deployment schema that must remain consistent.
+- Treat `src/main/resources/schema-h2.sql` as the fresh-database source. Add an idempotent upgrade to `H2SchemaBootstrapper` when an existing H2 file needs a schema transition.
 - Do not add generated Java boilerplate to this skill. Inspect the nearest existing command and service for current patterns before coding.
 
 ## Validation
@@ -46,4 +46,4 @@ python3 "$CODEX_HOME/skills/.system/skill-creator/scripts/quick_validate.py" \
   .skills/adding-saturn-command
 ```
 
-For persistent changes, run `make fresh-db` and exercise the migration sequence against an existing database. If deployment uses `deploy/create_db.sh`, validate its generated database too.
+For persistent changes, run `make fresh-db` and exercise the H2 bootstrap upgrade against an existing database.

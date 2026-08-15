@@ -68,7 +68,8 @@ class JSqlParserAgentSqlPolicyTest {
   void rejectsInternalUnknownAndDangerousReferences() {
     List<RejectedSql> queries =
         List.of(
-            new RejectedSql("SELECT * FROM sqlite_master", AgentSqlErrorCode.FORBIDDEN_TABLE),
+            new RejectedSql(
+                "SELECT * FROM information_schema.tables", AgentSqlErrorCode.FORBIDDEN_TABLE),
             new RejectedSql("SELECT * FROM missing_table", AgentSqlErrorCode.FORBIDDEN_TABLE),
             new RejectedSql(
                 "SELECT load_extension('/tmp/evil')", AgentSqlErrorCode.FORBIDDEN_FUNCTION),

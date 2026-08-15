@@ -12,10 +12,10 @@ import org.saturn.app.agent.persistence.AgentDatabaseSchema.ForeignKey;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema.Index;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema.Table;
 
-public final class SqliteAgentSchemaRepository implements AgentSchemaRepository {
-  private final SqliteReadOnlyConnectionFactory connectionFactory;
+public final class H2AgentSchemaRepository implements AgentSchemaRepository {
+  private final H2ReadOnlyConnectionFactory connectionFactory;
 
-  public SqliteAgentSchemaRepository(SqliteReadOnlyConnectionFactory connectionFactory) {
+  public H2AgentSchemaRepository(H2ReadOnlyConnectionFactory connectionFactory) {
     this.connectionFactory = Objects.requireNonNull(connectionFactory, "connectionFactory");
   }
 

@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.nio.file.Path;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -18,43 +16,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.saturn.app.agent.AgentConfig;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.persistence.H2Database;
 
-class SqliteAgentMemoryStoreTest {
+class H2AgentMemoryStoreTest {
   @TempDir Path tempDir;
   private Path database;
 
   @BeforeEach
   void createDatabase() throws Exception {
-    database = tempDir.resolve("memory.db");
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-        Statement statement = connection.createStatement()) {
-      statement.executeUpdate(
-          """
-          CREATE TABLE agent_memory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            identity_key TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('user','assistant')),
-            content TEXT NOT NULL,
-            created_on INTEGER NOT NULL,
-            expires_on INTEGER NOT NULL)
-          """);
-      statement.executeUpdate(
-          """
-          CREATE TABLE agent_tool_memory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            identity_key TEXT NOT NULL,
-            tool_name TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_on INTEGER NOT NULL,
-            expires_on INTEGER NOT NULL)
-          """);
-    }
+    database = tempDir.resolve("memory");
+    H2Database.bootstrap(database.toString());
   }
 
   @Test
   void loadsOnlyLatestConfiguredTurnsForStableIdentity() {
     Clock clock = Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC);
-    SqliteAgentMemoryStore store = new SqliteAgentMemoryStore(database.toString(), clock);
+    H2AgentMemoryStore store = new H2AgentMemoryStore(database.toString(), clock);
     AgentContext alice = context("alice", "trip-a");
     AgentConfig config = config(1, Duration.ofHours(1));
 
@@ -70,7 +47,7 @@ class SqliteAgentMemoryStoreTest {
   @Test
   void sharesPublicConversationAcrossUsersInTheSameRoom() {
     Clock clock = Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC);
-    SqliteAgentMemoryStore store = new SqliteAgentMemoryStore(database.toString(), clock);
+    H2AgentMemoryStore store = new H2AgentMemoryStore(database.toString(), clock);
     AgentConfig config = config(2, Duration.ofHours(1));
 
     store.append(context("alice", "trip-a"), "alice question", "shared answer", config);
@@ -85,7 +62,7 @@ class SqliteAgentMemoryStoreTest {
   @Test
   void retainsToolEvidenceForTheNextTurn() {
     Clock clock = Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC);
-    SqliteAgentMemoryStore store = new SqliteAgentMemoryStore(database.toString(), clock);
+    H2AgentMemoryStore store = new H2AgentMemoryStore(database.toString(), clock);
     AgentContext alice = context("alice", "trip-a");
     AgentConfig config = config(2, Duration.ofHours(1));
 
@@ -102,12 +79,12 @@ class SqliteAgentMemoryStoreTest {
   void expiresToolEvidenceWithoutRetainingItInConversationMemory() {
     AgentContext alice = context("alice", "trip-a");
     AgentConfig config = config(2, Duration.ofHours(1));
-    new SqliteAgentMemoryStore(
+    new H2AgentMemoryStore(
             database.toString(), Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC))
         .appendToolEvidence(alice, "room_users", "{\"count\":2}", config);
 
     var messages =
-        new SqliteAgentMemoryStore(
+        new H2AgentMemoryStore(
                 database.toString(), Clock.fixed(Instant.ofEpochSecond(3_701), ZoneOffset.UTC))
             .load(alice, config);
 
@@ -117,7 +94,7 @@ class SqliteAgentMemoryStoreTest {
   @Test
   void keepsWhispersOutOfPublicAndOtherUsersPrivateMemory() {
     Clock clock = Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC);
-    SqliteAgentMemoryStore store = new SqliteAgentMemoryStore(database.toString(), clock);
+    H2AgentMemoryStore store = new H2AgentMemoryStore(database.toString(), clock);
     AgentConfig config = config(2, Duration.ofHours(1));
     AgentContext aliceWhisper = whisperContext("alice", "trip-a");
 
@@ -133,7 +110,7 @@ class SqliteAgentMemoryStoreTest {
   @Test
   void loadsPersistedHistory() {
     Clock clock = Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC);
-    SqliteAgentMemoryStore store = new SqliteAgentMemoryStore(database.toString(), clock);
+    H2AgentMemoryStore store = new H2AgentMemoryStore(database.toString(), clock);
     AgentConfig config = config(2, Duration.ofHours(1));
     AgentContext alice = context("alice", "trip-a");
     store.append(alice, "question", "answer", config);
@@ -147,12 +124,12 @@ class SqliteAgentMemoryStoreTest {
   void excludesExpiredMemory() {
     AgentConfig config = config(2, Duration.ofHours(1));
     AgentContext alice = context("alice", "trip-a");
-    new SqliteAgentMemoryStore(
+    new H2AgentMemoryStore(
             database.toString(), Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC))
         .append(alice, "question", "answer", config);
 
     var expired =
-        new SqliteAgentMemoryStore(
+        new H2AgentMemoryStore(
                 database.toString(), Clock.fixed(Instant.ofEpochSecond(3_701), ZoneOffset.UTC))
             .load(alice, config);
 
@@ -162,7 +139,7 @@ class SqliteAgentMemoryStoreTest {
   @Test
   void isolatesMemoryForSameIdentityAcrossRooms() {
     Clock clock = Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC);
-    SqliteAgentMemoryStore store = new SqliteAgentMemoryStore(database.toString(), clock);
+    H2AgentMemoryStore store = new H2AgentMemoryStore(database.toString(), clock);
     AgentConfig config = config(2, Duration.ofHours(1));
     AgentContext programming = context("alice", "trip-a");
     AgentContext privateRoom =

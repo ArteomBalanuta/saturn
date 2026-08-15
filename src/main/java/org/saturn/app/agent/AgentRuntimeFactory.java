@@ -8,13 +8,12 @@ import org.saturn.app.agent.llm.OpenAiCompatibleClient;
 import org.saturn.app.agent.moderation.AgentModerationConfig;
 import org.saturn.app.agent.moderation.EngineModerationActionExecutor;
 import org.saturn.app.agent.moderation.RoomModerationMonitor;
-import org.saturn.app.agent.persistence.AgentSchemaMigrator;
+import org.saturn.app.agent.persistence.H2AgentMemoryStore;
+import org.saturn.app.agent.persistence.H2AgentQueryRepository;
+import org.saturn.app.agent.persistence.H2AgentSchemaRepository;
+import org.saturn.app.agent.persistence.H2AgentSqlRepository;
+import org.saturn.app.agent.persistence.H2ReadOnlyConnectionFactory;
 import org.saturn.app.agent.persistence.RepositoryAgentConversationContextProvider;
-import org.saturn.app.agent.persistence.SqliteAgentMemoryStore;
-import org.saturn.app.agent.persistence.SqliteAgentQueryRepository;
-import org.saturn.app.agent.persistence.SqliteAgentSchemaRepository;
-import org.saturn.app.agent.persistence.SqliteAgentSqlRepository;
-import org.saturn.app.agent.persistence.SqliteReadOnlyConnectionFactory;
 import org.saturn.app.agent.sql.JSqlParserAgentSqlPolicy;
 import org.saturn.app.agent.tool.DatabaseQueryTool;
 import org.saturn.app.agent.tool.DatabaseSchemaTool;
@@ -48,15 +47,14 @@ public final class AgentRuntimeFactory {
       return service;
     }
 
-    AgentSchemaMigrator.migrate(databasePath);
     AgentSqlConfig sqlConfig = AgentSqlConfig.from(rootConfig, System.getenv());
     AgentParticipationConfig participationConfig = AgentParticipationConfig.from(rootConfig);
     AgentModerationConfig moderationConfig = AgentModerationConfig.from(rootConfig);
-    var queryRepository = new SqliteAgentQueryRepository(databasePath);
-    var memoryStore = new SqliteAgentMemoryStore(databasePath);
-    var readOnlyConnectionFactory = new SqliteReadOnlyConnectionFactory(databasePath);
-    var schemaRepository = new SqliteAgentSchemaRepository(readOnlyConnectionFactory);
-    var sqlRepository = new SqliteAgentSqlRepository(readOnlyConnectionFactory);
+    var queryRepository = new H2AgentQueryRepository(databasePath);
+    var memoryStore = new H2AgentMemoryStore(databasePath);
+    var readOnlyConnectionFactory = new H2ReadOnlyConnectionFactory(databasePath);
+    var schemaRepository = new H2AgentSchemaRepository(readOnlyConnectionFactory);
+    var sqlRepository = new H2AgentSqlRepository(readOnlyConnectionFactory);
     EngineSaturnCommandGateway commandGateway = new EngineSaturnCommandGateway(engine);
     AgentToolRegistry registry =
         new AgentToolRegistry()

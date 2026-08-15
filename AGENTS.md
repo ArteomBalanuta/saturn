@@ -5,7 +5,7 @@
 - `src/main/java/org/saturn/app/command/` contains command contracts, discovery, and role-specific implementations; keep command orchestration there.
 - `src/main/java/org/saturn/app/service/` and `src/main/java/org/saturn/app/service/impl/` hold business and persistence boundaries; `src/main/java/org/saturn/app/facade/Base.java` wires shared services and `src/main/java/org/saturn/app/facade/impl/EngineImpl.java` owns runtime state and protocol queues.
 - `src/main/java/org/saturn/app/listener/` handles inbound protocol events, `src/main/java/org/saturn/app/model/dto/` contains data models, and `src/main/java/org/saturn/app/util/` contains shared utilities and SQL constants.
-- Tests mirror production code under `src/test/java/`. Fresh schema lives in `schema.sql`, upgrades in `database/migrations/`, and `deploy/create_db.sh` maintains a separate deployment schema.
+- Tests mirror production code under `src/test/java/`. The fresh H2 schema lives in `src/main/resources/schema-h2.sql`; `H2SchemaBootstrapper` applies it idempotently at startup.
 
 ## Java And Commands
 
@@ -16,8 +16,8 @@
 ## Persistence
 
 - Bind all values with prepared statements. Use transactions for multi-statement writes, roll back on failure, and restore connection state; close `PreparedStatement` and `ResultSet` resources on every path, preferably with try-with-resources.
-- Keep fresh and upgrade paths in sync: update `schema.sql`, add an idempotent dated migration in `database/migrations/`, and update the hand-maintained duplicate in `deploy/create_db.sh`. Run `make fresh-db` and add persistence coverage.
-- Add indexes for new query patterns and preserve appropriate foreign keys. Do not bypass connection setup that enables foreign keys, WAL mode, and the 5000 ms busy timeout.
+- Keep the H2 fresh and upgrade paths in sync: update `src/main/resources/schema-h2.sql` and add idempotent bootstrap upgrades in `H2SchemaBootstrapper` when existing H2 files need a schema transition. Run `make fresh-db` and add persistence coverage.
+- Add indexes for new query patterns and preserve appropriate foreign keys. Do not bypass H2 connection setup.
 
 ## Payloads
 
@@ -27,6 +27,6 @@
 
 ## Configuration And Repository Hygiene
 
-- Add documented defaults to `config.example.toml`; never commit local credentials or runtime values from ignored `config.toml`. Keep the ignored `database/` contents, including SQLite files, out of commits.
+- Add documented defaults to `config.example.toml`; never commit local credentials or runtime values from ignored `config.toml`. Keep the ignored `database/` contents, including H2 files and legacy SQLite sources awaiting one-time migration, out of commits.
 - Update documentation when behavior, configuration, or operations change. Use repository-relative paths in docs and agent guidance.
 - Preserve unrelated work in a dirty tree. Do not use destructive Git commands such as `git reset --hard` or `git checkout --`; stage and commit only task-owned files.

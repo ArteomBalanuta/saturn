@@ -1,6 +1,5 @@
 package org.saturn.app.agent;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -273,19 +272,13 @@ class DefaultAgentRouterTest {
   }
 
   @Test
-  void retriesOneTransientSqliteShortReadBeforeRouting() {
-    AtomicInteger loads = new AtomicInteger();
+  void failsWhenMemoryLoadingFails() {
     AgentMemoryStore transientMemory =
         new AgentMemoryStore() {
           @Override
           public List<org.saturn.app.agent.llm.LlmMessage> load(
               AgentContext context, AgentConfig config) {
-            if (loads.incrementAndGet() == 1) {
-              throw new AgentPersistenceException(
-                  "Agent memory load failed, sqliteCode=10: [SQLITE_IOERR_SHORT_READ] disk I/O error",
-                  null);
-            }
-            return List.of();
+            throw new AgentPersistenceException("Agent memory load failed", null);
           }
 
           @Override
@@ -295,23 +288,19 @@ class DefaultAgentRouterTest {
               String assistantContent,
               AgentConfig config) {}
         };
-    ScriptedClient client =
-        new ScriptedClient(new LlmResponse("Recovered answer.", List.of(), "stop"));
+    ScriptedClient client = new ScriptedClient(new LlmResponse("unused", List.of(), "stop"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
             config(2, 100), client, new AgentToolRegistry().freeze(), transientMemory);
 
-    AgentResult result =
-        assertDoesNotThrow(
-            () -> router.route(new AgentInvocation(context(), "question after short read")));
-
-    assertEquals("Recovered answer.", result.content());
-    assertEquals(2, loads.get());
+    assertThrows(
+        AgentRoutingException.class,
+        () -> router.route(new AgentInvocation(context(), "question after persistence failure")));
+    assertTrue(client.requests.isEmpty());
   }
 
   @Test
-  void retriesOneTransientSqliteShortReadWhenPersistingTheAnswer() {
-    AtomicInteger appends = new AtomicInteger();
+  void failsWhenMemoryPersistenceFails() {
     AgentMemoryStore transientMemory =
         new AgentMemoryStore() {
           @Override
@@ -326,25 +315,17 @@ class DefaultAgentRouterTest {
               String userContent,
               String assistantContent,
               AgentConfig config) {
-            if (appends.incrementAndGet() == 1) {
-              throw new AgentPersistenceException(
-                  "Agent memory append failed, sqliteCode=10: [SQLITE_IOERR_SHORT_READ] disk I/O error",
-                  null);
-            }
+            throw new AgentPersistenceException("Agent memory append failed", null);
           }
         };
-    ScriptedClient client =
-        new ScriptedClient(new LlmResponse("Recovered answer.", List.of(), "stop"));
+    ScriptedClient client = new ScriptedClient(new LlmResponse("Answer.", List.of(), "stop"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
             config(2, 100), client, new AgentToolRegistry().freeze(), transientMemory);
 
-    AgentResult result =
-        assertDoesNotThrow(
-            () -> router.route(new AgentInvocation(context(), "question before short write")));
-
-    assertEquals("Recovered answer.", result.content());
-    assertEquals(2, appends.get());
+    assertThrows(
+        AgentRoutingException.class,
+        () -> router.route(new AgentInvocation(context(), "question before persistence failure")));
     assertEquals(1, client.requests.size());
   }
 

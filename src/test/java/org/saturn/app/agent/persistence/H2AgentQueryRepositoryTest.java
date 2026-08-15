@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.nio.file.Path;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
@@ -14,24 +13,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.persistence.H2Database;
 
-class SqliteAgentQueryRepositoryTest {
+class H2AgentQueryRepositoryTest {
   @TempDir Path tempDir;
   private Path database;
 
   @BeforeEach
   void createDatabase() throws Exception {
-    database = tempDir.resolve("agent.db");
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    database = tempDir.resolve("agent");
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement()) {
-      statement.executeUpdate(
-          """
-          CREATE TABLE messages (
-            id INTEGER PRIMARY KEY, trip TEXT, name TEXT NOT NULL, hash TEXT,
-            message TEXT, created_on INTEGER NOT NULL, channel TEXT,
-            visibility TEXT CHECK(visibility IN ('PUBLIC', 'WHISPER')))
-          """);
-      statement.executeUpdate("CREATE TABLE trips (id INTEGER PRIMARY KEY, type TEXT, trip TEXT)");
+      statement.executeUpdate("DELETE FROM messages");
+      statement.executeUpdate("DELETE FROM trips");
       statement.executeUpdate(
           """
           INSERT INTO messages(trip,name,message,created_on,channel,visibility) VALUES
@@ -40,13 +34,13 @@ class SqliteAgentQueryRepositoryTest {
           ('trip-a','alice','three',3,'programming','PUBLIC')
           """);
       statement.executeUpdate(
-          "INSERT INTO trips(type,trip) VALUES ('REGULAR','trip-a'),('USER','trip-b')");
+          "INSERT INTO trips(type,trip,created_on) VALUES ('REGULAR','trip-a',1),('USER','trip-b',2)");
     }
   }
 
   @Test
   void executesNamedQueriesAndScopesRecentMessagesToRequester() {
-    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext alice =
         new AgentContext(
             "programming", "alice", "trip-a", "hash-a", false, List.of("alice", "bob"));
@@ -64,7 +58,7 @@ class SqliteAgentQueryRepositoryTest {
 
   @Test
   void rejectsUnknownQueryInsteadOfExecutingSqlText() {
-    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext context =
         new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
 
@@ -77,7 +71,7 @@ class SqliteAgentQueryRepositoryTest {
 
   @Test
   void capsRowsAndUsesRequesterTripAsPreparedParameter() throws Exception {
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    try (var connection = H2Database.open(database.toString());
         PreparedStatement statement =
             connection.prepareStatement(
                 "INSERT INTO messages(trip,name,message,created_on,channel,visibility) "
@@ -93,7 +87,7 @@ class SqliteAgentQueryRepositoryTest {
       }
       statement.executeBatch();
     }
-    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     JsonObject arguments = new JsonObject();
     arguments.addProperty("limit", 1_000);
     AgentContext alice =
@@ -111,7 +105,7 @@ class SqliteAgentQueryRepositoryTest {
 
   @Test
   void searchesNamedUserAcrossRoomsByDefaultAndSupportsAnExplicitRoom() throws Exception {
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement()) {
       statement.executeUpdate(
           """
@@ -120,7 +114,7 @@ class SqliteAgentQueryRepositoryTest {
           ('trip-j','Jetty','lounge message',11,'lounge','PUBLIC')
           """);
     }
-    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext context =
         new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of("Jetty"));
     JsonObject arguments = new JsonObject();
@@ -144,7 +138,7 @@ class SqliteAgentQueryRepositoryTest {
 
   @Test
   void capsNamedUserHistoryAtFiveHundredWithoutIncreasingGeneralQueryLimit() throws Exception {
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    try (var connection = H2Database.open(database.toString());
         PreparedStatement statement =
             connection.prepareStatement(
                 "INSERT INTO messages(trip,name,message,created_on,channel,visibility) "
@@ -161,7 +155,7 @@ class SqliteAgentQueryRepositoryTest {
       statement.executeBatch();
     }
 
-    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     JsonObject arguments = new JsonObject();
     arguments.addProperty("nick", "sun");
     JsonObject history =
@@ -175,7 +169,7 @@ class SqliteAgentQueryRepositoryTest {
 
   @Test
   void returnsRecentMessagesForAnExplicitRoomWithIdentityFields() throws Exception {
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement()) {
       statement.executeUpdate(
           """
@@ -184,7 +178,7 @@ class SqliteAgentQueryRepositoryTest {
           ('trip-k','Korin','hash-k','newer lounge message',11,'lounge','PUBLIC')
           """);
     }
-    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext context =
         new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
     JsonObject arguments = new JsonObject();
@@ -207,7 +201,7 @@ class SqliteAgentQueryRepositoryTest {
 
   @Test
   void excludesWhispersAndUnclassifiedLegacyRowsFromPublicHistory() throws Exception {
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement()) {
       statement.executeUpdate(
           """
@@ -217,7 +211,7 @@ class SqliteAgentQueryRepositoryTest {
           ('trip-j','Jetty','hash-j','legacy unknown',22,'private-room',NULL)
           """);
     }
-    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext context =
         new AgentContext("private-room", "alice", "trip-a", "hash-a", false, List.of());
     JsonObject roomArguments = new JsonObject();
@@ -237,7 +231,7 @@ class SqliteAgentQueryRepositoryTest {
 
   @Test
   void requiresNickForNamedUserMessageQuery() {
-    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext context =
         new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
 

@@ -9,13 +9,13 @@ import java.sql.SQLException;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.persistence.H2Database;
 
-public final class SqliteAgentQueryRepository implements AgentQueryRepository {
+public final class H2AgentQueryRepository implements AgentQueryRepository {
   private static final int DEFAULT_ROW_LIMIT = 10;
   private static final int MAX_ROW_LIMIT = 60;
   private static final int MAX_USER_HISTORY_ROW_LIMIT = 500;
   private final String databasePath;
 
-  public SqliteAgentQueryRepository(String databasePath) {
+  public H2AgentQueryRepository(String databasePath) {
     this.databasePath = databasePath;
   }
 

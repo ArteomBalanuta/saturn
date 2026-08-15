@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
 import java.nio.file.Path;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.Duration;
@@ -18,16 +17,17 @@ import org.junit.jupiter.api.io.TempDir;
 import org.saturn.app.agent.AgentSqlConfig;
 import org.saturn.app.agent.sql.AgentSqlErrorCode;
 import org.saturn.app.agent.sql.ValidatedAgentSql;
+import org.saturn.app.persistence.H2Database;
 
-class SqliteAgentSqlRepositoryTest {
+class H2AgentSqlRepositoryTest {
   @TempDir Path tempDir;
   private Path database;
-  private SqliteAgentSqlRepository repository;
+  private H2AgentSqlRepository repository;
 
   @BeforeEach
   void createDatabase() throws Exception {
-    database = tempDir.resolve("queries.db");
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    database = tempDir.resolve("queries");
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement()) {
       statement.executeUpdate(
           """
@@ -41,7 +41,7 @@ class SqliteAgentSqlRepositoryTest {
       statement.executeUpdate("INSERT INTO samples VALUES (7, 3.5, 'hello', X'00FF', NULL)");
       statement.executeUpdate("CREATE TABLE many_values (value INTEGER, text_value TEXT)");
     }
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    try (var connection = H2Database.open(database.toString());
         PreparedStatement statement =
             connection.prepareStatement("INSERT INTO many_values VALUES (?, ?)")) {
       for (int index = 0; index < 100; index++) {
@@ -51,12 +51,11 @@ class SqliteAgentSqlRepositoryTest {
       }
       statement.executeBatch();
     }
-    repository =
-        new SqliteAgentSqlRepository(new SqliteReadOnlyConnectionFactory(database.toString()));
+    repository = new H2AgentSqlRepository(new H2ReadOnlyConnectionFactory(database.toString()));
   }
 
   @Test
-  void returnsColumnsAndJsonSafeSQLiteValues() {
+  void returnsColumnsAndJsonSafeH2Values() {
     AgentSqlResult result =
         repository.execute(
             sql("SELECT id, real_value, text_value, blob_value, null_value FROM samples"),
@@ -89,7 +88,7 @@ class SqliteAgentSqlRepositoryTest {
 
   @Test
   void truncatesTextOnUnicodeCodePointBoundary() throws Exception {
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    try (var connection = H2Database.open(database.toString());
         PreparedStatement statement =
             connection.prepareStatement("INSERT INTO samples VALUES (?, ?, ?, ?, ?)"); ) {
       statement.setInt(1, 8);
@@ -189,9 +188,7 @@ class SqliteAgentSqlRepositoryTest {
                     config(50, 32, 2_000, 32_000, Duration.ofSeconds(1))));
 
     assertEquals(AgentSqlErrorCode.EXECUTION_FAILED, exception.code());
-    try (var connection =
-            DriverManager.getConnection(
-                org.saturn.app.persistence.H2Database.jdbcUrl(database.toString()));
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement();
         var resultSet = statement.executeQuery("SELECT count(*) FROM samples")) {
       assertTrue(resultSet.next());

@@ -8,7 +8,7 @@ existing Saturn commands, room state, and read-only persistence queries; it is n
 framework.
 
 The package root is `org.saturn.app.agent`. Provider integration lives in `agent.llm`, concrete
-tools in `agent.tool`, SQLite-backed context and memory in `agent.persistence`, and ambient abuse
+tools in `agent.tool`, H2-backed context and memory in `agent.persistence`, and ambient abuse
 monitoring in `agent.moderation`. `AgentRuntimeFactory` constructs the runtime.
 
 The provider selects from advertised tools. Saturn remains authoritative for capability checks,

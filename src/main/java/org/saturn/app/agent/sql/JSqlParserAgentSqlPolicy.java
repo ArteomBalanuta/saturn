@@ -61,7 +61,7 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
             .collect(Collectors.toUnmodifiableSet());
     for (String table : referencedTables) {
       String normalized = normalizeIdentifier(table);
-      if (normalized.startsWith("sqlite_") || !allowedTables.contains(normalized)) {
+      if (!allowedTables.contains(normalized)) {
         throw rejection(AgentSqlErrorCode.FORBIDDEN_TABLE, "SQL references a forbidden table");
       }
     }

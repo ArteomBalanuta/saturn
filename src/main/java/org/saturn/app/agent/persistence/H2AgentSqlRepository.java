@@ -20,11 +20,11 @@ import org.saturn.app.agent.sql.AgentSqlErrorCode;
 import org.saturn.app.agent.sql.ValidatedAgentSql;
 
 @Slf4j
-public final class SqliteAgentSqlRepository implements AgentSqlRepository {
-  private final SqliteReadOnlyConnectionFactory connectionFactory;
+public final class H2AgentSqlRepository implements AgentSqlRepository {
+  private final H2ReadOnlyConnectionFactory connectionFactory;
   private final Gson gson = new Gson();
 
-  public SqliteAgentSqlRepository(SqliteReadOnlyConnectionFactory connectionFactory) {
+  public H2AgentSqlRepository(H2ReadOnlyConnectionFactory connectionFactory) {
     this.connectionFactory = Objects.requireNonNull(connectionFactory, "connectionFactory");
   }
 

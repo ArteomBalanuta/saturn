@@ -27,7 +27,7 @@ class EngineImplTest {
             trip = "secret13"
             userTrips = ""
             adminTrips = ""
-            dbPath = "database/database.db"
+            dbPath = "database/database"
             wsUrl = "wss://hack.chat/chat-ws"
             proxies = ""
             autorunCommands = ""

@@ -27,7 +27,7 @@ Treat these as composable traits rather than mutually exclusive command types. A
 | --- | --- | --- |
 | Pure | Command, focused test, help | Service, listener, schema |
 | Service-backed | Interface in `service/`, implementation in `service/impl/`, `Base` construction with only needed dependencies, tests | Schema unless state is persisted |
-| Persistent | Service boundary, `SqlUtil`, DTO if needed, `schema.sql`, idempotent migration, indexes, cleanup, persistence tests | A new listener for a normal command |
+| Persistent | Service boundary, `SqlUtil`, DTO if needed, `src/main/resources/schema-h2.sql`, idempotent H2 bootstrap upgrade, indexes, cleanup, persistence tests | A new listener for a normal command |
 | External-API | Service interface/implementation for HTTP or other I/O, configuration, DTOs, parsing with Gson/`Util.gson`, response/error tests | HTTP logic in commands; database work unless it persists data |
 | Protocol-event-driven | Listener/handler and `EngineImpl.registerPayloadListener`, DTO and tests | A command alias unless users invoke it |
 
@@ -46,13 +46,12 @@ Use this complete checklist for a persistent command:
 - [ ] Write a failing direct command or service test before implementation, then a persistence integration test that proves the SQL behavior.
 - [ ] Define a service interface in `src/main/java/org/saturn/app/service/` and implementation in `service/impl/`; wire it in `Base` with only the dependencies it actually needs, rather than unconditionally passing a `Connection` and queues.
 - [ ] Add prepared-statement SQL constants to `src/main/java/org/saturn/app/util/SqlUtil.java`; bind values rather than concatenating user input.
-- [ ] For a persisted counter, increment atomically in one SQL statement (for example, `SET value = value + 1` or a SQLite upsert); never `SELECT` a value into Java and then write an incremented replacement. In a real-SQLite test, create a concurrent or deliberately interleaved lost-update race, preferably with separate connections, and assert the final stored total includes every increment; serial increments alone do not prove atomicity.
+- [ ] For a persisted counter, increment atomically in one SQL statement (for example, `SET value = value + 1` or H2 `MERGE`); never `SELECT` a value into Java and then write an incremented replacement.
 - [ ] Add a DTO under `src/main/java/org/saturn/app/model/dto/` only when data crosses the command/service boundary as a model.
-- [ ] Add the current table definition and needed indexes to `schema.sql` for a fresh database.
-- [ ] Add an idempotent, dated migration under `database/migrations/` for existing databases. Migrations run after `schema.sql` through `make fresh-db`.
-- [ ] Inspect `deploy/create_db.sh`: it contains a separate, hand-maintained schema duplicate and currently does not source `schema.sql` or apply migrations. Update it for schema changes, or intentionally replace its duplicate behavior, then validate the deployment-created database.
-- [ ] Close `PreparedStatement` and `ResultSet` resources on every path; prefer structured cleanup when modifying code. Add indexes for new query patterns and test the service against real SQLite where possible.
-- [ ] Run `make fresh-db`, verify migration idempotence, run relevant service integration tests, and run the full Maven suite.
+- [ ] Add the current table definition and needed indexes to `src/main/resources/schema-h2.sql` for a fresh database.
+- [ ] Add an idempotent upgrade in `H2SchemaBootstrapper` for existing H2 files when the schema change is not covered by `CREATE ... IF NOT EXISTS`.
+- [ ] Close `PreparedStatement` and `ResultSet` resources on every path; prefer structured cleanup when modifying code. Add indexes for new query patterns and test the service against H2.
+- [ ] Run `make fresh-db`, verify bootstrap idempotence, run relevant service integration tests, and run the full Maven suite.
 
 ## Help and Tests
 

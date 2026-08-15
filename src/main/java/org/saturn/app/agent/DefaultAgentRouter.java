@@ -735,17 +735,7 @@ public final class DefaultAgentRouter implements AgentRouter {
     try {
       memory.append(context, user, assistant, config);
     } catch (RuntimeException exception) {
-      if (!isSqliteShortRead(exception)) {
-        throw memoryPersistenceFailure(correlationId, exception);
-      }
-      log.warn(
-          "Transient SQLite short read while persisting agent memory; retrying once, correlationId={}",
-          correlationId);
-      try {
-        memory.append(context, user, assistant, config);
-      } catch (RuntimeException retryException) {
-        throw memoryPersistenceFailure(correlationId, retryException);
-      }
+      throw memoryPersistenceFailure(correlationId, exception);
     }
     log.info("Agent memory persisted, correlationId={}", correlationId);
   }
@@ -776,17 +766,7 @@ public final class DefaultAgentRouter implements AgentRouter {
     try {
       loaded = memory.load(context, config);
     } catch (RuntimeException exception) {
-      if (!isSqliteShortRead(exception)) {
-        throw memoryLoadFailure(correlationId, exception);
-      }
-      log.warn(
-          "Transient SQLite short read while loading agent memory; retrying once, correlationId={}",
-          correlationId);
-      try {
-        loaded = memory.load(context, config);
-      } catch (RuntimeException retryException) {
-        throw memoryLoadFailure(correlationId, retryException);
-      }
+      throw memoryLoadFailure(correlationId, exception);
     }
     List<LlmMessage> history = responseSanitizer.excludeLegacyPersonaTurns(loaded);
     log.info(
@@ -803,16 +783,6 @@ public final class DefaultAgentRouter implements AgentRouter {
         "Agent memory load failed, correlationId={}: {}", correlationId, exception.getMessage());
     log.debug("Agent memory load failure, correlationId={}", correlationId, exception);
     return new AgentRoutingException("Agent memory load failed", exception);
-  }
-
-  private static boolean isSqliteShortRead(Throwable failure) {
-    for (Throwable current = failure; current != null; current = current.getCause()) {
-      if (current.getMessage() != null
-          && current.getMessage().contains("SQLITE_IOERR_SHORT_READ")) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private String loadConversationContext(AgentInvocation invocation, String correlationId) {

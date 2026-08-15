@@ -75,7 +75,7 @@ updated as fixes are implemented and verified.
 - Expected vs. Actual Behavior:
   - Expected: The router should budget, trim, summarize, paginate, or reject context before sending a request that exceeds the provider window.
   - Actual: Only `invocation.prompt()` is checked against `maxPromptChars`; every other context source is appended without a total request bound.
-- Technical Context / Code Pointers: `DefaultAgentRouter.java:85-87` checks only the newest prompt, while `DefaultAgentRouter.java:104-115`, `DefaultAgentRouter.java:229-236`, `SqliteAgentQueryRepository.java:135-149`, and `UserMessageHistoryTool.java:23` can add large unbounded payloads to subsequent completions.
+- Technical Context / Code Pointers: `DefaultAgentRouter.java:85-87` checks only the newest prompt, while `DefaultAgentRouter.java:104-115`, `DefaultAgentRouter.java:229-236`, `H2AgentQueryRepository.java:135-149`, and `UserMessageHistoryTool.java:23` can add large unbounded payloads to subsequent completions.
 
 ### [FIXED][BUG-002] Freshness Gate Accepts History for the Wrong User
 - Subsystem / Module: Router
@@ -125,7 +125,7 @@ updated as fixes are implemented and verified.
 
 ### [FIXED][BUG-005] Tool Calls and Tool Results Are Lost Between Agent Turns
 - Subsystem / Module: State Orchestration
-- Affected File / Function: `src/main/java/org/saturn/app/agent/DefaultAgentRouter.java:persist`, `src/main/java/org/saturn/app/agent/AgentMemoryStore.java`, `src/main/java/org/saturn/app/agent/persistence/SqliteAgentMemoryStore.java`
+- Affected File / Function: `src/main/java/org/saturn/app/agent/DefaultAgentRouter.java:persist`, `src/main/java/org/saturn/app/agent/AgentMemoryStore.java`, `src/main/java/org/saturn/app/agent/persistence/H2AgentMemoryStore.java`
 - Severity: High
 - Impact: Follow-up requests cannot reliably refer to prior database rows, room rosters, schema details, or tool arguments because only the user prompt and final assistant prose survive into the next turn.
 - Steps to Reproduce / Trigger:
@@ -136,8 +136,8 @@ updated as fixes are implemented and verified.
 - Expected vs. Actual Behavior:
   - Expected: The shared session should persist enough of the agent trace to resolve references to prior tool outputs, or explicitly re-run the source tool.
   - Actual: Persistence stores exactly one `user` row and one `assistant` row; tool messages are transient to one `routeInSession` call.
-- Technical Context / Code Pointers: `DefaultAgentRouter.java:199-236` holds tool traffic only in the local `messages` list, then `DefaultAgentRouter.java:253` persists only final prose. `AgentMemoryStore.java:7-10` and `SqliteAgentMemoryStore.java:67-85` have no tool-event contract despite `vaelen-system-prompt.txt:10` instructing use of prior tool outputs.
-- Fix Decision: Added `AgentMemoryStore.appendToolEvidence`, SQLite-backed `agent_tool_memory`, fresh-schema support, and the dated idempotent migration. The router persists successful results only after the final assistant turn has been stored; loading appends clearly marked internal evidence in chronological order. This avoids creating invalid OpenAI `tool` messages without their original tool-call identifiers.
+- Technical Context / Code Pointers: `DefaultAgentRouter.java:199-236` holds tool traffic only in the local `messages` list, then `DefaultAgentRouter.java:253` persists only final prose. `AgentMemoryStore.java:7-10` and `H2AgentMemoryStore.java:67-85` have no tool-event contract despite `vaelen-system-prompt.txt:10` instructing use of prior tool outputs.
+- Fix Decision: Added `AgentMemoryStore.appendToolEvidence`, H2-backed `agent_tool_memory`, and fresh-schema support. The router persists successful results only after the final assistant turn has been stored; loading appends clearly marked internal evidence in chronological order. This avoids creating invalid OpenAI `tool` messages without their original tool-call identifiers.
 
 ### [FIXED][BUG-006] `run_command` Discards the Actual Command Output Needed by the Model
 - Subsystem / Module: Tool Handling
@@ -340,7 +340,7 @@ updated as fixes are implemented and verified.
 
 ### [FIXED][BUG-019] Recent Room Context Is Supplied in Reverse Conversation Order
 - Subsystem / Module: State Orchestration
-- Affected File / Function: `src/main/java/org/saturn/app/agent/persistence/SqliteAgentQueryRepository.java:recentMessagesForRoom`, `src/main/java/org/saturn/app/agent/persistence/RepositoryAgentConversationContextProvider.java:load`
+- Affected File / Function: `src/main/java/org/saturn/app/agent/persistence/H2AgentQueryRepository.java:recentMessagesForRoom`, `src/main/java/org/saturn/app/agent/persistence/RepositoryAgentConversationContextProvider.java:load`
 - Severity: Medium
 - Impact: Pronouns and short approvals such as `do it`, `check him`, or `there` can bind to the wrong earlier message because the model receives newest-to-oldest rows while the prompt describes them as conversation context.
 - Steps to Reproduce / Trigger:
@@ -351,7 +351,7 @@ updated as fixes are implemented and verified.
 - Expected vs. Actual Behavior:
   - Expected: Conversation context should be chronological, or the contract should explicitly label ordering and require timestamp-based reconstruction.
   - Actual: SQL returns descending timestamps and the provider passes that JSON through unchanged and unlabeled.
-- Technical Context / Code Pointers: `SqliteAgentQueryRepository.java:162-180` uses `ORDER BY created_on DESC, id DESC`; `RepositoryAgentConversationContextProvider.java:23-27` returns it directly. `system-policy.txt:23-29` relies on this data for follow-up resolution without declaring its order.
+- Technical Context / Code Pointers: `H2AgentQueryRepository.java:162-180` uses `ORDER BY created_on DESC, id DESC`; `RepositoryAgentConversationContextProvider.java:23-27` returns it directly. `system-policy.txt:23-29` relies on this data for follow-up resolution without declaring its order.
 
 ### [FIXED][BUG-020] The Current User Message Is Duplicated in Every Public Agent Request
 - Subsystem / Module: State Orchestration

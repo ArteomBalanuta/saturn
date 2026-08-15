@@ -5,10 +5,10 @@ import java.sql.SQLException;
 import java.util.Objects;
 import org.saturn.app.persistence.H2Database;
 
-public final class SqliteReadOnlyConnectionFactory {
+public final class H2ReadOnlyConnectionFactory {
   private final String databasePath;
 
-  public SqliteReadOnlyConnectionFactory(String databasePath) {
+  public H2ReadOnlyConnectionFactory(String databasePath) {
     this.databasePath = Objects.requireNonNull(databasePath, "databasePath");
   }
 

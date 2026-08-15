@@ -6,27 +6,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonParser;
 import java.nio.file.Path;
-import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.persistence.H2Database;
 
 class RepositoryAgentConversationContextProviderTest {
   @TempDir Path tempDir;
 
   @Test
   void hydratesOnlyBoundedPublicMessagesFromTheCurrentRoom() throws Exception {
-    Path database = tempDir.resolve("agent-context.db");
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    Path database = tempDir.resolve("agent-context");
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement()) {
-      statement.executeUpdate(
-          """
-          CREATE TABLE messages (
-            id INTEGER PRIMARY KEY, trip TEXT, name TEXT NOT NULL, hash TEXT,
-            message TEXT, created_on INTEGER NOT NULL, channel TEXT, visibility TEXT)
-          """);
       statement.executeUpdate(
           """
           INSERT INTO messages(trip,name,hash,message,created_on,channel,visibility) VALUES
@@ -40,7 +34,7 @@ class RepositoryAgentConversationContextProviderTest {
     }
     RepositoryAgentConversationContextProvider provider =
         new RepositoryAgentConversationContextProvider(
-            new SqliteAgentQueryRepository(database.toString()), 2);
+            new H2AgentQueryRepository(database.toString()), 2);
     AgentContext context =
         new AgentContext("lounge", "alice", "trip-a", "hash-a", false, List.of("alice"));
 
@@ -58,15 +52,9 @@ class RepositoryAgentConversationContextProviderTest {
 
   @Test
   void excludesTheNewestMatchingInboundMessageFromRoomContext() throws Exception {
-    Path database = tempDir.resolve("agent-context-exclude.db");
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    Path database = tempDir.resolve("agent-context-exclude");
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement()) {
-      statement.executeUpdate(
-          """
-          CREATE TABLE messages (
-            id INTEGER PRIMARY KEY, trip TEXT, name TEXT NOT NULL, hash TEXT,
-            message TEXT, created_on INTEGER NOT NULL, channel TEXT, visibility TEXT)
-          """);
       statement.executeUpdate(
           """
           INSERT INTO messages(trip,name,hash,message,created_on,channel,visibility) VALUES
@@ -76,7 +64,7 @@ class RepositoryAgentConversationContextProviderTest {
     }
     RepositoryAgentConversationContextProvider provider =
         new RepositoryAgentConversationContextProvider(
-            new SqliteAgentQueryRepository(database.toString()), 10);
+            new H2AgentQueryRepository(database.toString()), 10);
     AgentContext context =
         new AgentContext("lounge", "alice", "trip-a", "hash-a", false, List.of("alice"));
 
@@ -88,15 +76,9 @@ class RepositoryAgentConversationContextProviderTest {
 
   @Test
   void preservesAnOlderDuplicateWhenExcludingTheCurrentInboundMessage() throws Exception {
-    Path database = tempDir.resolve("agent-context-duplicate.db");
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    Path database = tempDir.resolve("agent-context-duplicate");
+    try (var connection = H2Database.open(database.toString());
         Statement statement = connection.createStatement()) {
-      statement.executeUpdate(
-          """
-          CREATE TABLE messages (
-            id INTEGER PRIMARY KEY, trip TEXT, name TEXT NOT NULL, hash TEXT,
-            message TEXT, created_on INTEGER NOT NULL, channel TEXT, visibility TEXT)
-          """);
       statement.executeUpdate(
           """
           INSERT INTO messages(trip,name,hash,message,created_on,channel,visibility) VALUES
@@ -107,7 +89,7 @@ class RepositoryAgentConversationContextProviderTest {
     }
     RepositoryAgentConversationContextProvider provider =
         new RepositoryAgentConversationContextProvider(
-            new SqliteAgentQueryRepository(database.toString()), 10);
+            new H2AgentQueryRepository(database.toString()), 10);
     AgentContext context =
         new AgentContext("lounge", "alice", "trip-a", "hash-a", false, List.of("alice"));
 

@@ -14,15 +14,15 @@ import org.saturn.app.agent.AgentMemoryStore;
 import org.saturn.app.agent.llm.LlmMessage;
 import org.saturn.app.persistence.H2Database;
 
-public final class SqliteAgentMemoryStore implements AgentMemoryStore {
+public final class H2AgentMemoryStore implements AgentMemoryStore {
   private final String databasePath;
   private final Clock clock;
 
-  public SqliteAgentMemoryStore(String databasePath) {
+  public H2AgentMemoryStore(String databasePath) {
     this(databasePath, Clock.systemUTC());
   }
 
-  public SqliteAgentMemoryStore(String databasePath, Clock clock) {
+  public H2AgentMemoryStore(String databasePath, Clock clock) {
     this.databasePath = databasePath;
     this.clock = clock;
   }
