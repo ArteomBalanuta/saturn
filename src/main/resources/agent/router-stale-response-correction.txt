@@ -1,0 +1,3 @@
+Your previous completion duplicated an earlier assistant answer. Ignore that attempt and
+answer the newest user message above. Do not repeat an older answer unless the newest request
+explicitly asks for it.

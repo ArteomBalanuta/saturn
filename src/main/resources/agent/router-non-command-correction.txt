@@ -1,0 +1,1 @@
+Return a clean response when a Markdown command was only referenced and must not run.

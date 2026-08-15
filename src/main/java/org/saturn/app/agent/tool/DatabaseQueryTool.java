@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.Set;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
@@ -16,6 +17,7 @@ import org.saturn.app.agent.persistence.AgentQueryRepository;
 
 public final class DatabaseQueryTool implements AgentTool {
   private final AgentQueryRepository repository;
+  private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
   public DatabaseQueryTool(AgentQueryRepository repository) {
     this.repository = repository;
@@ -28,8 +30,7 @@ public final class DatabaseQueryTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Execute one approved read-only Saturn database query, including bounded recent"
-        + " messages for a requested room. Arbitrary SQL is not accepted.";
+    return PROMPTS.toolDescription(name());
   }
 
   @Override
@@ -43,9 +44,9 @@ public final class DatabaseQueryTool implements AgentTool {
         ToolEffect.READ_ONLY,
         ToolResultMode.MODEL_DATA,
         parameters(context),
-        List.of("Use for supported counts, room messages, and known user identities."),
-        List.of("Do not pass SQL or assume unsupported query names are accepted."),
-        List.of(new ToolExample(name(), "{\"query\":\"recent_messages_for_room\"}", "Inspect recent room messages")),
+        PROMPTS.toolGuidance(name(), "whenToUse"),
+        PROMPTS.toolGuidance(name(), "whenNotToUse"),
+        List.of(new ToolExample(name(), "{\"query\":\"recent_messages_for_room\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(),
         Set.of());
   }

@@ -9,7 +9,7 @@
 /.vscode/
 hackchat.db
 *.txt
-!/src/main/resources/agent/vaelen-system-prompt.txt
+!/src/main/resources/agent/*.txt
 /saturn.iml
 /hc.log
 /dependency-reduced-pom.xml

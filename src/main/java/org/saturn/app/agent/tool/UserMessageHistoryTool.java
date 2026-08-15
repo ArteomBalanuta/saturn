@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
@@ -18,6 +19,7 @@ import org.saturn.app.agent.persistence.AgentQueryRepository;
 
 public final class UserMessageHistoryTool implements AgentTool {
   private final AgentQueryRepository repository;
+  private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
   public UserMessageHistoryTool(AgentQueryRepository repository) {
     this.repository = Objects.requireNonNull(repository, "repository");
@@ -30,9 +32,7 @@ public final class UserMessageHistoryTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Fetch a named user's recent public messages across all rooms. Pass room only to"
-        + " restrict the search to one channel. Use the all-room default for follow-ups such as"
-        + " 'check elsewhere' or 'check it'.";
+    return PROMPTS.toolDescription(name());
   }
 
   @Override
@@ -46,9 +46,9 @@ public final class UserMessageHistoryTool implements AgentTool {
         ToolEffect.READ_ONLY,
         ToolResultMode.MODEL_DATA,
         parameters(context),
-        List.of("Use for follow-ups about what a named user said, including requests to check elsewhere."),
-        List.of("Do not claim a user's history without querying this tool."),
-        List.of(new ToolExample(name(), "{\"nick\":\"sun\"}", "Find recent public messages by sun")),
+        PROMPTS.toolGuidance(name(), "whenToUse"),
+        PROMPTS.toolGuidance(name(), "whenNotToUse"),
+        List.of(new ToolExample(name(), "{\"nick\":\"sun\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(),
         Set.of());
   }

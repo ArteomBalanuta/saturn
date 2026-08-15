@@ -295,6 +295,9 @@ Existing tools remain compatible: tools that do not override `descriptor(context
 read-only defaults from `AgentTool`. Add an explicit descriptor for new tools, especially when a
 tool changes the room, moderates users, writes persistence, or requires another tool first.
 
+Agent-facing instructions and tool copy are externalized under `src/main/resources/agent/`; Java
+code supplies only runtime values and orchestration.
+
 ## Project Notes
 
 - SQLite is used for persistence.

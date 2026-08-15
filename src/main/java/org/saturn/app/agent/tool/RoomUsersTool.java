@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
@@ -15,6 +16,7 @@ import org.saturn.app.agent.ToolResultMode;
 
 public final class RoomUsersTool implements AgentTool {
   private final AgentRoomDirectory roomDirectory;
+  private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
   public RoomUsersTool(AgentRoomDirectory roomDirectory) {
     this.roomDirectory = Objects.requireNonNull(roomDirectory, "roomDirectory");
@@ -27,8 +29,7 @@ public final class RoomUsersTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Return live users in a Saturn-managed room. Pass room whenever the user names a"
-        + " channel; omit it only for the caller's current room.";
+    return PROMPTS.toolDescription(name());
   }
 
   @Override
@@ -42,9 +43,9 @@ public final class RoomUsersTool implements AgentTool {
         ToolEffect.READ_ONLY,
         ToolResultMode.MODEL_DATA,
         parameters(context),
-        List.of("Use when the user asks who is currently present in a room."),
-        List.of("Do not infer presence from conversation history when a live snapshot is available."),
-        List.of(new ToolExample(name(), "{\"room\":\"lounge\"}", "Inspect the lounge roster")),
+        PROMPTS.toolGuidance(name(), "whenToUse"),
+        PROMPTS.toolGuidance(name(), "whenNotToUse"),
+        List.of(new ToolExample(name(), "{\"room\":\"lounge\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(),
         Set.of());
   }

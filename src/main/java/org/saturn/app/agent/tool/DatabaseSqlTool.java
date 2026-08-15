@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentSqlConfig;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
@@ -30,6 +31,7 @@ public final class DatabaseSqlTool implements AgentTool {
   private final AgentSqlRepository sqlRepository;
   private final AgentSqlConfig config;
   private final Gson gson = new Gson();
+  private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
   public DatabaseSqlTool(
       AgentSchemaRepository schemaRepository,
@@ -49,7 +51,7 @@ public final class DatabaseSqlTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Run one bounded read-only SELECT against the inspected Saturn schema.";
+    return PROMPTS.toolDescription(name());
   }
 
   @Override
@@ -63,9 +65,9 @@ public final class DatabaseSqlTool implements AgentTool {
         ToolEffect.READ_ONLY,
         ToolResultMode.MODEL_DATA,
         parameters(context),
-        List.of("Inspect the schema first, then use one bounded SELECT when no approved query fits."),
-        List.of("Never use for INSERT, UPDATE, DELETE, DDL, or a query unrelated to the inspected schema."),
-        List.of(new ToolExample(name(), "{\"sql\":\"SELECT COUNT(*) FROM messages\"}", "Count rows after schema inspection")),
+        PROMPTS.toolGuidance(name(), "whenToUse"),
+        PROMPTS.toolGuidance(name(), "whenNotToUse"),
+        List.of(new ToolExample(name(), "{\"sql\":\"SELECT COUNT(*) FROM messages\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(AgentCapability.DYNAMIC_SQL.name()),
         requiredSuccessfulTools());
   }

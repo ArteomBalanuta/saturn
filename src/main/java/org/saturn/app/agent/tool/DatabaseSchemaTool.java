@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentSqlConfig;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
@@ -18,6 +19,7 @@ import org.saturn.app.agent.persistence.AgentSchemaRepository;
 public final class DatabaseSchemaTool implements AgentTool {
   private final AgentSchemaRepository repository;
   private final AgentSqlConfig config;
+  private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
   public DatabaseSchemaTool(AgentSchemaRepository repository, AgentSqlConfig config) {
     this.repository = Objects.requireNonNull(repository, "repository");
@@ -31,7 +33,7 @@ public final class DatabaseSchemaTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Describe Saturn application tables, columns, indexes, and foreign keys.";
+    return PROMPTS.toolDescription(name());
   }
 
   @Override
@@ -45,8 +47,8 @@ public final class DatabaseSchemaTool implements AgentTool {
         ToolEffect.READ_ONLY,
         ToolResultMode.MODEL_DATA,
         parameters(context),
-        List.of("Use before database_sql when the approved query catalog is insufficient."),
-        List.of("Do not use as a substitute for executing a query."),
+        PROMPTS.toolGuidance(name(), "whenToUse"),
+        PROMPTS.toolGuidance(name(), "whenNotToUse"),
         List.of(),
         Set.of(AgentCapability.DYNAMIC_SQL.name()),
         Set.of());

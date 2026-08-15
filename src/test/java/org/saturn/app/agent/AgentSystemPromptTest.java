@@ -52,21 +52,20 @@ class AgentSystemPromptTest {
             "correlation-3",
             "{\"rows\":[{\"name\":\"buu\",\"message\":\"Charlotte he meant\"}]}");
 
-    assertTrue(rendered.contains("Execute the user's authorized request"));
-    assertTrue(rendered.contains("This duty outranks persona"));
-    assertTrue(rendered.contains("resolve references from shared history"));
-    assertTrue(rendered.contains("The newest user message is authoritative"));
+    assertTrue(rendered.contains("PRIORITY ORDER"));
+    assertTrue(rendered.contains("EXECUTION LOOP"));
+    assertTrue(rendered.contains("Choose the narrowest exposed tool"));
+    assertTrue(rendered.contains("Complete required_successful_tools in the declared order"));
+    assertTrue(rendered.contains("The newest message controls the topic"));
     assertTrue(rendered.contains("For definition requests, answer the exact term"));
-    assertTrue(rendered.contains("call the matching tool immediately"));
-    assertTrue(rendered.contains("Do not ask for confirmation"));
-    assertTrue(rendered.contains("Do not mock, lecture, philosophize"));
-    assertTrue(rendered.contains("never repeat a question already answered"));
+    assertTrue(rendered.contains("Execute an actionable request immediately"));
+    assertTrue(rendered.contains("confirmation when the request and required arguments"));
+    assertTrue(rendered.contains("Do not mock, lecture,"));
     assertTrue(rendered.contains("For current weather or time, call run_command"));
     assertTrue(rendered.contains("Never print, quote, or fence a Saturn command"));
     assertTrue(rendered.contains("Conditional or future requests are not immediate commands"));
-    assertTrue(rendered.contains("Never claim a watcher, rule, or scheduled action exists"));
-    assertTrue(
-        rendered.indexOf("Execute the user's authorized request") < rendered.indexOf("PERSONA"));
+    assertTrue(rendered.contains("never claim a watcher, rule, or schedule"));
+    assertTrue(rendered.indexOf("PRIORITY ORDER") < rendered.indexOf("PERSONA"));
     assertFalse(rendered.contains("punch back immediately"));
     assertFalse(rendered.contains("philosophical roasts"));
     assertFalse(rendered.contains("playfully condescending"));
@@ -85,7 +84,7 @@ class AgentSystemPromptTest {
 
     assertTrue(rendered.contains("<quiet>"));
     assertTrue(rendered.contains("AMBIENT"));
-    assertTrue(rendered.contains("may remain silent"));
-    assertTrue(rendered.contains("Never announce or narrate silence"));
+    assertTrue(rendered.contains("politely asks you to be silent"));
+    assertTrue(rendered.contains("Never announce, explain, or narrate silence"));
   }
 }

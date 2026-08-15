@@ -20,41 +20,14 @@ import org.saturn.app.agent.llm.LlmResponse;
 
 @Slf4j
 public final class DefaultAgentRouter implements AgentRouter {
-  private static final String FINALIZE_PROMPT =
-      "Answer the user's request using the tool results already provided. Do not call tools.";
+  private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
+  private static final String FINALIZE_PROMPT = PROMPTS.text("router-finalize.txt").strip();
   private static final String RESPOND_WITHOUT_COMMAND = "respond_without_command";
-  private static final String COMMAND_TOOL_CORRECTION =
-      """
-      Your previous response placed the Saturn %s command in Markdown. Return exactly one tool call.
-      Use run_command with command %s only when the user requested that command to execute now. Use
-      respond_without_command when it was a reference, report, example, conditional, or future
-      action; provide a clean response that does not print a command or claim an action occurred. Do
-      not call another tool, ask for confirmation, or answer outside the tool call.
-      """;
-  private static final String COMMAND_OUTPUT_CORRECTION =
-      """
-      The Saturn command already executed. Answer briefly from its tool result without printing,
-      quoting, or fencing any Saturn command. Do not call another tool.
-      """;
-  private static final String COMMAND_NOT_EXECUTED_CORRECTION =
-      """
-      The Saturn command did not execute, and tools are unavailable for this turn. State that
-      outcome briefly without printing, quoting, or fencing any Saturn command. Do not claim the
-      action happened and do not call another tool.
-      """;
-  private static final String STALE_RESPONSE_CORRECTION =
-      """
-      Your previous completion duplicated an earlier assistant answer. Ignore that attempt and
-      answer the newest user message above. Do not repeat an older answer unless the newest request
-      explicitly asks for it.
-      """;
-  private static final String UNVERIFIED_ACTION_CORRECTION =
-      """
-      You narrated an action but did not call a tool. Re-evaluate the newest user request now. If it
-      requires live Saturn data or a Saturn command, return the matching tool call immediately. If
-      no exposed tool applies, answer honestly without claiming that you fetched, checked, queried,
-      searched, or executed anything.
-      """;
+  private static final String COMMAND_TOOL_CORRECTION = PROMPTS.text("router-command-tool-correction.txt");
+  private static final String COMMAND_OUTPUT_CORRECTION = PROMPTS.text("router-command-output-correction.txt");
+  private static final String COMMAND_NOT_EXECUTED_CORRECTION = PROMPTS.text("router-command-not-executed-correction.txt");
+  private static final String STALE_RESPONSE_CORRECTION = PROMPTS.text("router-stale-response-correction.txt");
+  private static final String UNVERIFIED_ACTION_CORRECTION = PROMPTS.text("router-unverified-action-correction.txt");
 
   private final AgentConfig config;
   private final LlmClient client;
@@ -210,7 +183,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         .find(context, call.name())
         .map(tool -> tool.descriptor(context).resultMode())
         .filter(mode -> mode == ToolResultMode.ROOM_DELIVERY)
-        .map(mode -> "Tool output was delivered to the room. Do not repeat or paraphrase it.")
+        .map(mode -> PROMPTS.text("router-room-delivery.txt").strip())
         .orElse(result.content());
   }
 
@@ -412,7 +385,7 @@ public final class DefaultAgentRouter implements AgentRouter {
     function.addProperty("name", RESPOND_WITHOUT_COMMAND);
     function.addProperty(
         "description",
-        "Return a clean response when a Markdown command was only referenced and must not run.");
+        PROMPTS.text("router-non-command-correction.txt").strip());
     function.add("parameters", parameters);
 
     JsonObject definition = new JsonObject();
@@ -456,7 +429,8 @@ public final class DefaultAgentRouter implements AgentRouter {
 
   private static String contextualizePrompt(AgentContext context, String prompt) {
     String visibility = context.whisper() ? "Private Saturn whisper" : "Public Saturn message";
-    return "%s from @%s in #%s:%n%s".formatted(visibility, context.nick(), context.room(), prompt);
+    return PROMPTS.formatted(
+        "router-contextualized-prompt.txt", visibility, context.nick(), context.room(), prompt);
   }
 
   private void persist(AgentContext context, String user, String assistant, String correlationId)

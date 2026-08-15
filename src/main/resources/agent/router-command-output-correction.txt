@@ -1,0 +1,2 @@
+The Saturn command already executed. Answer briefly from its tool result without printing,
+quoting, or fencing any Saturn command. Do not call another tool.

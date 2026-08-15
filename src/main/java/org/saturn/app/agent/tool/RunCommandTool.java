@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Set;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
@@ -37,6 +38,7 @@ public final class RunCommandTool implements AgentTool {
   private static final Set<String> MODERATION_COMMANDS =
       Set.of("captcha", "mute", "kick", "shadowban");
   private static final Set<String> PERMANENT_BAN_COMMAND = Set.of("ban");
+  private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private final SaturnCommandGateway gateway;
 
   public RunCommandTool(SaturnCommandGateway gateway) {
@@ -50,7 +52,7 @@ public final class RunCommandTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Execute an approved Saturn command using the caller's trusted capabilities.";
+    return PROMPTS.toolDescription(name());
   }
 
   @Override
@@ -76,13 +78,9 @@ public final class RunCommandTool implements AgentTool {
         moderator || creator ? ToolEffect.MODERATION : ToolEffect.ROOM_MESSAGE,
         ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA,
         parameters(context),
-        List.of(
-            "Use this for an existing Saturn command instead of imitating its output.",
-            "Use the command enum as the complete list of commands authorized for this caller."),
-        List.of(
-            "Do not invent command names or claim a command ran without invoking this tool.",
-            "Do not use this tool for general conversation or unsupported operations."),
-        List.of(new ToolExample(name(), "{\"command\":\"weather\",\"arguments\":\"Tokyo\"}", "Send weather output to the room")),
+        PROMPTS.toolGuidance(name(), "whenToUse"),
+        PROMPTS.toolGuidance(name(), "whenNotToUse"),
+        List.of(new ToolExample(name(), "{\"command\":\"weather\",\"arguments\":\"Tokyo\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(),
         Set.of());
   }
@@ -123,8 +121,7 @@ public final class RunCommandTool implements AgentTool {
     return executed
         ? AgentToolResult.success(
             name(),
-            "Saturn command '%s' executed; its output was sent to the room. No other Saturn command was executed."
-                .formatted(command))
+            PROMPTS.formatted("command-executed-result.txt", command))
         : AgentToolResult.error(null, name(), "Command was not authorized or could not run");
   }
 
