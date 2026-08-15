@@ -1016,6 +1016,26 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void returnsCapabilityLimitationWhenTheModelKeepsNarratingAnUnavailableAction() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("I will check the internal operation now.", List.of(), "stop"),
+            new LlmResponse("I will execute a timing measurement.", List.of(), "stop"),
+            new LlmResponse("I will query the internal clock and report back.", List.of(), "stop"));
+
+    AgentResult result =
+        routerWithRunCommand(client, new RecordingMemory())
+            .route(
+                new AgentInvocation(
+                    context(), "clock a consistent internal operation and report its duration"));
+
+    assertEquals(
+        "Saturn does not expose a tool for that live operation, so I cannot truthfully measure or execute it. I can use a supported command or read-only lookup if you name one.",
+        result.content());
+    assertEquals(3, client.requests.size());
+  }
+
+  @Test
   void requiresUserHistoryToolWhenCompletionClaimsItFetchedAUsersHistory() throws Exception {
     ScriptedClient client =
         new ScriptedClient(
@@ -1596,6 +1616,65 @@ class DefaultAgentRouterTest {
     assertTrue(
         client.requests.getLast().messages().getLast().content().contains("duplicated an earlier"));
     assertEquals("They are discussing the room lock.", memory.appended.getLast());
+  }
+
+  @Test
+  void retriesWhenToolEvidenceHidesThePreviousConversationAnswer() throws Exception {
+    String staleAnswer = "I am ready.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @broly in #programming:\nfight now"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(staleAnswer, List.of()),
+                org.saturn.app.agent.llm.LlmMessage.assistant(
+                    "[Internal tool evidence from run_command]\\nresponse time: 186 milliseconds",
+                    List.of())));
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(staleAnswer, List.of(), "stop"),
+            new LlmResponse(
+                "I cannot measure an internal operation without a matching tool.",
+                List.of(),
+                "stop"));
+
+    AgentResult result =
+        routerWithRunCommand(client, memory)
+            .route(
+                new AgentInvocation(
+                    context(),
+                    "can you infer the rate at which things are being done internally?"));
+
+    assertEquals(
+        "I cannot measure an internal operation without a matching tool.", result.content());
+    assertEquals(2, client.requests.size());
+    assertTrue(client.requests.getLast().bypassPromptCache());
+  }
+
+  @Test
+  void retriesAGenericAcknowledgementEvenWhenTheUserRepeatsThePrompt() throws Exception {
+    String repeatedPrompt = "can you infer the rate at which things are being done internally?";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @buu in #programming:\n" + repeatedPrompt),
+                org.saturn.app.agent.llm.LlmMessage.assistant("I am ready.", List.of())));
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("I am ready.", List.of(), "stop"),
+            new LlmResponse(
+                "I need a specific measurable operation before I can estimate its rate.",
+                List.of(),
+                "stop"));
+
+    AgentResult result =
+        routerWithRunCommand(client, memory).route(new AgentInvocation(context(), repeatedPrompt));
+
+    assertEquals(
+        "I need a specific measurable operation before I can estimate its rate.", result.content());
+    assertEquals(2, client.requests.size());
+    assertTrue(client.requests.getLast().bypassPromptCache());
   }
 
   @Test

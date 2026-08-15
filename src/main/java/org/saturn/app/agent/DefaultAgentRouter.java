@@ -48,6 +48,10 @@ public final class DefaultAgentRouter implements AgentRouter {
       PROMPTS.text("router-stale-response-correction.txt");
   private static final String UNVERIFIED_ACTION_CORRECTION =
       PROMPTS.text("router-unverified-action-correction.txt");
+  private static final String UNVERIFIED_ACTION_FINAL_CORRECTION =
+      PROMPTS.text("router-unverified-action-final-correction.txt");
+  private static final String UNAVAILABLE_ACTION_RESPONSE =
+      PROMPTS.text("router-unavailable-action-response.txt").strip();
 
   private final AgentConfig config;
   private final LlmClient client;
@@ -426,12 +430,13 @@ public final class DefaultAgentRouter implements AgentRouter {
           "Agent repeated an unverified action; requesting one final tool-only correction, correlationId={}",
           correlationId);
       messages.add(LlmMessage.assistant(corrected.content(), List.of()));
-      messages.add(
-          LlmMessage.user(
-              "Final correction: do not describe or promise the action. Return the matching Saturn tool call now, or answer without claiming that any live lookup or command was performed."));
+      messages.add(LlmMessage.user(UNVERIFIED_ACTION_FINAL_CORRECTION));
       corrected = client.complete(new LlmRequest(messages, definitions));
       if (corrected.toolCalls().isEmpty() && containsUnverifiedActionClaim(corrected.content())) {
-        throw new AgentRoutingException("Agent repeated an unverified action claim");
+        log.warn(
+            "Agent repeated an unverified action after corrections; returning capability limitation, correlationId={}",
+            correlationId);
+        return new LlmResponse(UNAVAILABLE_ACTION_RESPONSE, List.of(), "stop");
       }
     }
     return corrected;
@@ -465,11 +470,20 @@ public final class DefaultAgentRouter implements AgentRouter {
     }
 
     String previousUser = latestContent(history, "user").orElse(null);
-    String previousAssistant = latestContent(history, "assistant").orElse(null);
+    String previousAssistant = latestConversationAssistant(history).orElse(null);
     return previousUser != null
         && previousAssistant != null
-        && !userAuthoredBody(currentPrompt).equals(userAuthoredBody(previousUser))
-        && response.content().strip().equals(previousAssistant.strip());
+        && response.content().strip().equals(previousAssistant.strip())
+        && (!userAuthoredBody(currentPrompt).equals(userAuthoredBody(previousUser))
+            || isGenericAcknowledgement(response.content()));
+  }
+
+  private static boolean isGenericAcknowledgement(String content) {
+    String normalized = content.strip().toLowerCase(java.util.Locale.ROOT);
+    return normalized.equals("i am ready")
+        || normalized.equals("i am ready.")
+        || normalized.equals("ready")
+        || normalized.equals("ready.");
   }
 
   private static String userAuthoredBody(String prompt) {
@@ -485,6 +499,20 @@ public final class DefaultAgentRouter implements AgentRouter {
       }
     }
     return Optional.empty();
+  }
+
+  private static Optional<String> latestConversationAssistant(List<LlmMessage> messages) {
+    for (int index = messages.size() - 1; index >= 0; index--) {
+      LlmMessage message = messages.get(index);
+      if ("assistant".equals(message.role()) && !isToolEvidence(message.content())) {
+        return Optional.ofNullable(message.content());
+      }
+    }
+    return Optional.empty();
+  }
+
+  private static boolean isToolEvidence(String content) {
+    return content != null && content.startsWith("[Internal tool evidence from ");
   }
 
   private GuardedResponse enforceCommandChannel(
