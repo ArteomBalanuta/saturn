@@ -26,4 +26,35 @@ public final class RepositoryAgentConversationContextProvider
     arguments.addProperty("limit", messageLimit);
     return repository.execute("recent_messages_for_room", arguments, context).toString();
   }
+
+  @Override
+  public String load(AgentContext context, String author, String text) {
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("room", context.room());
+    arguments.addProperty("limit", messageLimit);
+    JsonObject result = repository.execute("recent_messages_for_room", arguments, context);
+    if (author == null || text == null || !result.has("rows") || !result.get("rows").isJsonArray()) {
+      return result.toString();
+    }
+    var rows = result.getAsJsonArray("rows");
+    for (int index = rows.size() - 1; index >= 0; index--) {
+      var row = rows.get(index);
+      if (!row.isJsonObject()) {
+        continue;
+      }
+      JsonObject value = row.getAsJsonObject();
+      if (author.equals(stringValue(value, "name")) && text.equals(stringValue(value, "message"))) {
+        rows.remove(index);
+        break;
+      }
+    }
+    return result.toString();
+  }
+
+  private static String stringValue(JsonObject value, String member) {
+    if (!value.has(member) || value.get(member).isJsonNull()) {
+      return null;
+    }
+    return value.get(member).getAsString();
+  }
 }

@@ -98,6 +98,15 @@ CREATE TABLE "agent_memory" (
     "expires_on" INTEGER NOT NULL
 );
 
+CREATE TABLE "agent_tool_memory" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "identity_key" TEXT NOT NULL,
+    "tool_name" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "created_on" INTEGER NOT NULL,
+    "expires_on" INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_trip_created_on ON messages (trip, created_on DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_name_created_on ON messages (name, created_on DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_hash_created_on ON messages (hash, created_on DESC);
@@ -126,3 +135,5 @@ CREATE INDEX IF NOT EXISTS idx_banned_users_hash ON banned_users (hash);
 CREATE INDEX IF NOT EXISTS idx_agent_memory_identity_created
   ON agent_memory (identity_key, created_on DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_memory_expires ON agent_memory (expires_on);
+CREATE INDEX IF NOT EXISTS idx_agent_tool_memory_identity_created
+  ON agent_tool_memory (identity_key, created_on DESC);

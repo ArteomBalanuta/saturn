@@ -31,11 +31,21 @@ class SqliteAgentMemoryStoreTest {
     try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
         Statement statement = connection.createStatement()) {
       statement.executeUpdate(
-          """
+            """
           CREATE TABLE agent_memory (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             identity_key TEXT NOT NULL,
             role TEXT NOT NULL CHECK(role IN ('user','assistant')),
+            content TEXT NOT NULL,
+            created_on INTEGER NOT NULL,
+            expires_on INTEGER NOT NULL)
+          """);
+      statement.executeUpdate(
+          """
+          CREATE TABLE agent_tool_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            identity_key TEXT NOT NULL,
+            tool_name TEXT NOT NULL,
             content TEXT NOT NULL,
             created_on INTEGER NOT NULL,
             expires_on INTEGER NOT NULL)
@@ -72,6 +82,38 @@ class SqliteAgentMemoryStoreTest {
         store.load(context("bob", "trip-b"), config).stream()
             .map(message -> message.content())
             .toList());
+  }
+
+  @Test
+  void retainsToolEvidenceForTheNextTurn() {
+    Clock clock = Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC);
+    SqliteAgentMemoryStore store = new SqliteAgentMemoryStore(database.toString(), clock);
+    AgentContext alice = context("alice", "trip-a");
+    AgentConfig config = config(2, Duration.ofHours(1));
+
+    store.append(alice, "who is jill", "Jill is active.", config);
+    store.appendToolEvidence(alice, "user_message_history", "{\"nick\":\"jill\"}", config);
+
+    assertTrue(
+        store.load(alice, config).stream()
+            .map(message -> message.content())
+            .anyMatch(content -> content.contains("user_message_history")));
+  }
+
+  @Test
+  void expiresToolEvidenceWithoutRetainingItInConversationMemory() {
+    AgentContext alice = context("alice", "trip-a");
+    AgentConfig config = config(2, Duration.ofHours(1));
+    new SqliteAgentMemoryStore(
+            database.toString(), Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC))
+        .appendToolEvidence(alice, "room_users", "{\"count\":2}", config);
+
+    var messages =
+        new SqliteAgentMemoryStore(
+                database.toString(), Clock.fixed(Instant.ofEpochSecond(3_701), ZoneOffset.UTC))
+            .load(alice, config);
+
+    assertTrue(messages.isEmpty());
   }
 
   @Test

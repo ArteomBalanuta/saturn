@@ -28,9 +28,7 @@ public record AgentToolDescriptor(
     effect = Objects.requireNonNull(effect, "effect");
     resultMode = Objects.requireNonNull(resultMode, "resultMode");
     parameters = Objects.requireNonNull(parameters, "parameters").deepCopy();
-    if (!parameters.has("type") || !parameters.isJsonObject()) {
-      throw new IllegalArgumentException("parameters must be a JSON object schema");
-    }
+    AgentToolSchemaValidator.validateSchema(parameters);
     whenToUse = immutableList(whenToUse, "whenToUse");
     whenNotToUse = immutableList(whenNotToUse, "whenNotToUse");
     examples = immutableList(examples, "examples");

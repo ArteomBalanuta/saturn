@@ -7,6 +7,7 @@ import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.service.impl.CommandOutputCapture;
 
 @Slf4j
 public final class EngineSaturnCommandGateway implements SaturnCommandGateway {
@@ -32,5 +33,22 @@ public final class EngineSaturnCommandGateway implements SaturnCommandGateway {
           "Agent-triggered Saturn command failed, command={}: {}", command, exception.getMessage());
       return false;
     }
+  }
+
+  @Override
+  public CommandExecution executeWithResult(
+      AgentContext context, String command, String arguments) {
+    CommandOutputCapture.Captured<Boolean> captured =
+        CommandOutputCapture.capture(() -> execute(context, command, arguments));
+    if (!captured.value()) {
+      return new CommandExecution(false, "");
+    }
+    String modelData = String.join("\n", captured.chatMessages());
+    if (modelData.isBlank()) {
+      modelData =
+          "Saturn command '%s' executed; its output was sent to the room. No other Saturn command was executed."
+              .formatted(command);
+    }
+    return new CommandExecution(true, modelData);
   }
 }

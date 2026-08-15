@@ -1,6 +1,7 @@
 package org.saturn.app.agent.tool;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.moandjiezana.toml.Toml;
 import java.sql.DriverManager;
@@ -32,6 +33,34 @@ class EngineSaturnCommandGatewayTest {
       boolean executed = gateway.execute(context(), "time", "");
 
       assertFalse(executed);
+    }
+  }
+
+  @Test
+  void returnsOnlyTheAgentTriggeredCommandOutputToTheModel() throws Exception {
+    try (var connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+        var statement = connection.createStatement()) {
+      statement.executeUpdate(
+          """
+          CREATE TABLE executed_commands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trip TEXT,
+            command_name TEXT,
+            arguments TEXT,
+            status TEXT,
+            created_on INTEGER NOT NULL,
+            channel TEXT)
+          """);
+      EngineImpl engine = new EngineImpl(connection, config(), EngineType.HOST);
+      EngineSaturnCommandGateway gateway = new EngineSaturnCommandGateway(engine);
+
+      SaturnCommandGateway.CommandExecution result =
+          gateway.executeWithResult(context(), "version", "");
+
+      assertTrue(result.executed());
+      assertTrue(result.modelData().startsWith("@alice "));
+      assertFalse(result.modelData().contains("Saturn command 'version' executed"));
+      assertTrue(engine.outgoingMessageQueue.contains(result.modelData()));
     }
   }
 

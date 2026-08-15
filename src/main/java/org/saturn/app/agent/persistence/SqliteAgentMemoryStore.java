@@ -57,9 +57,39 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
         }
       }
       Collections.reverse(result);
+      result.addAll(loadToolEvidence(connection, context, config, now));
       return List.copyOf(result);
     } catch (SQLException exception) {
       throw persistenceFailure("load", exception);
+    }
+  }
+
+  private List<LlmMessage> loadToolEvidence(
+      Connection connection, AgentContext context, AgentConfig config, long now) throws SQLException {
+    String sql =
+        """
+        SELECT tool_name, content
+        FROM agent_tool_memory
+        WHERE identity_key = ? AND expires_on > ?
+        ORDER BY created_on DESC, id DESC
+        LIMIT ?
+        """;
+    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setString(1, context.memoryKey());
+      statement.setLong(2, now);
+      statement.setInt(3, config.memoryTurns());
+      List<LlmMessage> evidence = new ArrayList<>();
+      try (ResultSet resultSet = statement.executeQuery()) {
+        while (resultSet.next()) {
+          evidence.add(
+              LlmMessage.assistant(
+                  "[Internal tool evidence from %s]\n%s"
+                      .formatted(resultSet.getString("tool_name"), resultSet.getString("content")),
+                  List.of()));
+        }
+      }
+      Collections.reverse(evidence);
+      return evidence;
     }
   }
 
@@ -86,6 +116,35 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
       connection.commit();
     } catch (SQLException exception) {
       throw persistenceFailure("append", exception);
+    }
+  }
+
+  @Override
+  public void appendToolEvidence(
+      AgentContext context, String toolName, String content, AgentConfig config) {
+    long createdOn = clock.instant().getEpochSecond();
+    long expiresOn = createdOn + config.memoryTtl().toSeconds();
+    String sql =
+        """
+        INSERT INTO agent_tool_memory(identity_key, tool_name, content, created_on, expires_on)
+        VALUES (?, ?, ?, ?, ?)
+        """;
+    try (Connection connection = open();
+        PreparedStatement cleanup =
+            connection.prepareStatement("DELETE FROM agent_tool_memory WHERE expires_on <= ?");
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      connection.setAutoCommit(false);
+      cleanup.setLong(1, createdOn);
+      cleanup.executeUpdate();
+      statement.setString(1, context.memoryKey());
+      statement.setString(2, toolName);
+      statement.setString(3, content);
+      statement.setLong(4, createdOn);
+      statement.setLong(5, expiresOn);
+      statement.executeUpdate();
+      connection.commit();
+    } catch (SQLException exception) {
+      throw persistenceFailure("append tool evidence", exception);
     }
   }
 

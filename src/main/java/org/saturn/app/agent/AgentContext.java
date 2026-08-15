@@ -11,7 +11,8 @@ public record AgentContext(
     String hash,
     boolean whisper,
     List<String> roomUsers,
-    Set<AgentCapability> capabilities) {
+    Set<AgentCapability> capabilities,
+    String moderationTarget) {
   public AgentContext {
     Objects.requireNonNull(room, "room");
     Objects.requireNonNull(nick, "nick");
@@ -23,7 +24,18 @@ public record AgentContext(
 
   public AgentContext(
       String room, String nick, String trip, String hash, boolean whisper, List<String> roomUsers) {
-    this(room, nick, trip, hash, whisper, roomUsers, Set.of());
+    this(room, nick, trip, hash, whisper, roomUsers, Set.of(), null);
+  }
+
+  public AgentContext(
+      String room,
+      String nick,
+      String trip,
+      String hash,
+      boolean whisper,
+      List<String> roomUsers,
+      Set<AgentCapability> capabilities) {
+    this(room, nick, trip, hash, whisper, roomUsers, capabilities, null);
   }
 
   public boolean hasCapability(AgentCapability capability) {

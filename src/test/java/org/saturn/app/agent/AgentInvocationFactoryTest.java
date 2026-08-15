@@ -35,7 +35,26 @@ class AgentInvocationFactoryTest {
     assertEquals("hash-a", invocation.context().hash());
     assertEquals(java.util.List.of("bob"), invocation.context().roomUsers());
     assertTrue(invocation.context().whisper());
+    assertEquals("hello", invocation.currentMessageText());
     assertTrue(invocation.context().capabilities().isEmpty());
+    engine.stop();
+  }
+
+  @Test
+  void retainsTheEscapedInboundTextUsedForRoomContextExclusion() {
+    var engine = TestSupport.engine();
+    installRoleResolver(engine, Role.REGULAR);
+    AgentInvocationFactory factory =
+        new AgentInvocationFactory(AgentParticipationConfig.from(new Toml()));
+
+    AgentInvocation invocation =
+        factory.create(
+            engine,
+            TestSupport.chatMessage("*l first line\nsecond line", "alice", "trip-a"),
+            "first line second line",
+            AgentInvocationMode.DIRECT);
+
+    assertEquals("*l first line\\nsecond line", invocation.currentMessageText());
     engine.stop();
   }
 

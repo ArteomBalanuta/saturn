@@ -4,7 +4,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 public record AgentInvocation(
-    String requestId, AgentContext context, String prompt, AgentInvocationMode mode) {
+    String requestId,
+    AgentContext context,
+    String prompt,
+    AgentInvocationMode mode,
+    String currentMessageText) {
   public AgentInvocation {
     if (requestId == null || requestId.isBlank()) {
       throw new IllegalArgumentException("requestId must not be blank");
@@ -17,14 +21,18 @@ public record AgentInvocation(
   }
 
   public AgentInvocation(String requestId, AgentContext context, String prompt) {
-    this(requestId, context, prompt, AgentInvocationMode.DIRECT);
+    this(requestId, context, prompt, AgentInvocationMode.DIRECT, null);
+  }
+
+  public AgentInvocation(String requestId, AgentContext context, String prompt, AgentInvocationMode mode) {
+    this(requestId, context, prompt, mode, null);
   }
 
   public AgentInvocation(AgentContext context, String prompt) {
-    this(UUID.randomUUID().toString(), context, prompt, AgentInvocationMode.DIRECT);
+    this(UUID.randomUUID().toString(), context, prompt, AgentInvocationMode.DIRECT, null);
   }
 
   public AgentInvocation(AgentContext context, String prompt, AgentInvocationMode mode) {
-    this(UUID.randomUUID().toString(), context, prompt, mode);
+    this(UUID.randomUUID().toString(), context, prompt, mode, null);
   }
 }

@@ -23,13 +23,22 @@ public final class AgentToolExecutor {
   private final Map<String, Integer> failuresByTool = new HashMap<>();
   private final Set<String> disabledTools = new HashSet<>();
   private final Set<String> successfulTools = new HashSet<>();
+  private final Set<String> allowedTools;
 
   public AgentToolExecutor(AgentToolRegistry registry, AgentConfig config) {
+    this(registry, config, Set.of());
+  }
+
+  public AgentToolExecutor(AgentToolRegistry registry, AgentConfig config, Set<String> allowedTools) {
     this.registry = registry;
     this.config = config;
+    this.allowedTools = Set.copyOf(allowedTools);
   }
 
   public AgentToolResult execute(AgentContext context, LlmToolCall call) {
+    if (!allowedTools.isEmpty() && !allowedTools.contains(call.name())) {
+      return AgentToolResult.error(call.id(), call.name(), "Tool is not allowed in this invocation mode");
+    }
     AgentTool tool = registry.find(context, call.name()).orElse(null);
     if (tool == null) {
       return AgentToolResult.error(call.id(), call.name(), "Unknown tool: " + call.name());
@@ -38,7 +47,16 @@ public final class AgentToolExecutor {
       return AgentToolResult.error(
           call.id(), call.name(), "Tool disabled after repeated failures: " + call.name());
     }
-    Set<String> missingPrerequisites = new HashSet<>(tool.requiredSuccessfulTools());
+    AgentToolDescriptor descriptor;
+    try {
+      descriptor = tool.descriptor(context);
+    } catch (RuntimeException exception) {
+      return AgentToolResult.error(call.id(), call.name(), "Invalid tool contract");
+    }
+    if (!tool.name().equals(descriptor.name())) {
+      return AgentToolResult.error(call.id(), call.name(), "Tool contract name mismatch");
+    }
+    Set<String> missingPrerequisites = new HashSet<>(descriptor.requiredSuccessfulTools());
     missingPrerequisites.removeAll(successfulTools);
     if (!missingPrerequisites.isEmpty()) {
       return AgentToolResult.error(
@@ -55,8 +73,14 @@ public final class AgentToolExecutor {
       return AgentToolResult.error(call.id(), call.name(), "Invalid tool arguments");
     }
 
+    String validationError = AgentToolSchemaValidator.validateArguments(descriptor.parameters(), arguments);
+    if (validationError != null) {
+      recordFailure(call.name());
+      return AgentToolResult.error(call.id(), call.name(), validationError);
+    }
+
     String invocationKey = call.name() + "|" + canonicalJson(arguments);
-    if (!invocationKeys.add(invocationKey)) {
+    if (invocationKeys.contains(invocationKey)) {
       return AgentToolResult.error(
           call.id(), call.name(), "Duplicate tool call; use the previous result");
     }
@@ -73,6 +97,7 @@ public final class AgentToolExecutor {
       if (result.isError()) {
         recordFailure(call.name());
       } else {
+        invocationKeys.add(invocationKey);
         successfulTools.add(call.name());
       }
       return result;

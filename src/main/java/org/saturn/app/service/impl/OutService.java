@@ -33,18 +33,21 @@ public class OutService {
 
     /* TODO: remove all the manual escaping and use `StringEscapeUtils.escapeJava(message)` */
     queue.add(message);
+    CommandOutputCapture.recordChat(message);
     return message;
   }
 
   public String enqueueMessageForSending(String message) {
     message = normalizeForChatPayload(message);
     queue.add(message);
+    CommandOutputCapture.recordChat(message);
     return message;
   }
 
   public void enqueueRawMessageForSending(String message) {
     log.debug("raw payload sent: {}", message);
     rawMessages.add(message);
+    CommandOutputCapture.recordRaw(message);
   }
 
   static String normalizeForChatPayload(String message) {

@@ -25,8 +25,20 @@ final class AgentFreshnessPolicy {
               + "\\s+user\\s+(?<target>"
               + NICK
               + ")\\b.*");
+  private static final Pattern QUOTED_NAMED_USER_PROFILE =
+      Pattern.compile(
+          "(?is).*\\b(?:tell\\s+me\\s+about|describe|profile|summari[sz]e|analy[sz]e)"
+              + "\\s+user\\s+named\\s+[\\\"'](?<target>"
+              + NICK
+              + ")[\\\"'].*");
+  private static final Pattern TRAILING_USER_TARGET =
+      Pattern.compile(
+          "(?is).*\\b(?:tell\\s+me\\s+about|describe|profile|summari[sz]e|analy[sz]e)\\s+"
+              + "(?<target>"
+              + NICK
+              + ")\\s+(?:user|member)\\b.*");
   private static final Set<String> NON_NICK_PROFILE_TERMS =
-      Set.of("experience", "interface", "research", "behavior", "behaviour");
+      Set.of("experience", "interface", "research", "behavior", "behaviour", "java", "here", "there", "shakespeare", "rome");
   private static final Pattern SIMPLE_USER_PROFILE =
       Pattern.compile(
           "(?is).*\\btell\\s+me\\s+about\\s+"
@@ -81,9 +93,39 @@ final class AgentFreshnessPolicy {
     return Optional.empty();
   }
 
+  Optional<String> requiredNick(String prompt, List<LlmMessage> history, List<String> roomUsers) {
+    Optional<String> current = extractNick(prompt, roomUsers);
+    if (current.isPresent()) {
+      return current;
+    }
+    if (isHistoryFollowUp(prompt)) {
+      return latestUser(history).flatMap(previous -> extractNick(previous, roomUsers));
+    }
+    return Optional.empty();
+  }
+
+  private static Optional<String> extractNick(String prompt, List<String> roomUsers) {
+    for (Pattern pattern :
+        List.of(
+            QUOTED_NAMED_USER_PROFILE,
+            PREFIX_USER_PROFILE,
+            TRAILING_USER_TARGET,
+            SIMPLE_USER_PROFILE,
+            WHO_IS_USER,
+            USER_SPEECH,
+            USER_HISTORY)) {
+      var matcher = pattern.matcher(prompt == null ? "" : prompt);
+      if (matcher.matches() && matchesTrustedRoomUser(pattern, prompt, roomUsers)) {
+        return Optional.of(withoutMention(matcher.group("target")));
+      }
+    }
+    return Optional.empty();
+  }
+
   private static boolean requiresNamedUserHistory(String prompt, List<String> roomUsers) {
     return prompt != null
         && (EXPLICIT_USER_PROFILE.matcher(prompt).matches()
+            || QUOTED_NAMED_USER_PROFILE.matcher(prompt).matches()
             || matchesExplicitPrefixUser(prompt)
             || POSSESSIVE_USER_PROFILE.matcher(prompt).matches()
             || EXPLICIT_WHO_IS_USER.matcher(prompt).matches()
@@ -111,9 +153,12 @@ final class AgentFreshnessPolicy {
     if (target.startsWith("@")) {
       return true;
     }
-    return roomUsers.stream()
-        .map(AgentFreshnessPolicy::withoutMention)
-        .anyMatch(target::equalsIgnoreCase);
+    if (NON_NICK_PROFILE_TERMS.contains(withoutMention(target).toLowerCase())) {
+      return false;
+    }
+    // A nick may be offline. Presence is useful for disambiguation, but it must not
+    // decide whether the database is consulted for a profile request.
+    return true;
   }
 
   private static String withoutMention(String nick) {

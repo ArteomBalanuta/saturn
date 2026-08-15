@@ -1084,19 +1084,7 @@ class DefaultAgentRouterTest {
     ScriptedClient client =
         new ScriptedClient(
             new LlmResponse(oldAnswer, List.of(), "stop"),
-            new LlmResponse(
-                "",
-                List.of(
-                    new LlmToolCall(
-                        "history-current",
-                        "user_message_history",
-                        "{\"nick\":\"jill\"}")),
-                "tool_calls"),
-            new LlmResponse(
-                "I analyzed 1 public message from 1700000000000 to 1700000000000. "
-                    + "Jill discussed weather in Wuhan.",
-                List.of(),
-                "stop"));
+            new LlmResponse("Jill has discussed weather in Wuhan.", List.of(), "stop"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
             config(4, 2_000),
@@ -1108,10 +1096,9 @@ class DefaultAgentRouterTest {
         router.route(new AgentInvocation(context(), "tell me about jill user"));
 
     assertEquals(1, historyCalls.get());
-    assertEquals(3, client.requests.size());
-    assertEquals(Set.of("user_message_history"), toolNames(client.requests.get(1)));
+    assertEquals(2, client.requests.size());
     String freshEvidence =
-        client.requests.get(2).messages().stream()
+        client.requests.get(1).messages().stream()
             .filter(message -> "tool".equals(message.role()))
             .findFirst()
             .orElseThrow()
@@ -1120,10 +1107,136 @@ class DefaultAgentRouterTest {
     assertTrue(freshEvidence.contains("\"oldestCreatedOn\":1700000000000"));
     assertTrue(freshEvidence.contains("\"newestCreatedOn\":1700000000000"));
     assertEquals(
-        "I analyzed 1 public message from 1700000000000 to 1700000000000. "
-            + "Jill discussed weather in Wuhan.",
+        "Jill has discussed weather in Wuhan.",
         result.content());
     assertEquals(result.content(), memory.appended.getLast());
+  }
+
+  @org.junit.jupiter.api.Disabled("Superseded by router-owned mandatory history lookup")
+  @Test
+  void rejectsFreshHistoryForADifferentNick() {
+    AgentTool historyTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "user_message_history";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), "wrong user's history");
+          }
+        };
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "history-wrong", "user_message_history", "{\"nick\":\"nex\"}")),
+                "tool_calls"),
+            new LlmResponse("Nex is active.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(historyTool).freeze(),
+            AgentMemoryStore.none());
+
+    assertThrows(
+        AgentRoutingException.class,
+        () -> router.route(new AgentInvocation(context(), "tell me about jill user")));
+  }
+
+  @Test
+  void executesRequiredHistoryWhenTheProviderDoesNotCallIt() throws Exception {
+    AtomicInteger historyCalls = new AtomicInteger();
+    AgentTool historyTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "user_message_history";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            historyCalls.incrementAndGet();
+            assertEquals("jill", arguments.get("nick").getAsString());
+            return AgentToolResult.success(name(), "Jill posted recently.");
+          }
+        };
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("I need current history first.", List.of(), "stop"),
+            new LlmResponse("Jill posted recently.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(historyTool).freeze(),
+            AgentMemoryStore.none());
+
+    AgentResult result = router.route(new AgentInvocation(context(), "tell me about jill user"));
+
+    assertEquals("Jill posted recently.", result.content());
+    assertEquals(1, historyCalls.get());
+    assertEquals(2, client.requests.size());
+    assertTrue(
+        client.requests.get(1).messages().stream()
+            .anyMatch(message -> "tool".equals(message.role()) && message.content().contains("Jill")));
+  }
+
+  @Test
+  void doesNotRequireUserHistoryForModerationInvocations() throws Exception {
+    ScriptedClient client = new ScriptedClient(new LlmResponse("No action.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000), client, new AgentToolRegistry().freeze(), AgentMemoryStore.none());
+
+    AgentResult result =
+        router.route(
+            new AgentInvocation(
+                context(), "tell me about jill user", AgentInvocationMode.MODERATION));
+
+    assertFalse(result.shouldReply());
+    assertEquals(1, client.requests.size());
+  }
+
+  @Test
+  void retriesAToolAfterAnAllErrorBatch() throws Exception {
+    AtomicInteger attempts = new AtomicInteger();
+    AgentTool retryingTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "retrying";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return attempts.incrementAndGet() == 1
+                ? AgentToolResult.error(null, name(), "temporary failure")
+                : AgentToolResult.success(name(), "recovered");
+          }
+        };
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "", List.of(new LlmToolCall("retry-1", "retrying", "{}")), "tool_calls"),
+            new LlmResponse(
+                "", List.of(new LlmToolCall("retry-2", "retrying", "{}")), "tool_calls"),
+            new LlmResponse("Recovered.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(retryingTool).freeze(),
+            AgentMemoryStore.none());
+
+    AgentResult result = router.route(new AgentInvocation(context(), "retry the tool"));
+
+    assertEquals("Recovered.", result.content());
+    assertEquals(2, attempts.get());
   }
 
   @Test
@@ -1142,7 +1255,9 @@ class DefaultAgentRouterTest {
               result.add("rows", rows);
               return result;
             });
-    String groundedAnswer = "Jill recently discussed the weather in Wuhan.";
+    String groundedAnswer =
+        "I analyzed 1 public message from 1700000000000 to 1700000000000. "
+            + "Jill recently discussed the weather in Wuhan.";
     ScriptedClient client =
         new ScriptedClient(
             new LlmResponse(
@@ -1226,14 +1341,6 @@ class DefaultAgentRouterTest {
     ScriptedClient client =
         new ScriptedClient(
             new LlmResponse(oldAnswer, List.of(), "stop"),
-            new LlmResponse(
-                "",
-                List.of(
-                    new LlmToolCall(
-                        "history-current",
-                        "user_message_history",
-                        "{\"nick\":\"jill\"}")),
-                "tool_calls"),
             new LlmResponse(oldAnswer, List.of(), "stop"),
             new LlmResponse(freshAnswer, List.of(), "stop"));
     DefaultAgentRouter router =
@@ -1247,13 +1354,14 @@ class DefaultAgentRouterTest {
         router.route(new AgentInvocation(context(), "tell me about jill user"));
 
     assertEquals(freshAnswer, result.content());
-    assertEquals(4, client.requests.size());
-    assertTrue(client.requests.get(3).tools().isEmpty());
+    assertEquals(3, client.requests.size());
+    assertTrue(client.requests.get(2).tools().isEmpty());
     assertTrue(
-        client.requests.get(3).messages().getLast().content().contains("fresh history"));
+        client.requests.get(2).messages().getLast().content().contains("fresh history"));
     assertEquals(freshAnswer, memory.appended.getLast());
   }
 
+  @org.junit.jupiter.api.Disabled("Superseded by router-owned mandatory history lookup")
   @Test
   void rejectsFreshnessCorrectionThatStillAvoidsTheRequiredTool() {
     String oldAnswer = "Jill is a user of modest but distinct activity.";
@@ -1290,6 +1398,7 @@ class DefaultAgentRouterTest {
     assertTrue(memory.appended.isEmpty());
   }
 
+  @org.junit.jupiter.api.Disabled("Superseded by router-owned mandatory history lookup")
   @Test
   void freshnessCorrectionCannotExecuteADifferentTool() {
     String oldAnswer = "Jill is a user of modest but distinct activity.";
@@ -1342,6 +1451,7 @@ class DefaultAgentRouterTest {
     assertTrue(memory.appended.isEmpty());
   }
 
+  @org.junit.jupiter.api.Disabled("Superseded by router-owned mandatory history lookup")
   @Test
   void freshnessGateRunsBeforeGenericActionClaimCorrection() {
     AtomicInteger commandExecutions = new AtomicInteger();
@@ -1385,6 +1495,7 @@ class DefaultAgentRouterTest {
     assertEquals(Set.of("user_message_history"), toolNames(client.requests.get(1)));
   }
 
+  @org.junit.jupiter.api.Disabled("Superseded by router-owned mandatory history lookup")
   @Test
   void freshnessGateRunsBeforeCommandProseCorrection() {
     AtomicInteger commandExecutions = new AtomicInteger();
@@ -1424,7 +1535,7 @@ class DefaultAgentRouterTest {
 
     assertTrue(exception.getMessage().contains("fresh-data tool"));
     assertEquals(0, commandExecutions.get());
-    assertEquals(2, client.requests.size());
+    assertEquals(1, client.requests.size());
     assertEquals(Set.of("user_message_history"), toolNames(client.requests.get(1)));
   }
 
@@ -1468,7 +1579,7 @@ class DefaultAgentRouterTest {
             () -> router.route(new AgentInvocation(context(), "tell me about jill user")));
 
     assertTrue(exception.getMessage().contains("fresh-data tool failed"));
-    assertEquals(2, client.requests.size());
+    assertEquals(1, client.requests.size());
     assertTrue(memory.appended.isEmpty());
   }
 
@@ -1541,6 +1652,25 @@ class DefaultAgentRouterTest {
             .route(new AgentInvocation(context(), "status"));
 
     assertEquals(repeatedAnswer, result.content());
+    assertEquals(1, client.requests.size());
+  }
+
+  @Test
+  void permitsTheSameAnswerWhenAnotherUserRepeatsTheSamePrompt() throws Exception {
+    String answer = "Everything is operational.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @alice in #programming:\nstatus"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(answer, List.of())));
+    ScriptedClient client = new ScriptedClient(new LlmResponse(answer, List.of(), "stop"));
+    AgentContext bob =
+        new AgentContext("programming", "bob", "trip-b", "hash-b", false, List.of("alice", "bob"));
+
+    AgentResult result = routerWithRunCommand(client, memory).route(new AgentInvocation(bob, "status"));
+
+    assertEquals(answer, result.content());
     assertEquals(1, client.requests.size());
   }
 

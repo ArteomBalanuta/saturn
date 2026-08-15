@@ -60,7 +60,31 @@ final class AgentCommandProseGuard {
     if (fenced.isEmpty()) {
       fenced = findIn(content, TILDE_FENCED_CODE, 1);
     }
-    return fenced.isPresent() ? fenced : findIn(content, INLINE_CODE, 2);
+    if (fenced.isPresent()) {
+      return fenced;
+    }
+    Optional<String> inline = findIn(content, INLINE_CODE, 2);
+    if (inline.isPresent()) {
+      return inline;
+    }
+    for (String line : content.lines().toList()) {
+      String stripped = line.strip();
+      Optional<String> plain = commandAtStart(stripped);
+      if (plain.isPresent() && !looksLikeNarrative(stripped, plain.get())) {
+        return plain;
+      }
+    }
+    return Optional.empty();
+  }
+
+  private static boolean looksLikeNarrative(String line, String command) {
+    String remainder = line.substring(Math.min(line.length(), command.length())).stripLeading();
+    if (remainder.isEmpty()) {
+      return false;
+    }
+    String firstWord = remainder.split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
+    return Set.of("is", "was", "were", "are", "has", "have", "had", "will", "would", "can", "could")
+        .contains(firstWord);
   }
 
   boolean matches(LlmToolCall call, String expectedCommand) {

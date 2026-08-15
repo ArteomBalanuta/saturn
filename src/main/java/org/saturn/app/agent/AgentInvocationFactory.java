@@ -2,6 +2,7 @@ package org.saturn.app.agent;
 
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.UUID;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -50,7 +51,8 @@ public final class AgentInvocationFactory {
             message.isWhisper(),
             engine.currentChannelUsers.stream().map(user -> user.getNick()).toList(),
             capabilities);
-    return new AgentInvocation(context, prompt, mode);
+    return new AgentInvocation(
+        UUID.randomUUID().toString(), context, prompt, mode, message.getText());
   }
 
   private static boolean isDynamicSqlAdmin(EngineImpl engine, String trip) {

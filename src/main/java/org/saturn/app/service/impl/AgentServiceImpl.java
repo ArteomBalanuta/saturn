@@ -48,7 +48,9 @@ public final class AgentServiceImpl implements AgentService {
       return false;
     }
     if (closed.get()) {
-      reply(invocation, "The agent is unavailable because Saturn is shutting down.");
+      if (invocation.mode() != AgentInvocationMode.MODERATION) {
+        reply(invocation, "The agent is unavailable because Saturn is shutting down.");
+      }
       return false;
     }
     if (!admission.tryAcquire()) {
@@ -116,6 +118,8 @@ public final class AgentServiceImpl implements AgentService {
           result.correlationId());
       if (result.shouldReply()) {
         reply(invocation, result.content());
+      } else if (invocation.mode() == AgentInvocationMode.MODERATION) {
+        replyFlusher.run();
       }
     } catch (AgentRoutingException exception) {
       log.warn(

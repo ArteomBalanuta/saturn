@@ -10,6 +10,7 @@ import com.google.gson.JsonParser;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.AgentCapability;
@@ -25,6 +26,32 @@ import org.saturn.app.agent.sql.AgentSqlPolicyException;
 import org.saturn.app.agent.sql.ValidatedAgentSql;
 
 class SaturnAgentToolsTest {
+  @Test
+  void rejectsModerationCommandForSomeoneOtherThanTheTrustedTarget() {
+    AtomicInteger executions = new AtomicInteger();
+    RunCommandTool tool = new RunCommandTool((context, command, arguments) -> {
+      executions.incrementAndGet();
+      return true;
+    });
+    AgentContext context =
+        new AgentContext(
+            "programming",
+            "saturn",
+            "bot-trip",
+            "bot-hash",
+            false,
+            List.of("alice", "bob"),
+            Set.of(AgentCapability.MODERATION_COMMANDS),
+            "alice");
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("command", "mute");
+    arguments.addProperty("arguments", "bob");
+
+    AgentToolResult result = tool.execute(context, arguments);
+
+    assertTrue(result.isError());
+    assertEquals(0, executions.get());
+  }
   @Test
   void roomAndDatabaseToolsReturnStructuredData() {
     AgentContext context = context();

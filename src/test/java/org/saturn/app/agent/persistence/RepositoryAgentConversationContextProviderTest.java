@@ -48,11 +48,76 @@ class RepositoryAgentConversationContextProviderTest {
 
     var rows = JsonParser.parseString(hydrated).getAsJsonObject().getAsJsonArray("rows");
     assertEquals(2, rows.size());
-    assertEquals("newest public", rows.get(0).getAsJsonObject().get("message").getAsString());
+    assertEquals("newer public", rows.get(0).getAsJsonObject().get("message").getAsString());
     assertTrue(hydrated.contains("newer public"));
     assertFalse(hydrated.contains("older public"));
     assertFalse(hydrated.contains("whisper secret"));
     assertFalse(hydrated.contains("legacy unknown"));
     assertFalse(hydrated.contains("other room"));
+  }
+
+  @Test
+  void excludesTheNewestMatchingInboundMessageFromRoomContext() throws Exception {
+    Path database = tempDir.resolve("agent-context-exclude.db");
+    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate(
+          """
+          CREATE TABLE messages (
+            id INTEGER PRIMARY KEY, trip TEXT, name TEXT NOT NULL, hash TEXT,
+            message TEXT, created_on INTEGER NOT NULL, channel TEXT, visibility TEXT)
+          """);
+      statement.executeUpdate(
+          """
+          INSERT INTO messages(trip,name,hash,message,created_on,channel,visibility) VALUES
+          ('trip-a','alice','hash-a','earlier',1,'lounge','PUBLIC'),
+          ('trip-a','alice','hash-a','current',2,'lounge','PUBLIC')
+          """);
+    }
+    RepositoryAgentConversationContextProvider provider =
+        new RepositoryAgentConversationContextProvider(
+            new SqliteAgentQueryRepository(database.toString()), 10);
+    AgentContext context =
+        new AgentContext("lounge", "alice", "trip-a", "hash-a", false, List.of("alice"));
+
+    String hydrated = provider.load(context, "alice", "current");
+
+    assertTrue(hydrated.contains("earlier"));
+    assertFalse(hydrated.contains("current"));
+  }
+
+  @Test
+  void preservesAnOlderDuplicateWhenExcludingTheCurrentInboundMessage() throws Exception {
+    Path database = tempDir.resolve("agent-context-duplicate.db");
+    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate(
+          """
+          CREATE TABLE messages (
+            id INTEGER PRIMARY KEY, trip TEXT, name TEXT NOT NULL, hash TEXT,
+            message TEXT, created_on INTEGER NOT NULL, channel TEXT, visibility TEXT)
+          """);
+      statement.executeUpdate(
+          """
+          INSERT INTO messages(trip,name,hash,message,created_on,channel,visibility) VALUES
+          ('trip-a','alice','hash-a','repeat',1,'lounge','PUBLIC'),
+          ('trip-b','bob','hash-b','between',2,'lounge','PUBLIC'),
+          ('trip-a','alice','hash-a','repeat',3,'lounge','PUBLIC')
+          """);
+    }
+    RepositoryAgentConversationContextProvider provider =
+        new RepositoryAgentConversationContextProvider(
+            new SqliteAgentQueryRepository(database.toString()), 10);
+    AgentContext context =
+        new AgentContext("lounge", "alice", "trip-a", "hash-a", false, List.of("alice"));
+
+    var rows =
+        JsonParser.parseString(provider.load(context, "alice", "repeat"))
+            .getAsJsonObject()
+            .getAsJsonArray("rows");
+
+    assertEquals(2, rows.size());
+    assertEquals("repeat", rows.get(0).getAsJsonObject().get("message").getAsString());
+    assertEquals("between", rows.get(1).getAsJsonObject().get("message").getAsString());
   }
 }

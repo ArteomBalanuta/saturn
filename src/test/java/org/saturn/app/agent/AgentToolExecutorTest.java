@@ -113,6 +113,76 @@ class AgentToolExecutorTest {
     assertEquals(1, sqlExecutions.get());
   }
 
+  @Test
+  void rejectsArgumentsOutsideThePublishedSchemaConstraints() {
+    AtomicInteger executions = new AtomicInteger();
+    AgentTool constrained =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "constrained";
+          }
+
+          @Override
+          public JsonObject parameters() {
+            JsonObject mode = new JsonObject();
+            mode.addProperty("type", "string");
+            mode.add("enum", new com.google.gson.JsonArray());
+            mode.getAsJsonArray("enum").add("brief");
+            JsonObject limit = new JsonObject();
+            limit.addProperty("type", "integer");
+            limit.addProperty("minimum", 1);
+            limit.addProperty("maximum", 3);
+            JsonObject name = new JsonObject();
+            name.addProperty("type", "string");
+            name.addProperty("minLength", 2);
+            name.addProperty("maxLength", 4);
+            JsonObject properties = new JsonObject();
+            properties.add("mode", mode);
+            properties.add("limit", limit);
+            properties.add("name", name);
+            JsonObject schema = new JsonObject();
+            schema.addProperty("type", "object");
+            schema.add("properties", properties);
+            schema.addProperty("additionalProperties", false);
+            return schema;
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            executions.incrementAndGet();
+            return AgentToolResult.success(name(), arguments);
+          }
+        };
+    AgentToolExecutor executor =
+        new AgentToolExecutor(new AgentToolRegistry().register(constrained).freeze(), config());
+
+    assertFalse(
+        executor
+            .execute(
+                null,
+                new LlmToolCall(
+                    "valid", "constrained", "{\"mode\":\"brief\",\"limit\":2,\"name\":\"name\"}"))
+            .isError());
+    assertTrue(
+        executor
+            .execute(null, new LlmToolCall("enum", "constrained", "{\"mode\":\"long\"}"))
+            .isError());
+    assertTrue(
+        executor
+            .execute(null, new LlmToolCall("minimum", "constrained", "{\"limit\":0}"))
+            .isError());
+    assertTrue(
+        executor
+            .execute(null, new LlmToolCall("length", "constrained", "{\"name\":\"a\"}"))
+            .isError());
+    assertTrue(
+        executor
+            .execute(null, new LlmToolCall("unknown", "constrained", "{\"unknown\":true}"))
+            .isError());
+    assertEquals(1, executions.get());
+  }
+
   private AgentTool successfulTool(String name) {
     return new AgentTool() {
       @Override

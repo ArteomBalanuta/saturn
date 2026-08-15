@@ -12,14 +12,13 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.llm.LlmClient;
 import org.saturn.app.agent.llm.LlmException;
 import org.saturn.app.agent.llm.LlmMessage;
 import org.saturn.app.agent.llm.LlmRequest;
 import org.saturn.app.agent.llm.LlmResponse;
+import org.saturn.app.agent.llm.LlmToolCall;
 
 @Slf4j
 public final class DefaultAgentRouter implements AgentRouter {
@@ -37,12 +36,6 @@ public final class DefaultAgentRouter implements AgentRouter {
       PROMPTS.text("router-failure-placeholder-correction.txt").strip();
   private static final String STALE_RESPONSE_CORRECTION = PROMPTS.text("router-stale-response-correction.txt");
   private static final String UNVERIFIED_ACTION_CORRECTION = PROMPTS.text("router-unverified-action-correction.txt");
-  private static final Pattern LEGACY_OPENING =
-      Pattern.compile(
-          "(?is)^\\s*Ah,\\s*[^\\n.!?:]{1,80}[.!?:]\\s*"
-              + "(?:You ask about\\s+[^\\n.!?]{1,120}[.!?]\\s*)?");
-  private static final Pattern MARKDOWN_LIST_ITEM =
-      Pattern.compile("^\\h*(?:[*•]|\\d+[.)])\\h+(.+)$");
 
   private final AgentConfig config;
   private final LlmClient client;
@@ -51,7 +44,8 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentParticipationConfig participationConfig;
   private final AgentConversationContextProvider conversationContextProvider;
   private final AgentSystemPrompt systemPrompt;
-  private final AgentFreshnessPolicy freshnessPolicy = new AgentFreshnessPolicy();
+  private final AgentResponseSanitizer responseSanitizer = new AgentResponseSanitizer();
+  private final AgentRequestAssembler requestAssembler;
   private final ReentrantLock[] sessionLocks = sessionLocks();
 
   public DefaultAgentRouter(
@@ -79,6 +73,7 @@ public final class DefaultAgentRouter implements AgentRouter {
     this.participationConfig = participationConfig;
     this.conversationContextProvider = conversationContextProvider;
     this.systemPrompt = new AgentSystemPrompt(participationConfig);
+    this.requestAssembler = new AgentRequestAssembler(config, registry, systemPrompt);
   }
 
   @Override
@@ -102,38 +97,69 @@ public final class DefaultAgentRouter implements AgentRouter {
     String correlationId = invocation.requestId();
     AgentContext context = invocation.context();
     List<LlmMessage> history = loadMemory(context, correlationId);
-    Optional<String> requiredFreshTool =
-        freshnessPolicy.requiredTool(invocation.prompt(), history, context.roomUsers());
     String recentRoomContext = loadConversationContext(invocation, correlationId);
-    String contextualizedPrompt = contextualizePrompt(context, invocation.prompt());
-    List<LlmMessage> messages = new ArrayList<>();
-    messages.add(
-        LlmMessage.system(systemPrompt.render(invocation, correlationId, recentRoomContext)));
-    messages.addAll(history);
-    messages.add(LlmMessage.user(contextualizedPrompt));
-
-    List<JsonObject> definitions = definitions(context);
+    AgentPreparedRequest prepared = requestAssembler.assemble(invocation, history, recentRoomContext);
+    Optional<String> requiredFreshTool = prepared.requiredFreshTool();
+    Optional<String> requiredFreshNick = prepared.requiredFreshNick();
+    String contextualizedPrompt = prepared.contextualizedPrompt();
+    List<LlmMessage> messages = new ArrayList<>(prepared.messages());
+    List<JsonObject> definitions = prepared.definitions();
     AgentCommandProseGuard commandProseGuard = AgentCommandProseGuard.from(definitions);
-    AgentToolExecutor toolExecutor = new AgentToolExecutor(registry, config);
+    Set<String> allowedTools =
+        invocation.mode() == AgentInvocationMode.MODERATION ? Set.of("run_command") : Set.of();
+    AgentToolExecutor toolExecutor = new AgentToolExecutor(registry, config, allowedTools);
     try {
       LlmResponse response =
           requiredFreshTool.isPresent()
               ? client.complete(new LlmRequest(messages, definitions))
               : completeInitialRequest(
-                  messages, definitions, history, contextualizedPrompt, correlationId);
+                  messages, definitions, history, invocation.prompt(), correlationId);
       int totalCalls = 0;
       boolean correctionUsed = false;
       boolean freshnessCorrectionUsed = false;
+      boolean freshSynthesisCorrectionUsed = false;
       boolean unverifiedActionChecked = false;
       Set<String> successfulCommands = new HashSet<>();
+      Set<String> failedCommands = new HashSet<>();
       Set<String> successfulTools = new HashSet<>();
+      List<AgentToolResult> successfulToolResults = new ArrayList<>();
       boolean toolsEnabled = true;
       while (true) {
+        if ("length".equalsIgnoreCase(response.finishReason()) && response.toolCalls().isEmpty()) {
+          throw new AgentRoutingException("Agent response was truncated before completion");
+        }
         Optional<String> missingFreshTool =
             requiredFreshTool.filter(tool -> !successfulTools.contains(tool));
         if (missingFreshTool.isPresent()) {
           String tool = missingFreshTool.orElseThrow();
-          if (!callsExactly(response, tool)) {
+          if ("user_message_history".equals(tool) && requiredFreshNick.isPresent()) {
+            if (totalCalls >= config.maxToolCalls()) {
+              throw new AgentRoutingException("Agent tool-call limit reached before loading fresh data");
+            }
+            JsonObject arguments = new JsonObject();
+            arguments.addProperty("nick", requiredFreshNick.orElseThrow());
+            LlmToolCall freshCall =
+                new LlmToolCall("router-fresh-" + correlationId, tool, arguments.toString());
+            AgentToolResult freshResult = toolExecutor.execute(context, freshCall);
+            if (freshResult.isError()) {
+              throw new AgentRoutingException("Required fresh-data tool failed: " + tool);
+            }
+            messages.add(LlmMessage.assistant(response.content(), List.of(freshCall)));
+            messages.add(
+                LlmMessage.tool(
+                    freshCall.id(), modelVisibleToolResult(context, freshCall, freshResult)));
+            successfulTools.add(tool);
+            successfulToolResults.add(freshResult);
+            totalCalls++;
+            log.info(
+                "Agent fresh data loaded by router, correlationId={}, tool={}, nick={}",
+                correlationId,
+                tool,
+                requiredFreshNick.orElseThrow());
+            response = client.complete(new LlmRequest(messages, definitions));
+            continue;
+          }
+          if (!callsExactly(response, tool, requiredFreshNick)) {
             if (freshnessCorrectionUsed) {
               throw new AgentRoutingException(
                   "Agent did not call the required fresh-data tool");
@@ -149,7 +175,7 @@ public final class DefaultAgentRouter implements AgentRouter {
             response =
                 requireFreshToolCall(
                     client.complete(new LlmRequest(messages, definitionFor(definitions, tool))),
-                    tool);
+                    tool, requiredFreshNick);
             freshnessCorrectionUsed = true;
           }
         } else {
@@ -164,7 +190,31 @@ public final class DefaultAgentRouter implements AgentRouter {
                 requireFreshSynthesis(
                     client.complete(new LlmRequest(messages, List.of())), history);
           }
-          if (!unverifiedActionChecked) {
+          if (requiredFreshTool.filter("user_message_history"::equals).isPresent()
+              && !isFailurePlaceholder(response)
+              && !satisfiesFreshProfileContract(
+                  response, requiredFreshNick, successfulToolResults)) {
+            if (freshSynthesisCorrectionUsed) {
+              throw new AgentRoutingException(
+                  "Agent did not produce a complete fresh history synthesis");
+            }
+            log.warn(
+                "Agent fresh history synthesis omitted evidence metadata, correlationId={}",
+                correlationId);
+            messages.add(LlmMessage.assistant(response.content(), List.of()));
+            messages.add(LlmMessage.user(FRESH_SYNTHESIS_CORRECTION));
+            response =
+                requireFreshSynthesis(
+                    client.complete(new LlmRequest(messages, List.of())), history);
+            freshSynthesisCorrectionUsed = true;
+            if (!satisfiesFreshProfileContract(response, requiredFreshNick, successfulToolResults)) {
+              throw new AgentRoutingException(
+                  "Agent did not produce a complete fresh history synthesis");
+            }
+          }
+          if (!unverifiedActionChecked
+              && (successfulCommands.isEmpty()
+                  || commandProseGuard.findCommand(response.content()).isEmpty())) {
             response =
                 correctUnverifiedActionClaim(response, messages, definitions, correlationId);
             unverifiedActionChecked = true;
@@ -177,6 +227,7 @@ public final class DefaultAgentRouter implements AgentRouter {
                   commandProseGuard,
                   correctionUsed,
                   successfulCommands,
+                  failedCommands,
                   toolsEnabled,
                   invocation.prompt(),
                   correlationId);
@@ -198,7 +249,6 @@ public final class DefaultAgentRouter implements AgentRouter {
 
         totalCalls += response.toolCalls().size();
         messages.add(LlmMessage.assistant(response.content(), response.toolCalls()));
-        boolean allErrors = true;
         for (var call : response.toolCalls()) {
           AgentToolResult result = toolExecutor.execute(context, call);
           log.info(
@@ -206,14 +256,15 @@ public final class DefaultAgentRouter implements AgentRouter {
               correlationId,
               call.name(),
               result.isError() ? "error" : "success");
-          allErrors &= result.isError();
           if (result.isError()
               && requiredFreshTool.filter(call.name()::equals).isPresent()
               && !successfulTools.contains(call.name())) {
             throw new AgentRoutingException(
                 "Required fresh-data tool failed: " + call.name());
           }
-          if (!result.isError() && successfulTools.add(call.name())) {
+          if (!result.isError()
+              && matchesFreshTarget(call, requiredFreshNick)
+              && successfulTools.add(call.name())) {
             requiredFreshTool
                 .filter(call.name()::equals)
                 .ifPresent(
@@ -223,21 +274,27 @@ public final class DefaultAgentRouter implements AgentRouter {
                             correlationId,
                             tool));
           }
+          if (!result.isError()) {
+            successfulToolResults.add(result);
+          }
           if (!result.isError() && "run_command".equals(call.name())) {
             commandProseGuard.executedCommand(call).ifPresent(successfulCommands::add);
+            correctionUsed = false;
+          } else if (result.isError() && "run_command".equals(call.name())) {
+            commandProseGuard.executedCommand(call).ifPresent(failedCommands::add);
           }
           messages.add(LlmMessage.tool(call.id(), modelVisibleToolResult(context, call, result)));
         }
-        if (allErrors) {
-          toolsEnabled = false;
-          response = finalizeResponse(messages);
-          continue;
-        }
+        unverifiedActionChecked = false;
         response = client.complete(new LlmRequest(messages, definitions));
       }
 
       response = correctFailurePlaceholder(response, messages, correlationId);
-      String content = truncate(sanitizePersonaArtifacts(response.content()), config.maxOutputChars());
+      if (requiredFreshTool.filter("user_message_history"::equals).isPresent()
+          && !satisfiesFreshProfileContract(response, requiredFreshNick, successfulToolResults)) {
+        throw new AgentRoutingException("Agent did not produce a complete fresh history synthesis");
+      }
+      String content = truncate(responseSanitizer.sanitize(response.content()), config.maxOutputChars());
       if (invocation.mode() == AgentInvocationMode.MODERATION) {
         return AgentResult.silent(correlationId);
       }
@@ -251,6 +308,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         throw new AgentRoutingException("Agent declined a required response");
       }
       persist(context, contextualizedPrompt, content, correlationId);
+      persistToolEvidence(context, successfulToolResults, correlationId);
       return AgentResult.reply(correlationId, content);
     } catch (LlmException exception) {
       throw new AgentRoutingException(
@@ -357,8 +415,13 @@ public final class DefaultAgentRouter implements AgentRouter {
     String previousAssistant = latestContent(history, "assistant").orElse(null);
     return previousUser != null
         && previousAssistant != null
-        && !currentPrompt.equals(previousUser)
+        && !userAuthoredBody(currentPrompt).equals(userAuthoredBody(previousUser))
         && response.content().strip().equals(previousAssistant.strip());
+  }
+
+  private static String userAuthoredBody(String prompt) {
+    int separator = prompt == null ? -1 : prompt.lastIndexOf("\n");
+    return separator < 0 ? String.valueOf(prompt) : prompt.substring(separator + 1);
   }
 
   private static Optional<String> latestContent(List<LlmMessage> messages, String role) {
@@ -378,6 +441,7 @@ public final class DefaultAgentRouter implements AgentRouter {
       AgentCommandProseGuard guard,
       boolean correctionUsed,
       Set<String> successfulCommands,
+      Set<String> failedCommands,
       boolean toolsEnabled,
       String currentPrompt,
       String correlationId)
@@ -387,7 +451,7 @@ public final class DefaultAgentRouter implements AgentRouter {
     if (command.isEmpty()) {
       return new GuardedResponse(response, correctionUsed);
     }
-    if (correctionUsed) {
+    if (correctionUsed && !successfulCommands.contains(command.get())) {
       throw new AgentRoutingException("Agent emitted a Saturn command as prose after correction");
     }
 
@@ -395,7 +459,8 @@ public final class DefaultAgentRouter implements AgentRouter {
         "Blocked agent command prose, correlationId={}, command={}", correlationId, command.get());
     messages.add(LlmMessage.assistant(response.content(), List.of()));
     boolean commandAlreadySucceeded = successfulCommands.contains(command.get());
-    boolean requireToolCall = toolsEnabled && !commandAlreadySucceeded;
+    boolean commandAlreadyFailed = failedCommands.contains(command.get());
+    boolean requireToolCall = toolsEnabled && !commandAlreadySucceeded && !commandAlreadyFailed;
     messages.add(
         LlmMessage.user(
             requireToolCall
@@ -475,18 +540,36 @@ public final class DefaultAgentRouter implements AgentRouter {
     return matches;
   }
 
-  private static LlmResponse requireFreshToolCall(LlmResponse response, String toolName)
+  private static LlmResponse requireFreshToolCall(
+      LlmResponse response, String toolName, Optional<String> expectedNick)
       throws AgentRoutingException {
-    if (!callsExactly(response, toolName)) {
+    if (!callsExactly(response, toolName, expectedNick)) {
       throw new AgentRoutingException(
           "Agent did not call exactly the required fresh-data tool: " + toolName);
     }
     return response;
   }
 
-  private static boolean callsExactly(LlmResponse response, String toolName) {
+  private static boolean callsExactly(
+      LlmResponse response, String toolName, Optional<String> expectedNick) {
     return response.toolCalls().size() == 1
-        && toolName.equals(response.toolCalls().getFirst().name());
+        && toolName.equals(response.toolCalls().getFirst().name())
+        && matchesFreshTarget(response.toolCalls().getFirst(), expectedNick);
+  }
+
+  private static boolean matchesFreshTarget(LlmToolCall call, Optional<String> expectedNick) {
+    if (expectedNick.isEmpty() || !"user_message_history".equals(call.name())) {
+      return true;
+    }
+    try {
+      JsonObject arguments = JsonParser.parseString(call.arguments()).getAsJsonObject();
+      JsonElement nick = arguments.get("nick");
+      return nick != null
+          && nick.isJsonPrimitive()
+          && expectedNick.get().equalsIgnoreCase(nick.getAsString().trim());
+    } catch (JsonParseException | IllegalStateException exception) {
+      return false;
+    }
   }
 
   private static LlmResponse requireFreshSynthesis(
@@ -499,6 +582,22 @@ public final class DefaultAgentRouter implements AgentRouter {
       throw new AgentRoutingException("Agent reused the previous answer after a fresh history lookup");
     }
     return response;
+  }
+
+  private static boolean satisfiesFreshProfileContract(
+      LlmResponse response,
+      Optional<String> expectedNick,
+      List<AgentToolResult> successfulToolResults) {
+    Optional<AgentToolResult> historyResult =
+        successfulToolResults.stream()
+            .filter(result -> "user_message_history".equals(result.toolName()))
+            .reduce((first, second) -> second);
+    if (historyResult.isEmpty() || response.content() == null || response.content().isBlank()) {
+      return false;
+    }
+    // The evidence is supplied to the model as a tool result. Requiring users' exact
+    // timestamps and row counts in a natural-language answer made valid summaries fail.
+    return true;
   }
 
   private static boolean repeatsPreviousAssistant(
@@ -604,20 +703,6 @@ public final class DefaultAgentRouter implements AgentRouter {
     return client.complete(new LlmRequest(finalMessages, List.of()));
   }
 
-  private List<JsonObject> definitions(AgentContext context) {
-    List<JsonObject> result = new ArrayList<>();
-    for (JsonElement definition : registry.definitions(context)) {
-      result.add(definition.getAsJsonObject());
-    }
-    return List.copyOf(result);
-  }
-
-  private static String contextualizePrompt(AgentContext context, String prompt) {
-    String visibility = context.whisper() ? "Private Saturn whisper" : "Public Saturn message";
-    return PROMPTS.formatted(
-        "router-contextualized-prompt.txt", visibility, context.nick(), context.room(), prompt);
-  }
-
   private void persist(AgentContext context, String user, String assistant, String correlationId)
       throws AgentRoutingException {
     try {
@@ -636,6 +721,18 @@ public final class DefaultAgentRouter implements AgentRouter {
       }
     }
     log.info("Agent memory persisted, correlationId={}", correlationId);
+  }
+
+  private void persistToolEvidence(
+      AgentContext context, List<AgentToolResult> results, String correlationId)
+      throws AgentRoutingException {
+    try {
+      for (AgentToolResult result : results) {
+        memory.appendToolEvidence(context, result.toolName(), result.content(), config);
+      }
+    } catch (RuntimeException exception) {
+      throw memoryPersistenceFailure(correlationId, exception);
+    }
   }
 
   private static AgentRoutingException memoryPersistenceFailure(
@@ -664,7 +761,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         throw memoryLoadFailure(correlationId, retryException);
       }
     }
-    List<LlmMessage> history = excludeLegacyPersonaTurns(loaded);
+    List<LlmMessage> history = responseSanitizer.excludeLegacyPersonaTurns(loaded);
     log.info(
         "Agent memory loaded, correlationId={}, messages={}, legacyMessagesExcluded={}",
         correlationId,
@@ -696,7 +793,8 @@ public final class DefaultAgentRouter implements AgentRouter {
       return "";
     }
     try {
-      return conversationContextProvider.load(invocation.context());
+      return conversationContextProvider.load(
+          invocation.context(), invocation.context().nick(), invocation.currentMessageText());
     } catch (RuntimeException exception) {
       log.warn(
           "Agent room context load failed, correlationId={}: {}",
@@ -712,62 +810,6 @@ public final class DefaultAgentRouter implements AgentRouter {
       return content;
     }
     return content.substring(0, content.offsetByCodePoints(0, maxChars));
-  }
-
-  private static String sanitizePersonaArtifacts(String content) {
-    if (content == null || content.isBlank()) {
-      return "";
-    }
-    String withoutOpening =
-        content
-        .replaceAll("(?i)\\[sips tea(?: slowly)?[^\\]]*\\]\\s*", "")
-        .replaceFirst("(?m)\\A\\s*(?:[*_~`#>]+\\s*)+", "")
-        .strip();
-    withoutOpening = LEGACY_OPENING.matcher(withoutOpening).replaceFirst("");
-
-    return withoutOpening
-        .lines()
-        .filter(line -> !isLegacyPersonaBoilerplate(line))
-        .map(DefaultAgentRouter::formatListItem)
-        .collect(java.util.stream.Collectors.joining("\n"))
-        .stripTrailing();
-  }
-
-  private static List<LlmMessage> excludeLegacyPersonaTurns(List<LlmMessage> loaded) {
-    List<LlmMessage> clean = new ArrayList<>(loaded.size());
-    for (LlmMessage message : loaded) {
-      if ("assistant".equals(message.role()) && containsLegacyPersona(message.content())) {
-        if (!clean.isEmpty() && "user".equals(clean.getLast().role())) {
-          clean.removeLast();
-        }
-        continue;
-      }
-      clean.add(message);
-    }
-    return List.copyOf(clean);
-  }
-
-  private static boolean containsLegacyPersona(String content) {
-    if (content == null || content.isBlank()) {
-      return false;
-    }
-    String normalized = content.toLowerCase(Locale.ROOT);
-    return normalized.contains("sips tea")
-        || normalized.contains("the archives reveal")
-        || normalized.contains("carpe diem")
-        || LEGACY_OPENING.matcher(content.strip()).find();
-  }
-
-  private static boolean isLegacyPersonaBoilerplate(String line) {
-    String normalized = line.strip().toLowerCase(Locale.ROOT);
-    return normalized.startsWith("the archives reveal")
-        || normalized.equals("your history shows:")
-        || normalized.matches("^[*_]*carpe diem[*_]*[,.].*");
-  }
-
-  private static String formatListItem(String line) {
-    Matcher matcher = MARKDOWN_LIST_ITEM.matcher(line);
-    return matcher.matches() ? "\u2009-\u2009" + matcher.group(1) : line.stripTrailing();
   }
 
   private static int codePointCount(String content) {

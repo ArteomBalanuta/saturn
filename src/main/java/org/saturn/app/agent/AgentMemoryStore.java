@@ -9,6 +9,9 @@ public interface AgentMemoryStore {
   void append(
       AgentContext context, String userContent, String assistantContent, AgentConfig config);
 
+  default void appendToolEvidence(
+      AgentContext context, String toolName, String content, AgentConfig config) {}
+
   static AgentMemoryStore none() {
     return new AgentMemoryStore() {
       @Override

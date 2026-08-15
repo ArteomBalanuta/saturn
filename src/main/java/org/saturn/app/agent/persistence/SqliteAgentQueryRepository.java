@@ -163,10 +163,14 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
     String sql =
         """
         SELECT name, trip, hash, message, created_on, channel
-        FROM messages
-        WHERE channel = ? COLLATE NOCASE AND visibility = 'PUBLIC'
-        ORDER BY created_on DESC, id DESC
-        LIMIT ?
+        FROM (
+          SELECT id, name, trip, hash, message, created_on, channel
+          FROM messages
+          WHERE channel = ? COLLATE NOCASE AND visibility = 'PUBLIC'
+          ORDER BY created_on DESC, id DESC
+          LIMIT ?
+        )
+        ORDER BY created_on ASC, id ASC
         """;
     try (Connection connection = openReadOnly();
         PreparedStatement statement = connection.prepareStatement(sql)) {

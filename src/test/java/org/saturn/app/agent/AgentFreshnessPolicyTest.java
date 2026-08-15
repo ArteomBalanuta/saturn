@@ -43,6 +43,16 @@ class AgentFreshnessPolicyTest {
   }
 
   @Test
+  void extractsQuotedNamedUserTargetsForRouterOwnedHistoryLookup() {
+    AgentFreshnessPolicy policy = new AgentFreshnessPolicy();
+    String prompt =
+        "tell me about user named \"gvreahui\" - summarize their activity and recent messages";
+
+    assertEquals(Optional.of("user_message_history"), policy.requiredTool(prompt, List.of()));
+    assertEquals(Optional.of("gvreahui"), policy.requiredNick(prompt, List.of(), List.of()));
+  }
+
+  @Test
   void carriesFreshnessAcrossAnExplicitHistoryFollowUp() {
     AgentFreshnessPolicy policy = new AgentFreshnessPolicy();
     List<LlmMessage> history =

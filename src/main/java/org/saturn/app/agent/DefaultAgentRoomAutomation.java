@@ -15,7 +15,8 @@ import org.saturn.app.service.AgentService;
 
 @Slf4j
 public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
-  private static final Pattern CONVENTIONAL_BOT_NICK = Pattern.compile("(?iu)bot(?:[_-]?\\d+)?$");
+  private static final Pattern CONVENTIONAL_BOT_NICK =
+      Pattern.compile("(?u)^(?:bot(?:[_-]?\\d+)?|[\\p{L}\\p{N}_-]*(?:Bot|[_-]bot)(?:[_-]?\\d+)?)$");
 
   private final EngineImpl engine;
   private final AgentParticipationConfig config;
@@ -148,7 +149,8 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
             botModerationContext.hash(),
             false,
             engine.currentChannelUsers.stream().map(user -> user.getNick()).toList(),
-            botModerationContext.capabilities());
+            botModerationContext.capabilities(),
+            message.getNick());
     String prompt =
         "Review this public chat message for severe abuse. Author nick: %s. Message: %s"
             .formatted(message.getNick(), text);
@@ -173,7 +175,7 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
   }
 
   private boolean isBotAuthor(String nick) {
-    return CONVENTIONAL_BOT_NICK.matcher(nick).find()
+    return CONVENTIONAL_BOT_NICK.matcher(nick).matches()
         || engine.currentChannelUsers.stream()
             .anyMatch(user -> user.isBot() && user.getNick().equalsIgnoreCase(nick));
   }

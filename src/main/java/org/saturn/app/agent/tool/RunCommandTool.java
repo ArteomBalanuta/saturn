@@ -36,8 +36,14 @@ public final class RunCommandTool implements AgentTool {
           "version",
           "v");
   private static final Set<String> MODERATION_COMMANDS =
-      Set.of("captcha", "mute", "kick", "shadowban");
-  private static final Set<String> PERMANENT_BAN_COMMAND = Set.of("ban");
+      Set.of(
+          "captcha",
+          "mute",
+          "unmute",
+          "kick",
+          "shadowban",
+          "unshadowban");
+  private static final Set<String> PERMANENT_BAN_COMMANDS = Set.of("ban", "unban");
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private final SaturnCommandGateway gateway;
 
@@ -117,11 +123,15 @@ public final class RunCommandTool implements AgentTool {
     }
     String commandArguments =
         arguments.has("arguments") ? arguments.get("arguments").getAsString().trim() : "";
-    boolean executed = gateway.execute(context, command, commandArguments);
-    return executed
-        ? AgentToolResult.success(
-            name(),
-            PROMPTS.formatted("command-executed-result.txt", command))
+    if (isTargetedModerationCommand(command)
+        && context.moderationTarget() != null
+        && !firstArgument(commandArguments).equalsIgnoreCase(context.moderationTarget())) {
+      return AgentToolResult.error(null, name(), "Moderation action must target the reviewed author");
+    }
+    SaturnCommandGateway.CommandExecution execution =
+        gateway.executeWithResult(context, command, commandArguments);
+    return execution.executed()
+        ? AgentToolResult.success(name(), execution.modelData())
         : AgentToolResult.error(null, name(), "Command was not authorized or could not run");
   }
 
@@ -131,8 +141,18 @@ public final class RunCommandTool implements AgentTool {
       commands.addAll(MODERATION_COMMANDS);
     }
     if (context.hasCapability(AgentCapability.PERMANENT_BAN)) {
-      commands.addAll(PERMANENT_BAN_COMMAND);
+      commands.addAll(PERMANENT_BAN_COMMANDS);
     }
     return Set.copyOf(commands);
+  }
+
+  private static boolean isTargetedModerationCommand(String command) {
+    return Set.of("mute", "unmute", "kick", "shadowban", "unshadowban", "ban", "unban")
+        .contains(command);
+  }
+
+  private static String firstArgument(String arguments) {
+    int separator = arguments.indexOf(' ');
+    return separator < 0 ? arguments : arguments.substring(0, separator);
   }
 }
