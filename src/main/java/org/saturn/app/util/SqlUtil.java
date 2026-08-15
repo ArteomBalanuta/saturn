@@ -26,9 +26,9 @@ public final class SqlUtil {
       """;
 
   public static final String INSERT_NAMES =
-      "INSERT INTO names (name, created_on) VALUES (?, DATEDIFF(SECOND, DATE '1970-01-01', CURRENT_TIMESTAMP))";
+      "INSERT INTO names (name, created_on) VALUES (?, DATEDIFF(MILLISECOND, DATE '1970-01-01', CURRENT_TIMESTAMP))";
   public static final String INSERT_TRIPS =
-      "INSERT INTO trips (type, trip, created_on) VALUES (?, ?, DATEDIFF(SECOND, DATE '1970-01-01', CURRENT_TIMESTAMP))";
+      "INSERT INTO trips (type, trip, created_on) VALUES (?, ?, DATEDIFF(MILLISECOND, DATE '1970-01-01', CURRENT_TIMESTAMP))";
   public static final String INSERT_TRIP_NAME =
       "INSERT INTO trip_names (trip_id, name_id) VALUES (?, ?)";
   public static final String

@@ -224,7 +224,7 @@ public class UserServiceImpl extends OutService implements UserService {
   public boolean isNameRegistered(String name) {
     boolean exists = false;
     try (PreparedStatement statement =
-        connection.prepareStatement("SELECT id from names where LOWER(name)==?")) {
+        connection.prepareStatement("SELECT id FROM names WHERE LOWER(name) = ?")) {
       statement.setString(1, name.toLowerCase());
       statement.execute();
 
@@ -245,7 +245,7 @@ public class UserServiceImpl extends OutService implements UserService {
   public boolean isTripRegistered(String trip) {
     boolean exists = false;
     try (PreparedStatement statement =
-        connection.prepareStatement("SELECT id from trips where LOWER(trip)==?")) {
+        connection.prepareStatement("SELECT id FROM trips WHERE LOWER(trip) = ?")) {
       statement.setString(1, trip.toLowerCase());
       statement.execute();
 
@@ -318,7 +318,7 @@ public class UserServiceImpl extends OutService implements UserService {
         statement.setString(1, name);
       }
       statement.setString(2, trip);
-      statement.setString(3, String.valueOf(count));
+      statement.setInt(3, count);
       statement.execute();
 
       ResultSet resultSet = statement.getResultSet();

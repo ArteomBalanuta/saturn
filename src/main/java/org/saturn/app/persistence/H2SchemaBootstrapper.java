@@ -5,8 +5,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /** Applies Saturn's idempotent H2 schema resource to an embedded database connection. */
@@ -38,8 +42,41 @@ final class H2SchemaBootstrapper {
           sql.setLength(0);
         }
       }
+      upgradeTripRoleConstraint(connection);
     } catch (IOException exception) {
       throw new SQLException("Unable to load H2 schema resource", exception);
     }
+  }
+
+  /** Aligns legacy H2 files with the complete set of roles supported by Saturn. */
+  private static void upgradeTripRoleConstraint(Connection connection) throws SQLException {
+    List<String> constraints = new ArrayList<>();
+    try (PreparedStatement statement =
+            connection.prepareStatement(
+                """
+                SELECT constraint_name
+                FROM information_schema.table_constraints
+                WHERE LOWER(table_name) = 'trips' AND constraint_type = 'CHECK'
+                """);
+        ResultSet resultSet = statement.executeQuery()) {
+      while (resultSet.next()) {
+        constraints.add(resultSet.getString("constraint_name"));
+      }
+    }
+
+    try (Statement statement = connection.createStatement()) {
+      for (String constraint : constraints) {
+        statement.execute("ALTER TABLE trips DROP CONSTRAINT " + quoteIdentifier(constraint));
+      }
+      statement.execute(
+          """
+          ALTER TABLE trips ADD CONSTRAINT trips_type_check
+          CHECK (type IN ('ADMIN', 'MODERATOR', 'TRUSTED', 'USER', 'REGULAR', 'PEST'))
+          """);
+    }
+  }
+
+  private static String quoteIdentifier(String identifier) {
+    return '\"' + identifier.replace("\"", "\"\"") + '\"';
   }
 }
