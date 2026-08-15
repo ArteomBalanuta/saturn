@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.AgentNickNormalizer;
 import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
@@ -108,7 +109,7 @@ public final class UserMessageHistoryTool implements AgentTool {
       return AgentToolResult.error(null, name(), "A non-blank nick is required");
     }
     JsonObject queryArguments = arguments.deepCopy();
-    queryArguments.addProperty("nick", nick.getAsString().trim());
+    queryArguments.addProperty("nick", AgentNickNormalizer.normalize(nick.getAsString()));
     if (queryArguments.has("room")) {
       JsonElement room = queryArguments.get("room");
       if (!room.isJsonPrimitive()

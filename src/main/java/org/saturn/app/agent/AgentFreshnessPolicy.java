@@ -25,6 +25,12 @@ final class AgentFreshnessPolicy {
               + "\\s+user\\s+(?<target>"
               + NICK
               + ")\\b.*");
+  private static final Pattern UNQUOTED_NAMED_USER_PROFILE =
+      Pattern.compile(
+          "(?is).*\\b(?:tell\\s+me\\s+about|describe|profile|summari[sz]e|analy[sz]e)"
+              + "\\s+user\\s+named\\s+(?<target>"
+              + NICK
+              + ")\\b.*");
   private static final Pattern QUOTED_NAMED_USER_PROFILE =
       Pattern.compile(
           "(?is).*\\b(?:tell\\s+me\\s+about|describe|profile|summari[sz]e|analy[sz]e)"
@@ -110,17 +116,19 @@ final class AgentFreshnessPolicy {
   }
 
   private static Optional<String> extractNick(String prompt, List<String> roomUsers) {
+    String normalizedPrompt = normalizePrompt(prompt);
     for (Pattern pattern :
         List.of(
             QUOTED_NAMED_USER_PROFILE,
+            UNQUOTED_NAMED_USER_PROFILE,
             PREFIX_USER_PROFILE,
             TRAILING_USER_TARGET,
             SIMPLE_USER_PROFILE,
             WHO_IS_USER,
             USER_SPEECH,
             USER_HISTORY)) {
-      var matcher = pattern.matcher(prompt == null ? "" : prompt);
-      if (matcher.matches() && matchesTrustedRoomUser(pattern, prompt, roomUsers)) {
+      var matcher = pattern.matcher(normalizedPrompt);
+      if (matcher.matches() && matchesTrustedRoomUser(pattern, normalizedPrompt, roomUsers)) {
         return Optional.of(withoutMention(matcher.group("target")));
       }
     }
@@ -128,16 +136,18 @@ final class AgentFreshnessPolicy {
   }
 
   private static boolean requiresNamedUserHistory(String prompt, List<String> roomUsers) {
+    String normalizedPrompt = normalizePrompt(prompt);
     return prompt != null
-        && (EXPLICIT_USER_PROFILE.matcher(prompt).matches()
-            || QUOTED_NAMED_USER_PROFILE.matcher(prompt).matches()
-            || matchesExplicitPrefixUser(prompt)
-            || POSSESSIVE_USER_PROFILE.matcher(prompt).matches()
-            || EXPLICIT_WHO_IS_USER.matcher(prompt).matches()
-            || matchesTrustedRoomUser(SIMPLE_USER_PROFILE, prompt, roomUsers)
-            || matchesTrustedRoomUser(WHO_IS_USER, prompt, roomUsers)
-            || matchesTrustedRoomUser(USER_SPEECH, prompt, roomUsers)
-            || matchesTrustedRoomUser(USER_HISTORY, prompt, roomUsers));
+        && (EXPLICIT_USER_PROFILE.matcher(normalizedPrompt).matches()
+            || QUOTED_NAMED_USER_PROFILE.matcher(normalizedPrompt).matches()
+            || UNQUOTED_NAMED_USER_PROFILE.matcher(normalizedPrompt).matches()
+            || matchesExplicitPrefixUser(normalizedPrompt)
+            || POSSESSIVE_USER_PROFILE.matcher(normalizedPrompt).matches()
+            || EXPLICIT_WHO_IS_USER.matcher(normalizedPrompt).matches()
+            || matchesTrustedRoomUser(SIMPLE_USER_PROFILE, normalizedPrompt, roomUsers)
+            || matchesTrustedRoomUser(WHO_IS_USER, normalizedPrompt, roomUsers)
+            || matchesTrustedRoomUser(USER_SPEECH, normalizedPrompt, roomUsers)
+            || matchesTrustedRoomUser(USER_HISTORY, normalizedPrompt, roomUsers));
   }
 
   private static boolean matchesExplicitPrefixUser(String prompt) {
@@ -167,7 +177,11 @@ final class AgentFreshnessPolicy {
   }
 
   private static String withoutMention(String nick) {
-    return nick != null && nick.startsWith("@") ? nick.substring(1) : nick;
+    return AgentNickNormalizer.normalize(nick);
+  }
+
+  private static String normalizePrompt(String prompt) {
+    return prompt == null ? "" : prompt.replace("\\_", "_");
   }
 
   private static boolean isHistoryFollowUp(String prompt) {

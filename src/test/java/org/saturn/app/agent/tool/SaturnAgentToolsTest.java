@@ -138,6 +138,24 @@ class SaturnAgentToolsTest {
   }
 
   @Test
+  void userMessageHistoryToolUnescapesMarkdownEscapedNickBeforeQuerying() {
+    AtomicReference<JsonObject> queryArguments = new AtomicReference<>();
+    AgentQueryRepository repository =
+        (name, arguments, ignored) -> {
+          queryArguments.set(arguments.deepCopy());
+          return new JsonObject();
+        };
+    UserMessageHistoryTool tool = new UserMessageHistoryTool(repository);
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("nick", "@Et\\_In\\_Arcadia\\_Ego");
+
+    AgentToolResult result = tool.execute(context(), arguments);
+
+    assertFalse(result.isError());
+    assertEquals("Et_In_Arcadia_Ego", queryArguments.get().get("nick").getAsString());
+  }
+
+  @Test
   void userMessageHistoryDefaultsToAllRoomsForFollowUpRequests() {
     AtomicReference<JsonObject> queryArguments = new AtomicReference<>();
     AgentQueryRepository repository =

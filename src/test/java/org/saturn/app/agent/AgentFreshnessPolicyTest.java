@@ -53,6 +53,25 @@ class AgentFreshnessPolicyTest {
   }
 
   @Test
+  void extractsMarkdownEscapedUnderscoreNicksForRouterOwnedHistoryLookup() {
+    AgentFreshnessPolicy policy = new AgentFreshnessPolicy();
+
+    assertEquals(
+        Optional.of("user_message_history"),
+        policy.requiredTool("tell me about Et\\_In\\_Arcadia\\_Ego", List.of()));
+    assertEquals(
+        Optional.of("Et_In_Arcadia_Ego"),
+        policy.requiredNick("tell me about Et\\_In\\_Arcadia\\_Ego", List.of(), List.of()));
+    assertEquals(
+        Optional.of("Et_In_Arcadia_Ego"),
+        policy.requiredNick("tell me about user Et\\_In\\_Arcadia\\_Ego", List.of(), List.of()));
+    assertEquals(
+        Optional.of("Et_In_Arcadia_Ego"),
+        policy.requiredNick(
+            "tell me about user named Et\\_In\\_Arcadia\\_Ego", List.of(), List.of()));
+  }
+
+  @Test
   void carriesFreshnessAcrossAnExplicitHistoryFollowUp() {
     AgentFreshnessPolicy policy = new AgentFreshnessPolicy();
     List<LlmMessage> history =
