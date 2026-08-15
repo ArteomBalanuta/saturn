@@ -21,7 +21,8 @@ snippet whose first token is an allowed Saturn command, the router will:
 2. Add a corrective message explaining that commands must be emitted through `run_command`.
 3. Request one more completion with the same capability-filtered tool catalog.
 4. Continue the normal tool loop if the model returns a structured call.
-5. Fail the turn if the corrective completion still contains command-shaped prose.
+5. Fail the turn unless the corrective completion contains a matching structured `run_command`
+   call. Ordinary prose, a different command, or another wrapped command is not accepted.
 
 The runtime system policy will also explicitly require `run_command` for live weather and time
 requests and prohibit printing, quoting, or fencing a command as a substitute for a tool call.
