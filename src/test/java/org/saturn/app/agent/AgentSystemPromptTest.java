@@ -60,7 +60,8 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("For definition requests, answer the exact term"));
     assertTrue(rendered.contains("Execute an actionable request immediately"));
     assertTrue(rendered.contains("confirmation when the request and required arguments"));
-    assertTrue(rendered.contains("Do not mock, lecture,"));
+    assertTrue(rendered.contains("Do not substitute"));
+    assertTrue(rendered.contains("banter, mocking, debate"));
     assertTrue(rendered.contains("For current weather or time, call run_command"));
     assertTrue(rendered.contains("Never print, quote, or fence a Saturn command"));
     assertTrue(rendered.contains("Conditional or future requests are not immediate commands"));
@@ -74,10 +75,12 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("Never use Markdown star, hyphen, or numbered-list syntax"));
     assertTrue(rendered.contains("U+2009 THIN SPACE"));
     assertTrue(rendered.contains("escaped \"\\\\n\" payload newlines"));
+    assertTrue(rendered.contains("allowed to curse"));
+    assertTrue(rendered.contains("mock bad arguments"));
+    assertTrue(rendered.contains("fighter's soul"));
+    assertTrue(rendered.contains("Never use protected-class slurs"));
     assertTrue(rendered.indexOf("PRIORITY ORDER") < rendered.indexOf("PERSONA"));
-    assertFalse(rendered.contains("punch back immediately"));
-    assertFalse(rendered.contains("philosophical roasts"));
-    assertFalse(rendered.contains("playfully condescending"));
+    assertFalse(rendered.contains("Do not mock, lecture,"));
   }
 
   @Test
