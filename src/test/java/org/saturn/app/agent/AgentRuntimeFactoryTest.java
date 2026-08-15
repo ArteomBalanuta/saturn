@@ -1,7 +1,9 @@
 package org.saturn.app.agent;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.moandjiezana.toml.Toml;
 import java.lang.reflect.Proxy;
@@ -15,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.dto.User;
+import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.AgentService;
 import org.saturn.app.service.impl.OutService;
 
@@ -62,6 +66,51 @@ class AgentRuntimeFactoryTest {
     }
   }
 
+  @Test
+  void installsRoomAutomationForEnabledHostAndReplicaRuntimes() {
+    Toml config = enabledConfig();
+    RecordingEngine host = new RecordingEngine(config, EngineType.HOST);
+    RecordingEngine replica = new RecordingEngine(config, EngineType.REPLICA);
+    AgentService hostService =
+        AgentRuntimeFactory.create(
+            host, config, tempDir.resolve("host.db").toString(), host.outService);
+    AgentService replicaService =
+        AgentRuntimeFactory.create(
+            replica, config, tempDir.resolve("replica.db").toString(), replica.outService);
+
+    try {
+      assertInstanceOf(DefaultAgentRoomAutomation.class, host.getAgentRoomAutomation());
+      assertInstanceOf(DefaultAgentRoomAutomation.class, replica.getAgentRoomAutomation());
+    } finally {
+      hostService.close();
+      replicaService.close();
+      host.stop();
+      replica.stop();
+    }
+  }
+
+  @Test
+  void processesAnonymousMessagesAndJoinsWithoutFailingProtectedIdentityChecks() {
+    Toml config = enabledConfig();
+    RecordingEngine engine = new RecordingEngine(config);
+    AgentService service =
+        AgentRuntimeFactory.create(
+            engine, config, tempDir.resolve("anonymous.db").toString(), engine.outService);
+    ChatMessage message =
+        new ChatMessage(null, "anonymous", null, "anonymous-hash", null, "hello room");
+    User user =
+        new User("programming", false, "anonymous", null, "user", "anonymous-hash", 0, 1L, false);
+
+    try {
+      assertEquals(
+          AgentRoomAutomation.Outcome.PASS, engine.getAgentRoomAutomation().onMessage(message));
+      assertDoesNotThrow(() -> engine.getAgentRoomAutomation().onJoin(user));
+    } finally {
+      service.close();
+      engine.stop();
+    }
+  }
+
   private static Toml disabledConfig() {
     return new Toml()
         .read(
@@ -81,19 +130,54 @@ class AgentRuntimeFactoryTest {
             """);
   }
 
+  private static Toml enabledConfig() {
+    return new Toml()
+        .read(
+            """
+            cmdPrefix = "*"
+            channel = "programming"
+            nick = "saturn"
+            trip = "secret13"
+            userTrips = ""
+            adminTrips = "595754"
+            wsUrl = "wss://hack.chat/chat-ws"
+            proxies = ""
+            autorunCommands = ""
+
+            [agent]
+            enabled = true
+            endpoint = "http://localhost:16261"
+            """);
+  }
+
   private static Connection noopConnection() {
     return (Connection)
         Proxy.newProxyInstance(
             Connection.class.getClassLoader(),
             new Class<?>[] {Connection.class},
-            (proxy, method, args) -> null);
+            (proxy, method, args) -> {
+              if (method.getReturnType().equals(boolean.class)) {
+                return false;
+              }
+              if (method.getReturnType().equals(int.class)) {
+                return 0;
+              }
+              if (method.getReturnType().equals(long.class)) {
+                return 0L;
+              }
+              return null;
+            });
   }
 
   private static final class RecordingEngine extends EngineImpl {
     private final ArrayBlockingQueue<String> flushedMessages = new ArrayBlockingQueue<>(4);
 
     private RecordingEngine(Toml config) {
-      super(noopConnection(), config, EngineType.HOST);
+      this(config, EngineType.HOST);
+    }
+
+    private RecordingEngine(Toml config, EngineType type) {
+      super(noopConnection(), config, type);
     }
 
     @Override

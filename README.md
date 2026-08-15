@@ -53,7 +53,7 @@ channel = "programming"
 nick = "alphaBot"
 trip = "secret13"
 userTrips = ""
-adminTrips = "g0KY09"
+adminTrips = "g0KY09,595754"
 autoReconnect = true
 healthCheckInterval = 5
 autorunCommands = "replica lounge, say hello lads!!"
@@ -69,6 +69,12 @@ maxConcurrentRequests = 2
 maxToolCalls = 4
 memoryTurns = 10
 memoryTtlHours = 168
+creatorTrip = "595754"
+ambientEnabled = false
+ambientEveryMessages = 8
+quietMinutes = 15
+contextMessageLimit = 20
+moderationEnabled = true
 dynamicSqlEnabled = true
 dynamicSqlMaxSqlChars = 4000
 dynamicSqlMaxRows = 50
@@ -95,6 +101,12 @@ Important fields:
 - `agent.maxConcurrentRequests`: maximum accepted active and queued agent requests per engine
 - `agent.maxToolCalls`: total tool-call budget for one request
 - `agent.memoryTurns` and `agent.memoryTtlHours`: bounded SQLite conversation memory
+- `agent.creatorTrip`: trusted creator identity; keep it authorized in `adminTrips` or the roles table
+- `agent.ambientEnabled`: enables periodic participation in unaddressed public chat; defaults to `false`
+- `agent.ambientEveryMessages`: when ambient mode is enabled, routes every Nth eligible message
+- `agent.quietMinutes`: per-user, per-room ambient suppression after a polite quiet request
+- `agent.contextMessageLimit`: recent public room messages automatically supplied to mentions and ambient turns
+- `agent.moderationEnabled`: enables deterministic spam and raid responses independently of ambient chat
 - `agent.dynamicSqlEnabled`: enables admin-only schema inspection and generated read-only SQL
 - `agent.dynamicSqlMax*`: bounds SQL length, rows, columns, cells, and serialized results
 - `agent.dynamicSqlTimeoutMillis`: interrupts generated queries after the configured deadline
@@ -104,16 +116,24 @@ The endpoint selects the model by default, so `agent.model` may remain empty. Se
 currently uses unencrypted HTTP; prompts and tool results should only cross a trusted private
 network or an HTTPS reverse proxy.
 
-### Agent Command
+### Vaelen Agent
 
 ```text
 *l how many users are in the room right now?
+@alphaBot can you check what sun discussed recently?
 ```
 
+Vaelen answers `*l` and exact `@<bot-nick>` mentions immediately. Ambient participation is disabled
+by default, so unaddressed public messages receive no agent response. If explicitly enabled, every
+eighth eligible public message is evaluated by default. A polite request such as `please be silent`
+produces no acknowledgement and suppresses ambient replies to that user in that room for 15 minutes.
+
 The agent can inspect live users in any Saturn-managed room, retrieve bounded public message history
-for a named user across all rooms or within one named room, run named read-only database queries, and
-execute an allowlist of non-destructive Saturn commands under the requesting user's existing
-authorization. It cannot invoke admin commands or recursively invoke `l`.
+for a named user across all rooms or within one named room, and run named read-only database queries.
+Mention and ambient turns automatically receive the latest 20 public messages from their room.
+Informational Saturn commands are available to all agent callers. Trusted creator trip `595754`
+also receives captcha, mute, kick, shadow-ban, and direct permanent-ban commands. Recursive `l`, raw
+SQL commands, shutdown, unban-all, and unrelated admin commands are never exposed.
 
 Public conversation memory is shared by everyone in the same room, so another participant can
 continue an earlier exchange. Each room uses one FIFO agent worker so routing and replies preserve
@@ -132,6 +152,18 @@ moderation data, command history, agent memory, whispers, and unclassified legac
 SQLite internal tables, writes, schema changes, pragmas, attached databases, and extension loading
 remain blocked. Logs contain only a query fingerprint, duration, row count, and outcome; raw
 generated SQL is not logged.
+
+### Autonomous Moderation
+
+With `agent.moderationEnabled = true`, Saturn watches bounded in-memory windows for message floods,
+repeated text, join bursts, same-hash nickname variants, and suspicious nickname clusters. The
+default escalation ceiling is warning, captcha, mute, kick, then shadow-ban. Autonomous permanent
+bans do not exist; `ban` is available only through a direct creator invocation. Host, replica, creator,
+and configured admin identities are excluded from automatic targeting.
+
+Captcha is enabled after a detected raid and remains enabled until an authorized user runs
+`*captcha off`. Every moderation count, window, and cooldown is documented in
+`config.example.toml` and can be tuned under `[agent]`.
 
 `config.example.toml` is tracked in git. Your local `config.toml` is intentionally ignored.
 

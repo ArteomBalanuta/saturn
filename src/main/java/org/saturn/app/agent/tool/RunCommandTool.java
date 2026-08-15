@@ -2,14 +2,16 @@ package org.saturn.app.agent.tool;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolResult;
 
 public final class RunCommandTool implements AgentTool {
-  private static final Set<String> ALLOWED_COMMANDS =
+  private static final Set<String> INFORMATIONAL_COMMANDS =
       Set.of(
           "help",
           "h",
@@ -26,6 +28,9 @@ public final class RunCommandTool implements AgentTool {
           "t",
           "version",
           "v");
+  private static final Set<String> MODERATION_COMMANDS =
+      Set.of("captcha", "mute", "kick", "shadowban");
+  private static final Set<String> PERMANENT_BAN_COMMAND = Set.of("ban");
   private final SaturnCommandGateway gateway;
 
   public RunCommandTool(SaturnCommandGateway gateway) {
@@ -39,15 +44,24 @@ public final class RunCommandTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Execute an approved non-destructive Saturn command as the requesting user.";
+    return "Execute an approved Saturn command using the caller's trusted capabilities.";
   }
 
   @Override
   public JsonObject parameters() {
+    return parametersFor(INFORMATIONAL_COMMANDS);
+  }
+
+  @Override
+  public JsonObject parameters(AgentContext context) {
+    return parametersFor(allowedCommands(context));
+  }
+
+  private JsonObject parametersFor(Set<String> commands) {
     JsonObject command = new JsonObject();
     command.addProperty("type", "string");
     JsonArray allowed = new JsonArray();
-    ALLOWED_COMMANDS.stream().sorted().forEach(allowed::add);
+    commands.stream().sorted().forEach(allowed::add);
     command.add("enum", allowed);
     JsonObject arguments = new JsonObject();
     arguments.addProperty("type", "string");
@@ -70,7 +84,7 @@ public final class RunCommandTool implements AgentTool {
       return AgentToolResult.error(null, name(), "Missing command");
     }
     String command = arguments.get("command").getAsString().toLowerCase(Locale.ROOT);
-    if (!ALLOWED_COMMANDS.contains(command)) {
+    if (!allowedCommands(context).contains(command)) {
       return AgentToolResult.error(null, name(), "Command is not approved for agent execution");
     }
     String commandArguments =
@@ -79,5 +93,16 @@ public final class RunCommandTool implements AgentTool {
     return executed
         ? AgentToolResult.success(name(), "Command executed; its output was sent to the room.")
         : AgentToolResult.error(null, name(), "Command was not authorized or could not run");
+  }
+
+  private static Set<String> allowedCommands(AgentContext context) {
+    Set<String> commands = new HashSet<>(INFORMATIONAL_COMMANDS);
+    if (context.hasCapability(AgentCapability.MODERATION_COMMANDS)) {
+      commands.addAll(MODERATION_COMMANDS);
+    }
+    if (context.hasCapability(AgentCapability.PERMANENT_BAN)) {
+      commands.addAll(PERMANENT_BAN_COMMAND);
+    }
+    return Set.copyOf(commands);
   }
 }

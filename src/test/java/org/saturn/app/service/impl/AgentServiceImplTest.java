@@ -12,10 +12,12 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.AgentConfig;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentInvocation;
+import org.saturn.app.agent.AgentInvocationMode;
 import org.saturn.app.agent.AgentResult;
 import org.saturn.app.agent.AgentRouter;
 
@@ -153,6 +155,79 @@ class AgentServiceImplTest {
     assertTrue(queue.take().contains("shutting down"));
   }
 
+  @Test
+  void coalescesPendingAmbientMessagesBehindAdmittedDirectWork() throws Exception {
+    CountDownLatch firstAmbientEntered = new CountDownLatch(1);
+    CountDownLatch releaseFirstAmbient = new CountDownLatch(1);
+    List<String> routed = new CopyOnWriteArrayList<>();
+    AgentRouter router =
+        invocation -> {
+          routed.add(invocation.prompt());
+          if ("first ambient".equals(invocation.prompt())) {
+            firstAmbientEntered.countDown();
+            try {
+              releaseFirstAmbient.await();
+            } catch (InterruptedException exception) {
+              Thread.currentThread().interrupt();
+            }
+          }
+          return AgentResult.silent(invocation.requestId());
+        };
+    ArrayBlockingQueue<String> replies = new ArrayBlockingQueue<>(10);
+    AgentServiceImpl service =
+        new AgentServiceImpl(config(true, 1), router, new OutService(replies), () -> {});
+
+    try {
+      assertTrue(service.submit(invocation("alice", "first ambient", AgentInvocationMode.AMBIENT)));
+      assertTrue(firstAmbientEntered.await(1, TimeUnit.SECONDS));
+      assertTrue(service.submit(invocation("bob", "stale ambient", AgentInvocationMode.AMBIENT)));
+      assertTrue(service.submit(invocation("alice", "direct", AgentInvocationMode.DIRECT)));
+      assertTrue(service.submit(invocation("bob", "latest ambient", AgentInvocationMode.AMBIENT)));
+      releaseFirstAmbient.countDown();
+
+      awaitListSize(routed, 3);
+      assertEquals(List.of("first ambient", "direct", "latest ambient"), routed);
+      assertTrue(replies.isEmpty());
+    } finally {
+      releaseFirstAmbient.countDown();
+      service.close();
+    }
+  }
+
+  @Test
+  void silentResultsAndAmbientFailuresNeverEmitOrFlushReplies() throws Exception {
+    AtomicInteger calls = new AtomicInteger();
+    AtomicInteger flushes = new AtomicInteger();
+    AgentRouter router =
+        invocation -> {
+          if (calls.getAndIncrement() == 0) {
+            return AgentResult.silent(invocation.requestId());
+          }
+          throw new IllegalStateException("ambient provider failed");
+        };
+    ArrayBlockingQueue<String> replies = new ArrayBlockingQueue<>(10);
+    AgentServiceImpl service =
+        new AgentServiceImpl(
+            config(true, 1), router, new OutService(replies), flushes::incrementAndGet);
+
+    try {
+      assertTrue(service.submit(invocation("alice", "silent", AgentInvocationMode.AMBIENT)));
+      while (calls.get() < 1) {
+        Thread.sleep(5);
+      }
+      assertTrue(service.submit(invocation("alice", "failure", AgentInvocationMode.AMBIENT)));
+      while (calls.get() < 2) {
+        Thread.sleep(5);
+      }
+      Thread.sleep(20);
+
+      assertTrue(replies.isEmpty());
+      assertEquals(0, flushes.get());
+    } finally {
+      service.close();
+    }
+  }
+
   private AgentInvocation invocation(boolean whisper) {
     return new AgentInvocation(
         new AgentContext("programming", "alice", "trip-a", "hash-a", whisper, List.of("alice")),
@@ -160,10 +235,15 @@ class AgentServiceImplTest {
   }
 
   private AgentInvocation invocation(String nick, String prompt) {
+    return invocation(nick, prompt, AgentInvocationMode.DIRECT);
+  }
+
+  private AgentInvocation invocation(String nick, String prompt, AgentInvocationMode mode) {
     return new AgentInvocation(
         new AgentContext(
             "programming", nick, "trip-" + nick, "hash-" + nick, false, List.of("alice", "bob")),
-        prompt);
+        prompt,
+        mode);
   }
 
   private AgentConfig config(boolean enabled, int concurrent) {

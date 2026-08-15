@@ -33,15 +33,15 @@ public final class AgentToolRegistry {
     JsonArray definitions = new JsonArray();
     tools.values().stream()
         .filter(tool -> tool.isAvailableTo(context))
-        .forEach(tool -> definitions.add(definition(tool)));
+        .forEach(tool -> definitions.add(definition(tool, context)));
     return definitions;
   }
 
-  private JsonObject definition(AgentTool tool) {
+  private JsonObject definition(AgentTool tool, AgentContext context) {
     JsonObject function = new JsonObject();
     function.addProperty("name", tool.name());
     function.addProperty("description", tool.description());
-    function.add("parameters", tool.parameters().deepCopy());
+    function.add("parameters", tool.parameters(context).deepCopy());
     JsonObject wrapper = new JsonObject();
     wrapper.addProperty("type", "function");
     wrapper.add("function", function);

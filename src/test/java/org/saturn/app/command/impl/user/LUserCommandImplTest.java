@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentInvocation;
+import org.saturn.app.agent.AgentInvocationMode;
 import org.saturn.app.command.UserCommand;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -45,6 +46,7 @@ class LUserCommandImplTest {
 
     AgentInvocation invocation = submitted.get();
     assertEquals("how many users?", invocation.prompt());
+    assertEquals(AgentInvocationMode.DIRECT, invocation.mode());
     assertEquals("programming", invocation.context().room());
     assertEquals("trip-a", invocation.context().trip());
     assertEquals(List.of("bob"), invocation.context().roomUsers());
@@ -82,6 +84,20 @@ class LUserCommandImplTest {
 
     assertEquals(Status.SUCCESSFUL, command.execute().orElseThrow());
     assertTrue(submitted.get().context().hasCapability(AgentCapability.DYNAMIC_SQL));
+    engine.stop();
+  }
+
+  @Test
+  void grantsDirectModerationAndPermanentBanOnlyToConfiguredCreatorTrip() {
+    var engine = TestSupport.engine();
+    AtomicReference<AgentInvocation> submitted = installRecordingAgent(engine);
+    var command =
+        new LUserCommandImpl(
+            engine, TestSupport.chatMessage("*l kick the spammer", "merc", "595754"), List.of("l"));
+
+    assertEquals(Status.SUCCESSFUL, command.execute().orElseThrow());
+    assertTrue(submitted.get().context().hasCapability(AgentCapability.MODERATION_COMMANDS));
+    assertTrue(submitted.get().context().hasCapability(AgentCapability.PERMANENT_BAN));
     engine.stop();
   }
 

@@ -155,7 +155,7 @@ class SaturnAgentToolsTest {
   }
 
   @Test
-  void commandToolAllowsReadOnlyCommandsAndRejectsRecursiveOrPrivilegedCommands() {
+  void commandToolPublishesAndEnforcesTheSameCapabilityAwareCatalog() {
     AtomicReference<String> invoked = new AtomicReference<>();
     SaturnCommandGateway gateway =
         (context, command, arguments) -> {
@@ -171,11 +171,30 @@ class SaturnAgentToolsTest {
     recursive.addProperty("command", "l");
     JsonObject privileged = new JsonObject();
     privileged.addProperty("command", "sql");
+    JsonObject kick = new JsonObject();
+    kick.addProperty("command", "kick");
+    kick.addProperty("arguments", "spammer");
+    JsonObject ban = new JsonObject();
+    ban.addProperty("command", "ban");
+    ban.addProperty("arguments", "spammer");
+
+    Set<String> regularCatalog = commandEnum(tool, context());
+    Set<String> moderatorCatalog = commandEnum(tool, moderatorContext());
+    Set<String> creatorCatalog = commandEnum(tool, creatorContext());
 
     assertFalse(tool.execute(context(), safe).isError());
     assertEquals("weather Chisinau", invoked.get());
     assertTrue(tool.execute(context(), recursive).isError());
     assertTrue(tool.execute(context(), privileged).isError());
+    assertFalse(regularCatalog.contains("kick"));
+    assertFalse(regularCatalog.contains("ban"));
+    assertTrue(moderatorCatalog.containsAll(Set.of("captcha", "mute", "kick", "shadowban")));
+    assertFalse(moderatorCatalog.contains("ban"));
+    assertTrue(creatorCatalog.contains("ban"));
+    assertTrue(tool.execute(context(), kick).isError());
+    assertFalse(tool.execute(moderatorContext(), kick).isError());
+    assertTrue(tool.execute(moderatorContext(), ban).isError());
+    assertFalse(tool.execute(creatorContext(), ban).isError());
   }
 
   @Test
@@ -315,6 +334,42 @@ class SaturnAgentToolsTest {
         context.whisper(),
         context.roomUsers(),
         Set.of(AgentCapability.DYNAMIC_SQL));
+  }
+
+  private AgentContext moderatorContext() {
+    return contextWithCapabilities(Set.of(AgentCapability.MODERATION_COMMANDS));
+  }
+
+  private AgentContext creatorContext() {
+    return contextWithCapabilities(
+        Set.of(
+            AgentCapability.DYNAMIC_SQL,
+            AgentCapability.MODERATION_COMMANDS,
+            AgentCapability.PERMANENT_BAN));
+  }
+
+  private AgentContext contextWithCapabilities(Set<AgentCapability> capabilities) {
+    AgentContext context = context();
+    return new AgentContext(
+        context.room(),
+        context.nick(),
+        context.trip(),
+        context.hash(),
+        context.whisper(),
+        context.roomUsers(),
+        capabilities);
+  }
+
+  private Set<String> commandEnum(RunCommandTool tool, AgentContext context) {
+    return tool
+        .parameters(context)
+        .getAsJsonObject("properties")
+        .getAsJsonObject("command")
+        .getAsJsonArray("enum")
+        .asList()
+        .stream()
+        .map(value -> value.getAsString())
+        .collect(java.util.stream.Collectors.toUnmodifiableSet());
   }
 
   private String errorCode(AgentToolResult result) {

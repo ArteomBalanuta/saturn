@@ -18,6 +18,10 @@ public interface AgentTool {
     return schema;
   }
 
+  default JsonObject parameters(AgentContext context) {
+    return parameters();
+  }
+
   default boolean isAvailableTo(AgentContext context) {
     return true;
   }

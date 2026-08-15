@@ -8,6 +8,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.ThreadContext;
+import org.saturn.app.agent.AgentRoomAutomation;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.AgentService;
 import org.saturn.app.service.AuthorizationService;
@@ -65,6 +66,7 @@ public abstract class Base {
 
   private final Connection dbConnection;
   private AgentService agentService;
+  private AgentRoomAutomation agentRoomAutomation = AgentRoomAutomation.none();
   public final EngineType engineType;
 
   public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
@@ -201,6 +203,14 @@ public abstract class Base {
 
   protected final void setAgentService(AgentService agentService) {
     this.agentService = agentService;
+  }
+
+  public final AgentRoomAutomation getAgentRoomAutomation() {
+    return agentRoomAutomation;
+  }
+
+  public final void setAgentRoomAutomation(AgentRoomAutomation agentRoomAutomation) {
+    this.agentRoomAutomation = java.util.Objects.requireNonNull(agentRoomAutomation);
   }
 
   protected void closeDbConnection() {

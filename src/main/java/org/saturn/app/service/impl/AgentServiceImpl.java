@@ -5,9 +5,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.AgentConfig;
 import org.saturn.app.agent.AgentInvocation;
+import org.saturn.app.agent.AgentInvocationMode;
 import org.saturn.app.agent.AgentRouter;
 import org.saturn.app.agent.AgentRoutingException;
 import org.saturn.app.service.AgentService;
@@ -21,6 +23,8 @@ public final class AgentServiceImpl implements AgentService {
   private final ExecutorService executor;
   private final Semaphore admission;
   private final AtomicBoolean closed = new AtomicBoolean();
+  private final AtomicReference<AgentInvocation> pendingAmbient = new AtomicReference<>();
+  private final AtomicBoolean ambientScheduled = new AtomicBoolean();
 
   public AgentServiceImpl(
       AgentConfig config, AgentRouter router, OutService outService, Runnable replyFlusher) {
@@ -35,6 +39,10 @@ public final class AgentServiceImpl implements AgentService {
 
   @Override
   public boolean submit(AgentInvocation invocation) {
+    Objects.requireNonNull(invocation, "invocation");
+    if (invocation.mode() == AgentInvocationMode.AMBIENT) {
+      return submitAmbient(invocation);
+    }
     if (!config.enabled()) {
       reply(invocation, "The agent is disabled.");
       return false;
@@ -49,7 +57,7 @@ public final class AgentServiceImpl implements AgentService {
     }
 
     try {
-      executor.submit(() -> execute(invocation));
+      executor.submit(() -> execute(invocation, true));
       return true;
     } catch (RuntimeException exception) {
       admission.release();
@@ -58,11 +66,46 @@ public final class AgentServiceImpl implements AgentService {
     }
   }
 
-  private void execute(AgentInvocation invocation) {
+  private boolean submitAmbient(AgentInvocation invocation) {
+    if (!config.enabled() || closed.get()) {
+      return false;
+    }
+    pendingAmbient.set(invocation);
+    return scheduleAmbient();
+  }
+
+  private boolean scheduleAmbient() {
+    if (!ambientScheduled.compareAndSet(false, true)) {
+      return true;
+    }
+    try {
+      executor.submit(this::executeNextAmbient);
+      return true;
+    } catch (RuntimeException exception) {
+      ambientScheduled.set(false);
+      pendingAmbient.set(null);
+      log.debug("Agent could not schedule ambient work", exception);
+      return false;
+    }
+  }
+
+  private void executeNextAmbient() {
+    AgentInvocation invocation = pendingAmbient.getAndSet(null);
+    if (invocation != null && !closed.get()) {
+      execute(invocation, false);
+    }
+    ambientScheduled.set(false);
+    if (pendingAmbient.get() != null && !closed.get()) {
+      scheduleAmbient();
+    }
+  }
+
+  private void execute(AgentInvocation invocation, boolean admitted) {
     var context = invocation.context();
     log.info(
-        "Agent request started, requestId={}, room={}, nick={}",
+        "Agent request started, requestId={}, mode={}, room={}, nick={}",
         invocation.requestId(),
+        invocation.mode(),
         context.room(),
         context.nick());
     try {
@@ -71,7 +114,9 @@ public final class AgentServiceImpl implements AgentService {
           "Agent request completed, requestId={}, correlationId={}",
           invocation.requestId(),
           result.correlationId());
-      reply(invocation, result.content());
+      if (result.shouldReply()) {
+        reply(invocation, result.content());
+      }
     } catch (AgentRoutingException exception) {
       log.warn(
           "Agent request failed, requestId={}, room={}, nick={}, reason={}",
@@ -80,7 +125,7 @@ public final class AgentServiceImpl implements AgentService {
           context.nick(),
           exception.getMessage());
       log.debug("Agent routing failure, requestId={}", invocation.requestId(), exception);
-      reply(invocation, "The agent could not answer that request.");
+      replyIfRequired(invocation, "The agent could not answer that request.");
     } catch (RuntimeException exception) {
       log.error(
           "Unexpected agent routing failure, requestId={}, type={}, message={}",
@@ -89,9 +134,17 @@ public final class AgentServiceImpl implements AgentService {
           exception.getMessage());
       log.debug(
           "Unexpected agent routing failure, requestId={}", invocation.requestId(), exception);
-      reply(invocation, "The agent could not answer that request.");
+      replyIfRequired(invocation, "The agent could not answer that request.");
     } finally {
-      admission.release();
+      if (admitted) {
+        admission.release();
+      }
+    }
+  }
+
+  private void replyIfRequired(AgentInvocation invocation, String content) {
+    if (invocation.mode().requiresReply()) {
+      reply(invocation, content);
     }
   }
 
@@ -108,6 +161,7 @@ public final class AgentServiceImpl implements AgentService {
   @Override
   public void close() {
     if (closed.compareAndSet(false, true)) {
+      pendingAmbient.set(null);
       executor.close();
     }
   }

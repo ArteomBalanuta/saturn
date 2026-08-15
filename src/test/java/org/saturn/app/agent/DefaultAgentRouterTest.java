@@ -30,6 +30,7 @@ import org.saturn.app.agent.persistence.AgentSqlResult;
 import org.saturn.app.agent.sql.ValidatedAgentSql;
 import org.saturn.app.agent.tool.DatabaseSchemaTool;
 import org.saturn.app.agent.tool.DatabaseSqlTool;
+import org.saturn.app.agent.tool.RunCommandTool;
 
 class DefaultAgentRouterTest {
   @Test
@@ -347,6 +348,138 @@ class DefaultAgentRouterTest {
     assertTrue(regularClient.requests.getFirst().tools().isEmpty());
   }
 
+  @Test
+  void hydratesMentionContextAndKeepsItsReply() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Sun discussed Java yesterday.", List.of(), "stop"));
+    RecordingMemory memory = new RecordingMemory();
+    List<AgentContext> loadedContexts = new ArrayList<>();
+    AgentConversationContextProvider contextProvider =
+        context -> {
+          loadedContexts.add(context);
+          return "{\"rows\":[{\"name\":\"sun\",\"message\":\"Java\"}]}";
+        };
+    AgentParticipationConfig participationConfig = AgentParticipationConfig.from(null);
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 2_000),
+            client,
+            new AgentToolRegistry().freeze(),
+            memory,
+            participationConfig,
+            contextProvider);
+
+    AgentResult result =
+        router.route(
+            new AgentInvocation(
+                "mention-1", context(), "who is sun?", AgentInvocationMode.MENTION));
+
+    assertTrue(result.shouldReply());
+    assertEquals(List.of(context()), loadedContexts);
+    assertTrue(
+        client
+            .requests
+            .getFirst()
+            .messages()
+            .getFirst()
+            .content()
+            .contains("\"message\":\"Java\""));
+    assertEquals(2, memory.appended.size());
+  }
+
+  @Test
+  void turnsAmbientNoReplyMarkerIntoAnUnpersistedSilentResult() throws Exception {
+    AgentParticipationConfig participationConfig = AgentParticipationConfig.from(null);
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse(participationConfig.noReplyMarker(), List.of(), "stop"));
+    RecordingMemory memory = new RecordingMemory();
+    AtomicInteger contextLoads = new AtomicInteger();
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 2_000),
+            client,
+            new AgentToolRegistry().freeze(),
+            memory,
+            participationConfig,
+            context -> {
+              contextLoads.incrementAndGet();
+              return "{\"rows\":[]}";
+            });
+
+    AgentResult result =
+        router.route(
+            new AgentInvocation(
+                "ambient-1", context(), "ordinary room comment", AgentInvocationMode.AMBIENT));
+
+    assertFalse(result.shouldReply());
+    assertEquals("", result.content());
+    assertEquals(1, contextLoads.get());
+    assertTrue(memory.appended.isEmpty());
+  }
+
+  @Test
+  void doesNotHydrateDirectInvocationsAndSurvivesOptionalContextFailure() throws Exception {
+    AtomicInteger contextLoads = new AtomicInteger();
+    AgentConversationContextProvider failingProvider =
+        context -> {
+          contextLoads.incrementAndGet();
+          throw new AgentPersistenceException("database unavailable", null);
+        };
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("direct answer", List.of(), "stop"),
+            new LlmResponse("mention fallback", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 2_000),
+            client,
+            new AgentToolRegistry().freeze(),
+            AgentMemoryStore.none(),
+            AgentParticipationConfig.from(null),
+            failingProvider);
+
+    assertEquals("direct answer", router.route(new AgentInvocation(context(), "direct")).content());
+    assertEquals(
+        "mention fallback",
+        router
+            .route(
+                new AgentInvocation("mention-2", context(), "mention", AgentInvocationMode.MENTION))
+            .content());
+    assertEquals(1, contextLoads.get());
+  }
+
+  @Test
+  void publishesRunCommandSchemaForTheCurrentInvocationCapabilities() throws Exception {
+    AgentToolRegistry registry =
+        new AgentToolRegistry()
+            .register(new RunCommandTool((context, command, arguments) -> true))
+            .freeze();
+    ScriptedClient regularClient =
+        new ScriptedClient(new LlmResponse("regular", List.of(), "stop"));
+    ScriptedClient creatorClient =
+        new ScriptedClient(new LlmResponse("creator", List.of(), "stop"));
+    DefaultAgentRouter regularRouter =
+        new DefaultAgentRouter(config(2, 2_000), regularClient, registry, AgentMemoryStore.none());
+    DefaultAgentRouter creatorRouter =
+        new DefaultAgentRouter(config(2, 2_000), creatorClient, registry, AgentMemoryStore.none());
+    AgentContext creator =
+        new AgentContext(
+            "programming",
+            "merc",
+            "595754",
+            "creator-hash",
+            false,
+            List.of("merc"),
+            Set.of(AgentCapability.MODERATION_COMMANDS, AgentCapability.PERMANENT_BAN));
+
+    regularRouter.route(new AgentInvocation(context(), "help"));
+    creatorRouter.route(new AgentInvocation(creator, "moderate"));
+
+    assertFalse(commandEnum(regularClient.requests.getFirst()).contains("kick"));
+    assertTrue(commandEnum(creatorClient.requests.getFirst()).contains("kick"));
+    assertTrue(commandEnum(creatorClient.requests.getFirst()).contains("ban"));
+  }
+
   private AgentContext context() {
     return new AgentContext(
         "programming", "alice", "trip-a", "hash-a", false, List.of("alice", "bob"));
@@ -367,6 +500,22 @@ class DefaultAgentRouterTest {
   private Set<String> toolNames(LlmRequest request) {
     return request.tools().stream()
         .map(tool -> tool.getAsJsonObject("function").get("name").getAsString())
+        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+  }
+
+  private Set<String> commandEnum(LlmRequest request) {
+    return request.tools().stream()
+        .map(tool -> tool.getAsJsonObject("function"))
+        .filter(function -> function.get("name").getAsString().equals("run_command"))
+        .findFirst()
+        .orElseThrow()
+        .getAsJsonObject("parameters")
+        .getAsJsonObject("properties")
+        .getAsJsonObject("command")
+        .getAsJsonArray("enum")
+        .asList()
+        .stream()
+        .map(value -> value.getAsString())
         .collect(java.util.stream.Collectors.toUnmodifiableSet());
   }
 
