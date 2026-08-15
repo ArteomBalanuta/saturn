@@ -3,7 +3,8 @@ package org.saturn.app.agent;
 public enum AgentInvocationMode {
   DIRECT(true),
   MENTION(true),
-  AMBIENT(false);
+  AMBIENT(false),
+  MODERATION(false);
 
   private final boolean requiresReply;
 

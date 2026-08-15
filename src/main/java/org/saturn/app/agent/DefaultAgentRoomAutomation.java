@@ -3,6 +3,7 @@ package org.saturn.app.agent;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.moderation.ModerationActionExecutor;
@@ -24,6 +25,8 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
   private final AgentQuietRegistry quietRegistry;
   private final RoomModerationMonitor moderationMonitor;
   private final ModerationActionExecutor moderationExecutor;
+  private final AgentContext botModerationContext;
+  private final Predicate<ChatMessage> semanticModerationCandidate;
   private final AtomicLong eligibleAmbientMessages = new AtomicLong();
 
   public DefaultAgentRoomAutomation(
@@ -41,7 +44,9 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
         mentionParser,
         quietRegistry,
         RoomModerationMonitor.disabled(),
-        ModerationActionExecutor.none());
+        ModerationActionExecutor.none(),
+        null,
+        message -> false);
   }
 
   public DefaultAgentRoomAutomation(
@@ -53,6 +58,30 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
       AgentQuietRegistry quietRegistry,
       RoomModerationMonitor moderationMonitor,
       ModerationActionExecutor moderationExecutor) {
+    this(
+        engine,
+        config,
+        agentService,
+        invocationFactory,
+        mentionParser,
+        quietRegistry,
+        moderationMonitor,
+        moderationExecutor,
+        null,
+        message -> false);
+  }
+
+  public DefaultAgentRoomAutomation(
+      EngineImpl engine,
+      AgentParticipationConfig config,
+      AgentService agentService,
+      AgentInvocationFactory invocationFactory,
+      AgentMentionParser mentionParser,
+      AgentQuietRegistry quietRegistry,
+      RoomModerationMonitor moderationMonitor,
+      ModerationActionExecutor moderationExecutor,
+      AgentContext botModerationContext,
+      Predicate<ChatMessage> semanticModerationCandidate) {
     this.engine = Objects.requireNonNull(engine, "engine");
     this.config = Objects.requireNonNull(config, "config");
     this.agentService = Objects.requireNonNull(agentService, "agentService");
@@ -61,6 +90,9 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
     this.quietRegistry = Objects.requireNonNull(quietRegistry, "quietRegistry");
     this.moderationMonitor = Objects.requireNonNull(moderationMonitor, "moderationMonitor");
     this.moderationExecutor = Objects.requireNonNull(moderationExecutor, "moderationExecutor");
+    this.botModerationContext = botModerationContext;
+    this.semanticModerationCandidate =
+        Objects.requireNonNull(semanticModerationCandidate, "semanticModerationCandidate");
   }
 
   @Override
@@ -74,6 +106,8 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
         || text.startsWith(engine.prefix)) {
       return Outcome.PASS;
     }
+
+    submitSemanticModeration(message, text);
 
     Optional<String> mentionPrompt = mentionParser.parse(text, engine.nick);
     AgentInvocationMode mode =
@@ -100,6 +134,26 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
 
     agentService.submit(invocation);
     return Outcome.PASS;
+  }
+
+  private void submitSemanticModeration(ChatMessage message, String text) {
+    if (botModerationContext == null || !semanticModerationCandidate.test(message)) {
+      return;
+    }
+    AgentContext liveBotContext =
+        new AgentContext(
+            engine.channel,
+            engine.nick,
+            botModerationContext.trip(),
+            botModerationContext.hash(),
+            false,
+            engine.currentChannelUsers.stream().map(user -> user.getNick()).toList(),
+            botModerationContext.capabilities());
+    String prompt =
+        "Review this public chat message for severe abuse. Author nick: %s. Message: %s"
+            .formatted(message.getNick(), text);
+    agentService.submit(
+        new AgentInvocation(liveBotContext, prompt, AgentInvocationMode.MODERATION));
   }
 
   @Override

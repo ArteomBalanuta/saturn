@@ -43,6 +43,9 @@ public final class AgentSystemPrompt {
           case AMBIENT ->
               prompts.formatted(
                   "participation-ambient.txt", config.noReplyMarker(), config.noReplyMarker());
+          case MODERATION ->
+              prompts.formatted(
+                  "participation-moderation.txt", config.noReplyMarker(), config.noReplyMarker());
         };
     String roomHistory =
         recentRoomContext == null || recentRoomContext.isBlank()

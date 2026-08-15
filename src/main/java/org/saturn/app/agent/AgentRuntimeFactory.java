@@ -114,7 +114,12 @@ public final class AgentRuntimeFactory {
               new AgentMentionParser(),
               new AgentQuietRegistry(participationConfig.quietDuration(), Clock.systemUTC()),
               moderationMonitor,
-              new EngineModerationActionExecutor(commandGateway, outService, botContext)));
+              new EngineModerationActionExecutor(commandGateway, outService, botContext),
+              botContext,
+              message ->
+                  moderationConfig.enabled()
+                      && !isProtectedTrip(protectedTrips, message.getTrip())
+                      && !isProtectedNick(engine, message.getNick())));
     }
     return service;
   }

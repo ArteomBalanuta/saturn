@@ -238,6 +238,9 @@ public final class DefaultAgentRouter implements AgentRouter {
 
       response = correctFailurePlaceholder(response, messages, correlationId);
       String content = truncate(sanitizePersonaArtifacts(response.content()), config.maxOutputChars());
+      if (invocation.mode() == AgentInvocationMode.MODERATION) {
+        return AgentResult.silent(correlationId);
+      }
       if (content.isBlank()) {
         throw new AgentRoutingException("Agent returned an empty response");
       }

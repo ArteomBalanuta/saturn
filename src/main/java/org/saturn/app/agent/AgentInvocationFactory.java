@@ -24,6 +24,7 @@ public final class AgentInvocationFactory {
     boolean dynamicSqlAdmin =
         !creator
             && mode != AgentInvocationMode.AMBIENT
+            && mode != AgentInvocationMode.MODERATION
             && isDynamicSqlAdmin(engine, trip);
     if (creator || dynamicSqlAdmin) {
       capabilities.add(AgentCapability.DYNAMIC_SQL);
@@ -31,6 +32,7 @@ public final class AgentInvocationFactory {
     boolean moderator =
         !creator
             && mode != AgentInvocationMode.AMBIENT
+            && mode != AgentInvocationMode.MODERATION
             && (dynamicSqlAdmin || engine.authorizationService.resolveRole(trip) == Role.MODERATOR);
     if (creator || moderator) {
       capabilities.add(AgentCapability.MODERATION_COMMANDS);
