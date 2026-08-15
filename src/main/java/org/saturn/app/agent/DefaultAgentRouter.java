@@ -228,7 +228,7 @@ public final class DefaultAgentRouter implements AgentRouter {
     messages.add(LlmMessage.assistant(response.content(), List.of()));
     messages.add(LlmMessage.user(UNVERIFIED_ACTION_CORRECTION.strip()));
     LlmResponse corrected = client.complete(new LlmRequest(messages, definitions));
-    if (containsUnverifiedActionClaim(corrected.content())) {
+    if (corrected.toolCalls().isEmpty() && containsUnverifiedActionClaim(corrected.content())) {
       throw new AgentRoutingException("Agent repeated an unverified action claim");
     }
     return corrected;

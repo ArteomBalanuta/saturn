@@ -847,7 +847,7 @@ class DefaultAgentRouterTest {
             new LlmResponse(
                 "I will execute ping now.\n[executes ping command]", List.of(), "stop"),
             new LlmResponse(
-                "",
+                "Checking the user's history now.",
                 List.of(
                     new LlmToolCall(
                         "ping-1", "run_command", "{\"command\":\"ping\",\"arguments\":\"\"}")),
