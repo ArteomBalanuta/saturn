@@ -26,9 +26,9 @@ public final class SqlUtil {
       """;
 
   public static final String INSERT_NAMES =
-      "INSERT INTO names (name, created_on) VALUES (?, strftime('%s', 'now'))";
+      "INSERT INTO names (name, created_on) VALUES (?, DATEDIFF(SECOND, DATE '1970-01-01', CURRENT_TIMESTAMP))";
   public static final String INSERT_TRIPS =
-      "INSERT INTO trips (type, trip, created_on) VALUES (?, ?, strftime('%s', 'now'))";
+      "INSERT INTO trips (type, trip, created_on) VALUES (?, ?, DATEDIFF(SECOND, DATE '1970-01-01', CURRENT_TIMESTAMP))";
   public static final String INSERT_TRIP_NAME =
       "INSERT INTO trip_names (trip_id, name_id) VALUES (?, ?)";
   public static final String
@@ -77,7 +77,7 @@ INNER JOIN names n on tn.name_id = n.id ORDER BY t.trip DESC;
       "DELETE FROM banned_users WHERE name = ? OR trip = ? OR hash = ?;";
   public static final String SELECT_BANNED_USERS =
       "SELECT trip,name,hash,reason FROM banned_users;";
-  public static final String SELECT_ROLE_BY_TRIP = "SELECT type FROM trips WHERE trip == ?;";
+  public static final String SELECT_ROLE_BY_TRIP = "SELECT type FROM trips WHERE trip = ?;";
 
   /* For now using USER role per every whitelisted ?lounge user */
   public static final String SELECT_LOUNGE_TRIPS = "SELECT trip FROM trips WHERE type = 'USER';";
@@ -94,16 +94,11 @@ INNER JOIN names n on tn.name_id = n.id ORDER BY t.trip DESC;
       "SELECT message,created_on FROM messages WHERE (name = ? or trip = ?) and (message not in"
           + " ('LEFT','JOINED')) order by created_on desc limit 1;";
 
-  /*
-    strftime('%s', 'now') gets the current time in seconds.
-    900 is 15 * 60 seconds (15 minutes).
-    We multiply by 1000 because created_on is in milliseconds.
-    This query will return all rows where the created_on timestamp is within the last 15 minutes.
-  */
+  /* The message timestamp is stored in milliseconds since the Unix epoch. */
   public static final String SELECT_SEEN_RECENTLY_AS =
       "SELECT distinct name FROM messages WHERE (hash = ? or (trip = ? and (trip IS NOT NULL and"
           + " trip != '' and trip != 'null'))) and (message in ('LEFT','JOINED')) and created_on >="
-          + " (strftime('%s', 'now') - 900) * 1000 limit 5";
+          + " DATEDIFF(MILLISECOND, DATE '1970-01-01', CURRENT_TIMESTAMP) - 900000 limit 5";
 
   public static final String SELECT_LAST_N_MESSAGES =
       "SELECT name,message,created_on FROM messages WHERE (name = ? or trip = ?) and (message not"

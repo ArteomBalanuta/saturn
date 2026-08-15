@@ -6,6 +6,7 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonParser;
 
 /** Stable model-facing result envelope for every SDK tool invocation. */
+/** Stable model-visible envelope for every successful or failed tool observation. */
 public record ToolResponseEnvelope(String status, JsonElement data, Error error) {
   private static final Gson GSON = new Gson();
 

@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 @FunctionalInterface
+/** Read-only bridge from agent tools to Saturn's live managed-room snapshots. */
 public interface AgentRoomDirectory {
   Optional<RoomSnapshot> find(String room);
 

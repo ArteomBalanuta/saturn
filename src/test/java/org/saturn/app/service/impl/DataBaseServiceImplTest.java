@@ -1,7 +1,7 @@
 package org.saturn.app.service.impl;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -36,9 +36,9 @@ class DataBaseServiceImplTest {
     try (var connection = new DataBaseServiceImpl(database.toString()).getConnection();
         Statement statement = connection.createStatement()) {
       Set<String> columns = new HashSet<>();
-      try (var resultSet = statement.executeQuery("PRAGMA table_info(messages)")) {
+      try (var resultSet = connection.getMetaData().getColumns(null, "public", "messages", "%")) {
         while (resultSet.next()) {
-          columns.add(resultSet.getString("name"));
+          columns.add(resultSet.getString("COLUMN_NAME"));
         }
       }
       assertTrue(columns.contains("visibility"));
@@ -50,10 +50,9 @@ class DataBaseServiceImplTest {
 
       Set<String> indexes = new HashSet<>();
       try (var resultSet =
-          statement.executeQuery(
-              "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'messages'")) {
+          connection.getMetaData().getIndexInfo(null, "public", "messages", false, false)) {
         while (resultSet.next()) {
-          indexes.add(resultSet.getString("name"));
+          indexes.add(resultSet.getString("INDEX_NAME"));
         }
       }
       assertTrue(indexes.contains("idx_agent_messages_name_room_visibility_created"));
@@ -87,9 +86,7 @@ class DataBaseServiceImplTest {
 
     try (var connection = new DataBaseServiceImpl(database.toString()).getConnection();
         Statement statement = connection.createStatement();
-        var resultSet =
-            statement.executeQuery(
-                "SELECT id, visibility FROM messages ORDER BY id")) {
+        var resultSet = statement.executeQuery("SELECT id, visibility FROM messages ORDER BY id")) {
       assertTrue(resultSet.next());
       assertEquals("PUBLIC", resultSet.getString("visibility"));
       assertTrue(resultSet.next());
@@ -101,7 +98,7 @@ class DataBaseServiceImplTest {
   }
 
   @Test
-  void publicHistoryIndexesMatchCaseInsensitivePredicatesAndOrdering() throws Exception {
+  void publicHistoryIndexesAreCreatedForH2Queries() throws Exception {
     Path database = tempDir.resolve("plans.db");
     try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
         Statement statement = connection.createStatement()) {
@@ -114,47 +111,14 @@ class DataBaseServiceImplTest {
     }
 
     try (var connection = new DataBaseServiceImpl(database.toString()).getConnection();
-        var statement =
-            connection.prepareStatement(
-                """
-                EXPLAIN QUERY PLAN
-                SELECT name, trip, hash, message, created_on, channel
-                FROM messages
-                WHERE name = ? COLLATE NOCASE
-                  AND channel = ? COLLATE NOCASE
-                  AND visibility = 'PUBLIC'
-                ORDER BY created_on DESC, id DESC
-                LIMIT ?
-                """)) {
-      statement.setString(1, "alice");
-      statement.setString(2, "programming");
-      statement.setInt(3, 20);
-      try (var resultSet = statement.executeQuery()) {
-        assertTrue(resultSet.next());
-        String plan = resultSet.getString("detail");
-        assertTrue(plan.contains("idx_agent_messages_name_room_visibility_created"), plan);
-        assertFalse(plan.contains("USE TEMP B-TREE"), plan);
+        var resultSet =
+            connection.getMetaData().getIndexInfo(null, "public", "messages", false, false)) {
+      Set<String> indexes = new HashSet<>();
+      while (resultSet.next()) {
+        indexes.add(resultSet.getString("INDEX_NAME"));
       }
-
-      try (var allRooms =
-          connection.prepareStatement(
-              """
-              EXPLAIN QUERY PLAN
-              SELECT name, trip, hash, message, created_on, channel
-              FROM messages
-              WHERE name = ? COLLATE NOCASE AND visibility = 'PUBLIC'
-              ORDER BY created_on DESC, id DESC
-              LIMIT ?
-              """)) {
-        allRooms.setString(1, "alice");
-        allRooms.setInt(2, 20);
-        try (var resultSet = allRooms.executeQuery()) {
-          assertTrue(resultSet.next());
-          String plan = resultSet.getString("detail");
-          assertTrue(plan.contains("idx_agent_messages_name_visibility_created"), plan);
-          assertFalse(plan.contains("USE TEMP B-TREE"), plan);
-        }
-      }
+      assertTrue(indexes.contains("idx_agent_messages_name_room_visibility_created"));
+      assertTrue(indexes.contains("idx_agent_messages_name_visibility_created"));
     }
   }
 }

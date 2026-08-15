@@ -27,7 +27,8 @@ class UnMuteUserCommandImplTest {
     var command = new UnMuteUserCommandImpl(engine, message, List.of("unmute", "undumb"));
 
     assertEquals(Status.SUCCESSFUL, command.execute().orElseThrow());
-    assertEquals("{ \"cmd\": \"unmute\", \"hash\": \"hash-a\"}", engine.outgoingRawMessageQueue.poll());
+    assertEquals(
+        "{ \"cmd\": \"unmute\", \"hash\": \"hash-a\"}", engine.outgoingRawMessageQueue.poll());
     assertEquals("@mod hash-a has been unmuted", engine.outgoingMessageQueue.poll());
   }
 }

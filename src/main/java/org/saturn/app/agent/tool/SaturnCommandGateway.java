@@ -2,6 +2,12 @@ package org.saturn.app.agent.tool;
 
 import org.saturn.app.agent.AgentContext;
 
+/**
+ * Command boundary used by agent tools to invoke Saturn without depending on command internals.
+ *
+ * <p>Implementations execute an already capability-validated command and report whether Saturn
+ * accepted it. They may also return model-visible data about the delivered output.
+ */
 @FunctionalInterface
 public interface SaturnCommandGateway {
   boolean execute(AgentContext context, String command, String arguments);

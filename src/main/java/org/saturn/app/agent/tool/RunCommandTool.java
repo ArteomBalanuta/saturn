@@ -17,6 +17,12 @@ import org.saturn.app.agent.ToolEffect;
 import org.saturn.app.agent.ToolExample;
 import org.saturn.app.agent.ToolResultMode;
 
+/**
+ * Bridges selected Saturn commands into the agent SDK.
+ *
+ * <p>This is always an ordered action tool, including weather and time commands, because command
+ * execution may send a room message. Available commands are derived from the caller capabilities.
+ */
 public final class RunCommandTool implements AgentTool {
   private static final Set<String> INFORMATIONAL_COMMANDS =
       Set.of(
@@ -36,13 +42,7 @@ public final class RunCommandTool implements AgentTool {
           "version",
           "v");
   private static final Set<String> MODERATION_COMMANDS =
-      Set.of(
-          "captcha",
-          "mute",
-          "unmute",
-          "kick",
-          "shadowban",
-          "unshadowban");
+      Set.of("captcha", "mute", "unmute", "kick", "shadowban", "unshadowban");
   private static final Set<String> PERMANENT_BAN_COMMANDS = Set.of("ban", "unban");
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private final SaturnCommandGateway gateway;
@@ -74,7 +74,8 @@ public final class RunCommandTool implements AgentTool {
   @Override
   public AgentToolDescriptor descriptor(AgentContext context) {
     boolean creator = context != null && context.hasCapability(AgentCapability.PERMANENT_BAN);
-    boolean moderator = context != null && context.hasCapability(AgentCapability.MODERATION_COMMANDS);
+    boolean moderator =
+        context != null && context.hasCapability(AgentCapability.MODERATION_COMMANDS);
     return new AgentToolDescriptor(
         name(),
         "Run Saturn command",
@@ -86,7 +87,13 @@ public final class RunCommandTool implements AgentTool {
         parameters(context),
         PROMPTS.toolGuidance(name(), "whenToUse"),
         PROMPTS.toolGuidance(name(), "whenNotToUse"),
-        List.of(new ToolExample(name(), "{\"command\":\"weather\",\"arguments\":\"Tokyo\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
+        List.of(
+            new ToolExample(
+                name(),
+                "{\"command\":\"weather\",\"arguments\":\"Tokyo\"}",
+                PROMPTS
+                    .toolExample(name())
+                    .substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(),
         Set.of());
   }
@@ -113,6 +120,7 @@ public final class RunCommandTool implements AgentTool {
   }
 
   @Override
+  /** Executes one capability-approved command and reports whether Saturn accepted it. */
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     if (!arguments.has("command")) {
       return AgentToolResult.error(null, name(), "Missing command");
@@ -126,7 +134,8 @@ public final class RunCommandTool implements AgentTool {
     if (isTargetedModerationCommand(command)
         && context.moderationTarget() != null
         && !firstArgument(commandArguments).equalsIgnoreCase(context.moderationTarget())) {
-      return AgentToolResult.error(null, name(), "Moderation action must target the reviewed author");
+      return AgentToolResult.error(
+          null, name(), "Moderation action must target the reviewed author");
     }
     SaturnCommandGateway.CommandExecution execution =
         gateway.executeWithResult(context, command, commandArguments);

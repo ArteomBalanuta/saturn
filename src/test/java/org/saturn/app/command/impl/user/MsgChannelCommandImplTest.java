@@ -39,6 +39,7 @@ class MsgChannelCommandImplTest {
 
     assertEquals(Status.FAILED, result);
     assertEquals(
-        "@testAuthor  Example: *msgroom your-room your message", engine.outgoingMessageQueue.poll());
+        "@testAuthor  Example: *msgroom your-room your message",
+        engine.outgoingMessageQueue.poll());
   }
 }

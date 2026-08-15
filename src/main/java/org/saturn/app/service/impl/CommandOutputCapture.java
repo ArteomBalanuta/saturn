@@ -16,7 +16,8 @@ public final class CommandOutputCapture {
     CURRENT.set(current);
     try {
       T value = operation.get();
-      return new Captured<>(value, List.copyOf(current.chatMessages), List.copyOf(current.rawMessages));
+      return new Captured<>(
+          value, List.copyOf(current.chatMessages), List.copyOf(current.rawMessages));
     } finally {
       CURRENT.set(previous);
     }

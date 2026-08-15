@@ -185,7 +185,9 @@ public class UserServiceImpl extends OutService implements UserService {
             int nameId;
             try (PreparedStatement pstmtNames =
                     connection.prepareStatement(INSERT_NAMES, Statement.RETURN_GENERATED_KEYS);
-                ResultSet rsNames = executeInsertReturningKeys(pstmtNames, statement -> statement.setString(1, name))) {
+                ResultSet rsNames =
+                    executeInsertReturningKeys(
+                        pstmtNames, statement -> statement.setString(1, name))) {
               rsNames.next();
               nameId = rsNames.getInt(1);
             }
@@ -263,8 +265,7 @@ public class UserServiceImpl extends OutService implements UserService {
 
   @Override
   public void registerTripByName(String name, String trip) {
-    String insertTripSql =
-        "INSERT INTO trips (type, trip, created_on) VALUES ('REGULAR', ?, ?)";
+    String insertTripSql = "INSERT INTO trips (type, trip, created_on) VALUES ('REGULAR', ?, ?)";
     String insertTripNamesSql =
         "INSERT INTO trip_names (trip_id, name_id) SELECT ?, id FROM names WHERE name = ?";
     try {

@@ -4,6 +4,12 @@ import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * SDK extension point for a capability exposed to the LLM as a validated function definition.
+ *
+ * <p>Implementations must make {@link #descriptor(AgentContext)} agree with runtime behavior and
+ * return errors as {@link AgentToolResult} rather than throwing for expected invalid input.
+ */
 public interface AgentTool {
   String name();
 
@@ -50,5 +56,6 @@ public interface AgentTool {
         requiredSuccessfulTools());
   }
 
+  /** Executes validated arguments for the contextual caller. */
   AgentToolResult execute(AgentContext context, JsonObject arguments);
 }

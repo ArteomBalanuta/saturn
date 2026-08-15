@@ -1,7 +1,7 @@
 package org.saturn.app.agent;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -99,7 +99,8 @@ class DefaultAgentRouterTest {
         List.of("system", "user", "assistant", "user"),
         request.messages().stream().map(org.saturn.app.agent.llm.LlmMessage::role).toList());
     assertTrue(request.messages().getFirst().content().contains("CONVERSATION CONTINUITY"));
-    assertTrue(request.messages().getFirst().content().contains("same conversation, not a new session"));
+    assertTrue(
+        request.messages().getFirst().content().contains("same conversation, not a new session"));
     assertTrue(request.messages().getLast().content().contains("@bob"));
     assertTrue(request.messages().getLast().content().contains("Which room did Alice ask about?"));
   }
@@ -112,8 +113,7 @@ class DefaultAgentRouterTest {
                 org.saturn.app.agent.llm.LlmMessage.user(
                     "Public Saturn message from @mer in #programming:\ntell me about jill"),
                 org.saturn.app.agent.llm.LlmMessage.assistant(
-                    "*[sips tea]*\nAh, merc. The archives reveal a user. Carpe diem.",
-                    List.of()),
+                    "*[sips tea]*\nAh, merc. The archives reveal a user. Carpe diem.", List.of()),
                 org.saturn.app.agent.llm.LlmMessage.user(
                     "Public Saturn message from @alice in #programming:\nwhere is lounge?"),
                 org.saturn.app.agent.llm.LlmMessage.assistant(
@@ -990,8 +990,7 @@ class DefaultAgentRouterTest {
   void doesNotAcceptNarratedCommandExecutionWithoutARealToolCall() throws Exception {
     ScriptedClient client =
         new ScriptedClient(
-            new LlmResponse(
-                "I will execute ping now.\n[executes ping command]", List.of(), "stop"),
+            new LlmResponse("I will execute ping now.\n[executes ping command]", List.of(), "stop"),
             new LlmResponse(
                 "Checking the user's history now.",
                 List.of(
@@ -1002,8 +1001,7 @@ class DefaultAgentRouterTest {
     RecordingMemory memory = new RecordingMemory();
 
     AgentResult result =
-        routerWithRunCommand(client, memory)
-            .route(new AgentInvocation(context(), "run ping"));
+        routerWithRunCommand(client, memory).route(new AgentInvocation(context(), "run ping"));
 
     assertEquals("The response time is 184 milliseconds.", result.content());
     assertEquals(3, client.requests.size());
@@ -1092,8 +1090,7 @@ class DefaultAgentRouterTest {
             new AgentToolRegistry().register(historyTool).freeze(),
             memory);
 
-    AgentResult result =
-        router.route(new AgentInvocation(context(), "tell me about jill user"));
+    AgentResult result = router.route(new AgentInvocation(context(), "tell me about jill user"));
 
     assertEquals(1, historyCalls.get());
     assertEquals(2, client.requests.size());
@@ -1106,9 +1103,7 @@ class DefaultAgentRouterTest {
     assertTrue(freshEvidence.contains("\"returnedCount\":1"));
     assertTrue(freshEvidence.contains("\"oldestCreatedOn\":1700000000000"));
     assertTrue(freshEvidence.contains("\"newestCreatedOn\":1700000000000"));
-    assertEquals(
-        "Jill has discussed weather in Wuhan.",
-        result.content());
+    assertEquals("Jill has discussed weather in Wuhan.", result.content());
     assertEquals(result.content(), memory.appended.getLast());
   }
 
@@ -1132,8 +1127,7 @@ class DefaultAgentRouterTest {
             new LlmResponse(
                 "",
                 List.of(
-                    new LlmToolCall(
-                        "history-wrong", "user_message_history", "{\"nick\":\"nex\"}")),
+                    new LlmToolCall("history-wrong", "user_message_history", "{\"nick\":\"nex\"}")),
                 "tool_calls"),
             new LlmResponse("Nex is active.", List.of(), "stop"));
     DefaultAgentRouter router =
@@ -1183,7 +1177,8 @@ class DefaultAgentRouterTest {
     assertEquals(2, client.requests.size());
     assertTrue(
         client.requests.get(1).messages().stream()
-            .anyMatch(message -> "tool".equals(message.role()) && message.content().contains("Jill")));
+            .anyMatch(
+                message -> "tool".equals(message.role()) && message.content().contains("Jill")));
   }
 
   @Test
@@ -1264,9 +1259,7 @@ class DefaultAgentRouterTest {
                 "",
                 List.of(
                     new LlmToolCall(
-                        "history-current",
-                        "user_message_history",
-                        "{\"nick\":\"jill\"}")),
+                        "history-current", "user_message_history", "{\"nick\":\"jill\"}")),
                 "tool_calls"),
             new LlmResponse("The agent could not answer that request.", List.of(), "stop"),
             new LlmResponse(groundedAnswer, List.of(), "stop"));
@@ -1277,8 +1270,7 @@ class DefaultAgentRouterTest {
             new AgentToolRegistry().register(historyTool).freeze(),
             memory);
 
-    AgentResult result =
-        router.route(new AgentInvocation(context(), "tell me about jill user"));
+    AgentResult result = router.route(new AgentInvocation(context(), "tell me about jill user"));
 
     assertEquals(groundedAnswer, result.content());
     assertEquals(3, client.requests.size());
@@ -1304,8 +1296,7 @@ class DefaultAgentRouterTest {
                 "tool_calls"));
     DefaultAgentRouter router = routerWithRunCommand(client, new RecordingMemory());
 
-    AgentResult result =
-        router.route(new AgentInvocation(context(), "do it @korin"));
+    AgentResult result = router.route(new AgentInvocation(context(), "do it @korin"));
 
     assertEquals("Merc's profile is based on fresh history.", result.content());
     String correction = client.requests.getLast().messages().getLast().content();
@@ -1350,14 +1341,12 @@ class DefaultAgentRouterTest {
             new AgentToolRegistry().register(historyTool).freeze(),
             memory);
 
-    AgentResult result =
-        router.route(new AgentInvocation(context(), "tell me about jill user"));
+    AgentResult result = router.route(new AgentInvocation(context(), "tell me about jill user"));
 
     assertEquals(freshAnswer, result.content());
     assertEquals(3, client.requests.size());
     assertTrue(client.requests.get(2).tools().isEmpty());
-    assertTrue(
-        client.requests.get(2).messages().getLast().content().contains("fresh history"));
+    assertTrue(client.requests.get(2).messages().getLast().content().contains("fresh history"));
     assertEquals(freshAnswer, memory.appended.getLast());
   }
 
@@ -1428,9 +1417,7 @@ class DefaultAgentRouterTest {
                 "",
                 List.of(
                     new LlmToolCall(
-                        "wrong-tool",
-                        "run_command",
-                        "{\"command\":\"ping\",\"arguments\":\"\"}")),
+                        "wrong-tool", "run_command", "{\"command\":\"ping\",\"arguments\":\"\"}")),
                 "tool_calls"),
             new LlmResponse("The ping command ran.", List.of(), "stop"));
     DefaultAgentRouter router =
@@ -1473,9 +1460,7 @@ class DefaultAgentRouterTest {
                 "",
                 List.of(
                     new LlmToolCall(
-                        "wrong-tool",
-                        "run_command",
-                        "{\"command\":\"ping\",\"arguments\":\"\"}")),
+                        "wrong-tool", "run_command", "{\"command\":\"ping\",\"arguments\":\"\"}")),
                 "tool_calls"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
@@ -1561,9 +1546,7 @@ class DefaultAgentRouterTest {
                 "",
                 List.of(
                     new LlmToolCall(
-                        "history-failed",
-                        "user_message_history",
-                        "{\"nick\":\"jill\"}")),
+                        "history-failed", "user_message_history", "{\"nick\":\"jill\"}")),
                 "tool_calls"),
             new LlmResponse(oldAnswer, List.of(), "stop"));
     DefaultAgentRouter router =
@@ -1644,12 +1627,10 @@ class DefaultAgentRouterTest {
             List.of(
                 org.saturn.app.agent.llm.LlmMessage.user(repeatedPrompt),
                 org.saturn.app.agent.llm.LlmMessage.assistant(repeatedAnswer, List.of())));
-    ScriptedClient client =
-        new ScriptedClient(new LlmResponse(repeatedAnswer, List.of(), "stop"));
+    ScriptedClient client = new ScriptedClient(new LlmResponse(repeatedAnswer, List.of(), "stop"));
 
     AgentResult result =
-        routerWithRunCommand(client, memory)
-            .route(new AgentInvocation(context(), "status"));
+        routerWithRunCommand(client, memory).route(new AgentInvocation(context(), "status"));
 
     assertEquals(repeatedAnswer, result.content());
     assertEquals(1, client.requests.size());
@@ -1668,7 +1649,8 @@ class DefaultAgentRouterTest {
     AgentContext bob =
         new AgentContext("programming", "bob", "trip-b", "hash-b", false, List.of("alice", "bob"));
 
-    AgentResult result = routerWithRunCommand(client, memory).route(new AgentInvocation(bob, "status"));
+    AgentResult result =
+        routerWithRunCommand(client, memory).route(new AgentInvocation(bob, "status"));
 
     assertEquals(answer, result.content());
     assertEquals(1, client.requests.size());

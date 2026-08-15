@@ -11,17 +11,21 @@ class AgentResponseSanitizerTest {
 
   @Test
   void removesOnlyLegacyPersonaMarkersAndFormatsListsForSaturn() {
-    String result = sanitizer.sanitize("[sips tea]\nAh, mer.\n* weather was sunny\nCarpe diem, mer.");
+    String result =
+        sanitizer.sanitize("[sips tea]\nAh, mer.\n* weather was sunny\nCarpe diem, mer.");
 
     assertEquals("\u2009-\u2009weather was sunny", result);
   }
 
   @Test
   void preservesOrdinaryEvidenceThatIsNotPersonaBoilerplate() {
-    String result = sanitizer.sanitize("Relevant records reveal useful database evidence.\n* plain fact");
+    String result =
+        sanitizer.sanitize("Relevant records reveal useful database evidence.\n* plain fact");
 
-    assertEquals("Relevant records reveal useful database evidence.\n\u2009-\u2009plain fact", result);
-    assertFalse(sanitizer.containsLegacyPersona("Relevant records reveal useful database evidence."));
+    assertEquals(
+        "Relevant records reveal useful database evidence.\n\u2009-\u2009plain fact", result);
+    assertFalse(
+        sanitizer.containsLegacyPersona("Relevant records reveal useful database evidence."));
     assertTrue(sanitizer.containsLegacyPersona("[sips tea]"));
   }
 }

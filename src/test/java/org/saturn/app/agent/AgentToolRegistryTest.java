@@ -108,8 +108,10 @@ class AgentToolRegistryTest {
     assertTrue(description.contains("effect: READ_ONLY"));
     assertTrue(description.contains("result_mode: MODEL_DATA"));
     assertTrue(description.contains("when_to_use: Use when the user asks for current weather."));
-    assertTrue(description.contains("when_not_to_use: Do not use for historical climate analysis."));
-    assertTrue(description.contains("example: weather {\"location\":\"Tokyo\"} - Get Tokyo weather"));
+    assertTrue(
+        description.contains("when_not_to_use: Do not use for historical climate analysis."));
+    assertTrue(
+        description.contains("example: weather {\"location\":\"Tokyo\"} - Get Tokyo weather"));
   }
 
   private AgentContext context(Set<AgentCapability> capabilities) {

@@ -15,6 +15,7 @@ hackchat.db
 /dependency-reduced-pom.xml
 /logs/
 /config.toml
+/.env
 /database/*
 !/database/migrations/
 !/database/migrations/*.sql

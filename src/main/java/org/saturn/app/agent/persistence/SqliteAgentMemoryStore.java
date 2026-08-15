@@ -1,7 +1,6 @@
 package org.saturn.app.agent.persistence;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,9 +12,10 @@ import org.saturn.app.agent.AgentConfig;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentMemoryStore;
 import org.saturn.app.agent.llm.LlmMessage;
+import org.saturn.app.persistence.H2Database;
 
 public final class SqliteAgentMemoryStore implements AgentMemoryStore {
-  private final String jdbcUrl;
+  private final String databasePath;
   private final Clock clock;
 
   public SqliteAgentMemoryStore(String databasePath) {
@@ -23,7 +23,7 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
   }
 
   public SqliteAgentMemoryStore(String databasePath, Clock clock) {
-    this.jdbcUrl = "jdbc:sqlite:" + databasePath;
+    this.databasePath = databasePath;
     this.clock = clock;
   }
 
@@ -39,9 +39,7 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
         LIMIT ?
         """;
     try (Connection connection = open();
-        PreparedStatement queryOnly = connection.prepareStatement("PRAGMA query_only = ON");
         PreparedStatement statement = connection.prepareStatement(sql)) {
-      queryOnly.execute();
       statement.setString(1, context.memoryKey());
       statement.setLong(2, now);
       statement.setInt(3, config.memoryTurns() * 2);
@@ -65,7 +63,8 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
   }
 
   private List<LlmMessage> loadToolEvidence(
-      Connection connection, AgentContext context, AgentConfig config, long now) throws SQLException {
+      Connection connection, AgentContext context, AgentConfig config, long now)
+      throws SQLException {
     String sql =
         """
         SELECT tool_name, content
@@ -149,13 +148,7 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
   }
 
   private Connection open() throws SQLException {
-    Connection connection = DriverManager.getConnection(jdbcUrl);
-    try (PreparedStatement foreignKeys = connection.prepareStatement("PRAGMA foreign_keys = ON");
-        PreparedStatement timeout = connection.prepareStatement("PRAGMA busy_timeout = 5000")) {
-      foreignKeys.execute();
-      timeout.execute();
-    }
-    return connection;
+    return H2Database.open(databasePath);
   }
 
   private static void insert(
@@ -176,10 +169,9 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
 
   private static AgentPersistenceException persistenceFailure(
       String operation, SQLException exception) {
-    String detail =
-        exception.getMessage() == null ? "unknown SQLite error" : exception.getMessage();
+    String detail = exception.getMessage() == null ? "unknown H2 error" : exception.getMessage();
     return new AgentPersistenceException(
-        "Agent memory %s failed, sqliteCode=%d: %s"
+        "Agent memory %s failed, databaseCode=%d: %s"
             .formatted(operation, exception.getErrorCode(), detail),
         exception);
   }

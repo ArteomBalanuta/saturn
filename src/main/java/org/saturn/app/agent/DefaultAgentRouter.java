@@ -21,21 +21,33 @@ import org.saturn.app.agent.llm.LlmResponse;
 import org.saturn.app.agent.llm.LlmToolCall;
 
 @Slf4j
+/**
+ * Coordinates one bounded LLM tool-calling session for a Saturn invocation.
+ *
+ * <p>Calls sharing a memory key are serialized through striped locks so memory, tool observations,
+ * and room replies retain session order. Tool execution state is request-local in {@link
+ * AgentToolExecutor}; this router is safe to call concurrently for distinct sessions.
+ */
 public final class DefaultAgentRouter implements AgentRouter {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private static final String FINALIZE_PROMPT = PROMPTS.text("router-finalize.txt").strip();
   private static final String RESPOND_WITHOUT_COMMAND = "respond_without_command";
-  private static final String COMMAND_TOOL_CORRECTION = PROMPTS.text("router-command-tool-correction.txt");
-  private static final String COMMAND_OUTPUT_CORRECTION = PROMPTS.text("router-command-output-correction.txt");
-  private static final String COMMAND_NOT_EXECUTED_CORRECTION = PROMPTS.text("router-command-not-executed-correction.txt");
+  private static final String COMMAND_TOOL_CORRECTION =
+      PROMPTS.text("router-command-tool-correction.txt");
+  private static final String COMMAND_OUTPUT_CORRECTION =
+      PROMPTS.text("router-command-output-correction.txt");
+  private static final String COMMAND_NOT_EXECUTED_CORRECTION =
+      PROMPTS.text("router-command-not-executed-correction.txt");
   private static final String FRESH_TOOL_CORRECTION =
       PROMPTS.text("router-fresh-tool-correction.txt");
   private static final String FRESH_SYNTHESIS_CORRECTION =
       PROMPTS.text("router-fresh-synthesis-correction.txt").strip();
   private static final String FAILURE_PLACEHOLDER_CORRECTION =
       PROMPTS.text("router-failure-placeholder-correction.txt").strip();
-  private static final String STALE_RESPONSE_CORRECTION = PROMPTS.text("router-stale-response-correction.txt");
-  private static final String UNVERIFIED_ACTION_CORRECTION = PROMPTS.text("router-unverified-action-correction.txt");
+  private static final String STALE_RESPONSE_CORRECTION =
+      PROMPTS.text("router-stale-response-correction.txt");
+  private static final String UNVERIFIED_ACTION_CORRECTION =
+      PROMPTS.text("router-unverified-action-correction.txt");
 
   private final AgentConfig config;
   private final LlmClient client;
@@ -76,6 +88,13 @@ public final class DefaultAgentRouter implements AgentRouter {
     this.requestAssembler = new AgentRequestAssembler(config, registry, systemPrompt);
   }
 
+  /**
+   * Routes an invocation while preserving order for its shared conversation session.
+   *
+   * @param invocation immutable request metadata and user prompt
+   * @return a reply or intentional silent result
+   * @throws AgentRoutingException for size-limit, provider, or bounded-loop failures
+   */
   @Override
   public AgentResult route(AgentInvocation invocation) throws AgentRoutingException {
     if (codePointCount(invocation.prompt()) > config.maxPromptChars()) {
@@ -98,7 +117,8 @@ public final class DefaultAgentRouter implements AgentRouter {
     AgentContext context = invocation.context();
     List<LlmMessage> history = loadMemory(context, correlationId);
     String recentRoomContext = loadConversationContext(invocation, correlationId);
-    AgentPreparedRequest prepared = requestAssembler.assemble(invocation, history, recentRoomContext);
+    AgentPreparedRequest prepared =
+        requestAssembler.assemble(invocation, history, recentRoomContext);
     Optional<String> requiredFreshTool = prepared.requiredFreshTool();
     Optional<String> requiredFreshNick = prepared.requiredFreshNick();
     String contextualizedPrompt = prepared.contextualizedPrompt();
@@ -137,7 +157,8 @@ public final class DefaultAgentRouter implements AgentRouter {
           String tool = missingFreshTool.orElseThrow();
           if ("user_message_history".equals(tool) && requiredFreshNick.isPresent()) {
             if (!executionState.reserveToolCalls(1)) {
-              throw new AgentRoutingException("Agent tool-call limit reached before loading fresh data");
+              throw new AgentRoutingException(
+                  "Agent tool-call limit reached before loading fresh data");
             }
             JsonObject arguments = new JsonObject();
             arguments.addProperty("nick", requiredFreshNick.orElseThrow());
@@ -163,21 +184,20 @@ public final class DefaultAgentRouter implements AgentRouter {
           }
           if (!callsExactly(response, tool, requiredFreshNick)) {
             if (freshnessCorrectionUsed) {
-              throw new AgentRoutingException(
-                  "Agent did not call the required fresh-data tool");
+              throw new AgentRoutingException("Agent did not call the required fresh-data tool");
             }
             if (!toolsEnabled) {
               throw new AgentRoutingException(
                   "Required fresh-data tool is unavailable after tool-call budget exhaustion");
             }
-            log.warn(
-                "Agent fresh data required, correlationId={}, tool={}", correlationId, tool);
+            log.warn("Agent fresh data required, correlationId={}, tool={}", correlationId, tool);
             messages.add(LlmMessage.assistant(response.content(), List.of()));
             messages.add(LlmMessage.user(FRESH_TOOL_CORRECTION.formatted(tool).strip()));
             response =
                 requireFreshToolCall(
                     client.complete(new LlmRequest(messages, definitionFor(definitions, tool))),
-                    tool, requiredFreshNick);
+                    tool,
+                    requiredFreshNick);
             freshnessCorrectionUsed = true;
           }
         } else {
@@ -209,7 +229,8 @@ public final class DefaultAgentRouter implements AgentRouter {
                 requireFreshSynthesis(
                     client.complete(new LlmRequest(messages, List.of())), history);
             freshSynthesisCorrectionUsed = true;
-            if (!satisfiesFreshProfileContract(response, requiredFreshNick, successfulToolResults)) {
+            if (!satisfiesFreshProfileContract(
+                response, requiredFreshNick, successfulToolResults)) {
               throw new AgentRoutingException(
                   "Agent did not produce a complete fresh history synthesis");
             }
@@ -217,8 +238,7 @@ public final class DefaultAgentRouter implements AgentRouter {
           if (!unverifiedActionChecked
               && (successfulCommands.isEmpty()
                   || commandProseGuard.findCommand(response.content()).isEmpty())) {
-            response =
-                correctUnverifiedActionClaim(response, messages, definitions, correlationId);
+            response = correctUnverifiedActionClaim(response, messages, definitions, correlationId);
             unverifiedActionChecked = true;
           }
           GuardedResponse guarded =
@@ -250,8 +270,10 @@ public final class DefaultAgentRouter implements AgentRouter {
         }
 
         messages.add(LlmMessage.assistant(response.content(), response.toolCalls()));
-        for (var call : response.toolCalls()) {
-          AgentToolResult result = toolExecutor.execute(context, call);
+        List<AgentToolResult> toolResults = toolExecutor.executeAll(context, response.toolCalls());
+        for (int index = 0; index < response.toolCalls().size(); index++) {
+          var call = response.toolCalls().get(index);
+          AgentToolResult result = toolResults.get(index);
           log.info(
               "Agent tool completed, correlationId={}, tool={}, outcome={}",
               correlationId,
@@ -260,8 +282,7 @@ public final class DefaultAgentRouter implements AgentRouter {
           if (result.isError()
               && requiredFreshTool.filter(call.name()::equals).isPresent()
               && !successfulTools.contains(call.name())) {
-            throw new AgentRoutingException(
-                "Required fresh-data tool failed: " + call.name());
+            throw new AgentRoutingException("Required fresh-data tool failed: " + call.name());
           }
           if (!result.isError()
               && matchesFreshTarget(call, requiredFreshNick)
@@ -295,7 +316,8 @@ public final class DefaultAgentRouter implements AgentRouter {
           && !satisfiesFreshProfileContract(response, requiredFreshNick, successfulToolResults)) {
         throw new AgentRoutingException("Agent did not produce a complete fresh history synthesis");
       }
-      String content = truncate(responseSanitizer.sanitize(response.content()), config.maxOutputChars());
+      String content =
+          truncate(responseSanitizer.sanitize(response.content()), config.maxOutputChars());
       if (invocation.mode() == AgentInvocationMode.MODERATION) {
         return AgentResult.silent(correlationId);
       }
@@ -350,8 +372,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         correlationId);
     List<LlmMessage> retryMessages = new ArrayList<>(messages);
     retryMessages.add(LlmMessage.user(STALE_RESPONSE_CORRECTION.strip()));
-    LlmResponse fresh =
-        client.complete(LlmRequest.withoutPromptCache(retryMessages, definitions));
+    LlmResponse fresh = client.complete(LlmRequest.withoutPromptCache(retryMessages, definitions));
     if (isStaleDuplicate(fresh, history, currentPrompt)) {
       throw new AgentRoutingException("Agent returned a stale response after cache bypass");
     }
@@ -411,7 +432,9 @@ public final class DefaultAgentRouter implements AgentRouter {
 
   private static boolean isStaleDuplicate(
       LlmResponse response, List<LlmMessage> history, String currentPrompt) {
-    if (!response.toolCalls().isEmpty() || response.content() == null || response.content().isBlank()) {
+    if (!response.toolCalls().isEmpty()
+        || response.content() == null
+        || response.content().isBlank()) {
       return false;
     }
 
@@ -576,14 +599,15 @@ public final class DefaultAgentRouter implements AgentRouter {
     }
   }
 
-  private static LlmResponse requireFreshSynthesis(
-      LlmResponse response, List<LlmMessage> history) throws AgentRoutingException {
+  private static LlmResponse requireFreshSynthesis(LlmResponse response, List<LlmMessage> history)
+      throws AgentRoutingException {
     if (!response.toolCalls().isEmpty()) {
       throw new AgentRoutingException(
           "Agent returned a tool call instead of a fresh history synthesis");
     }
     if (repeatsPreviousAssistant(response, history)) {
-      throw new AgentRoutingException("Agent reused the previous answer after a fresh history lookup");
+      throw new AgentRoutingException(
+          "Agent reused the previous answer after a fresh history lookup");
     }
     return response;
   }
@@ -604,9 +628,10 @@ public final class DefaultAgentRouter implements AgentRouter {
     return true;
   }
 
-  private static boolean repeatsPreviousAssistant(
-      LlmResponse response, List<LlmMessage> history) {
-    if (!response.toolCalls().isEmpty() || response.content() == null || response.content().isBlank()) {
+  private static boolean repeatsPreviousAssistant(LlmResponse response, List<LlmMessage> history) {
+    if (!response.toolCalls().isEmpty()
+        || response.content() == null
+        || response.content().isBlank()) {
       return false;
     }
     return latestContent(history, "assistant")
@@ -671,9 +696,7 @@ public final class DefaultAgentRouter implements AgentRouter {
 
     JsonObject function = new JsonObject();
     function.addProperty("name", RESPOND_WITHOUT_COMMAND);
-    function.addProperty(
-        "description",
-        PROMPTS.text("router-non-command-correction.txt").strip());
+    function.addProperty("description", PROMPTS.text("router-non-command-correction.txt").strip());
     function.add("parameters", parameters);
 
     JsonObject definition = new JsonObject();

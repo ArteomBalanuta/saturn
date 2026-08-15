@@ -90,11 +90,9 @@ class AgentToolDescriptorTest {
     assertEquals(List.of("answer current room questions"), descriptor.whenToUse());
     assertEquals("room_users", descriptor.examples().getFirst().toolName());
     assertThrows(
-        UnsupportedOperationException.class,
-        () -> descriptor.whenToUse().add("mutate descriptor"));
+        UnsupportedOperationException.class, () -> descriptor.whenToUse().add("mutate descriptor"));
     assertThrows(
-        UnsupportedOperationException.class,
-        () -> descriptor.requiredCapabilities().add("ADMIN"));
+        UnsupportedOperationException.class, () -> descriptor.requiredCapabilities().add("ADMIN"));
     assertThrows(
         UnsupportedOperationException.class,
         () -> descriptor.examples().add(new ToolExample("other", "{}", "other")));
@@ -140,12 +138,15 @@ class AgentToolDescriptorTest {
     property.addProperty("type", "unknown");
     parameterSchema.getAsJsonObject("properties").add("value", property);
 
-    assertThrows(IllegalArgumentException.class, () -> AgentToolSchemaValidator.validateSchema(parameterSchema));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(parameterSchema));
 
     JsonObject resultSchema = new JsonObject();
     resultSchema.addProperty("type", "unknown");
     assertThrows(
-        IllegalArgumentException.class, () -> AgentToolSchemaValidator.validateResultSchema(resultSchema));
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(resultSchema));
   }
 
   private AgentToolDescriptor descriptor(

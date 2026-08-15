@@ -3,14 +3,13 @@ package org.saturn.app.command.factory;
 import io.github.classgraph.AnnotationInfo;
 import io.github.classgraph.AnnotationParameterValue;
 import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -59,12 +58,9 @@ public class CommandFactory {
           "Found cmd implementation class, aliases: {}, [{}]",
           definition.className(),
           definition.aliases());
-      return Optional.of(
-          constructor.newInstance(this.engine, message, definition.aliases()));
+      return Optional.of(constructor.newInstance(this.engine, message, definition.aliases()));
 
-    } catch (InvocationTargetException
-        | InstantiationException
-        | IllegalAccessException ex) {
+    } catch (InvocationTargetException | InstantiationException | IllegalAccessException ex) {
       throw new RuntimeException(ex);
     }
   }
@@ -137,7 +133,5 @@ public class CommandFactory {
   }
 
   private record CommandDefinition(
-      String className,
-      List<String> aliases,
-      Constructor<? extends UserCommand> constructor) {}
+      String className, List<String> aliases, Constructor<? extends UserCommand> constructor) {}
 }

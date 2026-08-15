@@ -16,6 +16,12 @@ import org.saturn.app.agent.ToolEffect;
 import org.saturn.app.agent.ToolResultMode;
 import org.saturn.app.agent.persistence.AgentSchemaRepository;
 
+/**
+ * Exposes the current application schema to callers authorized for dynamic SQL.
+ *
+ * <p>A successful invocation is the ordered prerequisite for {@link DatabaseSqlTool} in the same
+ * agent request.
+ */
 public final class DatabaseSchemaTool implements AgentTool {
   private final AgentSchemaRepository repository;
   private final AgentSqlConfig config;
@@ -62,6 +68,7 @@ public final class DatabaseSchemaTool implements AgentTool {
   }
 
   @Override
+  /** Returns a schema snapshot for an authorized caller, without issuing generated SQL. */
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     if (!isAvailableTo(context)) {
       return AgentToolResult.error(null, name(), "Tool is unavailable for this caller");

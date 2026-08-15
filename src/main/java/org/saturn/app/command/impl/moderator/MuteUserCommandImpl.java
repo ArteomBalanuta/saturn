@@ -40,7 +40,10 @@ public class MuteUserCommandImpl extends UserCommandBaseImpl {
             .map(u -> u.getHash())
             .findFirst();
     if (hash.isEmpty()) {
-      log.info("Executed [mute] command by user: {}, target missing from room: {}", author, target.get());
+      log.info(
+          "Executed [mute] command by user: {}, target missing from room: {}",
+          author,
+          target.get());
       return fail(target.get() + " is not in the room");
     }
 

@@ -28,8 +28,7 @@ class DeAuthorizeTripCommandImplTest {
 
     assertEquals(Status.SUCCESSFUL, command.execute().orElseThrow());
     assertEquals(
-        "{ \"cmd\": \"deauthtrip\", \"trip\": \"cmdTV+\"}",
-        engine.outgoingRawMessageQueue.poll());
+        "{ \"cmd\": \"deauthtrip\", \"trip\": \"cmdTV+\"}", engine.outgoingRawMessageQueue.poll());
     assertEquals("@mod  deauthorized trip: cmdTV+", engine.outgoingMessageQueue.poll());
   }
 }

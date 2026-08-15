@@ -1,6 +1,7 @@
 package org.saturn.app.agent.persistence;
 
 import com.google.gson.Gson;
+import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -17,18 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.AgentSqlConfig;
 import org.saturn.app.agent.sql.AgentSqlErrorCode;
 import org.saturn.app.agent.sql.ValidatedAgentSql;
-import org.sqlite.ProgressHandler;
-import org.sqlite.SQLiteConnection;
-import org.sqlite.SQLiteErrorCode;
-import org.sqlite.SQLiteException;
-import org.sqlite.SQLiteLimits;
 
 @Slf4j
 public final class SqliteAgentSqlRepository implements AgentSqlRepository {
-  private static final int PROGRESS_HANDLER_INSTRUCTIONS = 100;
-  private static final int MAX_EXPRESSION_DEPTH = 100;
-  private static final int MAX_COMPOUND_SELECTS = 20;
-
   private final SqliteReadOnlyConnectionFactory connectionFactory;
   private final Gson gson = new Gson();
 
@@ -42,23 +34,7 @@ public final class SqliteAgentSqlRepository implements AgentSqlRepository {
     Objects.requireNonNull(config, "config");
     long startedAt = System.nanoTime();
     try (Connection connection = connectionFactory.open()) {
-      applyLimits(connection, config);
-      long timeoutNanos = timeoutNanos(config.timeout());
-      ProgressHandler.setHandler(
-          connection,
-          PROGRESS_HANDLER_INSTRUCTIONS,
-          new ProgressHandler() {
-            @Override
-            protected int progress() {
-              return System.nanoTime() - startedAt >= timeoutNanos ? 1 : 0;
-            }
-          });
-      AgentSqlResult result;
-      try {
-        result = executeQuery(connection, sql.sql(), config, startedAt);
-      } finally {
-        ProgressHandler.clearHandler(connection);
-      }
+      AgentSqlResult result = executeQuery(connection, sql.sql(), config, startedAt);
       log.info(
           "Agent SQL completed fingerprint={} elapsedMs={} rows={} outcome=success",
           safeFingerprint(sql.fingerprint()),
@@ -76,7 +52,12 @@ public final class SqliteAgentSqlRepository implements AgentSqlRepository {
   private AgentSqlResult executeQuery(
       Connection connection, String sql, AgentSqlConfig config, long startedAt)
       throws SQLException {
+    if (!sql.stripLeading().regionMatches(true, 0, "SELECT", 0, "SELECT".length())
+        && !sql.stripLeading().regionMatches(true, 0, "WITH", 0, "WITH".length())) {
+      throw new SQLException("Agent SQL repository only executes read queries");
+    }
     try (Statement statement = connection.createStatement()) {
+      statement.setQueryTimeout(queryTimeoutSeconds(config.timeout()));
       statement.setMaxRows(maxRowsWithSentinel(config.maxRows()));
       if (!statement.execute(sql)) {
         throw new SQLException("Statement did not produce a result set");
@@ -116,22 +97,6 @@ public final class SqliteAgentSqlRepository implements AgentSqlRepository {
     }
   }
 
-  private void applyLimits(Connection connection, AgentSqlConfig config) throws SQLException {
-    if (!(connection instanceof SQLiteConnection sqlite)) {
-      throw new SQLException("Expected an SQLite connection");
-    }
-    sqlite.setBusyTimeout(busyTimeoutMillis(config.timeout()));
-    sqlite.setLimit(
-        SQLiteLimits.SQLITE_LIMIT_LENGTH,
-        utf8ByteLimit(Math.max(config.maxCellChars(), config.maxResultChars())));
-    sqlite.setLimit(SQLiteLimits.SQLITE_LIMIT_SQL_LENGTH, utf8ByteLimit(config.maxSqlChars()));
-    sqlite.setLimit(SQLiteLimits.SQLITE_LIMIT_COLUMN, config.maxColumns());
-    sqlite.setLimit(SQLiteLimits.SQLITE_LIMIT_EXPR_DEPTH, MAX_EXPRESSION_DEPTH);
-    sqlite.setLimit(SQLiteLimits.SQLITE_LIMIT_COMPOUND_SELECT, MAX_COMPOUND_SELECTS);
-    sqlite.setLimit(SQLiteLimits.SQLITE_LIMIT_ATTACHED, 0);
-    sqlite.setLimit(SQLiteLimits.SQLITE_LIMIT_WORKER_THREADS, 0);
-  }
-
   private AgentSqlResult boundResultSize(
       List<String> columns,
       List<List<Object>> rows,
@@ -155,12 +120,17 @@ public final class SqliteAgentSqlRepository implements AgentSqlRepository {
     }
   }
 
-  private BoundedValue boundedValue(Object value, int maxChars) {
+  private BoundedValue boundedValue(Object value, int maxChars) throws SQLException {
     if (value == null) {
       return new BoundedValue(null, false);
     }
     if (value instanceof byte[] bytes) {
       return boundedBlob(bytes, maxChars);
+    }
+    if (value instanceof Blob blob) {
+      long length = blob.length();
+      int byteLength = (int) Math.min(length, Integer.MAX_VALUE);
+      return boundedBlob(blob.getBytes(1, byteLength), maxChars);
     }
     if (value instanceof Byte
         || value instanceof Short
@@ -196,23 +166,12 @@ public final class SqliteAgentSqlRepository implements AgentSqlRepository {
   }
 
   private AgentSqlErrorCode classify(SQLException exception) {
-    if (exception instanceof SQLiteException sqliteException) {
-      SQLiteErrorCode resultCode = sqliteException.getResultCode();
-      if (resultCode == SQLiteErrorCode.SQLITE_INTERRUPT
-          || resultCode == SQLiteErrorCode.SQLITE_BUSY
-          || resultCode == SQLiteErrorCode.SQLITE_BUSY_TIMEOUT
-          || resultCode == SQLiteErrorCode.SQLITE_BUSY_RECOVERY
-          || resultCode == SQLiteErrorCode.SQLITE_BUSY_SNAPSHOT
-          || resultCode == SQLiteErrorCode.SQLITE_LOCKED
-          || resultCode == SQLiteErrorCode.SQLITE_LOCKED_SHAREDCACHE) {
-        return AgentSqlErrorCode.TIMEOUT;
-      }
-      if (resultCode == SQLiteErrorCode.SQLITE_TOOBIG) {
-        return AgentSqlErrorCode.RESULT_TOO_LARGE;
-      }
-    }
     String message = exception.getMessage();
-    if (message != null && message.toLowerCase(Locale.ROOT).contains("too many columns")) {
+    String normalized = message == null ? "" : message.toLowerCase(Locale.ROOT);
+    if (normalized.contains("timeout") || normalized.contains("cancel")) {
+      return AgentSqlErrorCode.TIMEOUT;
+    }
+    if (normalized.contains("too many columns")) {
       return AgentSqlErrorCode.RESULT_TOO_LARGE;
     }
     return AgentSqlErrorCode.EXECUTION_FAILED;
@@ -226,22 +185,15 @@ public final class SqliteAgentSqlRepository implements AgentSqlRepository {
     };
   }
 
-  private long timeoutNanos(Duration timeout) {
-    try {
-      return timeout.toNanos();
-    } catch (ArithmeticException exception) {
-      return Long.MAX_VALUE;
-    }
-  }
-
-  private int busyTimeoutMillis(Duration timeout) {
+  private int queryTimeoutSeconds(Duration timeout) {
     long millis;
     try {
       millis = timeout.toMillis();
     } catch (ArithmeticException exception) {
       millis = Integer.MAX_VALUE;
     }
-    return (int) Math.clamp(millis, 1, Integer.MAX_VALUE);
+    long seconds = Math.max(1, (millis + 999) / 1_000);
+    return (int) Math.clamp(seconds, 1, Integer.MAX_VALUE);
   }
 
   private long elapsedMillis(long startedAt) {
@@ -250,10 +202,6 @@ public final class SqliteAgentSqlRepository implements AgentSqlRepository {
 
   private int maxRowsWithSentinel(int maxRows) {
     return maxRows == Integer.MAX_VALUE ? Integer.MAX_VALUE : maxRows + 1;
-  }
-
-  private int utf8ByteLimit(int maxChars) {
-    return maxChars > Integer.MAX_VALUE / 4 ? Integer.MAX_VALUE : maxChars * 4;
   }
 
   private String safeFingerprint(String fingerprint) {

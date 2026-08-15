@@ -10,7 +10,8 @@ public class UpdateAfkStateHandler implements ChatMessageHandler {
   @Override
   public boolean handle(ChatMessageContext context) {
     if (context.getAuthor().isEmpty()) {
-      log.warn("Skipping author-dependent AFK handling for nick: {}", context.getMessage().getNick());
+      log.warn(
+          "Skipping author-dependent AFK handling for nick: {}", context.getMessage().getNick());
       return true;
     }
 

@@ -36,8 +36,7 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
 
     String target = sanitizeTarget(arguments.getFirst());
     String result =
-        engine.sqlService.executeFormatted(
-            SQL_STATS_PER_HOUR_OF_WEEK.replace("?", target));
+        engine.sqlService.executeFormatted(SQL_STATS_PER_HOUR_OF_WEEK.replace("?", target));
     replyToAuthor("Stats: \\n%s".formatted(result));
     log.info(
         "Executed [active] command by user: {}, trip: {}, target: {}",
@@ -57,8 +56,8 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                 WITH MessagesPerTrip AS (
                     SELECT
                         trip,
-                        strftime('%w', created_on / 1000, 'unixepoch') AS day_number, -- Day of the week (0 = Sunday, 6 = Saturday)
-                        strftime('%H', created_on / 1000, 'unixepoch') AS hour, -- Hour of the day
+                        EXTRACT(DAY_OF_WEEK FROM DATEADD(MILLISECOND, created_on, TIMESTAMP '1970-01-01 00:00:00')) AS day_number,
+                        EXTRACT(HOUR FROM DATEADD(MILLISECOND, created_on, TIMESTAMP '1970-01-01 00:00:00')) AS hour,
                         COUNT(*) AS message_count
                     FROM messages
                     GROUP BY trip, day_number, hour
@@ -81,13 +80,13 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                         m.hour,
                         (m.message_count * 1.0 / t.total_message_count) * 100 AS probability_percentage,
                         CASE m.day_number
-                            WHEN '0' THEN 'Sunday'
-                            WHEN '1' THEN 'Monday'
-                            WHEN '2' THEN 'Tuesday'
-                            WHEN '3' THEN 'Wednesday'
-                            WHEN '4' THEN 'Thursday'
-                            WHEN '5' THEN 'Friday'
-                            WHEN '6' THEN 'Saturday'
+                            WHEN 1 THEN 'Sunday'
+                            WHEN 2 THEN 'Monday'
+                            WHEN 3 THEN 'Tuesday'
+                            WHEN 4 THEN 'Wednesday'
+                            WHEN 5 THEN 'Thursday'
+                            WHEN 6 THEN 'Friday'
+                            WHEN 7 THEN 'Saturday'
                         END AS day_full
                     FROM MessagesPerTrip m
                     JOIN TotalMessages t ON m.trip = t.trip
@@ -99,5 +98,5 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                     day_full AS day_of_week,
                     hour,
                     probability_percentage
-                FROM Probability where LOWER(trip) == LOWER('?') ORDER BY trip, day_number, hour;""";
+                FROM Probability where LOWER(trip) = LOWER('?') ORDER BY trip, day_number, hour;""";
 }

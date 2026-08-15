@@ -5,7 +5,9 @@ import java.time.Duration;
 import java.util.StringJoiner;
 
 /** Converts a validated Saturn SDK descriptor into the provider's function-tool payload. */
+/** Serializes validated tool descriptors into OpenAI-compatible function definitions. */
 public final class AgentToolDefinitionFactory {
+  /** Creates a provider payload without changing the descriptor's contract. */
   public JsonObject create(AgentToolDescriptor descriptor) {
     JsonObject function = new JsonObject();
     function.addProperty("name", descriptor.name());
@@ -25,6 +27,7 @@ public final class AgentToolDefinitionFactory {
     appendLine(description, "category", descriptor.category());
     appendLine(description, "access", descriptor.access());
     appendLine(description, "effect", descriptor.effect());
+    appendLine(description, "read_only", descriptor.isReadOnly());
     appendLine(description, "result_mode", descriptor.resultMode());
     appendLine(description, "idempotent", descriptor.isIdempotent());
     appendLine(description, "timeout_ms", timeoutMillis(descriptor.timeout()));
@@ -34,7 +37,8 @@ public final class AgentToolDefinitionFactory {
     appendList(description, "required_capabilities", descriptor.requiredCapabilities());
     appendList(description, "required_successful_tools", descriptor.requiredSuccessfulTools());
     for (ToolExample example : descriptor.examples()) {
-      description.append("example: ")
+      description
+          .append("example: ")
           .append(example.toolName())
           .append(' ')
           .append(example.arguments())

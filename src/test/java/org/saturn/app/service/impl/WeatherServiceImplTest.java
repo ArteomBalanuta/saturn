@@ -72,7 +72,8 @@ class WeatherServiceImplTest {
             currentWeatherUnits);
 
     Assertions.assertTrue(formatted.contains("\\n"));
-    Assertions.assertTrue(formatted.startsWith("Weather forecast for today: **London, United Kingdom**\\n"));
+    Assertions.assertTrue(
+        formatted.startsWith("Weather forecast for today: **London, United Kingdom**\\n"));
     Assertions.assertTrue(formatted.contains("Temperature: 21 C\\n"));
     Assertions.assertTrue(formatted.contains("\u2009\u2009\u2009 \\n"));
     Assertions.assertFalse(formatted.contains("\u200B"));

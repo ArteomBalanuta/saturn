@@ -27,7 +27,8 @@ class AuthorizeTripCommandImplTest {
     var command = new AuthorizeTripCommandImpl(engine, message, List.of("authorize", "auth"));
 
     assertEquals(Status.SUCCESSFUL, command.execute().orElseThrow());
-    assertEquals("{ \"cmd\": \"authtrip\", \"trip\": \"cmdTV+\"}", engine.outgoingRawMessageQueue.poll());
+    assertEquals(
+        "{ \"cmd\": \"authtrip\", \"trip\": \"cmdTV+\"}", engine.outgoingRawMessageQueue.poll());
     assertEquals("@mod  authorized trip: cmdTV+", engine.outgoingMessageQueue.poll());
   }
 }

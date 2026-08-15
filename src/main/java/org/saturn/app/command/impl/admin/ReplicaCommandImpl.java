@@ -3,7 +3,6 @@ package org.saturn.app.command.impl.admin;
 import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
 import com.moandjiezana.toml.Toml;
-import org.saturn.app.service.impl.DataBaseServiceImpl;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +12,7 @@ import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.service.impl.DataBaseServiceImpl;
 
 @Slf4j
 @CommandAliases(aliases = {"replica", "bot", "agent"})
@@ -54,7 +54,8 @@ public class ReplicaCommandImpl extends UserCommandBaseImpl {
       EngineImpl engine, ChatMessage chatMessage, String author, String channel) {
     Toml main = engine.getConfig();
     EngineImpl replica =
-        new EngineImpl(new DataBaseServiceImpl(engine.dbPath).getConnection(), main, EngineType.REPLICA);
+        new EngineImpl(
+            new DataBaseServiceImpl(engine.dbPath).getConnection(), main, EngineType.REPLICA);
     replica.setChannel(channel);
     replica.setNick(engine.nick.concat("Replica"));
     replica.setPassword(engine.password);

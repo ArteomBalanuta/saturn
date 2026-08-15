@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+/** Immutable caller, room, capability, and privacy context passed to every agent tool. */
 public record AgentContext(
     String room,
     String nick,

@@ -1,11 +1,11 @@
 package org.saturn.app.agent.persistence;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
-import java.sql.DriverManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.saturn.app.persistence.H2Database;
 
 class AgentSchemaMigratorTest {
   @TempDir Path tempDir;
@@ -17,13 +17,13 @@ class AgentSchemaMigratorTest {
     AgentSchemaMigrator.migrate(database.toString());
     AgentSchemaMigrator.migrate(database.toString());
 
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
-        var statement =
-            connection.prepareStatement(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name ="
-                    + " 'agent_memory'");
-        var resultSet = statement.executeQuery()) {
-      assertEquals(1, resultSet.getInt(1));
+    try (var connection =
+            java.sql.DriverManager.getConnection(H2Database.jdbcUrl(database.toString()));
+        var resultSet =
+            connection
+                .getMetaData()
+                .getTables(null, "public", "agent_memory", new String[] {"TABLE"})) {
+      assertTrue(resultSet.next());
     }
   }
 }

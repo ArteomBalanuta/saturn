@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.moandjiezana.toml.Toml;
 import java.time.Duration;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class AgentSqlConfigTest {
@@ -48,6 +49,31 @@ class AgentSqlConfigTest {
     assertEquals(500, actual.maxCellChars());
     assertEquals(16_000, actual.maxResultChars());
     assertEquals(Duration.ofMillis(2_500), actual.timeout());
+  }
+
+  @Test
+  void environmentOverridesTomlForDynamicSqlBounds() {
+    Toml config =
+        new Toml()
+            .read(
+                """
+                [agent]
+                dynamicSqlEnabled = false
+                dynamicSqlMaxRows = 50
+                dynamicSqlTimeoutMillis = 1000
+                """);
+
+    AgentSqlConfig actual =
+        AgentSqlConfig.from(
+            config,
+            Map.of(
+                "SATURN_AGENT_DYNAMIC_SQL_ENABLED", "true",
+                "SATURN_AGENT_DYNAMIC_SQL_MAX_ROWS", "25",
+                "SATURN_AGENT_DYNAMIC_SQL_TIMEOUT_MILLIS", "500"));
+
+    assertTrue(actual.enabled());
+    assertEquals(25, actual.maxRows());
+    assertEquals(Duration.ofMillis(500), actual.timeout());
   }
 
   @Test

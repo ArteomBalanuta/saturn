@@ -2,14 +2,13 @@
 
 **Saturn** is a moderator bot for [Hack.Chat](https://github.com/hack-chat).
 
-It supports moderation commands, user utilities, room replicas, persistence with SQLite, and Docker-based deployment.
+It supports moderation commands, user utilities, room replicas, embedded H2 persistence, and Docker-based deployment.
 
 ---
 
 ## Requirements
 
 - JDK 23+
-- `sqlite3`
 - Docker (optional, for containerized runs)
 
 Check your Java version:
@@ -46,12 +45,12 @@ cp config.example.toml config.toml
 Example:
 
 ```toml
-dbPath = "database/database.db"
+dbPath = "database/database"
 wsUrl = "wss://hack.chat/chat-ws"
 cmdPrefix = "*"
 channel = "programming"
 nick = "alphaBot"
-trip = "secret13"
+trip = "YOUR_BOT_TRIP_HERE"
 userTrips = ""
 adminTrips = "g0KY09,595754"
 autoReconnect = true
@@ -59,16 +58,16 @@ healthCheckInterval = 5
 autorunCommands = "replica lounge, say hello lads!!"
 
 [agent]
-enabled = true
-endpoint = "http://83.218.196.156:16261"
+enabled = false
+# Set SATURN_AGENT_ENDPOINT in the environment before enabling the agent.
 apiKeyEnv = "SATURN_AGENT_API_KEY"
 timeoutSeconds = 30
 maxCompletionTokens = 768
 thinkingEnabled = false
 maxConcurrentRequests = 2
-maxSteps = 8
+maxSteps = 5
 maxToolCallsPerTurn = 4
-toolTimeoutMillis = 15000
+toolTimeoutMillis = 10000
 maxToolCalls = 4
 memoryTurns = 30
 memoryTtlHours = 168
@@ -89,7 +88,7 @@ dynamicSqlTimeoutMillis = 1000
 
 Important fields:
 
-- `dbPath`: path to the SQLite database
+- `dbPath`: H2 database stem; H2 stores data at `<dbPath>.mv.db`
 - `cmdPrefix`: command prefix used in chat
 - `channel`: room Saturn joins on startup
 - `trip`: bot trip password
@@ -97,15 +96,18 @@ Important fields:
 - `adminTrips`: comma-separated admin trips
 - `autoReconnect`: enables health-check restart behavior
 - `autorunCommands`: commands executed after startup
-- `agent.endpoint`: OpenAI-compatible router base URL; Saturn calls `/v1/chat/completions`
-- `agent.apiKeyEnv`: environment variable containing an optional bearer token
+- `agent.endpoint`: TOML fallback for the OpenAI-compatible router base URL; Saturn calls `/v1/chat/completions`
+- `SATURN_AGENT_ENDPOINT`: environment-first provider URL; use this instead of committing a deployed endpoint
+- `agent.apiKeyEnv`: name of the environment variable containing an optional bearer token
+- `SATURN_AGENT_API_KEY`: standard bearer-token environment variable
+- `SATURN_AGENT_MODEL`: optional environment-first model override
 - `agent.maxCompletionTokens`: provider-side output-token limit for each completion
 - `agent.thinkingEnabled`: enables model thinking mode; disabled by default for predictable latency
 - `agent.maxConcurrentRequests`: maximum accepted active and queued agent requests per engine
 - `agent.maxSteps`: maximum model/tool loop iterations for one request
 - `agent.maxToolCallsPerTurn`: total tool-call budget for one request; `agent.maxToolCalls` remains a compatible legacy alias
 - `agent.toolTimeoutMillis`: deadline for one tool invocation unless that tool declares a shorter or longer override
-- `agent.memoryTurns` and `agent.memoryTtlHours`: bounded SQLite conversation memory
+- `agent.memoryTurns` and `agent.memoryTtlHours`: bounded embedded database conversation memory
 - `agent.creatorTrip`: trusted creator identity; keep it authorized in `adminTrips` or the roles table
 - `agent.ambientEnabled`: enables periodic participation in unaddressed public chat; defaults to `false`
 - `agent.ambientEveryMessages`: when ambient mode is enabled, routes every Nth eligible message
@@ -116,10 +118,22 @@ Important fields:
 - `agent.dynamicSqlMax*`: bounds SQL length, rows, columns, cells, and serialized results
 - `agent.dynamicSqlTimeoutMillis`: interrupts generated queries after the configured deadline
 
-The endpoint selects the model by default, so `agent.model` may remain empty. Set
-`SATURN_AGENT_API_KEY` only when the endpoint requires authentication. The configured endpoint
-currently uses unencrypted HTTP; prompts and tool results should only cross a trusted private
-network or an HTTPS reverse proxy.
+Environment variables take precedence over TOML for all provider settings, router limits, memory
+bounds, and dynamic-SQL bounds. Their names use the `SATURN_AGENT_` prefix and upper snake case,
+for example `agent.maxSteps` becomes `SATURN_AGENT_MAX_STEPS`. Copy [`.env.example`](.env.example)
+to the ignored `.env` file only when you want environment-specific overrides. Existing values in
+the ignored `config.toml`, including an existing `agent.enabled`, `agent.endpoint`, model, and
+limits, remain valid TOML fallbacks and are not replaced by this change. The endpoint selects the
+model by default, so `agent.model` may remain empty. Set `SATURN_AGENT_API_KEY` only when the
+endpoint requires authentication. Keep the agent disabled until an explicit endpoint is configured;
+use HTTPS or a trusted private network for all prompts and tool results.
+
+For production, choose one of these supported paths:
+
+- Keep the current real agent values in ignored `config.toml`; run `make run` or Compose without a
+  `.env` file and Saturn uses those values unchanged.
+- Create ignored `.env` from `.env.example`, replace its placeholders with the real endpoint and
+  credentials, and set `SATURN_AGENT_ENABLED=true`; those environment values override TOML.
 
 ### Vaelen Agent
 
@@ -134,7 +148,8 @@ eighth eligible public message is evaluated by default. A polite request such as
 produces no acknowledgement and suppresses ambient replies to that user in that room for 15 minutes.
 
 The agent can inspect live users in any Saturn-managed room, retrieve bounded public message history
-for a named user across all rooms or within one named room, and run named read-only database queries.
+for a named user across all rooms or within one named room (up to 500 messages), and run named
+read-only database queries.
 Public direct, mention, and ambient turns automatically receive the latest 60 public messages from
 their room.
 Informational Saturn commands are available to all agent callers. Trusted creator trip `595754`
@@ -152,10 +167,10 @@ excluded because Saturn cannot safely infer whether they came from public chat o
 
 Configured admin trips and users with a persisted `ADMIN` role also receive a generated-SQL
 fallback. The agent must inspect the schema first and may then run one bounded, AST-validated
-`SELECT` on a dedicated read-only SQLite connection. This admin capability can read every Saturn
+`SELECT` on a dedicated read-only H2 connection. This admin capability can read every Saturn
 application table and column, including cross-room messages, trip/hash identity data, mail, notes,
 moderation data, command history, agent memory, whispers, and unclassified legacy message rows.
-SQLite internal tables, writes, schema changes, pragmas, attached databases, and extension loading
+database metadata tables, writes, schema changes, and administrative statements
 remain blocked. Logs contain only a query fingerprint, duration, row count, and outcome; raw
 generated SQL is not logged.
 
@@ -183,8 +198,8 @@ Captcha is enabled after a detected raid and remains enabled until an authorized
 make fresh-db
 ```
 
-This stops the Docker container, removes the database and any SQLite sidecar files, recreates
-`database/database.db` from `schema.sql`, and applies migrations from `database/migrations/`.
+This stops the Docker container and removes `database/database.mv.db`. Saturn recreates its H2
+schema automatically on the next startup.
 
 ### Build
 
@@ -218,7 +233,7 @@ When running outside Docker, keep these files available together:
 - `config.toml`
 - `config.example.toml` (optional, as a template)
 - `log4j2.xml`
-- `database/database.db`
+- `database/database.mv.db`
 
 ---
 
@@ -229,6 +244,8 @@ The easiest Docker workflow uses the included `Makefile`.
 ### First Run
 
 ```bash
+# Optional environment-override mode:
+# cp .env.example .env
 make fresh-db
 make rebuild
 make logs
@@ -244,8 +261,8 @@ make stop       # stop the container
 make rm         # remove the container
 make rmi        # remove the image
 make clean      # remove both container and image
-make db-check   # stop Saturn and verify SQLite integrity
-make backup-db  # stop Saturn and create a consistent database backup
+make db-check   # stop Saturn and verify the H2 database file
+make backup-db  # stop Saturn and copy the H2 database file
 make logs       # follow container logs
 make shell      # open a shell in the container
 make status     # show container status
@@ -257,12 +274,18 @@ make help       # list all targets
 - `./config.toml` to `/app/config.toml`
 - `./database` to `/app/database`
 
-Container removal is graceful: Saturn receives up to 30 seconds to close its WebSocket, replicas,
-agent executor, and SQLite connections before Docker removes it.
+They preserve the ignored `config.toml` as the runtime fallback and, when present, pass the ignored
+`.env` file to Docker with `--env-file`. This lets production deployments retain their current TOML
+endpoint/model settings or override them through `SATURN_AGENT_*` without putting real values in
+tracked files. Compose forwards the same optional variables and also works with no `.env` file,
+using `config.toml` fallbacks.
 
-Do not open the bind-mounted database with any host-side SQLite client, including `sqlite3` or a GUI,
-while Saturn is running. Docker Desktop and the host can observe different file-lock state for the
-same SQLite WAL files, which can corrupt the database. Use `make db-check` or `make backup-db`; both
+Container removal is graceful: Saturn receives up to 30 seconds to close its WebSocket, replicas,
+agent executor, and H2 connections before Docker removes it.
+
+Do not open the bind-mounted database concurrently from another process while Saturn is running.
+H2 stores data in a `.mv.db` file; `AUTO_SERVER=TRUE` coordinates local JVMs, but one Saturn
+container should own a mounted database. Use `make db-check` or `make backup-db`; both
 stop Saturn before touching the database. Run `make start` afterward to resume the existing
 container.
 
@@ -273,11 +296,13 @@ docker build -t saturn .
 
 docker run -d \
   --name saturn \
-  --env SATURN_AGENT_API_KEY \
   -v $(pwd)/config.toml:/app/config.toml \
   -v $(pwd)/database:/app/database \
   saturn
 ```
+
+Add `--env-file .env` before the volume flags only when you intentionally use the environment-
+override mode.
 
 ### Docker Compose
 
@@ -296,6 +321,13 @@ tool's label, category, access level, side effect, result delivery mode, usage g
 capabilities, prerequisites, and JSON parameter schema. The registry publishes this contract in
 the provider definitions, and the runtime prompt treats it as authoritative over persona prose.
 
+The provider may emit multiple tool calls in one response. Saturn remains sequential-first:
+`run_command`, moderation, room delivery, and dependency chains execute in provider order. Only
+contiguous, independent tools marked both read-only and idempotent may run concurrently; their
+observations still return to the provider in original call order. This reduces provider round trips
+for compound read requests without reordering Saturn commands. See
+[`AGENTIC_ARCHITECTURE.md`](AGENTIC_ARCHITECTURE.md) for the full lifecycle and extension guide.
+
 Existing tools remain compatible: tools that do not override `descriptor(context)` receive safe
 read-only defaults from `AgentTool`. Add an explicit descriptor for new tools, especially when a
 tool changes the room, moderates users, writes persistence, or requires another tool first.
@@ -305,10 +337,11 @@ code supplies only runtime values and orchestration.
 
 ## Project Notes
 
-- SQLite is used for persistence.
+- H2 is used for embedded persistence. On first startup Saturn migrates a sibling legacy
+  `database.db` SQLite file to `database.mv.db` and archives the source as `database.db.bak`.
 - Startup adds the message-visibility column and matching agent query indexes to legacy databases.
 - The local database is not recreated automatically unless you run `make fresh-db`.
-- Docker image builds also create a database inside the image, but your local mounted `database/` overrides it at runtime.
+- Saturn creates the embedded H2 schema at startup; the mounted `database/` directory holds the active file.
 
 ---
 

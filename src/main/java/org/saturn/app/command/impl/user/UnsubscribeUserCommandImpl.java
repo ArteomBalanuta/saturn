@@ -31,7 +31,9 @@ public class UnsubscribeUserCommandImpl extends UserCommandBaseImpl {
     String trip = chatMessage.getTrip();
     if (trip == null || !engine.subscribers.contains(trip)) {
       replyToAuthor(
-          "you are not subscribed, please set your trip and use " + engine.prefix + " sub command.");
+          "you are not subscribed, please set your trip and use "
+              + engine.prefix
+              + " sub command.");
       log.info("User: {} failed unsubscribing", author);
       return Optional.of(Status.FAILED);
     }

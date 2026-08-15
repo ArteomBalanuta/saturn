@@ -10,7 +10,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 
-/** Loads agent-facing copy from classpath resources and keeps rendering out of orchestration code. */
+/**
+ * Loads agent-facing copy from classpath resources and keeps rendering out of orchestration code.
+ */
 public final class AgentPromptCatalog {
   private static final String ROOT = "/agent/";
   private final Gson gson;
@@ -75,6 +77,7 @@ public final class AgentPromptCatalog {
   }
 
   private IllegalStateException failure(String resource, Exception exception) {
-    return new IllegalStateException("Cannot load agent prompt resource: " + ROOT + resource, exception);
+    return new IllegalStateException(
+        "Cannot load agent prompt resource: " + ROOT + resource, exception);
   }
 }

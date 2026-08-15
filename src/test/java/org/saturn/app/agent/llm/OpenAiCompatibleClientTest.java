@@ -68,10 +68,7 @@ class OpenAiCompatibleClientTest {
     assertEquals("Bearer key", authorization.get());
     assertEquals(768, requestJson.get("max_tokens").getAsInt());
     assertFalse(
-        requestJson
-            .getAsJsonObject("chat_template_kwargs")
-            .get("enable_thinking")
-            .getAsBoolean());
+        requestJson.getAsJsonObject("chat_template_kwargs").get("enable_thinking").getAsBoolean());
     assertEquals("room_users", response.toolCalls().getFirst().name());
     assertEquals("call-1", response.toolCalls().getFirst().id());
     assertTrue(response.content().isEmpty());

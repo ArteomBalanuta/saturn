@@ -14,6 +14,6 @@ SSH_COMMAND=$2
 # Upload the files using sftp
 sshpass -p "$PASSWORD" sftp -oBatchMode=no -b - $SSH_COMMAND << !
 cd workspace/
-put database.db
+put database.mv.db
 bye
 !

@@ -7,6 +7,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Immutable, validated configuration for provider access and bounded agent execution.
+ *
+ * <p>{@link #from(Toml, Map)} reads TOML defaults and gives non-blank {@code SATURN_AGENT_*}
+ * environment values precedence. Credentials are read only from the environment variable named by
+ * {@code apiKeyEnv}.
+ */
 public record AgentConfig(
     boolean enabled,
     URI endpoint,
@@ -28,10 +35,10 @@ public record AgentConfig(
     int maxSteps,
     int maxToolCallsPerTurn,
     Duration toolTimeout) {
-  private static final String DEFAULT_ENDPOINT = "http://83.218.196.156:16261";
+  private static final String DEFAULT_ENDPOINT = "http://localhost:16261";
   private static final int DEFAULT_MAX_COMPLETION_TOKENS = 768;
-  private static final int DEFAULT_MAX_STEPS = 8;
-  private static final Duration DEFAULT_TOOL_TIMEOUT = Duration.ofSeconds(15);
+  private static final int DEFAULT_MAX_STEPS = 5;
+  private static final Duration DEFAULT_TOOL_TIMEOUT = Duration.ofSeconds(10);
 
   public AgentConfig {
     Objects.requireNonNull(endpoint, "endpoint");
@@ -143,42 +150,100 @@ public record AgentConfig(
         DEFAULT_TOOL_TIMEOUT);
   }
 
+  /**
+   * Loads an agent configuration with environment-first precedence.
+   *
+   * @param root Saturn TOML root; values under {@code [agent]} are fallback settings
+   * @param environment process environment, supplied explicitly to keep tests deterministic
+   * @return validated provider, memory, retry, and tool-execution settings
+   */
   public static AgentConfig from(Toml root, Map<String, String> environment) {
     Toml table = root == null ? null : root.getTable("agent");
-    boolean enabled = readBoolean(table, "enabled", true);
-    URI endpoint = normalizeEndpoint(URI.create(readString(table, "endpoint", DEFAULT_ENDPOINT)));
-    String model = readString(table, "model", "").trim();
-    String apiKeyEnv = readString(table, "apiKeyEnv", "SATURN_AGENT_API_KEY").trim();
+    boolean enabled = readBoolean(table, environment, "enabled", "SATURN_AGENT_ENABLED", false);
+    URI endpoint =
+        normalizeEndpoint(
+            URI.create(
+                readString(
+                    table, environment, "endpoint", "SATURN_AGENT_ENDPOINT", DEFAULT_ENDPOINT)));
+    String model = readString(table, environment, "model", "SATURN_AGENT_MODEL", "").trim();
+    String apiKeyEnv =
+        readString(
+                table, environment, "apiKeyEnv", "SATURN_AGENT_API_KEY_ENV", "SATURN_AGENT_API_KEY")
+            .trim();
     String apiKey = apiKeyEnv.isEmpty() ? "" : environment.getOrDefault(apiKeyEnv, "");
+    long maxToolCalls =
+        readLong(table, environment, "maxToolCalls", "SATURN_AGENT_MAX_TOOL_CALLS", 4);
 
     return new AgentConfig(
         enabled,
         endpoint,
         model.isEmpty() ? Optional.empty() : Optional.of(model),
         apiKey,
-        Duration.ofSeconds(readLong(table, "timeoutSeconds", 30)),
-        toInt(readLong(table, "maxConcurrentRequests", 2), "maxConcurrentRequests"),
-        toInt(readLong(table, "maxToolCalls", 4), "maxToolCalls"),
-        toInt(readLong(table, "maxCallsPerTool", 2), "maxCallsPerTool"),
-        toInt(readLong(table, "maxToolFailures", 2), "maxToolFailures"),
-        toInt(readLong(table, "maxPromptChars", 8_000), "maxPromptChars"),
-        toInt(readLong(table, "maxOutputChars", 8_000), "maxOutputChars"),
-        toInt(readLong(table, "memoryTurns", 30), "memoryTurns"),
-        Duration.ofHours(readLong(table, "memoryTtlHours", 168)),
-        toInt(readLong(table, "maxRetries", 2), "maxRetries"),
-        Duration.ofMillis(readLong(table, "retryBackoffMillis", 250)),
-        toInt(
-            readLong(table, "maxCompletionTokens", DEFAULT_MAX_COMPLETION_TOKENS),
-            "maxCompletionTokens"),
-        readBoolean(table, "thinkingEnabled", false),
-        toInt(readLong(table, "maxSteps", DEFAULT_MAX_STEPS), "maxSteps"),
+        Duration.ofSeconds(
+            readLong(table, environment, "timeoutSeconds", "SATURN_AGENT_TIMEOUT_SECONDS", 30)),
         toInt(
             readLong(
                 table,
+                environment,
+                "maxConcurrentRequests",
+                "SATURN_AGENT_MAX_CONCURRENT_REQUESTS",
+                2),
+            "maxConcurrentRequests"),
+        toInt(maxToolCalls, "maxToolCalls"),
+        toInt(
+            readLong(table, environment, "maxCallsPerTool", "SATURN_AGENT_MAX_CALLS_PER_TOOL", 2),
+            "maxCallsPerTool"),
+        toInt(
+            readLong(table, environment, "maxToolFailures", "SATURN_AGENT_MAX_TOOL_FAILURES", 2),
+            "maxToolFailures"),
+        toInt(
+            readLong(table, environment, "maxPromptChars", "SATURN_AGENT_MAX_PROMPT_CHARS", 8_000),
+            "maxPromptChars"),
+        toInt(
+            readLong(table, environment, "maxOutputChars", "SATURN_AGENT_MAX_OUTPUT_CHARS", 8_000),
+            "maxOutputChars"),
+        toInt(
+            readLong(table, environment, "memoryTurns", "SATURN_AGENT_MEMORY_TURNS", 30),
+            "memoryTurns"),
+        Duration.ofHours(
+            readLong(table, environment, "memoryTtlHours", "SATURN_AGENT_MEMORY_TTL_HOURS", 168)),
+        toInt(
+            readLong(table, environment, "maxRetries", "SATURN_AGENT_MAX_RETRIES", 2),
+            "maxRetries"),
+        Duration.ofMillis(
+            readLong(
+                table,
+                environment,
+                "retryBackoffMillis",
+                "SATURN_AGENT_RETRY_BACKOFF_MILLIS",
+                250)),
+        toInt(
+            readLong(
+                table,
+                environment,
+                "maxCompletionTokens",
+                "SATURN_AGENT_MAX_COMPLETION_TOKENS",
+                DEFAULT_MAX_COMPLETION_TOKENS),
+            "maxCompletionTokens"),
+        readBoolean(table, environment, "thinkingEnabled", "SATURN_AGENT_THINKING_ENABLED", false),
+        toInt(
+            readLong(table, environment, "maxSteps", "SATURN_AGENT_MAX_STEPS", DEFAULT_MAX_STEPS),
+            "maxSteps"),
+        toInt(
+            readLong(
+                table,
+                environment,
                 "maxToolCallsPerTurn",
-                readLong(table, "maxToolCalls", 4)),
+                "SATURN_AGENT_MAX_TOOL_CALLS_PER_TURN",
+                maxToolCalls),
             "maxToolCallsPerTurn"),
-        Duration.ofMillis(readLong(table, "toolTimeoutMillis", DEFAULT_TOOL_TIMEOUT.toMillis())));
+        Duration.ofMillis(
+            readLong(
+                table,
+                environment,
+                "toolTimeoutMillis",
+                "SATURN_AGENT_TOOL_TIMEOUT_MILLIS",
+                DEFAULT_TOOL_TIMEOUT.toMillis())));
   }
 
   private static void validateEndpoint(URI endpoint) {
@@ -202,14 +267,62 @@ public record AgentConfig(
     return value == null ? fallback : value;
   }
 
+  private static String readString(
+      Toml table,
+      Map<String, String> environment,
+      String key,
+      String environmentKey,
+      String fallback) {
+    String environmentValue = environment.get(environmentKey);
+    return environmentValue == null || environmentValue.isBlank()
+        ? readString(table, key, fallback)
+        : environmentValue;
+  }
+
   private static long readLong(Toml table, String key, long fallback) {
     Long value = table == null ? null : table.getLong(key);
     return value == null ? fallback : value;
   }
 
+  private static long readLong(
+      Toml table,
+      Map<String, String> environment,
+      String key,
+      String environmentKey,
+      long fallback) {
+    String environmentValue = environment.get(environmentKey);
+    if (environmentValue == null || environmentValue.isBlank()) {
+      return readLong(table, key, fallback);
+    }
+    try {
+      return Long.parseLong(environmentValue.strip());
+    } catch (NumberFormatException exception) {
+      throw new IllegalArgumentException(environmentKey + " must be an integer", exception);
+    }
+  }
+
   private static boolean readBoolean(Toml table, String key, boolean fallback) {
     Boolean value = table == null ? null : table.getBoolean(key);
     return value == null ? fallback : value;
+  }
+
+  private static boolean readBoolean(
+      Toml table,
+      Map<String, String> environment,
+      String key,
+      String environmentKey,
+      boolean fallback) {
+    String environmentValue = environment.get(environmentKey);
+    if (environmentValue == null || environmentValue.isBlank()) {
+      return readBoolean(table, key, fallback);
+    }
+    if ("true".equalsIgnoreCase(environmentValue.strip())) {
+      return true;
+    }
+    if ("false".equalsIgnoreCase(environmentValue.strip())) {
+      return false;
+    }
+    throw new IllegalArgumentException(environmentKey + " must be true or false");
   }
 
   private static int toInt(long value, String name) {

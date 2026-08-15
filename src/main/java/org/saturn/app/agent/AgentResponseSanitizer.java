@@ -56,8 +56,13 @@ final class AgentResponseSanitizer {
     }
     String normalized = content.toLowerCase(Locale.ROOT);
     return normalized.contains("[sips tea")
-        || normalized.lines().anyMatch(line -> line.strip().toLowerCase(Locale.ROOT).startsWith("the archives reveal"))
-        || normalized.lines().anyMatch(line -> line.strip().matches("(?i)[*_`]*carpe diem[*_`]*[,.].*"))
+        || normalized
+            .lines()
+            .anyMatch(
+                line -> line.strip().toLowerCase(Locale.ROOT).startsWith("the archives reveal"))
+        || normalized
+            .lines()
+            .anyMatch(line -> line.strip().matches("(?i)[*_`]*carpe diem[*_`]*[,.].*"))
         || LEGACY_OPENING.matcher(content.strip()).find();
   }
 

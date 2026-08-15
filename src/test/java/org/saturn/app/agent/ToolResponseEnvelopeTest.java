@@ -12,14 +12,14 @@ class ToolResponseEnvelopeTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> new ToolResponseEnvelope("error", JsonNull.INSTANCE, null));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> ToolResponseEnvelope.error("", "failure"));
+    assertThrows(IllegalArgumentException.class, () -> ToolResponseEnvelope.error("", "failure"));
   }
 
   @Test
   void serializesSuccessAndErrorWithTheStableProtocolShape() {
-    assertTrue(ToolResponseEnvelope.success("{\"count\":1}").toJson().contains("\"status\":\"success\""));
-    assertTrue(ToolResponseEnvelope.error("TOOL_TIMEOUT", "Timed out").toJson().contains("TOOL_TIMEOUT"));
+    assertTrue(
+        ToolResponseEnvelope.success("{\"count\":1}").toJson().contains("\"status\":\"success\""));
+    assertTrue(
+        ToolResponseEnvelope.error("TOOL_TIMEOUT", "Timed out").toJson().contains("TOOL_TIMEOUT"));
   }
 }

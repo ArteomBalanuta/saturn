@@ -24,7 +24,8 @@ public record AgentInvocation(
     this(requestId, context, prompt, AgentInvocationMode.DIRECT, null);
   }
 
-  public AgentInvocation(String requestId, AgentContext context, String prompt, AgentInvocationMode mode) {
+  public AgentInvocation(
+      String requestId, AgentContext context, String prompt, AgentInvocationMode mode) {
     this(requestId, context, prompt, mode, null);
   }
 

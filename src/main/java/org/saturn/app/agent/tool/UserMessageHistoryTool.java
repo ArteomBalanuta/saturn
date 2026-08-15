@@ -19,6 +19,12 @@ import org.saturn.app.agent.ToolExample;
 import org.saturn.app.agent.ToolResultMode;
 import org.saturn.app.agent.persistence.AgentQueryRepository;
 
+/**
+ * Retrieves bounded public message evidence for a named user.
+ *
+ * <p>Results include count and timestamp bounds so the router can distinguish a fresh history
+ * lookup from a model-generated profile. The tool returns at most 500 messages and is read-only.
+ */
 public final class UserMessageHistoryTool implements AgentTool {
   private static final int MAX_HISTORY_MESSAGES = 500;
   private final AgentQueryRepository repository;
@@ -51,7 +57,13 @@ public final class UserMessageHistoryTool implements AgentTool {
         parameters(context),
         PROMPTS.toolGuidance(name(), "whenToUse"),
         PROMPTS.toolGuidance(name(), "whenNotToUse"),
-        List.of(new ToolExample(name(), "{\"nick\":\"sun\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
+        List.of(
+            new ToolExample(
+                name(),
+                "{\"nick\":\"sun\"}",
+                PROMPTS
+                    .toolExample(name())
+                    .substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(),
         Set.of());
   }
@@ -86,6 +98,7 @@ public final class UserMessageHistoryTool implements AgentTool {
   }
 
   @Override
+  /** Queries public history for the supplied nick and adds evidence metadata to the result. */
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     JsonElement nick = arguments.get("nick");
     if (nick == null
@@ -106,10 +119,8 @@ public final class UserMessageHistoryTool implements AgentTool {
       queryArguments.addProperty("room", room.getAsString().trim());
     }
     try {
-      JsonObject result =
-          repository.execute("recent_messages_for_user", queryArguments, context);
-      return AgentToolResult.success(
-          name(), withEvidenceMetadata(result).toString());
+      JsonObject result = repository.execute("recent_messages_for_user", queryArguments, context);
+      return AgentToolResult.success(name(), withEvidenceMetadata(result).toString());
     } catch (IllegalArgumentException exception) {
       return AgentToolResult.error(null, name(), "Invalid message-history request");
     } catch (RuntimeException exception) {
@@ -141,10 +152,8 @@ public final class UserMessageHistoryTool implements AgentTool {
     }
 
     enriched.addProperty("returnedCount", rows.size());
-    enriched.add(
-        "oldestCreatedOn", oldest == null ? JsonNull.INSTANCE : new JsonPrimitive(oldest));
-    enriched.add(
-        "newestCreatedOn", newest == null ? JsonNull.INSTANCE : new JsonPrimitive(newest));
+    enriched.add("oldestCreatedOn", oldest == null ? JsonNull.INSTANCE : new JsonPrimitive(oldest));
+    enriched.add("newestCreatedOn", newest == null ? JsonNull.INSTANCE : new JsonPrimitive(newest));
     return enriched;
   }
 }

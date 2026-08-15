@@ -20,5 +20,6 @@ Successful observations serialize as `{"status":"success","data":...}`. Failures
 
 `DefaultAgentRouter` creates an `AgentExecutionState` and `AgentToolExecutor` for every request.
 The state limits model/tool iterations and calls, while the executor owns a request-local virtual-thread
-executor and cancels timed-out work. Future parallel execution may only schedule descriptors marked
-`isIdempotent`; Saturn currently retains deterministic sequential tool execution.
+executor and cancels timed-out work. The executor remains sequential by default, but fans out a
+contiguous batch when every call is read-only, idempotent, and has no prerequisite. Commands and
+other stateful calls remain sequential. See `AGENTIC_ARCHITECTURE.md` for the full policy.

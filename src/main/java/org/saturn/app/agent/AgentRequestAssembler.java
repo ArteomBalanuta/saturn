@@ -15,7 +15,8 @@ final class AgentRequestAssembler {
   private final AgentFreshnessPolicy freshnessPolicy = new AgentFreshnessPolicy();
   private final AgentPromptCatalog prompts = new AgentPromptCatalog();
 
-  AgentRequestAssembler(AgentConfig config, AgentToolRegistry registry, AgentSystemPrompt systemPrompt) {
+  AgentRequestAssembler(
+      AgentConfig config, AgentToolRegistry registry, AgentSystemPrompt systemPrompt) {
     this.config = config;
     this.registry = registry;
     this.systemPrompt = systemPrompt;

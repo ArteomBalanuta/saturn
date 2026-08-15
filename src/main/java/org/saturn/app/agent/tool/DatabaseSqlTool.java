@@ -25,6 +25,12 @@ import org.saturn.app.agent.sql.AgentSqlErrorCode;
 import org.saturn.app.agent.sql.AgentSqlPolicy;
 import org.saturn.app.agent.sql.AgentSqlPolicyException;
 
+/**
+ * Executes one bounded, validated read-only SQL statement for dynamic-SQL-capable callers.
+ *
+ * <p>The descriptor requires a successful {@code database_schema} observation first. Despite being
+ * read-only, this dependency keeps execution sequential so SQL is grounded in the current schema.
+ */
 public final class DatabaseSqlTool implements AgentTool {
   private final AgentSchemaRepository schemaRepository;
   private final AgentSqlPolicy policy;
@@ -67,7 +73,13 @@ public final class DatabaseSqlTool implements AgentTool {
         parameters(context),
         PROMPTS.toolGuidance(name(), "whenToUse"),
         PROMPTS.toolGuidance(name(), "whenNotToUse"),
-        List.of(new ToolExample(name(), "{\"sql\":\"SELECT COUNT(*) FROM messages\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
+        List.of(
+            new ToolExample(
+                name(),
+                "{\"sql\":\"SELECT COUNT(*) FROM messages\"}",
+                PROMPTS
+                    .toolExample(name())
+                    .substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(AgentCapability.DYNAMIC_SQL.name()),
         requiredSuccessfulTools());
   }
@@ -103,6 +115,7 @@ public final class DatabaseSqlTool implements AgentTool {
   }
 
   @Override
+  /** Validates and executes the SQL against the current schema, returning a safe error payload. */
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     if (!isAvailableTo(context)) {
       return AgentToolResult.error(null, name(), "Tool is unavailable for this caller");

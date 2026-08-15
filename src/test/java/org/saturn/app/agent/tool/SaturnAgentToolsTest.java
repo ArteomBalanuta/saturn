@@ -29,10 +29,12 @@ class SaturnAgentToolsTest {
   @Test
   void rejectsModerationCommandForSomeoneOtherThanTheTrustedTarget() {
     AtomicInteger executions = new AtomicInteger();
-    RunCommandTool tool = new RunCommandTool((context, command, arguments) -> {
-      executions.incrementAndGet();
-      return true;
-    });
+    RunCommandTool tool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              executions.incrementAndGet();
+              return true;
+            });
     AgentContext context =
         new AgentContext(
             "programming",
@@ -52,6 +54,7 @@ class SaturnAgentToolsTest {
     assertTrue(result.isError());
     assertEquals(0, executions.get());
   }
+
   @Test
   void roomAndDatabaseToolsReturnStructuredData() {
     AgentContext context = context();
@@ -173,8 +176,7 @@ class SaturnAgentToolsTest {
     JsonObject arguments = new JsonObject();
     arguments.addProperty("nick", "jill");
 
-    AgentToolResult result =
-        new UserMessageHistoryTool(repository).execute(context(), arguments);
+    AgentToolResult result = new UserMessageHistoryTool(repository).execute(context(), arguments);
 
     JsonObject content = JsonParser.parseString(result.content()).getAsJsonObject();
     assertFalse(result.isError());
@@ -184,8 +186,12 @@ class SaturnAgentToolsTest {
     assertEquals(2, content.get("returnedCount").getAsInt());
     assertEquals(100L, content.get("oldestCreatedOn").getAsLong());
     assertEquals(300L, content.get("newestCreatedOn").getAsLong());
-    assertEquals("older", content.getAsJsonArray("rows").get(0).getAsJsonObject().get("message").getAsString());
-    assertEquals("newer", content.getAsJsonArray("rows").get(1).getAsJsonObject().get("message").getAsString());
+    assertEquals(
+        "older",
+        content.getAsJsonArray("rows").get(0).getAsJsonObject().get("message").getAsString());
+    assertEquals(
+        "newer",
+        content.getAsJsonArray("rows").get(1).getAsJsonObject().get("message").getAsString());
   }
 
   @Test
@@ -199,8 +205,7 @@ class SaturnAgentToolsTest {
     JsonObject arguments = new JsonObject();
     arguments.addProperty("nick", "missing");
 
-    AgentToolResult result =
-        new UserMessageHistoryTool(repository).execute(context(), arguments);
+    AgentToolResult result = new UserMessageHistoryTool(repository).execute(context(), arguments);
 
     JsonObject content = JsonParser.parseString(result.content()).getAsJsonObject();
     assertTrue(content.has("returnedCount"));
@@ -227,8 +232,7 @@ class SaturnAgentToolsTest {
     JsonObject arguments = new JsonObject();
     arguments.addProperty("nick", "solo");
 
-    AgentToolResult result =
-        new UserMessageHistoryTool(repository).execute(context(), arguments);
+    AgentToolResult result = new UserMessageHistoryTool(repository).execute(context(), arguments);
 
     JsonObject content = JsonParser.parseString(result.content()).getAsJsonObject();
     assertTrue(content.has("returnedCount"));
@@ -322,17 +326,16 @@ class SaturnAgentToolsTest {
     RunCommandTool tool = new RunCommandTool((context, command, arguments) -> true);
 
     assertEquals("commands", tool.descriptor(context()).category());
-    assertEquals(org.saturn.app.agent.ToolAccess.AUTHORIZED_CALLER, tool.descriptor(context()).access());
+    assertEquals(
+        org.saturn.app.agent.ToolAccess.AUTHORIZED_CALLER, tool.descriptor(context()).access());
     assertEquals(org.saturn.app.agent.ToolEffect.ROOM_MESSAGE, tool.descriptor(context()).effect());
     assertEquals(
         org.saturn.app.agent.ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA,
         tool.descriptor(context()).resultMode());
     assertEquals(
-        org.saturn.app.agent.ToolEffect.MODERATION,
-        tool.descriptor(moderatorContext()).effect());
+        org.saturn.app.agent.ToolEffect.MODERATION, tool.descriptor(moderatorContext()).effect());
     assertEquals(
-        org.saturn.app.agent.ToolAccess.CREATOR_ONLY,
-        tool.descriptor(creatorContext()).access());
+        org.saturn.app.agent.ToolAccess.CREATOR_ONLY, tool.descriptor(creatorContext()).access());
   }
 
   @Test

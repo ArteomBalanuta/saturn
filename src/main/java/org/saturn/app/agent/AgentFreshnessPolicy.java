@@ -38,27 +38,33 @@ final class AgentFreshnessPolicy {
               + NICK
               + ")\\s+(?:user|member)\\b.*");
   private static final Set<String> NON_NICK_PROFILE_TERMS =
-      Set.of("experience", "interface", "research", "behavior", "behaviour", "java", "here", "there", "shakespeare", "rome");
+      Set.of(
+          "experience",
+          "interface",
+          "research",
+          "behavior",
+          "behaviour",
+          "java",
+          "here",
+          "there",
+          "shakespeare",
+          "rome");
   private static final Pattern SIMPLE_USER_PROFILE =
-      Pattern.compile(
-          "(?is).*\\btell\\s+me\\s+about\\s+"
-              + "(?<target>"
-              + NICK
-              + ")[?.!\\s]*$");
+      Pattern.compile("(?is).*\\btell\\s+me\\s+about\\s+" + "(?<target>" + NICK + ")[?.!\\s]*$");
   private static final Pattern POSSESSIVE_USER_PROFILE =
       Pattern.compile(
           "(?is).*\\b(?:show(?:\\s+me)?|give\\s+me|describe|summari[sz]e|analy[sz]e)\\s+"
               + NICK
               + "(?:'|\\x{2019})s\\s+(?:profile|messages?|history|activity)\\b.*");
   private static final Pattern WHO_IS_USER =
-      Pattern.compile(
-          "(?is).*\\bwho\\s+is\\s+(?<target>" + NICK + ")[?.!\\s]*$");
+      Pattern.compile("(?is).*\\bwho\\s+is\\s+(?<target>" + NICK + ")[?.!\\s]*$");
   private static final Pattern EXPLICIT_WHO_IS_USER =
-      Pattern.compile(
-          "(?is).*\\bwho\\s+is\\s+" + EXPLICIT_USER_TARGET + "[?.!\\s]*$");
+      Pattern.compile("(?is).*\\bwho\\s+is\\s+" + EXPLICIT_USER_TARGET + "[?.!\\s]*$");
   private static final Pattern USER_SPEECH =
       Pattern.compile(
-          "(?is).*\\bwhat\\s+(?:did|has)\\s+(?<target>" + NICK + ")\\s+"
+          "(?is).*\\bwhat\\s+(?:did|has)\\s+(?<target>"
+              + NICK
+              + ")\\s+"
               + "(?:say|said|post|posted|write|wrote|written)\\b.*");
   private static final Pattern USER_HISTORY =
       Pattern.compile(
@@ -79,8 +85,7 @@ final class AgentFreshnessPolicy {
     return requiredTool(prompt, history, List.of());
   }
 
-  Optional<String> requiredTool(
-      String prompt, List<LlmMessage> history, List<String> roomUsers) {
+  Optional<String> requiredTool(String prompt, List<LlmMessage> history, List<String> roomUsers) {
     if (requiresNamedUserHistory(prompt, roomUsers)) {
       return Optional.of(USER_MESSAGE_HISTORY);
     }

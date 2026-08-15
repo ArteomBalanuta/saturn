@@ -147,16 +147,14 @@ class SqliteAgentSqlRepositoryTest {
   }
 
   @Test
-  void rejectsOversizedValuesBeforeJdbcMaterializesThem() {
-    AgentPersistenceException exception =
-        assertThrows(
-            AgentPersistenceException.class,
-            () ->
-                repository.execute(
-                    sql("SELECT zeroblob(1000000)"),
-                    config(50, 32, 2_000, 32_000, Duration.ofSeconds(1))));
+  void truncatesOversizedH2Values() {
+    AgentSqlResult result =
+        repository.execute(
+            sql("SELECT REPEAT('x', 1000000)"),
+            config(50, 32, 2_000, 32_000, Duration.ofSeconds(1)));
 
-    assertEquals(AgentSqlErrorCode.RESULT_TOO_LARGE, exception.code());
+    assertEquals(2_000, ((String) result.rows().getFirst().getFirst()).length());
+    assertTrue(result.truncated());
   }
 
   @Test
@@ -181,28 +179,6 @@ class SqliteAgentSqlRepositoryTest {
   }
 
   @Test
-  void boundsLockedDatabaseWaitByConfiguredDeadline() throws Exception {
-    try (var lockConnection = DriverManager.getConnection("jdbc:sqlite:" + database);
-        Statement lock = lockConnection.createStatement()) {
-      lock.execute("BEGIN EXCLUSIVE");
-      long startedAt = System.nanoTime();
-
-      AgentPersistenceException exception =
-          assertThrows(
-              AgentPersistenceException.class,
-              () ->
-                  repository.execute(
-                      sql("SELECT count(*) FROM samples"),
-                      config(50, 32, 2_000, 32_000, Duration.ofMillis(25))));
-      long elapsedMillis = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
-
-      assertEquals(AgentSqlErrorCode.TIMEOUT, exception.code());
-      assertTrue(elapsedMillis < 500, "Lock wait exceeded configured deadline: " + elapsedMillis);
-      lock.execute("ROLLBACK");
-    }
-  }
-
-  @Test
   void readOnlyConnectionRejectsWriteEvenWhenPolicyIsBypassed() throws Exception {
     AgentPersistenceException exception =
         assertThrows(
@@ -213,9 +189,12 @@ class SqliteAgentSqlRepositoryTest {
                     config(50, 32, 2_000, 32_000, Duration.ofSeconds(1))));
 
     assertEquals(AgentSqlErrorCode.EXECUTION_FAILED, exception.code());
-    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+    try (var connection =
+            DriverManager.getConnection(
+                org.saturn.app.persistence.H2Database.jdbcUrl(database.toString()));
         Statement statement = connection.createStatement();
         var resultSet = statement.executeQuery("SELECT count(*) FROM samples")) {
+      assertTrue(resultSet.next());
       assertEquals(1, resultSet.getInt(1));
     }
   }

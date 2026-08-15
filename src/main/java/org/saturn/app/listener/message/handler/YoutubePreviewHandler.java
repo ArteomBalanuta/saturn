@@ -7,7 +7,8 @@ public class YoutubePreviewHandler implements ChatMessageHandler {
 
   @Override
   public boolean handle(ChatMessageContext context) {
-    context.getEngine()
+    context
+        .getEngine()
         .printYoutubeThumbnailAndDetails(
             context.getMessage().getNick(), context.getMessage().getText());
     return true;

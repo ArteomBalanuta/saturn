@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.service.SQLService;
 import org.saturn.app.service.impl.util.TableGenerator;
-import org.saturn.app.util.SqlUtil;
 
 @Slf4j
 public class SQLServiceImpl extends OutService implements SQLService {
@@ -135,13 +134,15 @@ public class SQLServiceImpl extends OutService implements SQLService {
       throws SQLException {
     if (trip == null || trip.trim().isEmpty()) {
       PreparedStatement statement =
-          connection.prepareStatement("select distinct hash,name from messages where hash = ? limit 30;");
+          connection.prepareStatement(
+              "select distinct hash,name from messages where hash = ? limit 30;");
       statement.setString(1, hash);
       return statement;
     }
 
     PreparedStatement statement =
-        connection.prepareStatement("select distinct hash,name from messages where trip = ? limit 30;");
+        connection.prepareStatement(
+            "select distinct hash,name from messages where trip = ? limit 30;");
     statement.setString(1, trip);
     return statement;
   }

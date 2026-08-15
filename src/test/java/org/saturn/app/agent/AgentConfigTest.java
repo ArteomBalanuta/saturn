@@ -28,9 +28,9 @@ class AgentConfigTest {
     assertEquals("secret", actual.apiKey());
     assertEquals(Duration.ofSeconds(30), actual.timeout());
     assertEquals(4, actual.maxToolCalls());
-    assertEquals(8, actual.maxSteps());
+    assertEquals(5, actual.maxSteps());
     assertEquals(4, actual.maxToolCallsPerTurn());
-    assertEquals(Duration.ofSeconds(15), actual.toolTimeout());
+    assertEquals(Duration.ofSeconds(10), actual.toolTimeout());
     assertEquals(2, actual.maxConcurrentRequests());
     assertEquals(768, actual.maxCompletionTokens());
     assertFalse(actual.thinkingEnabled());
@@ -71,6 +71,53 @@ class AgentConfigTest {
     assertEquals(6, actual.maxSteps());
     assertEquals(3, actual.maxToolCallsPerTurn());
     assertEquals(Duration.ofMillis(1200), actual.toolTimeout());
+  }
+
+  @Test
+  void environmentOverridesTomlForProviderAndExecutionSettings() {
+    Toml config =
+        new Toml()
+            .read(
+                """
+                [agent]
+                enabled = false
+                endpoint = "http://toml.example"
+                model = "toml-model"
+                timeoutSeconds = 30
+                maxSteps = 8
+                maxToolCallsPerTurn = 4
+                toolTimeoutMillis = 15000
+                """);
+
+    AgentConfig actual =
+        AgentConfig.from(
+            config,
+            Map.of(
+                "SATURN_AGENT_ENABLED", "true",
+                "SATURN_AGENT_ENDPOINT", "http://environment.example/",
+                "SATURN_AGENT_MODEL", "environment-model",
+                "SATURN_AGENT_TIMEOUT_SECONDS", "12",
+                "SATURN_AGENT_MAX_STEPS", "5",
+                "SATURN_AGENT_MAX_TOOL_CALLS_PER_TURN", "3",
+                "SATURN_AGENT_TOOL_TIMEOUT_MILLIS", "10000"));
+
+    assertTrue(actual.enabled());
+    assertEquals("http://environment.example", actual.endpoint().toString());
+    assertEquals("environment-model", actual.model().orElseThrow());
+    assertEquals(Duration.ofSeconds(12), actual.timeout());
+    assertEquals(5, actual.maxSteps());
+    assertEquals(3, actual.maxToolCallsPerTurn());
+    assertEquals(Duration.ofSeconds(10), actual.toolTimeout());
+  }
+
+  @Test
+  void usesLocalSafeDefaultsWhenAgentSettingsAreAbsent() {
+    AgentConfig actual = AgentConfig.from(new Toml(), Map.of());
+
+    assertFalse(actual.enabled());
+    assertEquals("http://localhost:16261", actual.endpoint().toString());
+    assertEquals(5, actual.maxSteps());
+    assertEquals(Duration.ofSeconds(10), actual.toolTimeout());
   }
 
   @Test

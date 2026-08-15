@@ -6,6 +6,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Immutable provider-facing contract for one contextual agent tool.
+ *
+ * <p>The constructor validates metadata and deep-copies schemas. {@code isIdempotent} is an
+ * execution property, not a permission: only read-only, idempotent tools without prerequisites may
+ * be included in a concurrent batch.
+ */
 public record AgentToolDescriptor(
     String name,
     String label,
@@ -84,9 +91,14 @@ public record AgentToolDescriptor(
         examples,
         requiredCapabilities,
         requiredSuccessfulTools,
-        false,
+        effect == ToolEffect.READ_ONLY,
         Duration.ZERO,
         anyResultSchema());
+  }
+
+  /** Returns whether this descriptor declares no Saturn-side effect. */
+  public boolean isReadOnly() {
+    return effect == ToolEffect.READ_ONLY;
   }
 
   private static JsonObject anyResultSchema() {

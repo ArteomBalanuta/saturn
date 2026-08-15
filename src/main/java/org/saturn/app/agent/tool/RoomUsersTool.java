@@ -14,6 +14,11 @@ import org.saturn.app.agent.ToolEffect;
 import org.saturn.app.agent.ToolExample;
 import org.saturn.app.agent.ToolResultMode;
 
+/**
+ * Returns a live snapshot of users in one Saturn-managed room.
+ *
+ * <p>The tool is read-only and idempotent, so independent calls are eligible for executor fan-out.
+ */
 public final class RoomUsersTool implements AgentTool {
   private final AgentRoomDirectory roomDirectory;
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
@@ -45,7 +50,13 @@ public final class RoomUsersTool implements AgentTool {
         parameters(context),
         PROMPTS.toolGuidance(name(), "whenToUse"),
         PROMPTS.toolGuidance(name(), "whenNotToUse"),
-        List.of(new ToolExample(name(), "{\"room\":\"lounge\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
+        List.of(
+            new ToolExample(
+                name(),
+                "{\"room\":\"lounge\"}",
+                PROMPTS
+                    .toolExample(name())
+                    .substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(),
         Set.of());
   }
@@ -67,6 +78,7 @@ public final class RoomUsersTool implements AgentTool {
   }
 
   @Override
+  /** Returns the selected room's name, user list, and count, or a coded lookup error. */
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     String requestedRoom = context.room();
     if (arguments.has("room")) {

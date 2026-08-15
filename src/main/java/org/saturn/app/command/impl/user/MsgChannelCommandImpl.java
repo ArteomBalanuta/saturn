@@ -15,7 +15,6 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.payload.ChatMessage;
-import org.saturn.app.service.impl.OutService;
 
 @Slf4j
 @CommandAliases(aliases = {"msgchannel", "msgroom"})

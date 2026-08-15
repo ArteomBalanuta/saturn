@@ -25,8 +25,7 @@ public class OutService {
     }
     message = normalizeForChatPayload(message);
     if (isWhisper) {
-      message =
-          StringUtils.prependIfMissingIgnoreCase(message, "/whisper @%s ".formatted(author));
+      message = StringUtils.prependIfMissingIgnoreCase(message, "/whisper @%s ".formatted(author));
     } else {
       message = "@%s %s".formatted(author, message);
     }

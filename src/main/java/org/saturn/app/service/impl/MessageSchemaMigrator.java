@@ -1,13 +1,12 @@
 package org.saturn.app.service.impl;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 final class MessageSchemaMigrator {
   private static final String VISIBILITY_COLUMN =
-      "ALTER TABLE messages ADD COLUMN visibility TEXT "
+      "ALTER TABLE messages ADD COLUMN visibility VARCHAR "
           + "CHECK(visibility IN ('PUBLIC', 'WHISPER'))";
 
   private MessageSchemaMigrator() {}
@@ -36,8 +35,7 @@ final class MessageSchemaMigrator {
 
   private static void backfillLegacyVisibility(Connection connection) throws SQLException {
     try (Statement statement = connection.createStatement()) {
-      statement.executeUpdate(
-          "UPDATE messages SET visibility = 'PUBLIC' WHERE visibility IS NULL");
+      statement.executeUpdate("UPDATE messages SET visibility = 'PUBLIC' WHERE visibility IS NULL");
     }
   }
 
@@ -47,8 +45,8 @@ final class MessageSchemaMigrator {
           """
           CREATE INDEX IF NOT EXISTS idx_agent_messages_name_room_visibility_created
           ON messages (
-            name COLLATE NOCASE,
-            channel COLLATE NOCASE,
+            name,
+            channel,
             visibility,
             created_on DESC,
             id DESC)
@@ -56,12 +54,12 @@ final class MessageSchemaMigrator {
       statement.executeUpdate(
           """
           CREATE INDEX IF NOT EXISTS idx_agent_messages_name_visibility_created
-          ON messages (name COLLATE NOCASE, visibility, created_on DESC, id DESC)
+          ON messages (name, visibility, created_on DESC, id DESC)
           """);
       statement.executeUpdate(
           """
           CREATE INDEX IF NOT EXISTS idx_agent_messages_room_visibility_created
-          ON messages (channel COLLATE NOCASE, visibility, created_on DESC, id DESC)
+          ON messages (channel, visibility, created_on DESC, id DESC)
           """);
       statement.executeUpdate(
           """
@@ -77,22 +75,17 @@ final class MessageSchemaMigrator {
   }
 
   private static boolean tableExists(Connection connection, String table) throws SQLException {
-    try (var statement =
-        connection.prepareStatement(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")) {
-      statement.setString(1, table);
-      try (ResultSet resultSet = statement.executeQuery()) {
-        return resultSet.next();
-      }
+    try (var resultSet =
+        connection.getMetaData().getTables(null, null, table, new String[] {"TABLE"})) {
+      return resultSet.next();
     }
   }
 
   private static boolean columnExists(Connection connection, String table, String column)
       throws SQLException {
-    try (Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery("PRAGMA table_info(" + table + ")")) {
+    try (var resultSet = connection.getMetaData().getColumns(null, null, table, column)) {
       while (resultSet.next()) {
-        if (column.equalsIgnoreCase(resultSet.getString("name"))) {
+        if (column.equalsIgnoreCase(resultSet.getString("COLUMN_NAME"))) {
           return true;
         }
       }

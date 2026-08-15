@@ -15,7 +15,8 @@ import org.saturn.app.agent.llm.LlmMessage;
 class AgentRequestAssemblerTest {
   @Test
   void assemblesBoundedMessagesAndModeSpecificTools() {
-    AgentToolRegistry registry = new AgentToolRegistry().register(tool("run_command")).register(tool("weather")).freeze();
+    AgentToolRegistry registry =
+        new AgentToolRegistry().register(tool("run_command")).register(tool("weather")).freeze();
     AgentRequestAssembler assembler =
         new AgentRequestAssembler(
             config(), registry, new AgentSystemPrompt(AgentParticipationConfig.from(null)));
@@ -30,7 +31,8 @@ class AgentRequestAssemblerTest {
             List.of(LlmMessage.user("old question"), LlmMessage.assistant("old answer", List.of())),
             "recent room context");
 
-    assertEquals(Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY), request.requiredFreshTool());
+    assertEquals(
+        Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY), request.requiredFreshTool());
     assertEquals(Optional.of("jill"), request.requiredFreshNick());
     assertEquals("user", request.messages().getLast().role());
     assertTrue(request.contextualizedPrompt().contains("tell me about jill user"));
@@ -38,7 +40,9 @@ class AgentRequestAssemblerTest {
 
     AgentPreparedRequest moderation =
         assembler.assemble(
-            new AgentInvocation(context, "possible abuse", AgentInvocationMode.MODERATION), List.of(), "");
+            new AgentInvocation(context, "possible abuse", AgentInvocationMode.MODERATION),
+            List.of(),
+            "");
     assertTrue(moderation.requiredFreshTool().isEmpty());
     assertFalse(moderation.definitions().isEmpty());
     assertEquals(

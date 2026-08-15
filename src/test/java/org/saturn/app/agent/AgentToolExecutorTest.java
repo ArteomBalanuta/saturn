@@ -10,6 +10,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.llm.LlmToolCall;
@@ -256,12 +259,62 @@ class AgentToolExecutorTest {
         };
 
     try (AgentToolExecutor executor =
-        new AgentToolExecutor(new AgentToolRegistry().register(invalidResultTool).freeze(), config())) {
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(invalidResultTool).freeze(), config())) {
       AgentToolResult result =
           executor.execute(null, new LlmToolCall("structured-1", "structured", "{}"));
 
       assertTrue(result.isError());
       assertEquals("INVALID_TOOL_RESULT", result.errorCode());
+    }
+  }
+
+  @Test
+  void runsConsecutiveIdempotentReadToolsConcurrentlyAndPreservesObservationOrder()
+      throws InterruptedException {
+    CountDownLatch started = new CountDownLatch(2);
+    AgentTool first = concurrentReadTool("first", started);
+    AgentTool second = concurrentReadTool("second", started);
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(first).register(second).freeze(), config())) {
+      List<AgentToolResult> results =
+          executor.executeAll(
+              null,
+              List.of(
+                  new LlmToolCall("first-call", "first", "{}"),
+                  new LlmToolCall("second-call", "second", "{}")));
+
+      assertEquals(
+          List.of("first", "second"), results.stream().map(AgentToolResult::toolName).toList());
+      assertTrue(started.await(10, TimeUnit.MILLISECONDS));
+      assertFalse(results.stream().anyMatch(AgentToolResult::isError));
+    }
+  }
+
+  @Test
+  void runsCommandToolsOnlyAfterThePrecedingReadBatchCompletes() {
+    List<String> events = new CopyOnWriteArrayList<>();
+    CountDownLatch readsStarted = new CountDownLatch(2);
+    AgentTool first = orderedReadTool("first", readsStarted, events);
+    AgentTool second = orderedReadTool("second", readsStarted, events);
+    AgentTool command = orderedCommandTool(events);
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(first).register(second).register(command).freeze(),
+            config())) {
+      List<AgentToolResult> results =
+          executor.executeAll(
+              null,
+              List.of(
+                  new LlmToolCall("first-call", "first", "{}"),
+                  new LlmToolCall("second-call", "second", "{}"),
+                  new LlmToolCall("command-call", "command", "{}")));
+
+      assertFalse(results.stream().anyMatch(AgentToolResult::isError));
+      assertEquals("command", events.getLast());
     }
   }
 
@@ -292,6 +345,117 @@ class AgentToolExecutorTest {
         return AgentToolResult.success(name(), arguments);
       }
     };
+  }
+
+  private AgentTool concurrentReadTool(String name, CountDownLatch started) {
+    return new AgentTool() {
+      @Override
+      public String name() {
+        return name;
+      }
+
+      @Override
+      public AgentToolDescriptor descriptor(AgentContext context) {
+        return new AgentToolDescriptor(
+            name(),
+            name(),
+            "Reads test data. Do NOT use when an action is required.",
+            "test",
+            ToolAccess.PUBLIC,
+            ToolEffect.READ_ONLY,
+            ToolResultMode.MODEL_DATA,
+            parameters(),
+            List.of("Read independent test data."),
+            List.of("Do not use for room actions."),
+            List.of(),
+            Set.of(),
+            Set.of(),
+            true,
+            Duration.ZERO,
+            anyResultSchema());
+      }
+
+      @Override
+      public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+        started.countDown();
+        try {
+          if (!started.await(250, TimeUnit.MILLISECONDS)) {
+            return AgentToolResult.error(null, name(), "The other read did not start");
+          }
+        } catch (InterruptedException exception) {
+          Thread.currentThread().interrupt();
+          return AgentToolResult.error(null, name(), "Read was interrupted");
+        }
+        return AgentToolResult.success(name(), name());
+      }
+    };
+  }
+
+  private AgentTool orderedReadTool(String name, CountDownLatch started, List<String> events) {
+    AgentTool delegate = concurrentReadTool(name, started);
+    return new AgentTool() {
+      @Override
+      public String name() {
+        return delegate.name();
+      }
+
+      @Override
+      public AgentToolDescriptor descriptor(AgentContext context) {
+        return delegate.descriptor(context);
+      }
+
+      @Override
+      public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+        AgentToolResult result = delegate.execute(context, arguments);
+        events.add(name);
+        return result;
+      }
+    };
+  }
+
+  private AgentTool orderedCommandTool(List<String> events) {
+    return new AgentTool() {
+      @Override
+      public String name() {
+        return "command";
+      }
+
+      @Override
+      public AgentToolDescriptor descriptor(AgentContext context) {
+        return new AgentToolDescriptor(
+            name(),
+            "Command",
+            "Runs a test command. Do NOT run in parallel.",
+            "test",
+            ToolAccess.PUBLIC,
+            ToolEffect.ROOM_MESSAGE,
+            ToolResultMode.ROOM_DELIVERY,
+            parameters(),
+            List.of("Run the ordered test action."),
+            List.of("Do not run in parallel."),
+            List.of(),
+            Set.of(),
+            Set.of(),
+            false,
+            Duration.ZERO,
+            anyResultSchema());
+      }
+
+      @Override
+      public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+        if (events.size() != 2) {
+          return AgentToolResult.error(null, name(), "Reads were not complete");
+        }
+        events.add(name());
+        return AgentToolResult.success(name(), "done");
+      }
+    };
+  }
+
+  private JsonObject anyResultSchema() {
+    JsonObject schema = new JsonObject();
+    schema.addProperty("type", "any");
+    return schema;
   }
 
   private AgentConfig config() {

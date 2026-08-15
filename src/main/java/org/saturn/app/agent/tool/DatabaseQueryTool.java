@@ -15,6 +15,12 @@ import org.saturn.app.agent.ToolExample;
 import org.saturn.app.agent.ToolResultMode;
 import org.saturn.app.agent.persistence.AgentQueryRepository;
 
+/**
+ * Runs one of Saturn's named read-only database queries.
+ *
+ * <p>It does not accept generated SQL; use {@link DatabaseSqlTool} only where the separate
+ * admin-only dynamic-SQL contract is available.
+ */
 public final class DatabaseQueryTool implements AgentTool {
   private final AgentQueryRepository repository;
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
@@ -46,7 +52,13 @@ public final class DatabaseQueryTool implements AgentTool {
         parameters(context),
         PROMPTS.toolGuidance(name(), "whenToUse"),
         PROMPTS.toolGuidance(name(), "whenNotToUse"),
-        List.of(new ToolExample(name(), "{\"query\":\"recent_messages_for_room\"}", PROMPTS.toolExample(name()).substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
+        List.of(
+            new ToolExample(
+                name(),
+                "{\"query\":\"recent_messages_for_room\"}",
+                PROMPTS
+                    .toolExample(name())
+                    .substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
         Set.of(),
         Set.of());
   }
@@ -88,6 +100,7 @@ public final class DatabaseQueryTool implements AgentTool {
   }
 
   @Override
+  /** Executes an allow-listed query and converts repository failures into tool errors. */
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     if (!arguments.has("query")) {
       return AgentToolResult.error(null, name(), "Missing required query name");

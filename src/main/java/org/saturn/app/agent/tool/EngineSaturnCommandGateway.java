@@ -10,6 +10,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.impl.CommandOutputCapture;
 
 @Slf4j
+/** Adapts agent command requests to Saturn's engine command-dispatch boundary. */
 public final class EngineSaturnCommandGateway implements SaturnCommandGateway {
   private final EngineImpl engine;
 

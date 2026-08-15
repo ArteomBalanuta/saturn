@@ -49,7 +49,7 @@ public final class AgentRuntimeFactory {
     }
 
     AgentSchemaMigrator.migrate(databasePath);
-    AgentSqlConfig sqlConfig = AgentSqlConfig.from(rootConfig);
+    AgentSqlConfig sqlConfig = AgentSqlConfig.from(rootConfig, System.getenv());
     AgentParticipationConfig participationConfig = AgentParticipationConfig.from(rootConfig);
     AgentModerationConfig moderationConfig = AgentModerationConfig.from(rootConfig);
     var queryRepository = new SqliteAgentQueryRepository(databasePath);

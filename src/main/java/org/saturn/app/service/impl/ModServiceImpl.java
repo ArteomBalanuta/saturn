@@ -278,9 +278,7 @@ public class ModServiceImpl extends OutService implements ModService {
       return Optional.empty();
     }
 
-    return getBannedUsers().stream()
-            .filter(banned -> isMatch(target, banned))
-            .findFirst();
+    return getBannedUsers().stream().filter(banned -> isMatch(target, banned)).findFirst();
   }
 
   private boolean isMatch(User target, BanRecord banned) {

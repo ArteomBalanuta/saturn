@@ -1,9 +1,9 @@
-dbPath = "database/database.db"
+dbPath = "database/database"
 wsUrl = "wss://hack.chat/chat-ws"
 cmdPrefix = "*"
 channel = "programming"
 nick = "alphaBot"
-trip = "secret13"
+trip = "YOUR_BOT_TRIP_HERE"
 userTrips = ""
 adminTrips = "g0KY09,595754"
 proxies = ""
@@ -12,9 +12,9 @@ healthCheckInterval = 5
 autorunCommands = "replica lounge, say hello lads!!"
 
 [agent]
-enabled = true
-endpoint = "http://83.218.196.156:16261"
-# Leave empty when the endpoint chooses the model.
+enabled = false
+# Provider settings are environment-first: SATURN_AGENT_ENDPOINT, SATURN_AGENT_MODEL, and
+# SATURN_AGENT_API_KEY override this file. Leave model empty when the provider chooses it.
 model = ""
 apiKeyEnv = "SATURN_AGENT_API_KEY"
 timeoutSeconds = 30
@@ -22,9 +22,9 @@ maxCompletionTokens = 768
 thinkingEnabled = false
 maxConcurrentRequests = 2
 # SDK execution bounds for one agent turn. `maxToolCalls` remains the legacy alias.
-maxSteps = 8
+maxSteps = 5
 maxToolCallsPerTurn = 4
-toolTimeoutMillis = 15000
+toolTimeoutMillis = 10000
 maxToolCalls = 4
 maxCallsPerTool = 2
 maxToolFailures = 2

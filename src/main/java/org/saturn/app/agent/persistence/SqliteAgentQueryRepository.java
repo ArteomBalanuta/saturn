@@ -3,20 +3,20 @@ package org.saturn.app.agent.persistence;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.persistence.H2Database;
 
 public final class SqliteAgentQueryRepository implements AgentQueryRepository {
   private static final int DEFAULT_ROW_LIMIT = 10;
   private static final int MAX_ROW_LIMIT = 60;
   private static final int MAX_USER_HISTORY_ROW_LIMIT = 500;
-  private final String jdbcUrl;
+  private final String databasePath;
 
   public SqliteAgentQueryRepository(String databasePath) {
-    this.jdbcUrl = "jdbc:sqlite:" + databasePath;
+    this.databasePath = databasePath;
   }
 
   @Override
@@ -125,8 +125,8 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
             ? """
               SELECT name, trip, hash, message, created_on, channel
               FROM messages
-              WHERE name = ? COLLATE NOCASE
-                AND channel = ? COLLATE NOCASE
+              WHERE LOWER(name) = LOWER(?)
+                AND LOWER(channel) = LOWER(?)
                 AND visibility = 'PUBLIC'
               ORDER BY created_on DESC, id DESC
               LIMIT ?
@@ -134,7 +134,7 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
             : """
               SELECT name, trip, hash, message, created_on, channel
               FROM messages
-              WHERE name = ? COLLATE NOCASE AND visibility = 'PUBLIC'
+              WHERE LOWER(name) = LOWER(?) AND visibility = 'PUBLIC'
               ORDER BY created_on DESC, id DESC
               LIMIT ?
               """;
@@ -166,7 +166,7 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
         FROM (
           SELECT id, name, trip, hash, message, created_on, channel
           FROM messages
-          WHERE channel = ? COLLATE NOCASE AND visibility = 'PUBLIC'
+          WHERE LOWER(channel) = LOWER(?) AND visibility = 'PUBLIC'
           ORDER BY created_on DESC, id DESC
           LIMIT ?
         )
@@ -212,12 +212,8 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
   }
 
   private Connection openReadOnly() throws SQLException {
-    Connection connection = DriverManager.getConnection(jdbcUrl);
-    try (PreparedStatement timeout = connection.prepareStatement("PRAGMA busy_timeout = 5000");
-        PreparedStatement queryOnly = connection.prepareStatement("PRAGMA query_only = ON")) {
-      timeout.execute();
-      queryOnly.execute();
-    }
+    Connection connection = H2Database.open(databasePath);
+    connection.setReadOnly(true);
     return connection;
   }
 
@@ -232,9 +228,7 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
 
   private static int userHistoryRowLimit(JsonObject arguments) {
     int requested =
-        arguments.has("limit")
-            ? arguments.get("limit").getAsInt()
-            : MAX_USER_HISTORY_ROW_LIMIT;
+        arguments.has("limit") ? arguments.get("limit").getAsInt() : MAX_USER_HISTORY_ROW_LIMIT;
     return Math.max(1, Math.min(requested, MAX_USER_HISTORY_ROW_LIMIT));
   }
 

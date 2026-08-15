@@ -58,16 +58,14 @@ class AgentFreshnessPolicyTest {
     List<LlmMessage> history =
         List.of(
             LlmMessage.user(
-                "Public Saturn message from @mer in #programming:\n"
-                    + "tell me about jill user"),
+                "Public Saturn message from @mer in #programming:\n" + "tell me about jill user"),
             LlmMessage.assistant("Old Jill summary", List.of()));
 
     assertEquals(
         Optional.of("user_message_history"), policy.requiredTool("check it again", history));
     assertEquals(
         Optional.of("user_message_history"), policy.requiredTool("check her elsewhere", history));
-    assertEquals(
-        Optional.of("user_message_history"), policy.requiredTool("do it @korin", history));
+    assertEquals(Optional.of("user_message_history"), policy.requiredTool("do it @korin", history));
   }
 
   @Test
@@ -76,8 +74,7 @@ class AgentFreshnessPolicyTest {
     List<LlmMessage> history =
         List.of(
             LlmMessage.user(
-                "Public Saturn message from @mer in #programming:\n"
-                    + "tell me about jill user"),
+                "Public Saturn message from @mer in #programming:\n" + "tell me about jill user"),
             LlmMessage.assistant("Old Jill summary", List.of()));
 
     assertTrue(policy.requiredTool("tell me about Java records", List.of()).isEmpty());
@@ -85,7 +82,9 @@ class AgentFreshnessPolicyTest {
     assertTrue(policy.requiredTool("tell me about user experience", List.of()).isEmpty());
     assertTrue(policy.requiredTool("analyze message history retention", List.of()).isEmpty());
     assertTrue(
-        policy.requiredTool("what has Shakespeare written?", List.of(), List.of("alice")).isEmpty());
+        policy
+            .requiredTool("what has Shakespeare written?", List.of(), List.of("alice"))
+            .isEmpty());
     assertTrue(
         policy.requiredTool("tell me the history of Rome", List.of(), List.of("alice")).isEmpty());
     assertTrue(policy.requiredTool("who is in lounge?", List.of()).isEmpty());

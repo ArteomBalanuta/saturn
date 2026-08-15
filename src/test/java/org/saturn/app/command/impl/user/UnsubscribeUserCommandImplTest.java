@@ -15,8 +15,7 @@ class UnsubscribeUserCommandImplTest {
     engine.subscribers.add("testTrip");
     var message = CommandTestSupport.chatMessage("*unsub", "testAuthor", "testTrip");
 
-    var command =
-        new UnsubscribeUserCommandImpl(engine, message, List.of("unsub", "unsubscribe"));
+    var command = new UnsubscribeUserCommandImpl(engine, message, List.of("unsub", "unsubscribe"));
 
     var result = command.execute();
 

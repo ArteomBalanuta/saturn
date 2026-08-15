@@ -8,6 +8,7 @@ import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.dto.User;
 
+/** Engine-backed implementation of the live room directory used by {@link RoomUsersTool}. */
 public final class EngineAgentRoomDirectory implements AgentRoomDirectory {
   private final EngineImpl engine;
 

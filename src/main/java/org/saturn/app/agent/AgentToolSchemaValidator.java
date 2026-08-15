@@ -57,7 +57,8 @@ final class AgentToolSchemaValidator {
 
   static String validateArguments(JsonObject schema, JsonObject arguments) {
     validateSchema(schema);
-    JsonObject properties = schema.has("properties") ? schema.getAsJsonObject("properties") : new JsonObject();
+    JsonObject properties =
+        schema.has("properties") ? schema.getAsJsonObject("properties") : new JsonObject();
     if (schema.has("required")) {
       for (JsonElement required : schema.getAsJsonArray("required")) {
         if (!arguments.has(required.getAsString())) {
@@ -65,8 +66,7 @@ final class AgentToolSchemaValidator {
         }
       }
     }
-    if (schema.has("additionalProperties")
-        && !schema.get("additionalProperties").getAsBoolean()) {
+    if (schema.has("additionalProperties") && !schema.get("additionalProperties").getAsBoolean()) {
       for (String name : arguments.keySet()) {
         if (!properties.has(name)) {
           return "Unknown parameter: " + name;
@@ -74,21 +74,24 @@ final class AgentToolSchemaValidator {
       }
     }
     for (var entry : arguments.entrySet()) {
-      JsonObject property = properties.has(entry.getKey()) ? properties.getAsJsonObject(entry.getKey()) : null;
+      JsonObject property =
+          properties.has(entry.getKey()) ? properties.getAsJsonObject(entry.getKey()) : null;
       if (property == null || !property.has("type")) {
         continue;
       }
       String expected = property.get("type").getAsString();
       JsonElement value = entry.getValue();
-      boolean valid = switch (expected) {
-        case "string" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isString();
-        case "boolean" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean();
-        case "number", "integer" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber();
-        case "object" -> value.isJsonObject();
-        case "array" -> value.isJsonArray();
-        case "null" -> value.isJsonNull();
-        default -> true;
-      };
+      boolean valid =
+          switch (expected) {
+            case "string" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isString();
+            case "boolean" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean();
+            case "number", "integer" ->
+                value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber();
+            case "object" -> value.isJsonObject();
+            case "array" -> value.isJsonArray();
+            case "null" -> value.isJsonNull();
+            default -> true;
+          };
       if (!valid) {
         return "Invalid type for parameter: " + entry.getKey();
       }
@@ -165,14 +168,16 @@ final class AgentToolSchemaValidator {
     }
     for (var property : schema.getAsJsonObject("properties").entrySet()) {
       if (!property.getValue().isJsonObject()) {
-        throw new IllegalArgumentException(subject + " property must be an object: " + property.getKey());
+        throw new IllegalArgumentException(
+            subject + " property must be an object: " + property.getKey());
       }
       JsonObject definition = property.getValue().getAsJsonObject();
       if (!definition.has("type")
           || !definition.get("type").isJsonPrimitive()
           || !definition.get("type").getAsJsonPrimitive().isString()
           || !isSupportedType(definition.get("type").getAsString())) {
-        throw new IllegalArgumentException(subject + " property has an unsupported type: " + property.getKey());
+        throw new IllegalArgumentException(
+            subject + " property has an unsupported type: " + property.getKey());
       }
     }
   }

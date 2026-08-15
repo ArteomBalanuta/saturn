@@ -14,8 +14,7 @@ public record LlmRequest(
     tools = List.copyOf(tools);
   }
 
-  public static LlmRequest withoutPromptCache(
-      List<LlmMessage> messages, List<JsonObject> tools) {
+  public static LlmRequest withoutPromptCache(List<LlmMessage> messages, List<JsonObject> tools) {
     return new LlmRequest(messages, tools, true);
   }
 }

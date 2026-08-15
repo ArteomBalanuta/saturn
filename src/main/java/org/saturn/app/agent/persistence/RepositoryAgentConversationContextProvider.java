@@ -33,7 +33,10 @@ public final class RepositoryAgentConversationContextProvider
     arguments.addProperty("room", context.room());
     arguments.addProperty("limit", messageLimit);
     JsonObject result = repository.execute("recent_messages_for_room", arguments, context);
-    if (author == null || text == null || !result.has("rows") || !result.get("rows").isJsonArray()) {
+    if (author == null
+        || text == null
+        || !result.has("rows")
+        || !result.get("rows").isJsonArray()) {
       return result.toString();
     }
     var rows = result.getAsJsonArray("rows");
