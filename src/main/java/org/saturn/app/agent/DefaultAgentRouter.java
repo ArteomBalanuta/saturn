@@ -178,6 +178,7 @@ public final class DefaultAgentRouter implements AgentRouter {
                   correctionUsed,
                   successfulCommands,
                   toolsEnabled,
+                  invocation.prompt(),
                   correlationId);
           response = guarded.response();
           correctionUsed = guarded.correctionUsed();
@@ -375,6 +376,7 @@ public final class DefaultAgentRouter implements AgentRouter {
       boolean correctionUsed,
       Set<String> successfulCommands,
       boolean toolsEnabled,
+      String currentPrompt,
       String correlationId)
       throws LlmException, AgentRoutingException {
     Optional<String> command =
@@ -394,7 +396,9 @@ public final class DefaultAgentRouter implements AgentRouter {
     messages.add(
         LlmMessage.user(
             requireToolCall
-                ? COMMAND_TOOL_CORRECTION.formatted(command.get(), command.get()).strip()
+                ? COMMAND_TOOL_CORRECTION
+                    .formatted(command.get(), command.get(), currentPrompt)
+                    .strip()
                 : commandAlreadySucceeded
                     ? COMMAND_OUTPUT_CORRECTION.strip()
                     : COMMAND_NOT_EXECUTED_CORRECTION.strip()));

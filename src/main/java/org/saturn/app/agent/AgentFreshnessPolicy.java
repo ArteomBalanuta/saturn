@@ -2,6 +2,7 @@ package org.saturn.app.agent;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.saturn.app.agent.llm.LlmMessage;
 
@@ -18,6 +19,14 @@ final class AgentFreshnessPolicy {
               + "\\s+"
               + EXPLICIT_USER_TARGET
               + "\\b.*");
+  private static final Pattern PREFIX_USER_PROFILE =
+      Pattern.compile(
+          "(?is).*\\b(?:tell\\s+me\\s+about|describe|profile|summari[sz]e|analy[sz]e)"
+              + "\\s+user\\s+(?<target>"
+              + NICK
+              + ")\\b.*");
+  private static final Set<String> NON_NICK_PROFILE_TERMS =
+      Set.of("experience", "interface", "research", "behavior", "behaviour");
   private static final Pattern SIMPLE_USER_PROFILE =
       Pattern.compile(
           "(?is).*\\btell\\s+me\\s+about\\s+"
@@ -47,8 +56,12 @@ final class AgentFreshnessPolicy {
               + ")\\b.*");
   private static final Pattern HISTORY_FOLLOW_UP =
       Pattern.compile(
-          "(?is)^\\s*(?:please\\s+)?(?:check|look\\s+up)\\s+"
-              + "(?:it|him|her|them|that)(?:\\s+(?:again|elsewhere))?[?.!\\s]*$");
+          "(?is)^\\s*(?:please\\s+)?(?:"
+              + "(?:check|look\\s+up)\\s+(?:it|him|her|them|that)(?:\\s+(?:again|elsewhere))?"
+              + "|do\\s+it)"
+              + "(?:\\s+@"
+              + NICK_BODY
+              + ")?[?.!\\s]*$");
 
   Optional<String> requiredTool(String prompt, List<LlmMessage> history) {
     return requiredTool(prompt, history, List.of());
@@ -71,12 +84,21 @@ final class AgentFreshnessPolicy {
   private static boolean requiresNamedUserHistory(String prompt, List<String> roomUsers) {
     return prompt != null
         && (EXPLICIT_USER_PROFILE.matcher(prompt).matches()
+            || matchesExplicitPrefixUser(prompt)
             || POSSESSIVE_USER_PROFILE.matcher(prompt).matches()
             || EXPLICIT_WHO_IS_USER.matcher(prompt).matches()
             || matchesTrustedRoomUser(SIMPLE_USER_PROFILE, prompt, roomUsers)
             || matchesTrustedRoomUser(WHO_IS_USER, prompt, roomUsers)
             || matchesTrustedRoomUser(USER_SPEECH, prompt, roomUsers)
             || matchesTrustedRoomUser(USER_HISTORY, prompt, roomUsers));
+  }
+
+  private static boolean matchesExplicitPrefixUser(String prompt) {
+    var matcher = PREFIX_USER_PROFILE.matcher(prompt);
+    if (!matcher.matches()) {
+      return false;
+    }
+    return !NON_NICK_PROFILE_TERMS.contains(withoutMention(matcher.group("target")).toLowerCase());
   }
 
   private static boolean matchesTrustedRoomUser(

@@ -18,6 +18,9 @@ class AgentFreshnessPolicyTest {
         policy.requiredTool("tell me about jill user", List.of()));
     assertEquals(
         Optional.of("user_message_history"),
+        policy.requiredTool("tell me about user merc", List.of()));
+    assertEquals(
+        Optional.of("user_message_history"),
         policy.requiredTool("who is nex", List.of(), List.of("nex")));
     assertEquals(
         Optional.of("user_message_history"),
@@ -53,6 +56,8 @@ class AgentFreshnessPolicyTest {
         Optional.of("user_message_history"), policy.requiredTool("check it again", history));
     assertEquals(
         Optional.of("user_message_history"), policy.requiredTool("check her elsewhere", history));
+    assertEquals(
+        Optional.of("user_message_history"), policy.requiredTool("do it @korin", history));
   }
 
   @Test

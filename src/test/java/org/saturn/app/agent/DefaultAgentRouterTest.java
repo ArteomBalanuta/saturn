@@ -1175,6 +1175,30 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void commandCorrectionKeepsTheNewestFollowUpAsItsTopic() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("`ping`", List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "response-1",
+                        "respond_without_command",
+                        "{\"response\":\"Merc's profile is based on fresh history.\"}")),
+                "tool_calls"));
+    DefaultAgentRouter router = routerWithRunCommand(client, new RecordingMemory());
+
+    AgentResult result =
+        router.route(new AgentInvocation(context(), "do it @korin"));
+
+    assertEquals("Merc's profile is based on fresh history.", result.content());
+    String correction = client.requests.getLast().messages().getLast().content();
+    assertTrue(correction.contains("do it @korin"));
+    assertTrue(correction.contains("unrelated command"));
+  }
+
+  @Test
   void rewritesAnOldSummaryAfterFreshHistoryWasLoaded() throws Exception {
     String oldAnswer = "Jill is a user of modest but distinct activity.";
     String freshAnswer =
