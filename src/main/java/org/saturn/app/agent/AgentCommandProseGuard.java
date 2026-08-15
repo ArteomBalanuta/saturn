@@ -67,24 +67,7 @@ final class AgentCommandProseGuard {
     if (inline.isPresent()) {
       return inline;
     }
-    for (String line : content.lines().toList()) {
-      String stripped = line.strip();
-      Optional<String> plain = commandAtStart(stripped);
-      if (plain.isPresent() && !looksLikeNarrative(stripped, plain.get())) {
-        return plain;
-      }
-    }
     return Optional.empty();
-  }
-
-  private static boolean looksLikeNarrative(String line, String command) {
-    String remainder = line.substring(Math.min(line.length(), command.length())).stripLeading();
-    if (remainder.isEmpty()) {
-      return false;
-    }
-    String firstWord = remainder.split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
-    return Set.of("is", "was", "were", "are", "has", "have", "had", "will", "would", "can", "could")
-        .contains(firstWord);
   }
 
   boolean matches(LlmToolCall call, String expectedCommand) {

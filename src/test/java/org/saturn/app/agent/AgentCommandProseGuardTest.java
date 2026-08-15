@@ -23,6 +23,11 @@ class AgentCommandProseGuardTest {
     assertEquals(Optional.of("time"), guard.findCommand("~~~text\n*time Tokyo\n~~~"));
     assertTrue(guard.findCommand("Use `List.of()` here").isEmpty());
     assertTrue(guard.findCommand("`kick bob`").isEmpty());
+    assertTrue(
+        guard
+            .findCommand(
+                "Weather activity appears in the user's message history, but no live lookup was performed.")
+            .isEmpty());
   }
 
   @Test
