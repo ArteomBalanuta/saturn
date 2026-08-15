@@ -75,8 +75,8 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("Never use Markdown star, hyphen, or numbered-list syntax"));
     assertTrue(rendered.contains("U+2009 THIN SPACE"));
     assertTrue(rendered.contains("escaped \"\\\\n\" payload newlines"));
-    assertTrue(rendered.contains("allowed to curse"));
-    assertTrue(rendered.contains("mock bad arguments"));
+    assertTrue(rendered.contains("Curse freely"));
+    assertTrue(rendered.contains("Mock choices, claims"));
     assertTrue(rendered.contains("fighter's soul"));
     assertTrue(rendered.contains("Never use protected-class slurs"));
     assertTrue(rendered.indexOf("PRIORITY ORDER") < rendered.indexOf("PERSONA"));

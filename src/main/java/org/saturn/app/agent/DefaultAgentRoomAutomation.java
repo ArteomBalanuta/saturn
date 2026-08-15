@@ -17,6 +17,11 @@ import org.saturn.app.service.AgentService;
 public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
   private static final Pattern CONVENTIONAL_BOT_NICK =
       Pattern.compile("(?u)^(?:bot(?:[_-]?\\d+)?|[\\p{L}\\p{N}_-]*(?:Bot|[_-]bot)(?:[_-]?\\d+)?)$");
+  private static final Pattern SEMANTIC_MODERATION_SIGNAL =
+      Pattern.compile(
+          "(?iu)\\b(?:kys|kill\\s+(?:yourself|urself|u|you)|hang\\s+(?:yourself|"
+              + "urself)|doxx?\\b|swat(?:ting)?\\b|rape\\b|shoot\\s+you|stab\\s+you|"
+              + "bomb\\s+(?:you|them|the room))");
 
   private final EngineImpl engine;
   private final AgentParticipationConfig config;
@@ -108,8 +113,6 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
       return Outcome.PASS;
     }
 
-    submitSemanticModeration(message, text);
-
     Optional<String> mentionPrompt = mentionParser.parse(text, engine.nick);
     AgentInvocationMode mode =
         mentionPrompt.isPresent() ? AgentInvocationMode.MENTION : AgentInvocationMode.AMBIENT;
@@ -125,6 +128,7 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
       agentService.submit(invocation);
       return Outcome.CLAIMED;
     }
+    submitSemanticModeration(message, text);
     if (!config.ambientEnabled() || quietRegistry.isQuiet(invocation.context())) {
       return Outcome.PASS;
     }
@@ -138,7 +142,9 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
   }
 
   private void submitSemanticModeration(ChatMessage message, String text) {
-    if (botModerationContext == null || !semanticModerationCandidate.test(message)) {
+    if (botModerationContext == null
+        || !semanticModerationCandidate.test(message)
+        || !requiresSemanticModeration(text)) {
       return;
     }
     AgentContext liveBotContext =
@@ -178,5 +184,9 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
     return CONVENTIONAL_BOT_NICK.matcher(nick).matches()
         || engine.currentChannelUsers.stream()
             .anyMatch(user -> user.isBot() && user.getNick().equalsIgnoreCase(nick));
+  }
+
+  private static boolean requiresSemanticModeration(String text) {
+    return SEMANTIC_MODERATION_SIGNAL.matcher(text).find();
   }
 }

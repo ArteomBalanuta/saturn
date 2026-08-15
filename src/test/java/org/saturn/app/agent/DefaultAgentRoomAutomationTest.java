@@ -7,6 +7,7 @@ import com.moandjiezana.toml.Toml;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.moderation.AgentModerationConfig;
 import org.saturn.app.agent.moderation.ModerationAction;
@@ -214,6 +215,44 @@ class DefaultAgentRoomAutomationTest {
         List.of(ModerationAction.WARN, ModerationAction.CAPTCHA_ON),
         decisions.stream().map(ModerationDecision::action).toList());
     assertTrue(submissions.isEmpty());
+    engine.stop();
+  }
+
+  @Test
+  void doesNotSpendSemanticModerationOnOrdinaryMessagesOrMentions() {
+    EngineImpl engine = TestSupport.engine();
+    installRoleResolver(engine, Role.REGULAR);
+    List<AgentInvocation> submissions = new ArrayList<>();
+    AgentParticipationConfig participationConfig = AgentParticipationConfig.from(new Toml());
+    AgentContext botContext =
+        new AgentContext(
+            engine.channel,
+            engine.nick,
+            "creator-trip",
+            null,
+            false,
+            List.of("saturn", "alice"),
+            Set.of(AgentCapability.MODERATION_COMMANDS));
+    DefaultAgentRoomAutomation automation =
+        new DefaultAgentRoomAutomation(
+            engine,
+            participationConfig,
+            recordingService(submissions),
+            new AgentInvocationFactory(participationConfig),
+            new AgentMentionParser(),
+            new AgentQuietRegistry(participationConfig.quietDuration(), Clock.systemUTC()),
+            RoomModerationMonitor.disabled(),
+            decision -> true,
+            botContext,
+            message -> true);
+
+    automation.onMessage(TestSupport.chatMessage("nice", "alice", "trip-a"));
+    automation.onMessage(
+        TestSupport.chatMessage("@saturn i'm holding in a fart", "alice", "trip-a"));
+
+    assertEquals(1, submissions.size());
+    assertEquals(AgentInvocationMode.MENTION, submissions.getFirst().mode());
+    assertEquals("i'm holding in a fart", submissions.getFirst().prompt());
     engine.stop();
   }
 
