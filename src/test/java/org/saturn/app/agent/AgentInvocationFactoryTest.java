@@ -74,6 +74,63 @@ class AgentInvocationFactoryTest {
     engine.stop();
   }
 
+  @Test
+  void grantsModerationCommandsToModeratorWithoutPermanentBan() {
+    var engine = TestSupport.engine();
+    installRoleResolver(engine, Role.MODERATOR);
+    AgentInvocationFactory factory =
+        new AgentInvocationFactory(AgentParticipationConfig.from(new Toml()));
+
+    AgentInvocation invocation =
+        factory.create(
+            engine,
+            TestSupport.chatMessage("mute spammer", "moderator", "moderator-trip"),
+            "mute spammer",
+            AgentInvocationMode.DIRECT);
+
+    assertTrue(invocation.context().hasCapability(AgentCapability.MODERATION_COMMANDS));
+    assertFalse(invocation.context().hasCapability(AgentCapability.PERMANENT_BAN));
+    engine.stop();
+  }
+
+  @Test
+  void grantsModerationCommandsToAdminWithoutPermanentBan() {
+    var engine = TestSupport.engine();
+    installRoleResolver(engine, Role.ADMIN);
+    AgentInvocationFactory factory =
+        new AgentInvocationFactory(AgentParticipationConfig.from(new Toml()));
+
+    AgentInvocation invocation =
+        factory.create(
+            engine,
+            TestSupport.chatMessage("kick spammer", "admin", "admin-trip"),
+            "kick spammer",
+            AgentInvocationMode.MENTION);
+
+    assertTrue(invocation.context().hasCapability(AgentCapability.MODERATION_COMMANDS));
+    assertFalse(invocation.context().hasCapability(AgentCapability.PERMANENT_BAN));
+    engine.stop();
+  }
+
+  @Test
+  void doesNotGrantModerationCommandsToRegularUser() {
+    var engine = TestSupport.engine();
+    installRoleResolver(engine, Role.REGULAR);
+    AgentInvocationFactory factory =
+        new AgentInvocationFactory(AgentParticipationConfig.from(new Toml()));
+
+    AgentInvocation invocation =
+        factory.create(
+            engine,
+            TestSupport.chatMessage("mute someone", "user", "user-trip"),
+            "mute someone",
+            AgentInvocationMode.DIRECT);
+
+    assertFalse(invocation.context().hasCapability(AgentCapability.MODERATION_COMMANDS));
+    assertFalse(invocation.context().hasCapability(AgentCapability.PERMANENT_BAN));
+    engine.stop();
+  }
+
   private void installRoleResolver(EngineImpl engine, Role role) {
     AuthorizationService authorizationService =
         new AuthorizationService() {

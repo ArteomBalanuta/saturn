@@ -27,4 +27,16 @@ class AgentPromptCatalogTest {
     assertTrue(prompt.startsWith("You are **Vaelen**"));
     assertTrue(prompt.endsWith("\n"));
   }
+
+  @Test
+  void moderationPolicyDescribesExposedCommandsAsExecutableCapabilities() {
+    AgentPromptCatalog catalog = new AgentPromptCatalog();
+
+    String policy = catalog.text("system-policy.txt");
+
+    assertTrue(
+        policy.contains(
+            "When asked what you can do, state that you can execute every moderation action"
+                + " currently exposed by run_command"));
+  }
 }

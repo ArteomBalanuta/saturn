@@ -21,14 +21,22 @@ public final class AgentInvocationFactory {
     EnumSet<AgentCapability> capabilities = EnumSet.noneOf(AgentCapability.class);
     String trip = message.getTrip();
     boolean creator = config.creatorTrip().equals(trip);
-    if (creator || (mode != AgentInvocationMode.AMBIENT && isDynamicSqlAdmin(engine, trip))) {
+    boolean dynamicSqlAdmin =
+        !creator
+            && mode != AgentInvocationMode.AMBIENT
+            && isDynamicSqlAdmin(engine, trip);
+    if (creator || dynamicSqlAdmin) {
       capabilities.add(AgentCapability.DYNAMIC_SQL);
     }
-    if (creator) {
+    boolean moderator =
+        !creator
+            && mode != AgentInvocationMode.AMBIENT
+            && (dynamicSqlAdmin || engine.authorizationService.resolveRole(trip) == Role.MODERATOR);
+    if (creator || moderator) {
       capabilities.add(AgentCapability.MODERATION_COMMANDS);
-      if (mode == AgentInvocationMode.DIRECT) {
-        capabilities.add(AgentCapability.PERMANENT_BAN);
-      }
+    }
+    if (creator && mode == AgentInvocationMode.DIRECT) {
+      capabilities.add(AgentCapability.PERMANENT_BAN);
     }
 
     AgentContext context =
