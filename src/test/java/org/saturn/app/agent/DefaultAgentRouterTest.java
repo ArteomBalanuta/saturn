@@ -522,6 +522,30 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void removesAnEmbeddedNoReplyMarkerFromADirectReply() throws Exception {
+    AgentParticipationConfig participationConfig = AgentParticipationConfig.from(null);
+    RecordingMemory memory = new RecordingMemory();
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 2_000),
+            new ScriptedClient(
+                new LlmResponse(
+                    "I am ready.\n\n" + participationConfig.noReplyMarker(), List.of(), "stop")),
+            new AgentToolRegistry().freeze(),
+            memory,
+            participationConfig,
+            AgentConversationContextProvider.none());
+
+    AgentResult result =
+        router.route(
+            new AgentInvocation("direct-1", context(), "fight me dog", AgentInvocationMode.DIRECT));
+
+    assertTrue(result.shouldReply());
+    assertEquals("I am ready.", result.content());
+    assertFalse(memory.appended.getLast().contains(participationConfig.noReplyMarker()));
+  }
+
+  @Test
   void hydratesPublicDirectInvocationsWithRecentRoomContext() throws Exception {
     List<AgentContext> loadedContexts = new ArrayList<>();
     AgentConversationContextProvider contextProvider =

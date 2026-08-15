@@ -316,19 +316,19 @@ public final class DefaultAgentRouter implements AgentRouter {
           && !satisfiesFreshProfileContract(response, requiredFreshNick, successfulToolResults)) {
         throw new AgentRoutingException("Agent did not produce a complete fresh history synthesis");
       }
-      String content =
-          truncate(responseSanitizer.sanitize(response.content()), config.maxOutputChars());
+      String sanitizedContent = responseSanitizer.sanitize(response.content());
       if (invocation.mode() == AgentInvocationMode.MODERATION) {
         return AgentResult.silent(correlationId);
       }
-      if (content.isBlank()) {
-        throw new AgentRoutingException("Agent returned an empty response");
-      }
-      if (content.strip().equals(participationConfig.noReplyMarker())) {
+      if (sanitizedContent.strip().equals(participationConfig.noReplyMarker())) {
         if (!invocation.mode().requiresReply()) {
           return AgentResult.silent(correlationId);
         }
         throw new AgentRoutingException("Agent declined a required response");
+      }
+      String content = truncate(removeNoReplyMarker(sanitizedContent), config.maxOutputChars());
+      if (content.isBlank()) {
+        throw new AgentRoutingException("Agent returned an empty response");
       }
       persist(context, contextualizedPrompt, content, correlationId);
       persistToolEvidence(context, successfulToolResults, correlationId);
@@ -337,6 +337,32 @@ public final class DefaultAgentRouter implements AgentRouter {
       throw new AgentRoutingException(
           "Agent provider failed: " + exception.getMessage(), exception);
     }
+  }
+
+  /** Removes the control-only silence token when a model improperly mixes it into visible prose. */
+  private String removeNoReplyMarker(String content) {
+    String marker = participationConfig.noReplyMarker();
+    if (!content.contains(marker)) {
+      return content;
+    }
+    return trimControlWhitespace(content.replace(marker, ""));
+  }
+
+  /** Trims only ASCII control whitespace so Saturn's U+2009 formatting spaces survive delivery. */
+  private String trimControlWhitespace(String content) {
+    int first = 0;
+    int last = content.length();
+    while (first < last && isControlWhitespace(content.charAt(first))) {
+      first++;
+    }
+    while (last > first && isControlWhitespace(content.charAt(last - 1))) {
+      last--;
+    }
+    return content.substring(first, last);
+  }
+
+  private boolean isControlWhitespace(char character) {
+    return character == ' ' || character == '\t' || character == '\n' || character == '\r';
   }
 
   private String modelVisibleToolResult(
