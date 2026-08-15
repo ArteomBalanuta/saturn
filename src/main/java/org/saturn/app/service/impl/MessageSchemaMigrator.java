@@ -19,6 +19,7 @@ final class MessageSchemaMigrator {
     if (!columnExists(connection, "messages", "visibility")) {
       addVisibilityColumn(connection);
     }
+    backfillLegacyVisibility(connection);
     createIndexes(connection);
   }
 
@@ -30,6 +31,13 @@ final class MessageSchemaMigrator {
       if (!columnExists(connection, "messages", "visibility")) {
         throw exception;
       }
+    }
+  }
+
+  private static void backfillLegacyVisibility(Connection connection) throws SQLException {
+    try (Statement statement = connection.createStatement()) {
+      statement.executeUpdate(
+          "UPDATE messages SET visibility = 'PUBLIC' WHERE visibility IS NULL");
     }
   }
 

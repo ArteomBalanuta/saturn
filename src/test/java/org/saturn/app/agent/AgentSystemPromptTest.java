@@ -65,6 +65,11 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("Never print, quote, or fence a Saturn command"));
     assertTrue(rendered.contains("Conditional or future requests are not immediate commands"));
     assertTrue(rendered.contains("never claim a watcher, rule, or schedule"));
+    assertTrue(rendered.contains("call user_message_history again"));
+    assertTrue(rendered.contains("returnedCount"));
+    assertTrue(rendered.contains("oldestCreatedOn"));
+    assertTrue(rendered.contains("newestCreatedOn"));
+    assertTrue(rendered.contains("complete returned result"));
     assertTrue(rendered.contains("Do not use canned openings, repeated"));
     assertTrue(rendered.contains("Never use Markdown star, hyphen, or numbered-list syntax"));
     assertTrue(rendered.contains("U+2009 THIN SPACE"));

@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -122,6 +124,92 @@ class SaturnAgentToolsTest {
     assertFalse(result.isError());
     assertFalse(queryArguments.get().has("room"));
     assertTrue(tool.description().contains("all rooms"));
+  }
+
+  @Test
+  void userMessageHistoryReportsReturnedEvidenceRange() {
+    AgentQueryRepository repository =
+        (name, arguments, ignored) -> {
+          JsonArray rows = new JsonArray();
+          JsonObject older = new JsonObject();
+          older.addProperty("message", "older");
+          older.addProperty("createdOn", 100L);
+          JsonObject newer = new JsonObject();
+          newer.addProperty("message", "newer");
+          newer.addProperty("createdOn", 300L);
+          rows.add(older);
+          rows.add(newer);
+          JsonObject result = new JsonObject();
+          result.add("rows", rows);
+          return result;
+        };
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("nick", "jill");
+
+    AgentToolResult result =
+        new UserMessageHistoryTool(repository).execute(context(), arguments);
+
+    JsonObject content = JsonParser.parseString(result.content()).getAsJsonObject();
+    assertFalse(result.isError());
+    assertTrue(content.has("returnedCount"));
+    assertTrue(content.has("oldestCreatedOn"));
+    assertTrue(content.has("newestCreatedOn"));
+    assertEquals(2, content.get("returnedCount").getAsInt());
+    assertEquals(100L, content.get("oldestCreatedOn").getAsLong());
+    assertEquals(300L, content.get("newestCreatedOn").getAsLong());
+    assertEquals("older", content.getAsJsonArray("rows").get(0).getAsJsonObject().get("message").getAsString());
+    assertEquals("newer", content.getAsJsonArray("rows").get(1).getAsJsonObject().get("message").getAsString());
+  }
+
+  @Test
+  void userMessageHistoryReportsEmptyEvidenceWithoutInventingATimeRange() {
+    AgentQueryRepository repository =
+        (name, arguments, ignored) -> {
+          JsonObject result = new JsonObject();
+          result.add("rows", new JsonArray());
+          return result;
+        };
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("nick", "missing");
+
+    AgentToolResult result =
+        new UserMessageHistoryTool(repository).execute(context(), arguments);
+
+    JsonObject content = JsonParser.parseString(result.content()).getAsJsonObject();
+    assertTrue(content.has("returnedCount"));
+    assertTrue(content.has("oldestCreatedOn"));
+    assertTrue(content.has("newestCreatedOn"));
+    assertEquals(0, content.get("returnedCount").getAsInt());
+    assertTrue(content.get("oldestCreatedOn").isJsonNull());
+    assertTrue(content.get("newestCreatedOn").isJsonNull());
+  }
+
+  @Test
+  void userMessageHistoryUsesTheSameTimestampForSingleRowRange() {
+    AgentQueryRepository repository =
+        (name, arguments, ignored) -> {
+          JsonObject row = new JsonObject();
+          row.addProperty("message", "only message");
+          row.addProperty("createdOn", 200L);
+          JsonArray rows = new JsonArray();
+          rows.add(row);
+          JsonObject result = new JsonObject();
+          result.add("rows", rows);
+          return result;
+        };
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("nick", "solo");
+
+    AgentToolResult result =
+        new UserMessageHistoryTool(repository).execute(context(), arguments);
+
+    JsonObject content = JsonParser.parseString(result.content()).getAsJsonObject();
+    assertTrue(content.has("returnedCount"));
+    assertTrue(content.has("oldestCreatedOn"));
+    assertTrue(content.has("newestCreatedOn"));
+    assertEquals(1, content.get("returnedCount").getAsInt());
+    assertEquals(200L, content.get("oldestCreatedOn").getAsLong());
+    assertEquals(200L, content.get("newestCreatedOn").getAsLong());
   }
 
   @Test

@@ -29,6 +29,12 @@ public final class DefaultAgentRouter implements AgentRouter {
   private static final String COMMAND_TOOL_CORRECTION = PROMPTS.text("router-command-tool-correction.txt");
   private static final String COMMAND_OUTPUT_CORRECTION = PROMPTS.text("router-command-output-correction.txt");
   private static final String COMMAND_NOT_EXECUTED_CORRECTION = PROMPTS.text("router-command-not-executed-correction.txt");
+  private static final String FRESH_TOOL_CORRECTION =
+      PROMPTS.text("router-fresh-tool-correction.txt");
+  private static final String FRESH_SYNTHESIS_CORRECTION =
+      PROMPTS.text("router-fresh-synthesis-correction.txt").strip();
+  private static final String FAILURE_PLACEHOLDER_CORRECTION =
+      PROMPTS.text("router-failure-placeholder-correction.txt").strip();
   private static final String STALE_RESPONSE_CORRECTION = PROMPTS.text("router-stale-response-correction.txt");
   private static final String UNVERIFIED_ACTION_CORRECTION = PROMPTS.text("router-unverified-action-correction.txt");
   private static final Pattern LEGACY_OPENING =
@@ -45,6 +51,7 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentParticipationConfig participationConfig;
   private final AgentConversationContextProvider conversationContextProvider;
   private final AgentSystemPrompt systemPrompt;
+  private final AgentFreshnessPolicy freshnessPolicy = new AgentFreshnessPolicy();
   private final ReentrantLock[] sessionLocks = sessionLocks();
 
   public DefaultAgentRouter(
@@ -95,6 +102,8 @@ public final class DefaultAgentRouter implements AgentRouter {
     String correlationId = invocation.requestId();
     AgentContext context = invocation.context();
     List<LlmMessage> history = loadMemory(context, correlationId);
+    Optional<String> requiredFreshTool =
+        freshnessPolicy.requiredTool(invocation.prompt(), history, context.roomUsers());
     String recentRoomContext = loadConversationContext(invocation, correlationId);
     String contextualizedPrompt = contextualizePrompt(context, invocation.prompt());
     List<LlmMessage> messages = new ArrayList<>();
@@ -108,26 +117,71 @@ public final class DefaultAgentRouter implements AgentRouter {
     AgentToolExecutor toolExecutor = new AgentToolExecutor(registry, config);
     try {
       LlmResponse response =
-          completeInitialRequest(
-              messages, definitions, history, contextualizedPrompt, correlationId);
-      response = correctUnverifiedActionClaim(response, messages, definitions, correlationId);
+          requiredFreshTool.isPresent()
+              ? client.complete(new LlmRequest(messages, definitions))
+              : completeInitialRequest(
+                  messages, definitions, history, contextualizedPrompt, correlationId);
       int totalCalls = 0;
       boolean correctionUsed = false;
+      boolean freshnessCorrectionUsed = false;
+      boolean unverifiedActionChecked = false;
       Set<String> successfulCommands = new HashSet<>();
+      Set<String> successfulTools = new HashSet<>();
       boolean toolsEnabled = true;
       while (true) {
-        GuardedResponse guarded =
-            enforceCommandChannel(
-                response,
-                messages,
-                definitions,
-                commandProseGuard,
-                correctionUsed,
-                successfulCommands,
-                toolsEnabled,
+        Optional<String> missingFreshTool =
+            requiredFreshTool.filter(tool -> !successfulTools.contains(tool));
+        if (missingFreshTool.isPresent()) {
+          String tool = missingFreshTool.orElseThrow();
+          if (!callsExactly(response, tool)) {
+            if (freshnessCorrectionUsed) {
+              throw new AgentRoutingException(
+                  "Agent did not call the required fresh-data tool");
+            }
+            if (!toolsEnabled) {
+              throw new AgentRoutingException(
+                  "Required fresh-data tool is unavailable after tool-call budget exhaustion");
+            }
+            log.warn(
+                "Agent fresh data required, correlationId={}, tool={}", correlationId, tool);
+            messages.add(LlmMessage.assistant(response.content(), List.of()));
+            messages.add(LlmMessage.user(FRESH_TOOL_CORRECTION.formatted(tool).strip()));
+            response =
+                requireFreshToolCall(
+                    client.complete(new LlmRequest(messages, definitionFor(definitions, tool))),
+                    tool);
+            freshnessCorrectionUsed = true;
+          }
+        } else {
+          if (requiredFreshTool.filter(successfulTools::contains).isPresent()
+              && repeatsPreviousAssistant(response, history)) {
+            log.warn(
+                "Agent reused a pre-lookup summary; requesting fresh synthesis, correlationId={}",
                 correlationId);
-        response = guarded.response();
-        correctionUsed = guarded.correctionUsed();
+            messages.add(LlmMessage.assistant(response.content(), List.of()));
+            messages.add(LlmMessage.user(FRESH_SYNTHESIS_CORRECTION));
+            response =
+                requireFreshSynthesis(
+                    client.complete(new LlmRequest(messages, List.of())), history);
+          }
+          if (!unverifiedActionChecked) {
+            response =
+                correctUnverifiedActionClaim(response, messages, definitions, correlationId);
+            unverifiedActionChecked = true;
+          }
+          GuardedResponse guarded =
+              enforceCommandChannel(
+                  response,
+                  messages,
+                  definitions,
+                  commandProseGuard,
+                  correctionUsed,
+                  successfulCommands,
+                  toolsEnabled,
+                  correlationId);
+          response = guarded.response();
+          correctionUsed = guarded.correctionUsed();
+        }
 
         if (response.toolCalls().isEmpty()) {
           break;
@@ -152,6 +206,22 @@ public final class DefaultAgentRouter implements AgentRouter {
               call.name(),
               result.isError() ? "error" : "success");
           allErrors &= result.isError();
+          if (result.isError()
+              && requiredFreshTool.filter(call.name()::equals).isPresent()
+              && !successfulTools.contains(call.name())) {
+            throw new AgentRoutingException(
+                "Required fresh-data tool failed: " + call.name());
+          }
+          if (!result.isError() && successfulTools.add(call.name())) {
+            requiredFreshTool
+                .filter(call.name()::equals)
+                .ifPresent(
+                    tool ->
+                        log.info(
+                            "Agent fresh data satisfied, correlationId={}, tool={}",
+                            correlationId,
+                            tool));
+          }
           if (!result.isError() && "run_command".equals(call.name())) {
             commandProseGuard.executedCommand(call).ifPresent(successfulCommands::add);
           }
@@ -165,6 +235,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         response = client.complete(new LlmRequest(messages, definitions));
       }
 
+      response = correctFailurePlaceholder(response, messages, correlationId);
       String content = truncate(sanitizePersonaArtifacts(response.content()), config.maxOutputChars());
       if (content.isBlank()) {
         throw new AgentRoutingException("Agent returned an empty response");
@@ -384,6 +455,94 @@ public final class DefaultAgentRouter implements AgentRouter {
         && "run_command".equals(function.get("name").getAsString());
   }
 
+  private static List<JsonObject> definitionFor(List<JsonObject> definitions, String toolName)
+      throws AgentRoutingException {
+    List<JsonObject> matches =
+        definitions.stream()
+            .filter(definition -> isNamedToolDefinition(definition, toolName))
+            .map(JsonObject::deepCopy)
+            .toList();
+    if (matches.size() != 1) {
+      throw new AgentRoutingException("Required fresh-data tool is not exposed: " + toolName);
+    }
+    return matches;
+  }
+
+  private static LlmResponse requireFreshToolCall(LlmResponse response, String toolName)
+      throws AgentRoutingException {
+    if (!callsExactly(response, toolName)) {
+      throw new AgentRoutingException(
+          "Agent did not call exactly the required fresh-data tool: " + toolName);
+    }
+    return response;
+  }
+
+  private static boolean callsExactly(LlmResponse response, String toolName) {
+    return response.toolCalls().size() == 1
+        && toolName.equals(response.toolCalls().getFirst().name());
+  }
+
+  private static LlmResponse requireFreshSynthesis(
+      LlmResponse response, List<LlmMessage> history) throws AgentRoutingException {
+    if (!response.toolCalls().isEmpty()) {
+      throw new AgentRoutingException(
+          "Agent returned a tool call instead of a fresh history synthesis");
+    }
+    if (repeatsPreviousAssistant(response, history)) {
+      throw new AgentRoutingException("Agent reused the previous answer after a fresh history lookup");
+    }
+    return response;
+  }
+
+  private static boolean repeatsPreviousAssistant(
+      LlmResponse response, List<LlmMessage> history) {
+    if (!response.toolCalls().isEmpty() || response.content() == null || response.content().isBlank()) {
+      return false;
+    }
+    return latestContent(history, "assistant")
+        .map(previous -> response.content().strip().equals(previous.strip()))
+        .orElse(false);
+  }
+
+  private LlmResponse correctFailurePlaceholder(
+      LlmResponse response, List<LlmMessage> messages, String correlationId)
+      throws LlmException, AgentRoutingException {
+    if (!isFailurePlaceholder(response)) {
+      return response;
+    }
+
+    log.warn(
+        "Agent returned a failure placeholder; requesting grounded synthesis, correlationId={}",
+        correlationId);
+    List<LlmMessage> correctionMessages = new ArrayList<>(messages);
+    correctionMessages.add(LlmMessage.assistant(response.content(), List.of()));
+    correctionMessages.add(LlmMessage.user(FAILURE_PLACEHOLDER_CORRECTION));
+    LlmResponse corrected =
+        client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of()));
+    if (!corrected.toolCalls().isEmpty() || isFailurePlaceholder(corrected)) {
+      throw new AgentRoutingException("Agent repeated a failure placeholder after correction");
+    }
+    return corrected;
+  }
+
+  private static boolean isFailurePlaceholder(LlmResponse response) {
+    if (!response.toolCalls().isEmpty() || response.content() == null) {
+      return false;
+    }
+    String normalized = response.content().strip().toLowerCase(Locale.ROOT);
+    return normalized.equals("the agent could not answer that request.")
+        || normalized.equals("the agent could not answer that request")
+        || normalized.equals("i could not answer that request.")
+        || normalized.equals("i could not answer that request");
+  }
+
+  private static boolean isNamedToolDefinition(JsonObject definition, String toolName) {
+    JsonObject function = definition.getAsJsonObject("function");
+    return function != null
+        && function.has("name")
+        && toolName.equals(function.get("name").getAsString());
+  }
+
   private static JsonObject responseWithoutCommandDefinition() {
     JsonObject response = new JsonObject();
     response.addProperty("type", "string");
@@ -456,34 +615,73 @@ public final class DefaultAgentRouter implements AgentRouter {
       throws AgentRoutingException {
     try {
       memory.append(context, user, assistant, config);
-      log.info("Agent memory persisted, correlationId={}", correlationId);
     } catch (RuntimeException exception) {
+      if (!isSqliteShortRead(exception)) {
+        throw memoryPersistenceFailure(correlationId, exception);
+      }
       log.warn(
-          "Agent memory append failed, correlationId={}: {}",
-          correlationId,
-          exception.getMessage());
-      log.debug("Agent memory append failure, correlationId={}", correlationId, exception);
-      throw new AgentRoutingException("Agent memory persistence failed", exception);
+          "Transient SQLite short read while persisting agent memory; retrying once, correlationId={}",
+          correlationId);
+      try {
+        memory.append(context, user, assistant, config);
+      } catch (RuntimeException retryException) {
+        throw memoryPersistenceFailure(correlationId, retryException);
+      }
     }
+    log.info("Agent memory persisted, correlationId={}", correlationId);
+  }
+
+  private static AgentRoutingException memoryPersistenceFailure(
+      String correlationId, RuntimeException exception) {
+    log.warn(
+        "Agent memory append failed, correlationId={}: {}", correlationId, exception.getMessage());
+    log.debug("Agent memory append failure, correlationId={}", correlationId, exception);
+    return new AgentRoutingException("Agent memory persistence failed", exception);
   }
 
   private List<LlmMessage> loadMemory(AgentContext context, String correlationId)
       throws AgentRoutingException {
+    List<LlmMessage> loaded;
     try {
-      List<LlmMessage> loaded = memory.load(context, config);
-      List<LlmMessage> history = excludeLegacyPersonaTurns(loaded);
-      log.info(
-          "Agent memory loaded, correlationId={}, messages={}, legacyMessagesExcluded={}",
-          correlationId,
-          history.size(),
-          loaded.size() - history.size());
-      return history;
+      loaded = memory.load(context, config);
     } catch (RuntimeException exception) {
+      if (!isSqliteShortRead(exception)) {
+        throw memoryLoadFailure(correlationId, exception);
+      }
       log.warn(
-          "Agent memory load failed, correlationId={}: {}", correlationId, exception.getMessage());
-      log.debug("Agent memory load failure, correlationId={}", correlationId, exception);
-      throw new AgentRoutingException("Agent memory load failed", exception);
+          "Transient SQLite short read while loading agent memory; retrying once, correlationId={}",
+          correlationId);
+      try {
+        loaded = memory.load(context, config);
+      } catch (RuntimeException retryException) {
+        throw memoryLoadFailure(correlationId, retryException);
+      }
     }
+    List<LlmMessage> history = excludeLegacyPersonaTurns(loaded);
+    log.info(
+        "Agent memory loaded, correlationId={}, messages={}, legacyMessagesExcluded={}",
+        correlationId,
+        history.size(),
+        loaded.size() - history.size());
+    return history;
+  }
+
+  private static AgentRoutingException memoryLoadFailure(
+      String correlationId, RuntimeException exception) {
+    log.warn(
+        "Agent memory load failed, correlationId={}: {}", correlationId, exception.getMessage());
+    log.debug("Agent memory load failure, correlationId={}", correlationId, exception);
+    return new AgentRoutingException("Agent memory load failed", exception);
+  }
+
+  private static boolean isSqliteShortRead(Throwable failure) {
+    for (Throwable current = failure; current != null; current = current.getCause()) {
+      if (current.getMessage() != null
+          && current.getMessage().contains("SQLITE_IOERR_SHORT_READ")) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private String loadConversationContext(AgentInvocation invocation, String correlationId) {

@@ -1,6 +1,7 @@
 package org.saturn.app.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,6 +32,7 @@ import org.saturn.app.agent.sql.ValidatedAgentSql;
 import org.saturn.app.agent.tool.DatabaseSchemaTool;
 import org.saturn.app.agent.tool.DatabaseSqlTool;
 import org.saturn.app.agent.tool.RunCommandTool;
+import org.saturn.app.agent.tool.UserMessageHistoryTool;
 
 class DefaultAgentRouterTest {
   @Test
@@ -117,10 +119,11 @@ class DefaultAgentRouterTest {
                 org.saturn.app.agent.llm.LlmMessage.assistant(
                     "Lounge is another Saturn room.", List.of())));
     ScriptedClient client =
-        new ScriptedClient(new LlmResponse("Jill recently discussed food.", List.of(), "stop"));
+        new ScriptedClient(
+            new LlmResponse("The clean conversation discusses lounge.", List.of(), "stop"));
 
     routerWithRunCommand(client, memory)
-        .route(new AgentInvocation(context(), "tell me about jill"));
+        .route(new AgentInvocation(context(), "summarize the clean conversation context"));
 
     List<org.saturn.app.agent.llm.LlmMessage> requestMessages =
         client.requests.getFirst().messages();
@@ -270,6 +273,82 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void retriesOneTransientSqliteShortReadBeforeRouting() {
+    AtomicInteger loads = new AtomicInteger();
+    AgentMemoryStore transientMemory =
+        new AgentMemoryStore() {
+          @Override
+          public List<org.saturn.app.agent.llm.LlmMessage> load(
+              AgentContext context, AgentConfig config) {
+            if (loads.incrementAndGet() == 1) {
+              throw new AgentPersistenceException(
+                  "Agent memory load failed, sqliteCode=10: [SQLITE_IOERR_SHORT_READ] disk I/O error",
+                  null);
+            }
+            return List.of();
+          }
+
+          @Override
+          public void append(
+              AgentContext context,
+              String userContent,
+              String assistantContent,
+              AgentConfig config) {}
+        };
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Recovered answer.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 100), client, new AgentToolRegistry().freeze(), transientMemory);
+
+    AgentResult result =
+        assertDoesNotThrow(
+            () -> router.route(new AgentInvocation(context(), "question after short read")));
+
+    assertEquals("Recovered answer.", result.content());
+    assertEquals(2, loads.get());
+  }
+
+  @Test
+  void retriesOneTransientSqliteShortReadWhenPersistingTheAnswer() {
+    AtomicInteger appends = new AtomicInteger();
+    AgentMemoryStore transientMemory =
+        new AgentMemoryStore() {
+          @Override
+          public List<org.saturn.app.agent.llm.LlmMessage> load(
+              AgentContext context, AgentConfig config) {
+            return List.of();
+          }
+
+          @Override
+          public void append(
+              AgentContext context,
+              String userContent,
+              String assistantContent,
+              AgentConfig config) {
+            if (appends.incrementAndGet() == 1) {
+              throw new AgentPersistenceException(
+                  "Agent memory append failed, sqliteCode=10: [SQLITE_IOERR_SHORT_READ] disk I/O error",
+                  null);
+            }
+          }
+        };
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Recovered answer.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 100), client, new AgentToolRegistry().freeze(), transientMemory);
+
+    AgentResult result =
+        assertDoesNotThrow(
+            () -> router.route(new AgentInvocation(context(), "question before short write")));
+
+    assertEquals("Recovered answer.", result.content());
+    assertEquals(2, appends.get());
+    assertEquals(1, client.requests.size());
+  }
+
+  @Test
   void failsRatherThanReturningAnUnpersistedResponse() {
     AgentMemoryStore unavailableMemory =
         new AgentMemoryStore() {
@@ -413,7 +492,10 @@ class DefaultAgentRouterTest {
     AgentResult result =
         router.route(
             new AgentInvocation(
-                "mention-1", context(), "who is sun?", AgentInvocationMode.MENTION));
+                "mention-1",
+                context(),
+                "what topic is visible in recent room context?",
+                AgentInvocationMode.MENTION));
 
     assertTrue(result.shouldReply());
     assertEquals(List.of(context()), loadedContexts);
@@ -517,7 +599,13 @@ class DefaultAgentRouterTest {
     assertEquals("private answer", result.content());
     assertEquals(0, contextLoads.get());
     assertFalse(
-        client.requests.getFirst().messages().getFirst().content().contains("public message"));
+        client
+            .requests
+            .getFirst()
+            .messages()
+            .getFirst()
+            .content()
+            .contains("\"name\":\"Meth\",\"message\":\"public message\""));
   }
 
   @Test
@@ -891,7 +979,7 @@ class DefaultAgentRouterTest {
 
     AgentResult result =
         routerWithRunCommand(client, new RecordingMemory())
-            .route(new AgentInvocation(context(), "tell me about nex"));
+            .route(new AgentInvocation(context(), "format this draft profile"));
 
     assertEquals(
         "\u2009-\u2009**First:** Nex writes short messages.\n\u2009-\u2009Second point",
@@ -966,6 +1054,398 @@ class DefaultAgentRouterTest {
     assertEquals("Nex has recently been active in programming.", result.content());
     assertEquals(3, client.requests.size());
     assertTrue(memory.appended.stream().noneMatch(value -> value.contains("I will fetch")));
+  }
+
+  @Test
+  void refreshesUserHistoryInsteadOfReusingThePreviousSummary() throws Exception {
+    String oldAnswer = "Jill is a user of modest but distinct activity.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @alice in #programming:\n"
+                        + "tell me about jill user"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(oldAnswer, List.of())));
+    AtomicInteger historyCalls = new AtomicInteger();
+    UserMessageHistoryTool historyTool =
+        new UserMessageHistoryTool(
+            (query, arguments, context) -> {
+              historyCalls.incrementAndGet();
+              JsonObject row = new JsonObject();
+              row.addProperty("nick", "jill");
+              row.addProperty("message", "weather in Wuhan");
+              row.addProperty("createdOn", 1_700_000_000_000L);
+              com.google.gson.JsonArray rows = new com.google.gson.JsonArray();
+              rows.add(row);
+              JsonObject result = new JsonObject();
+              result.add("rows", rows);
+              return result;
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(oldAnswer, List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "history-current",
+                        "user_message_history",
+                        "{\"nick\":\"jill\"}")),
+                "tool_calls"),
+            new LlmResponse(
+                "I analyzed 1 public message from 1700000000000 to 1700000000000. "
+                    + "Jill discussed weather in Wuhan.",
+                List.of(),
+                "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(historyTool).freeze(),
+            memory);
+
+    AgentResult result =
+        router.route(new AgentInvocation(context(), "tell me about jill user"));
+
+    assertEquals(1, historyCalls.get());
+    assertEquals(3, client.requests.size());
+    assertEquals(Set.of("user_message_history"), toolNames(client.requests.get(1)));
+    String freshEvidence =
+        client.requests.get(2).messages().stream()
+            .filter(message -> "tool".equals(message.role()))
+            .findFirst()
+            .orElseThrow()
+            .content();
+    assertTrue(freshEvidence.contains("\"returnedCount\":1"));
+    assertTrue(freshEvidence.contains("\"oldestCreatedOn\":1700000000000"));
+    assertTrue(freshEvidence.contains("\"newestCreatedOn\":1700000000000"));
+    assertEquals(
+        "I analyzed 1 public message from 1700000000000 to 1700000000000. "
+            + "Jill discussed weather in Wuhan.",
+        result.content());
+    assertEquals(result.content(), memory.appended.getLast());
+  }
+
+  @Test
+  void retriesFailurePlaceholderAfterFreshUserHistoryWasLoaded() throws Exception {
+    RecordingMemory memory = new RecordingMemory();
+    UserMessageHistoryTool historyTool =
+        new UserMessageHistoryTool(
+            (query, arguments, context) -> {
+              JsonObject row = new JsonObject();
+              row.addProperty("nick", "jill");
+              row.addProperty("message", "weather in Wuhan");
+              row.addProperty("createdOn", 1_700_000_000_000L);
+              com.google.gson.JsonArray rows = new com.google.gson.JsonArray();
+              rows.add(row);
+              JsonObject result = new JsonObject();
+              result.add("rows", rows);
+              return result;
+            });
+    String groundedAnswer = "Jill recently discussed the weather in Wuhan.";
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "history-current",
+                        "user_message_history",
+                        "{\"nick\":\"jill\"}")),
+                "tool_calls"),
+            new LlmResponse("The agent could not answer that request.", List.of(), "stop"),
+            new LlmResponse(groundedAnswer, List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(historyTool).freeze(),
+            memory);
+
+    AgentResult result =
+        router.route(new AgentInvocation(context(), "tell me about jill user"));
+
+    assertEquals(groundedAnswer, result.content());
+    assertEquals(3, client.requests.size());
+    assertTrue(client.requests.getLast().tools().isEmpty());
+    assertTrue(
+        client.requests.getLast().messages().getLast().content().contains("failure placeholder"));
+    assertEquals(groundedAnswer, memory.appended.getLast());
+    assertFalse(memory.appended.contains("The agent could not answer that request."));
+  }
+
+  @Test
+  void rewritesAnOldSummaryAfterFreshHistoryWasLoaded() throws Exception {
+    String oldAnswer = "Jill is a user of modest but distinct activity.";
+    String freshAnswer =
+        "I analyzed 1 public message from 1700000000000 to 1700000000000. "
+            + "Jill discussed weather in Wuhan.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @alice in #programming:\n"
+                        + "tell me about jill user"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(oldAnswer, List.of())));
+    UserMessageHistoryTool historyTool =
+        new UserMessageHistoryTool(
+            (query, arguments, context) -> {
+              JsonObject row = new JsonObject();
+              row.addProperty("message", "weather in Wuhan");
+              row.addProperty("createdOn", 1_700_000_000_000L);
+              com.google.gson.JsonArray rows = new com.google.gson.JsonArray();
+              rows.add(row);
+              JsonObject result = new JsonObject();
+              result.add("rows", rows);
+              return result;
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(oldAnswer, List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "history-current",
+                        "user_message_history",
+                        "{\"nick\":\"jill\"}")),
+                "tool_calls"),
+            new LlmResponse(oldAnswer, List.of(), "stop"),
+            new LlmResponse(freshAnswer, List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(historyTool).freeze(),
+            memory);
+
+    AgentResult result =
+        router.route(new AgentInvocation(context(), "tell me about jill user"));
+
+    assertEquals(freshAnswer, result.content());
+    assertEquals(4, client.requests.size());
+    assertTrue(client.requests.get(3).tools().isEmpty());
+    assertTrue(
+        client.requests.get(3).messages().getLast().content().contains("fresh history"));
+    assertEquals(freshAnswer, memory.appended.getLast());
+  }
+
+  @Test
+  void rejectsFreshnessCorrectionThatStillAvoidsTheRequiredTool() {
+    String oldAnswer = "Jill is a user of modest but distinct activity.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @alice in #programming:\n"
+                        + "tell me about jill user"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(oldAnswer, List.of())));
+    UserMessageHistoryTool historyTool =
+        new UserMessageHistoryTool(
+            (query, arguments, context) -> {
+              throw new AssertionError("The model did not call the exposed history tool");
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(oldAnswer, List.of(), "stop"),
+            new LlmResponse("Jill still appears moderately active.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(historyTool).freeze(),
+            memory);
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "tell me about jill user")));
+
+    assertTrue(exception.getMessage().contains("fresh"));
+    assertEquals(2, client.requests.size());
+    assertTrue(memory.appended.isEmpty());
+  }
+
+  @Test
+  void freshnessCorrectionCannotExecuteADifferentTool() {
+    String oldAnswer = "Jill is a user of modest but distinct activity.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @alice in #programming:\n"
+                        + "tell me about jill user"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(oldAnswer, List.of())));
+    AtomicInteger commandExecutions = new AtomicInteger();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              commandExecutions.incrementAndGet();
+              return true;
+            });
+    UserMessageHistoryTool historyTool =
+        new UserMessageHistoryTool(
+            (query, arguments, context) -> {
+              throw new AssertionError("The required tool was not called");
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(oldAnswer, List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "wrong-tool",
+                        "run_command",
+                        "{\"command\":\"ping\",\"arguments\":\"\"}")),
+                "tool_calls"),
+            new LlmResponse("The ping command ran.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).register(historyTool).freeze(),
+            memory);
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "tell me about jill user")));
+
+    assertTrue(exception.getMessage().contains("fresh-data tool"));
+    assertEquals(0, commandExecutions.get());
+    assertEquals(2, client.requests.size());
+    assertTrue(memory.appended.isEmpty());
+  }
+
+  @Test
+  void freshnessGateRunsBeforeGenericActionClaimCorrection() {
+    AtomicInteger commandExecutions = new AtomicInteger();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              commandExecutions.incrementAndGet();
+              return true;
+            });
+    UserMessageHistoryTool historyTool =
+        new UserMessageHistoryTool(
+            (query, arguments, context) -> {
+              throw new AssertionError("The focused correction returned the wrong tool");
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("I will check Jill's message history.", List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "wrong-tool",
+                        "run_command",
+                        "{\"command\":\"ping\",\"arguments\":\"\"}")),
+                "tool_calls"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).register(historyTool).freeze(),
+            new RecordingMemory());
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "tell me about jill user")));
+
+    assertTrue(exception.getMessage().contains("fresh-data tool"));
+    assertEquals(0, commandExecutions.get());
+    assertEquals(2, client.requests.size());
+    assertEquals(Set.of("user_message_history"), toolNames(client.requests.get(1)));
+  }
+
+  @Test
+  void freshnessGateRunsBeforeCommandProseCorrection() {
+    AtomicInteger commandExecutions = new AtomicInteger();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              commandExecutions.incrementAndGet();
+              return true;
+            });
+    UserMessageHistoryTool historyTool =
+        new UserMessageHistoryTool(
+            (query, arguments, context) -> {
+              throw new AssertionError("The focused correction returned the wrong tool");
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("`weather tokyo`", List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "wrong-tool",
+                        "run_command",
+                        "{\"command\":\"weather\",\"arguments\":\"tokyo\"}")),
+                "tool_calls"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).register(historyTool).freeze(),
+            new RecordingMemory());
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "tell me about jill user")));
+
+    assertTrue(exception.getMessage().contains("fresh-data tool"));
+    assertEquals(0, commandExecutions.get());
+    assertEquals(2, client.requests.size());
+    assertEquals(Set.of("user_message_history"), toolNames(client.requests.get(1)));
+  }
+
+  @Test
+  void failedRequiredHistoryLookupCannotFallBackToTheOldSummary() {
+    String oldAnswer = "Jill is a user of modest but distinct activity.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @alice in #programming:\n"
+                        + "tell me about jill user"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(oldAnswer, List.of())));
+    UserMessageHistoryTool historyTool =
+        new UserMessageHistoryTool(
+            (query, arguments, context) -> {
+              throw new AgentPersistenceException("history unavailable", null);
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(oldAnswer, List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "history-failed",
+                        "user_message_history",
+                        "{\"nick\":\"jill\"}")),
+                "tool_calls"),
+            new LlmResponse(oldAnswer, List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(historyTool).freeze(),
+            memory);
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "tell me about jill user")));
+
+    assertTrue(exception.getMessage().contains("fresh-data tool failed"));
+    assertEquals(2, client.requests.size());
+    assertTrue(memory.appended.isEmpty());
   }
 
   @Test

@@ -2,7 +2,9 @@ package org.saturn.app.agent.tool;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -104,12 +106,45 @@ public final class UserMessageHistoryTool implements AgentTool {
       queryArguments.addProperty("room", room.getAsString().trim());
     }
     try {
+      JsonObject result =
+          repository.execute("recent_messages_for_user", queryArguments, context);
       return AgentToolResult.success(
-          name(), repository.execute("recent_messages_for_user", queryArguments, context));
+          name(), withEvidenceMetadata(result).toString());
     } catch (IllegalArgumentException exception) {
       return AgentToolResult.error(null, name(), "Invalid message-history request");
     } catch (RuntimeException exception) {
       return AgentToolResult.error(null, name(), "Message-history query failed");
     }
+  }
+
+  private static JsonObject withEvidenceMetadata(JsonObject result) {
+    JsonObject enriched = result.deepCopy();
+    JsonArray rows =
+        result.has("rows") && result.get("rows").isJsonArray()
+            ? result.getAsJsonArray("rows")
+            : new JsonArray();
+    Long oldest = null;
+    Long newest = null;
+    for (JsonElement element : rows) {
+      if (!element.isJsonObject()) {
+        continue;
+      }
+      JsonElement createdOn = element.getAsJsonObject().get("createdOn");
+      if (createdOn == null
+          || !createdOn.isJsonPrimitive()
+          || !createdOn.getAsJsonPrimitive().isNumber()) {
+        continue;
+      }
+      long timestamp = createdOn.getAsLong();
+      oldest = oldest == null ? timestamp : Math.min(oldest, timestamp);
+      newest = newest == null ? timestamp : Math.max(newest, timestamp);
+    }
+
+    enriched.addProperty("returnedCount", rows.size());
+    enriched.add(
+        "oldestCreatedOn", oldest == null ? JsonNull.INSTANCE : new JsonPrimitive(oldest));
+    enriched.add(
+        "newestCreatedOn", newest == null ? JsonNull.INSTANCE : new JsonPrimitive(newest));
+    return enriched;
   }
 }
