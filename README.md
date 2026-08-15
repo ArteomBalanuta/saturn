@@ -8,7 +8,7 @@ It supports moderation commands, user utilities, room replicas, persistence with
 
 ## Requirements
 
-- JDK 24+
+- JDK 23+
 - `sqlite3`
 - Docker (optional, for containerized runs)
 
@@ -57,6 +57,25 @@ adminTrips = "g0KY09"
 autoReconnect = true
 healthCheckInterval = 5
 autorunCommands = "replica lounge, say hello lads!!"
+
+[agent]
+enabled = true
+endpoint = "http://83.218.196.156:16261"
+apiKeyEnv = "SATURN_AGENT_API_KEY"
+timeoutSeconds = 30
+maxCompletionTokens = 768
+thinkingEnabled = false
+maxConcurrentRequests = 2
+maxToolCalls = 4
+memoryTurns = 10
+memoryTtlHours = 168
+dynamicSqlEnabled = true
+dynamicSqlMaxSqlChars = 4000
+dynamicSqlMaxRows = 50
+dynamicSqlMaxColumns = 32
+dynamicSqlMaxCellChars = 2000
+dynamicSqlMaxResultChars = 32000
+dynamicSqlTimeoutMillis = 1000
 ```
 
 Important fields:
@@ -69,6 +88,41 @@ Important fields:
 - `adminTrips`: comma-separated admin trips
 - `autoReconnect`: enables health-check restart behavior
 - `autorunCommands`: commands executed after startup
+- `agent.endpoint`: OpenAI-compatible router base URL; Saturn calls `/v1/chat/completions`
+- `agent.apiKeyEnv`: environment variable containing an optional bearer token
+- `agent.maxCompletionTokens`: provider-side output-token limit for each completion
+- `agent.thinkingEnabled`: enables model thinking mode; disabled by default for predictable latency
+- `agent.maxConcurrentRequests`: maximum simultaneous agent requests per engine
+- `agent.maxToolCalls`: total tool-call budget for one request
+- `agent.memoryTurns` and `agent.memoryTtlHours`: bounded SQLite conversation memory
+- `agent.dynamicSqlEnabled`: enables admin-only schema inspection and generated read-only SQL
+- `agent.dynamicSqlMax*`: bounds SQL length, rows, columns, cells, and serialized results
+- `agent.dynamicSqlTimeoutMillis`: interrupts generated queries after the configured deadline
+
+The endpoint selects the model by default, so `agent.model` may remain empty. Set
+`SATURN_AGENT_API_KEY` only when the endpoint requires authentication. The configured endpoint
+currently uses unencrypted HTTP; prompts and tool results should only cross a trusted private
+network or an HTTPS reverse proxy.
+
+### Agent Command
+
+```text
+*l how many users are in the room right now?
+```
+
+The agent can inspect current room users, retrieve a named user's recent messages from the current
+room, run named read-only database queries, and execute an allowlist of non-destructive Saturn
+commands under the requesting user's existing authorization. It cannot invoke admin commands or
+recursively invoke `l`. Conversation memory is scoped to the room, keyed by trip when available and
+then hash, and expires according to the configured TTL.
+
+Configured admin trips and users with a persisted `ADMIN` role also receive a generated-SQL
+fallback. The agent must inspect the schema first and may then run one bounded, AST-validated
+`SELECT` on a dedicated read-only SQLite connection. This admin capability can read every Saturn
+application table and column, including cross-room messages, trip/hash identity data, mail, notes,
+moderation data, command history, and agent memory. SQLite internal tables, writes, schema changes,
+pragmas, attached databases, and extension loading remain blocked. Logs contain only a query
+fingerprint, duration, row count, and outcome; raw generated SQL is not logged.
 
 `config.example.toml` is tracked in git. Your local `config.toml` is intentionally ignored.
 
@@ -160,6 +214,7 @@ docker build -t saturn .
 
 docker run -d \
   --name saturn \
+  --env SATURN_AGENT_API_KEY \
   -v $(pwd)/config.toml:/app/config.toml \
   -v $(pwd)/database:/app/database \
   saturn

@@ -5,6 +5,7 @@ CONFIG_FILE ?= $(shell if [ -f "$(CURDIR)/config.toml" ]; then printf "%s" "$(CU
 DATABASE_DIR ?= $(CURDIR)/database
 DATABASE_FILE ?= $(DATABASE_DIR)/database.db
 MIGRATIONS_DIR ?= $(DATABASE_DIR)/migrations
+AGENT_API_KEY_ENV ?= SATURN_AGENT_API_KEY
 
 .PHONY: help build run start stop restart rm rmi clean rebuild logs shell ps status fresh-db
 
@@ -36,6 +37,7 @@ run: rm
 	fi
 	docker run -d \
 		--name $(CONTAINER_NAME) \
+		--env $(AGENT_API_KEY_ENV) \
 		-v $(CONFIG_FILE):$(APP_DIR)/config.toml \
 		-v $(DATABASE_DIR):$(APP_DIR)/database \
 		$(IMAGE_NAME)

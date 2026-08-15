@@ -9,6 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.ThreadContext;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.service.AgentService;
 import org.saturn.app.service.AuthorizationService;
 import org.saturn.app.service.DBZService;
 import org.saturn.app.service.LogRepository;
@@ -63,6 +64,7 @@ public abstract class Base {
   public final DBZService dbzService;
 
   private final Connection dbConnection;
+  private AgentService agentService;
   public final EngineType engineType;
 
   public final BlockingQueue<String> outgoingMessageQueue = new ArrayBlockingQueue<>(256);
@@ -191,6 +193,14 @@ public abstract class Base {
 
   public Connection getDbConnection() {
     return this.dbConnection;
+  }
+
+  public final AgentService getAgentService() {
+    return agentService;
+  }
+
+  protected final void setAgentService(AgentService agentService) {
+    this.agentService = agentService;
   }
 
   protected void closeDbConnection() {

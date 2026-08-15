@@ -1,0 +1,13 @@
+package org.saturn.app.agent.sql;
+
+public enum AgentSqlErrorCode {
+  EMPTY_SQL,
+  SQL_TOO_LONG,
+  MALFORMED_SQL,
+  FORBIDDEN_STATEMENT,
+  FORBIDDEN_TABLE,
+  FORBIDDEN_FUNCTION,
+  TIMEOUT,
+  RESULT_TOO_LARGE,
+  EXECUTION_FAILED
+}

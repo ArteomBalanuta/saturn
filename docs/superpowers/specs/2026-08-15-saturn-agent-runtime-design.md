@@ -16,7 +16,7 @@ Build a lightweight, production-shaped agent SDK for Saturn. The `*l <prompt>` c
 | Tools | Immutable registry plus executor/policy layer | Definition, lookup, validation, limits, and invocation are separate. |
 | Database access | Named prepared read-only queries | No model-generated SQL and no shared JDBC connection on virtual threads. |
 | Saturn commands | Explicit allowlist and original authorization path | Prevent privilege escalation and recursive `l` execution. |
-| Memory | SQLite conversation history keyed by trip, then hash, with TTL and turn limit | Useful continuity without trusting nicknames as identity. |
+| Memory | SQLite conversation history scoped by room and keyed by trip, then hash, with TTL and turn limit | Useful continuity without trusting nicknames as identity or leaking context across rooms. |
 | Limits | Prompt/output/tool-call/per-tool/duplicate/time limits | Stop loops and resource exhaustion. |
 | Failure behavior | Typed errors internally, short stable chat messages externally | Logs retain detail without leaking infrastructure data. |
 | Limit exhaustion | Final provider call without tools | Give the user a coherent answer from accumulated results. |

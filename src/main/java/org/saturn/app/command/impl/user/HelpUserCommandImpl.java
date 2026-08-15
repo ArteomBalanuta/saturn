@@ -123,6 +123,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
               "\u2009note,save <text>\u2009\u2009- saves a note",
               "\u2009notes purge\u2009\u2009\u2009- removes all saved notes",
               "\u2009ping,p\u2009\u2009\u2009\u2009\u2009- shows bot latency",
+              "\u2009l <prompt>\u2009\u2009- asks the room agent a question",
               "\u2009users\u2009\u2009\u2009\u2009\u2009- lists registered users",
               "\u2009say,echo <text>\u2009\u2009- echoes text back",
               "\u2009sub,subscribe\u2009\u2009\u2009- subscribes to join notifications",

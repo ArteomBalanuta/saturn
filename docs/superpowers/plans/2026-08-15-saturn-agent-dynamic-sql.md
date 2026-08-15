@@ -33,7 +33,7 @@
 - Consumes: root `Toml` configuration.
 - Produces: `AgentSqlConfig.from(Toml)` and JSQLParser on the application classpath.
 
-- [ ] **Step 1: Write failing configuration tests**
+- [x] **Step 1: Write failing configuration tests**
 
 ```java
 @Test
@@ -55,13 +55,13 @@ void rejectsNonPositiveDynamicSqlLimits() {
 }
 ```
 
-- [ ] **Step 2: Run the focused test and confirm the missing type failure**
+- [x] **Step 2: Run the focused test and confirm the missing type failure**
 
 Run: `./mvnw -q -Dtest=AgentSqlConfigTest test`
 
 Expected: test compilation fails because `AgentSqlConfig` does not exist.
 
-- [ ] **Step 3: Add immutable validated configuration and JSQLParser 5.3**
+- [x] **Step 3: Add immutable validated configuration and JSQLParser 5.3**
 
 ```java
 public record AgentSqlConfig(
@@ -88,7 +88,7 @@ public record AgentSqlConfig(
 Add `com.github.jsqlparser:jsqlparser:5.3` and document all seven `[agent]` keys in
 `config.example.toml`.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run: `./mvnw -q -Dtest=AgentSqlConfigTest test`
 
@@ -118,7 +118,7 @@ Expected: PASS.
   `AgentTool.requiredSuccessfulTools()`, and `AuthorizationService.resolveRole(trip)`.
 - Consumes: these capabilities in all later dynamic tools.
 
-- [ ] **Step 1: Write failing capability and precondition tests**
+- [x] **Step 1: Write failing capability and precondition tests**
 
 ```java
 AgentTool adminTool = new TestTool("database_sql") {
@@ -140,13 +140,13 @@ assertFalse(executor.execute(adminContext(), sqlCall).isError());
 Add command tests proving configured admins receive `DYNAMIC_SQL`, regular callers do not, and an
 authorization-service test proving a persisted `ADMIN` role resolves to `Role.ADMIN`.
 
-- [ ] **Step 2: Run focused tests and confirm missing API failures**
+- [x] **Step 2: Run focused tests and confirm missing API failures**
 
 Run: `./mvnw -q -Dtest=AgentToolRegistryTest,AgentToolExecutorTest,LUserCommandImplTest,AuthorizationServiceImplTest test`
 
 Expected: compilation failures for capability-aware APIs.
 
-- [ ] **Step 3: Implement context-aware catalog and successful-tool tracking**
+- [x] **Step 3: Implement context-aware catalog and successful-tool tracking**
 
 ```java
 public enum AgentCapability { DYNAMIC_SQL }
@@ -165,7 +165,7 @@ Expose `Role resolveRole(String trip)` from `AuthorizationService`; return `REGU
 stored. `LUserCommandImpl` grants `DYNAMIC_SQL` when the trip is in `getAdminTrips(engine)` or resolves
 to database role `ADMIN`.
 
-- [ ] **Step 4: Pass context through router definitions and run focused tests**
+- [x] **Step 4: Pass context through router definitions and run focused tests**
 
 Run: `./mvnw -q -Dtest=AgentToolRegistryTest,AgentToolExecutorTest,DefaultAgentRouterTest,LUserCommandImplTest,AuthorizationServiceImplTest test`
 
@@ -189,7 +189,7 @@ Expected: PASS.
   `AgentDatabaseSchema.tableNames()` / `findTable(String)`.
 - Consumes: `AgentSqlConfig` and `AgentCapability.DYNAMIC_SQL`.
 
-- [ ] **Step 1: Write failing temporary-database introspection tests**
+- [x] **Step 1: Write failing temporary-database introspection tests**
 
 ```java
 AgentDatabaseSchema schema = repository.describe();
@@ -203,13 +203,13 @@ assertFalse(schema.findTable("trip_names").orElseThrow().foreignKeys().isEmpty()
 Add a tool test proving `database_schema` is unavailable without `DYNAMIC_SQL` and returns structured
 metadata for an admin.
 
-- [ ] **Step 2: Run focused tests and confirm missing repository failures**
+- [x] **Step 2: Run focused tests and confirm missing repository failures**
 
 Run: `./mvnw -q -Dtest=SqliteAgentSchemaRepositoryTest,SaturnAgentToolsTest test`
 
 Expected: compilation failures for schema contracts.
 
-- [ ] **Step 3: Implement typed metadata and read-only connection creation**
+- [x] **Step 3: Implement typed metadata and read-only connection creation**
 
 `AgentDatabaseSchema` contains nested immutable `Table`, `Column`, `Index`, and `ForeignKey` records.
 Use `sqlite_master`, `PRAGMA table_info`, `PRAGMA index_list/index_info`, and
@@ -219,7 +219,7 @@ embedded quotes.
 `SqliteReadOnlyConnectionFactory.open()` uses `SQLiteConfig.setReadOnly(true)`, disables extension
 loading, sets a busy timeout, and executes `PRAGMA query_only = ON`.
 
-- [ ] **Step 4: Implement `DatabaseSchemaTool` and run focused tests**
+- [x] **Step 4: Implement `DatabaseSchemaTool` and run focused tests**
 
 The tool has no arguments, requires `DYNAMIC_SQL`, and returns the typed schema through Gson.
 
@@ -243,7 +243,7 @@ Expected: PASS.
 - Consumes: raw SQL, `AgentSqlConfig`, and `AgentDatabaseSchema`.
 - Produces: `ValidatedAgentSql(sql, fingerprint)` or a typed policy exception.
 
-- [ ] **Step 1: Write failing policy matrix tests**
+- [x] **Step 1: Write failing policy matrix tests**
 
 Accepted cases include joins, aggregates, nested selects, `UNION`, and read-only CTEs. Rejected cases
 include two statements, `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`, `PRAGMA`, `ATTACH`, `DETACH`,
@@ -261,13 +261,13 @@ assertEquals(AgentSqlErrorCode.FORBIDDEN_TABLE,
         () -> policy.validate("SELECT * FROM sqlite_master", schema)).code());
 ```
 
-- [ ] **Step 2: Run the focused test and confirm missing policy failures**
+- [x] **Step 2: Run the focused test and confirm missing policy failures**
 
 Run: `./mvnw -q -Dtest=JSqlParserAgentSqlPolicyTest test`
 
 Expected: compilation failure.
 
-- [ ] **Step 3: Implement single-`Select` AST validation and table traversal**
+- [x] **Step 3: Implement single-`Select` AST validation and table traversal**
 
 Parse with `CCJSqlParserUtil.parse`, require `statement instanceof Select`, and use
 `TablesNamesFinder` to collect physical tables. Normalize identifiers case-insensitively, account for
@@ -277,7 +277,7 @@ physical table to exist in `AgentDatabaseSchema.tableNames()`.
 Compute the fingerprint with SHA-256 over UTF-8 SQL and retain the original SQL only inside the
 validated value passed to the executor.
 
-- [ ] **Step 4: Run policy tests**
+- [x] **Step 4: Run policy tests**
 
 Run: `./mvnw -q -Dtest=JSqlParserAgentSqlPolicyTest test`
 
@@ -297,7 +297,7 @@ Expected: PASS.
 - Consumes: `ValidatedAgentSql` and `AgentSqlConfig`.
 - Produces: `AgentSqlResult(columns, rows, truncated, elapsedMillis)` with JSON-safe values.
 
-- [ ] **Step 1: Write failing executor tests**
+- [x] **Step 1: Write failing executor tests**
 
 Cover null, integer, floating point, text, and blob values; max rows; max columns; Unicode-safe cell
 truncation; total JSON size; timeout; and actual read-only enforcement using a deliberately constructed
@@ -310,20 +310,20 @@ assertEquals(50, repository.execute(selectAll, config).rows().size());
 assertTrue(repository.execute(selectAll, config).truncated());
 ```
 
-- [ ] **Step 2: Run the focused test and confirm missing executor failures**
+- [x] **Step 2: Run the focused test and confirm missing executor failures**
 
 Run: `./mvnw -q -Dtest=SqliteAgentSqlRepositoryTest test`
 
 Expected: compilation failure.
 
-- [ ] **Step 3: Implement SQLite limits, progress cancellation, and bounded serialization**
+- [x] **Step 3: Implement SQLite limits, progress cancellation, and bounded serialization**
 
 Set SQLite limits for SQL length, columns, expression depth, compound selects, attached databases,
 and worker threads. Register `ProgressHandler` with a monotonic deadline and clear it in `finally`.
 Use `Statement.setMaxRows(maxRows + 1)` to detect truncation. Represent result rows as arrays aligned
 with a separate columns array, Base64-encode blobs, and truncate strings by Unicode code point.
 
-- [ ] **Step 4: Run executor tests**
+- [x] **Step 4: Run executor tests**
 
 Run: `./mvnw -q -Dtest=SqliteAgentSqlRepositoryTest test`
 
@@ -345,19 +345,19 @@ Expected: PASS.
 - Consumes: schema repository, SQL policy, SQL repository, SQL config.
 - Produces: admin-only `database_sql` fallback integrated with the existing router.
 
-- [ ] **Step 1: Write failing tool and router-flow tests**
+- [x] **Step 1: Write failing tool and router-flow tests**
 
 Prove the tool requires `database_schema`, rejects missing SQL, returns policy error codes, emits
 structured rows, and is absent from a regular caller's initial LLM request. Script an admin router
 flow of `database_schema` then `database_sql` then final synthesis.
 
-- [ ] **Step 2: Run focused tests and confirm missing tool/wiring failures**
+- [x] **Step 2: Run focused tests and confirm missing tool/wiring failures**
 
 Run: `./mvnw -q -Dtest=SaturnAgentToolsTest,DefaultAgentRouterTest test`
 
 Expected: compilation/test failures.
 
-- [ ] **Step 3: Implement and register the dynamic tools**
+- [x] **Step 3: Implement and register the dynamic tools**
 
 `DatabaseSqlTool` requires `Set.of("database_schema")`, is available only for
 `DYNAMIC_SQL`, introspects the current allowed table set, validates SQL, executes it, and maps typed
@@ -367,7 +367,7 @@ database tool.
 Extend the system prompt with: prefer purpose-built tools; admins may inspect schema and use generated
 read-only SQL only when no purpose-built tool can answer.
 
-- [ ] **Step 4: Update documentation and focused tests**
+- [x] **Step 4: Update documentation and focused tests**
 
 Document admin-only full-schema visibility, read-only behavior, configuration limits, and the fact
 that raw SQL is not logged.
@@ -383,12 +383,12 @@ Expected: PASS.
 **Files:**
 - Modify: `docs/superpowers/plans/2026-08-15-saturn-agent-dynamic-sql.md`
 
-- [ ] **Step 1: Format only files changed by this feature**
+- [x] **Step 1: Format only files changed by this feature**
 
 Use Google Java Format 1.24.0 on the dynamic SQL source/tests and touched agent files. Do not run a
 repository-wide apply because unrelated files have pre-existing format debt.
 
-- [ ] **Step 2: Run all tests and package**
+- [x] **Step 2: Run all tests and package**
 
 Run: `./mvnw -q test`
 
@@ -396,7 +396,7 @@ Run: `./mvnw -q package`
 
 Expected: both exit 0 without contacting the real LLM endpoint.
 
-- [ ] **Step 3: Run static and SQL safety checks**
+- [x] **Step 3: Run static and SQL safety checks**
 
 Run: `git diff --check`
 
@@ -404,7 +404,7 @@ Run: `./mvnw spotless:check`
 
 Expected: changed files are clean; classify only unrelated pre-existing Spotless failures.
 
-- [ ] **Step 4: Review the final diff against the design**
+- [x] **Step 4: Review the final diff against the design**
 
 Confirm admin-only visibility, schema-before-query enforcement, AST-only selects, true SQLite
 read-only mode, internal-table rejection, all configured limits, no raw SQL logs, updated docs, and

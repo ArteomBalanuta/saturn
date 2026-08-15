@@ -22,7 +22,7 @@ import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"list", "l"})
+@CommandAliases(aliases = {"list"})
 public class ListUserCommandImpl extends UserCommandBaseImpl {
   public ListUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminAndUserTrips(engine));

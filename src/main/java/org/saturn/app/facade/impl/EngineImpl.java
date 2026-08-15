@@ -30,6 +30,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.saturn.app.agent.AgentRuntimeFactory;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.command.factory.CommandFactory;
 import org.saturn.app.facade.Base;
@@ -84,6 +85,9 @@ public class EngineImpl extends Base implements Engine {
 
     registerDefaultPayloadListeners();
     this.commandFactory = new CommandFactory(this, CommandAliases.class);
+    if (dbPath != null) {
+      setAgentService(AgentRuntimeFactory.create(this, config, dbPath, outService));
+    }
   }
 
   private void registerDefaultPayloadListeners() {
@@ -222,6 +226,9 @@ public class EngineImpl extends Base implements Engine {
       log.info("Error: {}", e.getMessage());
       log.error("Exception: ", e);
     } finally {
+      if (getAgentService() != null) {
+        getAgentService().close();
+      }
       closeDbConnection();
     }
   }

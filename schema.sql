@@ -88,6 +88,15 @@ CREATE TABLE "dbz_stats" (
 	FOREIGN KEY ("char_id") REFERENCES "dbz_characters" ("id")
 );
 
+CREATE TABLE "agent_memory" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "identity_key" TEXT NOT NULL,
+    "role" TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+    "content" TEXT NOT NULL,
+    "created_on" INTEGER NOT NULL,
+    "expires_on" INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_trip_created_on ON messages (trip, created_on DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_name_created_on ON messages (name, created_on DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_hash_created_on ON messages (hash, created_on DESC);
@@ -99,3 +108,6 @@ CREATE INDEX IF NOT EXISTS idx_executed_commands_channel_created_on
 CREATE INDEX IF NOT EXISTS idx_banned_users_name ON banned_users (name);
 CREATE INDEX IF NOT EXISTS idx_banned_users_trip ON banned_users (trip);
 CREATE INDEX IF NOT EXISTS idx_banned_users_hash ON banned_users (hash);
+CREATE INDEX IF NOT EXISTS idx_agent_memory_identity_created
+  ON agent_memory (identity_key, created_on DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_memory_expires ON agent_memory (expires_on);

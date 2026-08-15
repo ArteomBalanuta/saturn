@@ -7,3 +7,4 @@ services:
     build: .
     environment:
       - JAVA_OPTS=-Xms128m -Xmx256m
+      - SATURN_AGENT_API_KEY=${SATURN_AGENT_API_KEY:-}

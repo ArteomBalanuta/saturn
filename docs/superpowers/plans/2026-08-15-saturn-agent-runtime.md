@@ -8,6 +8,10 @@
 
 **Tech Stack:** Java 23, Gson, Java `HttpClient`, SQLite JDBC, JUnit 5, Mockito only where an external boundary requires it.
 
+**Status:** Implemented on `develop` on 2026-08-15. The duplicate draft `AgentMessage`
+contract was removed in favor of the provider-neutral `LlmMessage` model. Agent memory is scoped by
+room and stable requester identity after the final privacy review.
+
 ## Global Constraints
 
 - Work directly on `develop` as explicitly requested.
@@ -25,17 +29,16 @@
 - Create: `src/main/java/org/saturn/app/agent/AgentConfig.java`
 - Create: `src/main/java/org/saturn/app/agent/AgentInvocation.java`
 - Create: `src/main/java/org/saturn/app/agent/AgentResult.java`
-- Create: `src/main/java/org/saturn/app/agent/AgentMessage.java`
 - Create: `src/main/java/org/saturn/app/agent/AgentRouter.java`
 - Create: `src/test/java/org/saturn/app/agent/AgentConfigTest.java`
 
 **Interfaces:**
 - Produces: `AgentConfig.from(Toml, Map<String,String>)`, `AgentRouter.route(AgentInvocation)`.
 
-- [ ] Write tests proving defaults, environment API-key lookup, and rejection of invalid endpoint/limits.
-- [ ] Run `./mvnw -q -Dtest=AgentConfigTest test` and confirm failure because contracts do not exist.
-- [ ] Implement immutable records and validated configuration.
-- [ ] Re-run the focused test and confirm success.
+- [x] Write tests proving defaults, environment API-key lookup, and rejection of invalid endpoint/limits.
+- [x] Run `./mvnw -q -Dtest=AgentConfigTest test` and confirm failure because contracts do not exist.
+- [x] Implement immutable records and validated configuration.
+- [x] Re-run the focused test and confirm success.
 
 ### Task 2: Provider Port and OpenAI Adapter
 
@@ -51,10 +54,10 @@
 - Consumes: `AgentConfig`.
 - Produces: `LlmClient.complete(LlmRequest)` with typed response and tool calls.
 
-- [ ] Write in-process HTTP tests for endpoint path, optional model omission, bearer header, response parsing, transient retry, non-retryable 4xx, and malformed payloads.
-- [ ] Run the focused test and confirm expected compilation/test failures.
-- [ ] Implement typed mapping, timeout, status validation, and bounded retry/backoff.
-- [ ] Re-run the focused test and confirm success.
+- [x] Write in-process HTTP tests for endpoint path, optional model omission, bearer header, response parsing, transient retry, non-retryable 4xx, and malformed payloads.
+- [x] Run the focused test and confirm expected compilation/test failures.
+- [x] Implement typed mapping, timeout, status validation, and bounded retry/backoff.
+- [x] Re-run the focused test and confirm success.
 
 ### Task 3: Tool Catalog and Policy Executor
 
@@ -69,10 +72,10 @@
 **Interfaces:**
 - Produces: immutable registry definitions and `AgentToolExecutor.execute(context, call)`.
 
-- [ ] Write tests for unknown tools, malformed arguments, duplicate calls, per-tool limits, failure disabling, and stable structured results.
-- [ ] Run focused tests and confirm failure for missing policy behavior.
-- [ ] Implement registry freeze semantics, JSON-schema definitions, execution state per invocation, and safe error conversion.
-- [ ] Re-run focused tests and confirm success.
+- [x] Write tests for unknown tools, malformed arguments, duplicate calls, per-tool limits, failure disabling, and stable structured results.
+- [x] Run focused tests and confirm failure for missing policy behavior.
+- [x] Implement registry freeze semantics, JSON-schema definitions, execution state per invocation, and safe error conversion.
+- [x] Re-run focused tests and confirm success.
 
 ### Task 4: Router, Limits, and Finalization
 
@@ -85,10 +88,10 @@
 - Consumes: `LlmClient`, registry/executor, memory store, config.
 - Produces: bounded `AgentResult` and one no-tools finalization call on exhaustion.
 
-- [ ] Write scripted-client tests for plain answers, multi-tool loops, duplicate/error-only termination, cancellation/interruption, prompt limits, output limits, and final synthesis.
-- [ ] Run focused tests and confirm failure.
-- [ ] Implement the router, correlation IDs, system context, bounded history, and finalization path.
-- [ ] Re-run focused tests and confirm success.
+- [x] Write scripted-client tests for plain answers, tool loops, error termination, provider failures, prompt/output limits, Unicode safety, and final synthesis.
+- [x] Run focused tests and confirm failure.
+- [x] Implement the router, correlation IDs, system context, bounded history, and finalization path.
+- [x] Re-run focused tests and confirm success.
 
 ### Task 5: Saturn Tools and SQLite Persistence
 
@@ -106,11 +109,11 @@
 **Interfaces:**
 - Produces: safe room data, named read queries, authorization-preserving command execution, and TTL-bounded memory.
 
-- [ ] Write temporary-SQLite tests for schema, query allowlist, prepared parameters, row limits, memory identity, TTL cleanup, and turn limits; write command-tool authorization tests.
-- [ ] Run focused tests and confirm failure.
-- [ ] Implement dedicated-connection repositories and concrete tools.
-- [ ] Keep `schema.sql`, migration SQL, Docker database setup, and tests consistent.
-- [ ] Re-run focused tests and confirm success.
+- [x] Write temporary-SQLite tests for schema, query allowlist, prepared parameters, row limits, room-scoped memory identity, TTL cleanup, and turn limits; write command-tool authorization tests.
+- [x] Run focused tests and confirm failure.
+- [x] Implement dedicated-connection repositories and concrete tools.
+- [x] Keep `schema.sql`, migration SQL, Docker database setup, and tests consistent.
+- [x] Re-run focused tests and confirm success.
 
 ### Task 6: Service, Command, Lifecycle, and Documentation
 
@@ -128,8 +131,8 @@
 **Interfaces:**
 - Produces: bounded asynchronous submission, busy handling, clean shutdown, and documented `*l` behavior.
 
-- [ ] Write tests for missing prompt, disabled agent, queue saturation, successful reply, whisper preservation, and shutdown rejection.
-- [ ] Run focused tests and confirm failure.
-- [ ] Wire validated config, router, repositories, registry, and bounded executor in one composition root.
-- [ ] Update configuration and operational documentation.
-- [ ] Run `./mvnw spotless:check`, `./mvnw test`, and `./mvnw package`; classify any unrelated pre-existing formatting debt explicitly.
+- [x] Write tests for missing prompt, disabled agent, queue saturation, successful reply, whisper preservation, and shutdown rejection.
+- [x] Run focused tests and confirm failure.
+- [x] Wire validated config, router, repositories, registry, and bounded executor in one composition root.
+- [x] Update configuration and operational documentation.
+- [x] Run `./mvnw spotless:check`, `./mvnw test`, and `./mvnw package`; new files are clean and 49 unrelated pre-existing Java files remain outside Spotless format.

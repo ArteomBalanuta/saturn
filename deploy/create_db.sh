@@ -75,4 +75,17 @@ CREATE TABLE "trip_names" (
     FOREIGN KEY ("name_id") REFERENCES "names" ("id"),
     UNIQUE ("trip_id", "name_id")
 );
+
+CREATE TABLE "agent_memory" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "identity_key" TEXT NOT NULL,
+    "role" TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+    "content" TEXT NOT NULL,
+    "created_on" INTEGER NOT NULL,
+    "expires_on" INTEGER NOT NULL
+);
+
+CREATE INDEX idx_agent_memory_identity_created
+  ON agent_memory (identity_key, created_on DESC);
+CREATE INDEX idx_agent_memory_expires ON agent_memory (expires_on);
 EOF
