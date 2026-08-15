@@ -79,6 +79,9 @@ public final class OpenAiCompatibleClient implements LlmClient {
     JsonObject templateArguments = new JsonObject();
     templateArguments.addProperty("enable_thinking", config.thinkingEnabled());
     payload.add("chat_template_kwargs", templateArguments);
+    if (request.bypassPromptCache()) {
+      payload.addProperty("cache_prompt", false);
+    }
     JsonArray messages = new JsonArray();
     request.messages().forEach(message -> messages.add(toJson(message)));
     payload.add("messages", messages);

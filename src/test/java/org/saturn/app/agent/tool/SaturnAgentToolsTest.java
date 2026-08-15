@@ -182,7 +182,12 @@ class SaturnAgentToolsTest {
     Set<String> moderatorCatalog = commandEnum(tool, moderatorContext());
     Set<String> creatorCatalog = commandEnum(tool, creatorContext());
 
-    assertFalse(tool.execute(context(), safe).isError());
+    AgentToolResult safeResult = tool.execute(context(), safe);
+
+    assertFalse(safeResult.isError());
+    assertEquals(
+        "Saturn command 'weather' executed; its output was sent to the room. No other Saturn command was executed.",
+        safeResult.content());
     assertEquals("weather Chisinau", invoked.get());
     assertTrue(tool.execute(context(), recursive).isError());
     assertTrue(tool.execute(context(), privileged).isError());
@@ -195,6 +200,24 @@ class SaturnAgentToolsTest {
     assertFalse(tool.execute(moderatorContext(), kick).isError());
     assertTrue(tool.execute(moderatorContext(), ban).isError());
     assertFalse(tool.execute(creatorContext(), ban).isError());
+  }
+
+  @Test
+  void commandToolDescriptorExplainsAuthorityAndDelivery() {
+    RunCommandTool tool = new RunCommandTool((context, command, arguments) -> true);
+
+    assertEquals("commands", tool.descriptor(context()).category());
+    assertEquals(org.saturn.app.agent.ToolAccess.AUTHORIZED_CALLER, tool.descriptor(context()).access());
+    assertEquals(org.saturn.app.agent.ToolEffect.ROOM_MESSAGE, tool.descriptor(context()).effect());
+    assertEquals(
+        org.saturn.app.agent.ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA,
+        tool.descriptor(context()).resultMode());
+    assertEquals(
+        org.saturn.app.agent.ToolEffect.MODERATION,
+        tool.descriptor(moderatorContext()).effect());
+    assertEquals(
+        org.saturn.app.agent.ToolAccess.CREATOR_ONLY,
+        tool.descriptor(creatorContext()).access());
   }
 
   @Test

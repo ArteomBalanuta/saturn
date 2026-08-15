@@ -1,6 +1,7 @@
 package org.saturn.app.agent;
 
 import com.google.gson.JsonObject;
+import java.util.List;
 import java.util.Set;
 
 public interface AgentTool {
@@ -28,6 +29,23 @@ public interface AgentTool {
 
   default Set<String> requiredSuccessfulTools() {
     return Set.of();
+  }
+
+  default AgentToolDescriptor descriptor(AgentContext context) {
+    return new AgentToolDescriptor(
+        name(),
+        name(),
+        description(),
+        "general",
+        ToolAccess.PUBLIC,
+        ToolEffect.READ_ONLY,
+        ToolResultMode.MODEL_DATA,
+        parameters(context),
+        List.of(),
+        List.of(),
+        List.of(),
+        Set.of(),
+        requiredSuccessfulTools());
   }
 
   AgentToolResult execute(AgentContext context, JsonObject arguments);

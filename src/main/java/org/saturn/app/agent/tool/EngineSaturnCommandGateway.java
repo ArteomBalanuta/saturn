@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.facade.impl.EngineImpl;
+import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
@@ -22,7 +23,10 @@ public final class EngineSaturnCommandGateway implements SaturnCommandGateway {
         new ChatMessage(null, context.nick(), context.trip(), context.hash(), null, text);
     synthetic.setWhisper(context.whisper());
     try {
-      return new UserCommandBaseImpl(synthetic, engine, List.of("x")).execute().isPresent();
+      return new UserCommandBaseImpl(synthetic, engine, List.of("x"))
+          .execute()
+          .filter(Status.SUCCESSFUL::equals)
+          .isPresent();
     } catch (RuntimeException exception) {
       log.warn(
           "Agent-triggered Saturn command failed, command={}: {}", command, exception.getMessage());

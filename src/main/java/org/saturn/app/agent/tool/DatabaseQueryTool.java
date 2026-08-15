@@ -2,9 +2,16 @@ package org.saturn.app.agent.tool;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.util.List;
+import java.util.Set;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentTool;
+import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.ToolAccess;
+import org.saturn.app.agent.ToolEffect;
+import org.saturn.app.agent.ToolExample;
+import org.saturn.app.agent.ToolResultMode;
 import org.saturn.app.agent.persistence.AgentQueryRepository;
 
 public final class DatabaseQueryTool implements AgentTool {
@@ -23,6 +30,24 @@ public final class DatabaseQueryTool implements AgentTool {
   public String description() {
     return "Execute one approved read-only Saturn database query, including bounded recent"
         + " messages for a requested room. Arbitrary SQL is not accepted.";
+  }
+
+  @Override
+  public AgentToolDescriptor descriptor(AgentContext context) {
+    return new AgentToolDescriptor(
+        name(),
+        "Approved database query",
+        description(),
+        "database",
+        ToolAccess.PUBLIC,
+        ToolEffect.READ_ONLY,
+        ToolResultMode.MODEL_DATA,
+        parameters(context),
+        List.of("Use for supported counts, room messages, and known user identities."),
+        List.of("Do not pass SQL or assume unsupported query names are accepted."),
+        List.of(new ToolExample(name(), "{\"query\":\"recent_messages_for_room\"}", "Inspect recent room messages")),
+        Set.of(),
+        Set.of());
   }
 
   @Override

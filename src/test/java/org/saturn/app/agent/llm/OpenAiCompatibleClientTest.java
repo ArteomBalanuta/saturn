@@ -75,6 +75,30 @@ class OpenAiCompatibleClientTest {
     assertEquals("room_users", response.toolCalls().getFirst().name());
     assertEquals("call-1", response.toolCalls().getFirst().id());
     assertTrue(response.content().isEmpty());
+    assertFalse(requestJson.has("cache_prompt"));
+  }
+
+  @Test
+  void disablesLlamaPromptCacheForFreshCompletionRequest() throws Exception {
+    AtomicReference<String> body = new AtomicReference<>();
+    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext(
+        "/v1/chat/completions",
+        exchange -> {
+          body.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+          respond(
+              exchange,
+              200,
+              "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"fresh\"},\"finish_reason\":\"stop\"}]}");
+        });
+    server.start();
+    OpenAiCompatibleClient client = new OpenAiCompatibleClient(config("", 0));
+
+    client.complete(
+        LlmRequest.withoutPromptCache(List.of(LlmMessage.user("latest prompt")), List.of()));
+
+    var requestJson = JsonParser.parseString(body.get()).getAsJsonObject();
+    assertFalse(requestJson.get("cache_prompt").getAsBoolean());
   }
 
   @Test

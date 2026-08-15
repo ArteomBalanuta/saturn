@@ -3,12 +3,18 @@ package org.saturn.app.agent.tool;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentTool;
+import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.ToolAccess;
+import org.saturn.app.agent.ToolEffect;
+import org.saturn.app.agent.ToolExample;
+import org.saturn.app.agent.ToolResultMode;
 
 public final class RunCommandTool implements AgentTool {
   private static final Set<String> INFORMATIONAL_COMMANDS =
@@ -57,6 +63,30 @@ public final class RunCommandTool implements AgentTool {
     return parametersFor(allowedCommands(context));
   }
 
+  @Override
+  public AgentToolDescriptor descriptor(AgentContext context) {
+    boolean creator = context != null && context.hasCapability(AgentCapability.PERMANENT_BAN);
+    boolean moderator = context != null && context.hasCapability(AgentCapability.MODERATION_COMMANDS);
+    return new AgentToolDescriptor(
+        name(),
+        "Run Saturn command",
+        description(),
+        "commands",
+        creator ? ToolAccess.CREATOR_ONLY : ToolAccess.AUTHORIZED_CALLER,
+        moderator || creator ? ToolEffect.MODERATION : ToolEffect.ROOM_MESSAGE,
+        ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA,
+        parameters(context),
+        List.of(
+            "Use this for an existing Saturn command instead of imitating its output.",
+            "Use the command enum as the complete list of commands authorized for this caller."),
+        List.of(
+            "Do not invent command names or claim a command ran without invoking this tool.",
+            "Do not use this tool for general conversation or unsupported operations."),
+        List.of(new ToolExample(name(), "{\"command\":\"weather\",\"arguments\":\"Tokyo\"}", "Send weather output to the room")),
+        Set.of(),
+        Set.of());
+  }
+
   private JsonObject parametersFor(Set<String> commands) {
     JsonObject command = new JsonObject();
     command.addProperty("type", "string");
@@ -91,7 +121,10 @@ public final class RunCommandTool implements AgentTool {
         arguments.has("arguments") ? arguments.get("arguments").getAsString().trim() : "";
     boolean executed = gateway.execute(context, command, commandArguments);
     return executed
-        ? AgentToolResult.success(name(), "Command executed; its output was sent to the room.")
+        ? AgentToolResult.success(
+            name(),
+            "Saturn command '%s' executed; its output was sent to the room. No other Saturn command was executed."
+                .formatted(command))
         : AgentToolResult.error(null, name(), "Command was not authorized or could not run");
   }
 

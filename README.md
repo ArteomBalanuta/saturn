@@ -105,7 +105,7 @@ Important fields:
 - `agent.ambientEnabled`: enables periodic participation in unaddressed public chat; defaults to `false`
 - `agent.ambientEveryMessages`: when ambient mode is enabled, routes every Nth eligible message
 - `agent.quietMinutes`: per-user, per-room ambient suppression after a polite quiet request
-- `agent.contextMessageLimit`: recent public room messages automatically supplied to mentions and ambient turns
+- `agent.contextMessageLimit`: recent public room messages automatically supplied to all public agent turns
 - `agent.moderationEnabled`: enables deterministic spam and raid responses independently of ambient chat
 - `agent.dynamicSqlEnabled`: enables admin-only schema inspection and generated read-only SQL
 - `agent.dynamicSqlMax*`: bounds SQL length, rows, columns, cells, and serialized results
@@ -130,7 +130,8 @@ produces no acknowledgement and suppresses ambient replies to that user in that 
 
 The agent can inspect live users in any Saturn-managed room, retrieve bounded public message history
 for a named user across all rooms or within one named room, and run named read-only database queries.
-Mention and ambient turns automatically receive the latest 20 public messages from their room.
+Public direct, mention, and ambient turns automatically receive the latest 20 public messages from
+their room.
 Informational Saturn commands are available to all agent callers. Trusted creator trip `595754`
 also receives captcha, mute, kick, shadow-ban, and direct permanent-ban commands. Recursive `l`, raw
 SQL commands, shutdown, unban-all, and unrelated admin commands are never exposed.
@@ -254,10 +255,11 @@ make help       # list all targets
 Container removal is graceful: Saturn receives up to 30 seconds to close its WebSocket, replicas,
 agent executor, and SQLite connections before Docker removes it.
 
-Do not open the bind-mounted database with host-side `sqlite3` while Saturn is running. Docker
-Desktop and the host can observe different file-lock state for the same SQLite WAL files, which can
-corrupt the database. Use `make db-check` or `make backup-db`; both stop Saturn before touching the
-database. Run `make start` afterward to resume the existing container.
+Do not open the bind-mounted database with any host-side SQLite client, including `sqlite3` or a GUI,
+while Saturn is running. Docker Desktop and the host can observe different file-lock state for the
+same SQLite WAL files, which can corrupt the database. Use `make db-check` or `make backup-db`; both
+stop Saturn before touching the database. Run `make start` afterward to resume the existing
+container.
 
 ### Manual Docker Commands
 
@@ -281,6 +283,17 @@ docker compose up --build -d
 If you use the local bind-mounted setup, the container will use your local `config.toml` and `database/`.
 
 ---
+
+## Agent Tool SDK
+
+Agent tools expose a contextual `AgentToolDescriptor` contract. Each descriptor documents the
+tool's label, category, access level, side effect, result delivery mode, usage guidance, examples,
+capabilities, prerequisites, and JSON parameter schema. The registry publishes this contract in
+the provider definitions, and the runtime prompt treats it as authoritative over persona prose.
+
+Existing tools remain compatible: tools that do not override `descriptor(context)` receive safe
+read-only defaults from `AgentTool`. Add an explicit descriptor for new tools, especially when a
+tool changes the room, moderates users, writes persistence, or requires another tool first.
 
 ## Project Notes
 

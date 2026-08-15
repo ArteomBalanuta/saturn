@@ -4,13 +4,19 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentSqlConfig;
 import org.saturn.app.agent.AgentTool;
+import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.ToolAccess;
+import org.saturn.app.agent.ToolEffect;
+import org.saturn.app.agent.ToolExample;
+import org.saturn.app.agent.ToolResultMode;
 import org.saturn.app.agent.persistence.AgentPersistenceException;
 import org.saturn.app.agent.persistence.AgentSchemaRepository;
 import org.saturn.app.agent.persistence.AgentSqlRepository;
@@ -44,6 +50,24 @@ public final class DatabaseSqlTool implements AgentTool {
   @Override
   public String description() {
     return "Run one bounded read-only SELECT against the inspected Saturn schema.";
+  }
+
+  @Override
+  public AgentToolDescriptor descriptor(AgentContext context) {
+    return new AgentToolDescriptor(
+        name(),
+        "Run bounded read-only SQL",
+        description(),
+        "database",
+        ToolAccess.AUTHORIZED_CALLER,
+        ToolEffect.READ_ONLY,
+        ToolResultMode.MODEL_DATA,
+        parameters(context),
+        List.of("Inspect the schema first, then use one bounded SELECT when no approved query fits."),
+        List.of("Never use for INSERT, UPDATE, DELETE, DDL, or a query unrelated to the inspected schema."),
+        List.of(new ToolExample(name(), "{\"sql\":\"SELECT COUNT(*) FROM messages\"}", "Count rows after schema inspection")),
+        Set.of(AgentCapability.DYNAMIC_SQL.name()),
+        requiredSuccessfulTools());
   }
 
   @Override

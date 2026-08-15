@@ -1,10 +1,17 @@
 package org.saturn.app.agent.tool;
 
 import com.google.gson.JsonObject;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentTool;
+import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.ToolAccess;
+import org.saturn.app.agent.ToolEffect;
+import org.saturn.app.agent.ToolExample;
+import org.saturn.app.agent.ToolResultMode;
 
 public final class RoomUsersTool implements AgentTool {
   private final AgentRoomDirectory roomDirectory;
@@ -22,6 +29,24 @@ public final class RoomUsersTool implements AgentTool {
   public String description() {
     return "Return live users in a Saturn-managed room. Pass room whenever the user names a"
         + " channel; omit it only for the caller's current room.";
+  }
+
+  @Override
+  public AgentToolDescriptor descriptor(AgentContext context) {
+    return new AgentToolDescriptor(
+        name(),
+        "List room users",
+        description(),
+        "room",
+        ToolAccess.PUBLIC,
+        ToolEffect.READ_ONLY,
+        ToolResultMode.MODEL_DATA,
+        parameters(context),
+        List.of("Use when the user asks who is currently present in a room."),
+        List.of("Do not infer presence from conversation history when a live snapshot is available."),
+        List.of(new ToolExample(name(), "{\"room\":\"lounge\"}", "Inspect the lounge roster")),
+        Set.of(),
+        Set.of());
   }
 
   @Override

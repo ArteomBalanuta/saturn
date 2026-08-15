@@ -3,10 +3,17 @@ package org.saturn.app.agent.tool;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentTool;
+import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.ToolAccess;
+import org.saturn.app.agent.ToolEffect;
+import org.saturn.app.agent.ToolExample;
+import org.saturn.app.agent.ToolResultMode;
 import org.saturn.app.agent.persistence.AgentQueryRepository;
 
 public final class UserMessageHistoryTool implements AgentTool {
@@ -26,6 +33,24 @@ public final class UserMessageHistoryTool implements AgentTool {
     return "Fetch a named user's recent public messages across all rooms. Pass room only to"
         + " restrict the search to one channel. Use the all-room default for follow-ups such as"
         + " 'check elsewhere' or 'check it'.";
+  }
+
+  @Override
+  public AgentToolDescriptor descriptor(AgentContext context) {
+    return new AgentToolDescriptor(
+        name(),
+        "Search user message history",
+        description(),
+        "messages",
+        ToolAccess.PUBLIC,
+        ToolEffect.READ_ONLY,
+        ToolResultMode.MODEL_DATA,
+        parameters(context),
+        List.of("Use for follow-ups about what a named user said, including requests to check elsewhere."),
+        List.of("Do not claim a user's history without querying this tool."),
+        List.of(new ToolExample(name(), "{\"nick\":\"sun\"}", "Find recent public messages by sun")),
+        Set.of(),
+        Set.of());
   }
 
   @Override

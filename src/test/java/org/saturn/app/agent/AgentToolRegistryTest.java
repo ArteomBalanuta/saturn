@@ -60,6 +60,58 @@ class AgentToolRegistryTest {
     assertFalse(regular.hasCapability(AgentCapability.DYNAMIC_SQL));
   }
 
+  @Test
+  void serializesSdkContractAlongsideProviderDefinition() {
+    AgentTool tool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "weather";
+          }
+
+          @Override
+          public AgentToolDescriptor descriptor(AgentContext context) {
+            return new AgentToolDescriptor(
+                name(),
+                "Weather lookup",
+                "Fetch the current weather for a location.",
+                "information",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.MODEL_DATA,
+                parameters(context),
+                List.of("Use when the user asks for current weather."),
+                List.of("Do not use for historical climate analysis."),
+                List.of(new ToolExample(name(), "{\"location\":\"Tokyo\"}", "Get Tokyo weather")),
+                Set.of(),
+                Set.of());
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), arguments);
+          }
+        };
+    JsonObject function =
+        new AgentToolRegistry()
+            .register(tool)
+            .definitions(context(Set.of()))
+            .get(0)
+            .getAsJsonObject()
+            .getAsJsonObject("function");
+
+    String description = function.get("description").getAsString();
+    assertTrue(description.contains("SATURN SDK CONTRACT"));
+    assertTrue(description.contains("label: Weather lookup"));
+    assertTrue(description.contains("category: information"));
+    assertTrue(description.contains("access: PUBLIC"));
+    assertTrue(description.contains("effect: READ_ONLY"));
+    assertTrue(description.contains("result_mode: MODEL_DATA"));
+    assertTrue(description.contains("when_to_use: Use when the user asks for current weather."));
+    assertTrue(description.contains("when_not_to_use: Do not use for historical climate analysis."));
+    assertTrue(description.contains("example: weather {\"location\":\"Tokyo\"} - Get Tokyo weather"));
+  }
+
   private AgentContext context(Set<AgentCapability> capabilities) {
     return new AgentContext(
         "programming", "alice", "trip-a", "hash-a", false, List.of("alice"), capabilities);

@@ -203,7 +203,7 @@ class DefaultAgentRouterTest {
   }
 
   @Test
-  void continuesWithoutHistoryWhenMemoryCannotBeRead() throws Exception {
+  void failsRatherThanAnsweringStatelesslyWhenMemoryCannotBeRead() {
     AgentMemoryStore unavailableMemory =
         new AgentMemoryStore() {
           @Override
@@ -219,20 +219,23 @@ class DefaultAgentRouterTest {
               String assistantContent,
               AgentConfig config) {}
         };
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Answer without history.", List.of(), "stop"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
-            config(2, 100),
-            new ScriptedClient(new LlmResponse("Answer without history.", List.of(), "stop")),
-            new AgentToolRegistry().freeze(),
-            unavailableMemory);
+            config(2, 100), client, new AgentToolRegistry().freeze(), unavailableMemory);
 
-    AgentResult result = router.route(new AgentInvocation(context(), "question"));
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "question")));
 
-    assertEquals("Answer without history.", result.content());
+    assertTrue(exception.getMessage().contains("memory"));
+    assertTrue(client.requests.isEmpty());
   }
 
   @Test
-  void returnsCompletedResponseWhenMemoryCannotBePersisted() throws Exception {
+  void failsRatherThanReturningAnUnpersistedResponse() {
     AgentMemoryStore unavailableMemory =
         new AgentMemoryStore() {
           @Override
@@ -250,16 +253,19 @@ class DefaultAgentRouterTest {
             throw new AgentPersistenceException("database unavailable", null);
           }
         };
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Unpersisted answer.", List.of(), "stop"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
-            config(2, 100),
-            new ScriptedClient(new LlmResponse("Unpersisted answer.", List.of(), "stop")),
-            new AgentToolRegistry().freeze(),
-            unavailableMemory);
+            config(2, 100), client, new AgentToolRegistry().freeze(), unavailableMemory);
 
-    AgentResult result = router.route(new AgentInvocation(context(), "question"));
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "question")));
 
-    assertEquals("Unpersisted answer.", result.content());
+    assertTrue(exception.getMessage().contains("memory"));
+    assertEquals(1, client.requests.size());
   }
 
   @Test
@@ -418,7 +424,69 @@ class DefaultAgentRouterTest {
   }
 
   @Test
-  void doesNotHydrateDirectInvocationsAndSurvivesOptionalContextFailure() throws Exception {
+  void hydratesPublicDirectInvocationsWithRecentRoomContext() throws Exception {
+    List<AgentContext> loadedContexts = new ArrayList<>();
+    AgentConversationContextProvider contextProvider =
+        context -> {
+          loadedContexts.add(context);
+          return "{\"rows\":[{\"name\":\"Meth\",\"message\":\"*help\"}]}";
+        };
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Meth used help recently.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 2_000),
+            client,
+            new AgentToolRegistry().freeze(),
+            AgentMemoryStore.none(),
+            AgentParticipationConfig.from(null),
+            contextProvider);
+
+    AgentResult result = router.route(new AgentInvocation(context(), "what did Meth just do?"));
+
+    assertEquals("Meth used help recently.", result.content());
+    assertEquals(List.of(context()), loadedContexts);
+    assertTrue(
+        client
+            .requests
+            .getFirst()
+            .messages()
+            .getFirst()
+            .content()
+            .contains("\"message\":\"*help\""));
+  }
+
+  @Test
+  void keepsPrivateDirectInvocationsOutOfPublicRoomContext() throws Exception {
+    AtomicInteger contextLoads = new AtomicInteger();
+    AgentConversationContextProvider contextProvider =
+        context -> {
+          contextLoads.incrementAndGet();
+          return "{\"rows\":[{\"name\":\"Meth\",\"message\":\"public message\"}]}";
+        };
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("private answer", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 2_000),
+            client,
+            new AgentToolRegistry().freeze(),
+            AgentMemoryStore.none(),
+            AgentParticipationConfig.from(null),
+            contextProvider);
+    AgentContext whisperContext =
+        new AgentContext("programming", "alice", "trip-a", "hash-a", true, List.of("alice", "bob"));
+
+    AgentResult result = router.route(new AgentInvocation(whisperContext, "answer this privately"));
+
+    assertEquals("private answer", result.content());
+    assertEquals(0, contextLoads.get());
+    assertFalse(
+        client.requests.getFirst().messages().getFirst().content().contains("public message"));
+  }
+
+  @Test
+  void continuesWhenOptionalRoomContextCannotBeRead() throws Exception {
     AtomicInteger contextLoads = new AtomicInteger();
     AgentConversationContextProvider failingProvider =
         context -> {
@@ -426,9 +494,7 @@ class DefaultAgentRouterTest {
           throw new AgentPersistenceException("database unavailable", null);
         };
     ScriptedClient client =
-        new ScriptedClient(
-            new LlmResponse("direct answer", List.of(), "stop"),
-            new LlmResponse("mention fallback", List.of(), "stop"));
+        new ScriptedClient(new LlmResponse("mention fallback", List.of(), "stop"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
             config(2, 2_000),
@@ -438,7 +504,6 @@ class DefaultAgentRouterTest {
             AgentParticipationConfig.from(null),
             failingProvider);
 
-    assertEquals("direct answer", router.route(new AgentInvocation(context(), "direct")).content());
     assertEquals(
         "mention fallback",
         router
@@ -480,6 +545,443 @@ class DefaultAgentRouterTest {
     assertTrue(commandEnum(creatorClient.requests.getFirst()).contains("ban"));
   }
 
+  @Test
+  void convertsWrappedCommandIntentIntoARealToolCallWithoutPublishingTheWrapper() throws Exception {
+    List<String> executions = new ArrayList<>();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              executions.add(command + " " + arguments);
+              return true;
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("As commanded:\n``weather charlotte``", List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "weather-1",
+                        "run_command",
+                        "{\"command\":\"weather\",\"arguments\":\"charlotte\"}")),
+                "tool_calls"),
+            new LlmResponse("The live weather was sent to the room.", List.of(), "stop"));
+    RecordingMemory memory = new RecordingMemory();
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).freeze(),
+            memory);
+
+    AgentResult result = router.route(new AgentInvocation(context(), "please fetch it"));
+
+    assertEquals(List.of("weather charlotte"), executions);
+    assertEquals("The live weather was sent to the room.", result.content());
+    assertFalse(
+        memory.appended.stream().anyMatch(value -> value.contains("``weather charlotte``")));
+    assertTrue(client.requests.get(1).messages().getLast().content().contains("run_command"));
+    assertTrue(
+        client.requests.get(1).messages().getLast().content().contains("exactly one tool call"));
+  }
+
+  @Test
+  void rewritesWrappedCommandReferenceWithoutExecutingIt() throws Exception {
+    List<String> executions = new ArrayList<>();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              executions.add(command + " " + arguments);
+              return true;
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "Meth used `*help`; I will wait for repeated use before acting.",
+                List.of(),
+                "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "response-1",
+                        "respond_without_command",
+                        "{\"response\":\"Meth used help once. No moderation command was executed.\"}")),
+                "tool_calls"));
+    RecordingMemory memory = new RecordingMemory();
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).freeze(),
+            memory);
+
+    AgentResult result =
+        router.route(
+            new AgentInvocation(context(), "if Meth uses *help a few more times, mute him"));
+
+    assertEquals("Meth used help once. No moderation command was executed.", result.content());
+    assertTrue(executions.isEmpty());
+    assertFalse(memory.appended.stream().anyMatch(value -> value.contains("`*help`")));
+    assertEquals(
+        Set.of("respond_without_command", "run_command"), toolNames(client.requests.get(1)));
+  }
+
+  @Test
+  void rejectsNonCommandCorrectionWithUndeclaredArguments() {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("Meth used `*help` once.", List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "response-1",
+                        "respond_without_command",
+                        "{\"response\":\"Meth used help once.\",\"execute\":true}")),
+                "tool_calls"));
+    RecordingMemory memory = new RecordingMemory();
+    DefaultAgentRouter router = routerWithRunCommand(client, memory);
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "what did Meth do?")));
+
+    assertTrue(exception.getMessage().contains("invalid non-command correction"));
+    assertTrue(memory.appended.isEmpty());
+  }
+
+  @Test
+  void rejectsCorrectionThatDoesNotReturnTheMatchingToolCall() {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("`weather charlotte`", List.of(), "stop"),
+            new LlmResponse("I will not call it.", List.of(), "stop"));
+    RecordingMemory memory = new RecordingMemory();
+    DefaultAgentRouter router = routerWithRunCommand(client, memory);
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "fetch weather")));
+
+    assertTrue(exception.getMessage().contains("required Saturn tool call"));
+    assertTrue(memory.appended.isEmpty());
+    assertEquals(2, client.requests.size());
+  }
+
+  @Test
+  void rejectsCorrectionThatPiggybacksAnotherToolCall() {
+    List<String> executions = new ArrayList<>();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              executions.add(command + " " + arguments);
+              return true;
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("`weather charlotte`", List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "weather-1",
+                        "run_command",
+                        "{\"command\":\"weather\",\"arguments\":\"charlotte\"}"),
+                    new LlmToolCall(
+                        "help-1", "run_command", "{\"command\":\"help\",\"arguments\":\"\"}")),
+                "tool_calls"),
+            new LlmResponse("Both commands completed.", List.of(), "stop"));
+    RecordingMemory memory = new RecordingMemory();
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).freeze(),
+            memory);
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "fetch weather")));
+
+    assertTrue(exception.getMessage().contains("required Saturn tool call"));
+    assertTrue(executions.isEmpty());
+    assertTrue(memory.appended.isEmpty());
+  }
+
+  @Test
+  void rewritesWrappedCommandAfterExecutionWithoutRunningItTwice() throws Exception {
+    List<String> executions = new ArrayList<>();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              executions.add(command + " " + arguments);
+              return true;
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "weather-1",
+                        "run_command",
+                        "{\"command\":\"weather\",\"arguments\":\"charlotte\"}")),
+                "tool_calls"),
+            new LlmResponse("Done: `weather charlotte`", List.of(), "stop"),
+            new LlmResponse("The live weather was sent to the room.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).freeze(),
+            AgentMemoryStore.none());
+
+    AgentResult result = router.route(new AgentInvocation(context(), "fetch weather"));
+
+    assertEquals(List.of("weather charlotte"), executions);
+    assertEquals("The live weather was sent to the room.", result.content());
+    assertTrue(client.requests.getLast().tools().isEmpty());
+  }
+
+  @Test
+  void executesDifferentWrappedCommandAfterAnEarlierCommandSucceeded() throws Exception {
+    List<String> executions = new ArrayList<>();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              executions.add(command + " " + arguments);
+              return true;
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "weather-1",
+                        "run_command",
+                        "{\"command\":\"weather\",\"arguments\":\"charlotte\"}")),
+                "tool_calls"),
+            new LlmResponse("Next: `help`", List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "help-1", "run_command", "{\"command\":\"help\",\"arguments\":\"\"}")),
+                "tool_calls"),
+            new LlmResponse("Help was sent to the room.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).freeze(),
+            AgentMemoryStore.none());
+
+    AgentResult result = router.route(new AgentInvocation(context(), "fetch weather, then help"));
+
+    assertEquals(List.of("weather charlotte", "help "), executions);
+    assertEquals("Help was sent to the room.", result.content());
+    assertTrue(client.requests.get(2).messages().getLast().content().contains("run_command"));
+  }
+
+  @Test
+  void rewritesWrappedCommandAfterFailedExecutionWithoutClaimingItRan() throws Exception {
+    List<String> attempts = new ArrayList<>();
+    RunCommandTool commandTool =
+        new RunCommandTool(
+            (context, command, arguments) -> {
+              attempts.add(command + " " + arguments);
+              return false;
+            });
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "weather-1",
+                        "run_command",
+                        "{\"command\":\"weather\",\"arguments\":\"charlotte\"}")),
+                "tool_calls"),
+            new LlmResponse("Try this instead: `weather charlotte`", List.of(), "stop"),
+            new LlmResponse("The weather command did not run.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(commandTool).freeze(),
+            AgentMemoryStore.none());
+
+    AgentResult result = router.route(new AgentInvocation(context(), "fetch weather"));
+
+    assertEquals(List.of("weather charlotte"), attempts);
+    assertEquals("The weather command did not run.", result.content());
+    assertTrue(client.requests.getLast().tools().isEmpty());
+    assertTrue(
+        client.requests.getLast().messages().getLast().content().contains("did not execute"));
+    assertFalse(
+        client.requests.getLast().messages().getLast().content().contains("already executed"));
+  }
+
+  @Test
+  void preservesUnrelatedInlineCodeInOrdinaryAnswers() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Use `List.of()`.", List.of(), "stop"));
+
+    AgentResult result =
+        routerWithRunCommand(client, new RecordingMemory())
+            .route(new AgentInvocation(context(), "show Java"));
+
+    assertEquals("Use `List.of()`.", result.content());
+    assertEquals(1, client.requests.size());
+  }
+
+  @Test
+  void doesNotAcceptNarratedCommandExecutionWithoutARealToolCall() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "I will execute ping now.\n[executes ping command]", List.of(), "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "ping-1", "run_command", "{\"command\":\"ping\",\"arguments\":\"\"}")),
+                "tool_calls"),
+            new LlmResponse("The response time is 184 milliseconds.", List.of(), "stop"));
+    RecordingMemory memory = new RecordingMemory();
+
+    AgentResult result =
+        routerWithRunCommand(client, memory)
+            .route(new AgentInvocation(context(), "run ping"));
+
+    assertEquals("The response time is 184 milliseconds.", result.content());
+    assertEquals(3, client.requests.size());
+    assertTrue(
+        client.requests.get(1).messages().getLast().content().contains("narrated an action"));
+    assertFalse(memory.appended.stream().anyMatch(value -> value.contains("executes ping")));
+  }
+
+  @Test
+  void requiresUserHistoryToolWhenCompletionClaimsItFetchedAUsersHistory() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "I will fetch nex's recent message history to provide a complete picture.",
+                List.of(),
+                "stop"),
+            new LlmResponse(
+                "",
+                List.of(
+                    new LlmToolCall(
+                        "history-1",
+                        "user_message_history",
+                        "{\"nick\":\"nex\",\"room\":\"programming\"}")),
+                "tool_calls"),
+            new LlmResponse("Nex has recently been active in programming.", List.of(), "stop"));
+    AgentTool historyTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "user_message_history";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), "nex posted recently");
+          }
+        };
+    RecordingMemory memory = new RecordingMemory();
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 2_000),
+            client,
+            new AgentToolRegistry().register(historyTool).freeze(),
+            memory);
+
+    AgentResult result = router.route(new AgentInvocation(context(), "who is nex"));
+
+    assertEquals("Nex has recently been active in programming.", result.content());
+    assertEquals(3, client.requests.size());
+    assertTrue(memory.appended.stream().noneMatch(value -> value.contains("I will fetch")));
+  }
+
+  @Test
+  void retriesWithoutPromptCacheWhenNewPromptGetsPreviousAnswer() throws Exception {
+    String previousAnswer = "Welcome back. The room is still here.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public message from @alice in #programming:\nwb"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(previousAnswer, List.of())));
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(previousAnswer, List.of(), "stop"),
+            new LlmResponse("They are discussing the room lock.", List.of(), "stop"));
+
+    AgentResult result =
+        routerWithRunCommand(client, memory)
+            .route(new AgentInvocation(context(), "what is being discussed?"));
+
+    assertEquals("They are discussing the room lock.", result.content());
+    assertEquals(2, client.requests.size());
+    assertFalse(client.requests.getFirst().bypassPromptCache());
+    assertTrue(client.requests.getLast().bypassPromptCache());
+    assertTrue(
+        client.requests.getLast().messages().getLast().content().contains("duplicated an earlier"));
+    assertEquals("They are discussing the room lock.", memory.appended.getLast());
+  }
+
+  @Test
+  void rejectsAnswerThatRemainsStaleAfterCacheBypass() {
+    String previousAnswer = "Welcome back. The room is still here.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public message from @alice in #programming:\nwb"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(previousAnswer, List.of())));
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(previousAnswer, List.of(), "stop"),
+            new LlmResponse(previousAnswer, List.of(), "stop"));
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                routerWithRunCommand(client, memory)
+                    .route(new AgentInvocation(context(), "what is being discussed?")));
+
+    assertTrue(exception.getMessage().contains("stale response"));
+    assertTrue(memory.appended.isEmpty());
+  }
+
+  @Test
+  void permitsSameAnswerWhenTheUserRepeatedTheSamePrompt() throws Exception {
+    String repeatedPrompt = "Public Saturn message from @alice in #programming:\nstatus";
+    String repeatedAnswer = "Everything is operational.";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(repeatedPrompt),
+                org.saturn.app.agent.llm.LlmMessage.assistant(repeatedAnswer, List.of())));
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse(repeatedAnswer, List.of(), "stop"));
+
+    AgentResult result =
+        routerWithRunCommand(client, memory)
+            .route(new AgentInvocation(context(), "status"));
+
+    assertEquals(repeatedAnswer, result.content());
+    assertEquals(1, client.requests.size());
+  }
+
   private AgentContext context() {
     return new AgentContext(
         "programming", "alice", "trip-a", "hash-a", false, List.of("alice", "bob"));
@@ -517,6 +1019,16 @@ class DefaultAgentRouterTest {
         .stream()
         .map(value -> value.getAsString())
         .collect(java.util.stream.Collectors.toUnmodifiableSet());
+  }
+
+  private DefaultAgentRouter routerWithRunCommand(ScriptedClient client, AgentMemoryStore memory) {
+    return new DefaultAgentRouter(
+        config(4, 2_000),
+        client,
+        new AgentToolRegistry()
+            .register(new RunCommandTool((context, command, arguments) -> true))
+            .freeze(),
+        memory);
   }
 
   private AgentConfig config(int maxToolCalls, int maxChars) {
