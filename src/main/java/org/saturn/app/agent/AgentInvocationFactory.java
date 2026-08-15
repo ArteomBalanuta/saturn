@@ -40,6 +40,7 @@ public final class AgentInvocationFactory {
     }
     if (creator && mode == AgentInvocationMode.DIRECT) {
       capabilities.add(AgentCapability.PERMANENT_BAN);
+      capabilities.add(AgentCapability.ADMIN_COMMANDS);
     }
 
     AgentContext context =

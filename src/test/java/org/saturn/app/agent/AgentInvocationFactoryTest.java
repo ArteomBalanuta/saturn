@@ -87,8 +87,10 @@ class AgentInvocationFactoryTest {
     assertTrue(direct.context().hasCapability(AgentCapability.DYNAMIC_SQL));
     assertTrue(direct.context().hasCapability(AgentCapability.MODERATION_COMMANDS));
     assertTrue(direct.context().hasCapability(AgentCapability.PERMANENT_BAN));
+    assertTrue(direct.context().hasCapability(AgentCapability.ADMIN_COMMANDS));
     assertTrue(mention.context().hasCapability(AgentCapability.MODERATION_COMMANDS));
     assertFalse(mention.context().hasCapability(AgentCapability.PERMANENT_BAN));
+    assertFalse(mention.context().hasCapability(AgentCapability.ADMIN_COMMANDS));
     assertTrue(impostor.context().capabilities().isEmpty());
     engine.stop();
   }
