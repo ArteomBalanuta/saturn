@@ -9,6 +9,7 @@ import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.tool.SaturnCommandToolCatalog;
 
 class AgentToolRegistryTest {
   @Test
@@ -114,9 +115,42 @@ class AgentToolRegistryTest {
         description.contains("example: weather {\"location\":\"Tokyo\"} - Get Tokyo weather"));
   }
 
+  @Test
+  void exposesCatalogCommandsOnlyToTheirRequiredCapabilities() {
+    AgentToolRegistry registry = new AgentToolRegistry();
+    SaturnCommandToolCatalog.registerAll(registry, (context, command, arguments) -> true);
+    registry.freeze();
+
+    Set<String> regular = toolNames(registry, context(Set.of()));
+    Set<String> moderator =
+        toolNames(registry, context(Set.of(AgentCapability.MODERATION_COMMANDS)));
+    Set<String> creator =
+        toolNames(
+            registry,
+            context(
+                Set.of(
+                    AgentCapability.MODERATION_COMMANDS,
+                    AgentCapability.PERMANENT_BAN,
+                    AgentCapability.ADMIN_COMMANDS)));
+
+    assertTrue(regular.contains("saturn_weather"));
+    assertFalse(regular.contains("saturn_kick"));
+    assertTrue(moderator.contains("saturn_kick"));
+    assertFalse(moderator.contains("saturn_restart"));
+    assertTrue(creator.contains("saturn_restart"));
+    assertEquals(SaturnCommandToolCatalog.entries().size(), creator.size());
+  }
+
   private AgentContext context(Set<AgentCapability> capabilities) {
     return new AgentContext(
         "programming", "alice", "trip-a", "hash-a", false, List.of("alice"), capabilities);
+  }
+
+  private Set<String> toolNames(AgentToolRegistry registry, AgentContext context) {
+    return registry.definitions(context).asList().stream()
+        .map(definition -> definition.getAsJsonObject().getAsJsonObject("function"))
+        .map(function -> function.get("name").getAsString())
+        .collect(java.util.stream.Collectors.toSet());
   }
 
   private AgentTool tool(String name) {

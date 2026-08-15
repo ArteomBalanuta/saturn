@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import org.saturn.app.agent.AgentCapability;
+import org.saturn.app.agent.AgentToolRegistry;
 import org.saturn.app.agent.ToolEffect;
 import org.saturn.app.agent.ToolExample;
 import org.saturn.app.command.UserCommand;
@@ -32,6 +33,11 @@ public final class SaturnCommandToolCatalog {
   /** Returns one immutable command tool contract for every annotated Saturn command handler. */
   public static List<CommandToolDefinition> entries() {
     return ENTRIES;
+  }
+
+  /** Registers every reflected command contract with the supplied agent tool registry. */
+  public static void registerAll(AgentToolRegistry registry, SaturnCommandGateway gateway) {
+    entries().forEach(definition -> registry.register(new SaturnCommandTool(definition, gateway)));
   }
 
   private static List<CommandToolDefinition> loadEntries() {

@@ -22,6 +22,7 @@ import org.saturn.app.agent.tool.EngineAgentRoomDirectory;
 import org.saturn.app.agent.tool.EngineSaturnCommandGateway;
 import org.saturn.app.agent.tool.RoomUsersTool;
 import org.saturn.app.agent.tool.RunCommandTool;
+import org.saturn.app.agent.tool.SaturnCommandToolCatalog;
 import org.saturn.app.agent.tool.UserMessageHistoryTool;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.service.AgentService;
@@ -68,8 +69,9 @@ public final class AgentRuntimeFactory {
                     new JSqlParserAgentSqlPolicy(sqlConfig),
                     sqlRepository,
                     sqlConfig))
-            .register(new RunCommandTool(commandGateway))
-            .freeze();
+            .register(new RunCommandTool(commandGateway));
+    SaturnCommandToolCatalog.registerAll(registry, commandGateway);
+    registry.freeze();
     AgentRouter router =
         new DefaultAgentRouter(
             config,
