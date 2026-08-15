@@ -13,6 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.llm.LlmClient;
 import org.saturn.app.agent.llm.LlmException;
@@ -62,7 +67,90 @@ class DefaultAgentRouterTest {
     assertTrue(
         client.requests.getFirst().messages().getFirst().content().contains("user-authored text"));
     assertEquals("tool", client.requests.get(1).messages().getLast().role());
-    assertEquals(List.of("who is here?", "There are users in the room."), memory.appended);
+    assertTrue(memory.appended.getFirst().contains("@alice"));
+    assertTrue(memory.appended.getFirst().contains("who is here?"));
+    assertEquals("There are users in the room.", memory.appended.getLast());
+  }
+
+  @Test
+  void labelsPersistedSharedHistoryAndDirectsTheModelToUseItForFollowUps() throws Exception {
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @alice in #programming:\n"
+                        + "How many users are in lounge?"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(
+                    "There are 17 users in lounge.", List.of())));
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("You asked about lounge.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(config(2, 1_000), client, new AgentToolRegistry().freeze(), memory);
+    AgentContext bob =
+        new AgentContext("programming", "bob", "trip-b", "hash-b", false, List.of("alice", "bob"));
+
+    router.route(new AgentInvocation(bob, "Which room did Alice ask about?"));
+
+    LlmRequest request = client.requests.getFirst();
+    assertEquals(
+        List.of("system", "user", "assistant", "user"),
+        request.messages().stream().map(org.saturn.app.agent.llm.LlmMessage::role).toList());
+    assertTrue(request.messages().getFirst().content().contains("persisted shared room history"));
+    assertTrue(request.messages().getFirst().content().contains("Never claim"));
+    assertTrue(request.messages().getLast().content().contains("@bob"));
+    assertTrue(request.messages().getLast().content().contains("Which room did Alice ask about?"));
+  }
+
+  @Test
+  void serializesRequestsThatBelongToTheSameSharedRoomSession() throws Exception {
+    CountDownLatch firstEntered = new CountDownLatch(1);
+    CountDownLatch releaseFirst = new CountDownLatch(1);
+    CountDownLatch secondEntered = new CountDownLatch(1);
+    AtomicInteger calls = new AtomicInteger();
+    List<LlmRequest> requests = new CopyOnWriteArrayList<>();
+    LlmClient client =
+        request -> {
+          requests.add(request);
+          int call = calls.incrementAndGet();
+          if (call == 1) {
+            firstEntered.countDown();
+            try {
+              if (!releaseFirst.await(2, TimeUnit.SECONDS)) {
+                throw new LlmException("test timed out waiting to release first request");
+              }
+            } catch (InterruptedException exception) {
+              Thread.currentThread().interrupt();
+              throw new LlmException("test interrupted", exception);
+            }
+            return new LlmResponse("first answer", List.of(), "stop");
+          }
+          secondEntered.countDown();
+          return new LlmResponse("second answer", List.of(), "stop");
+        };
+    SharedRecordingMemory memory = new SharedRecordingMemory();
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(config(2, 1_000), client, new AgentToolRegistry().freeze(), memory);
+    AgentContext alice = context();
+    AgentContext bob =
+        new AgentContext("programming", "bob", "trip-b", "hash-b", false, List.of("alice", "bob"));
+
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      var first = executor.submit(() -> router.route(new AgentInvocation(alice, "first question")));
+      assertTrue(firstEntered.await(1, TimeUnit.SECONDS));
+      var second = executor.submit(() -> router.route(new AgentInvocation(bob, "follow up")));
+
+      boolean secondStartedBeforeFirstCompleted = secondEntered.await(150, TimeUnit.MILLISECONDS);
+      releaseFirst.countDown();
+      first.get(2, TimeUnit.SECONDS);
+      second.get(2, TimeUnit.SECONDS);
+
+      assertFalse(secondStartedBeforeFirstCompleted);
+      assertTrue(
+          requests.get(1).messages().stream()
+              .anyMatch(message -> message.content().contains("first question")));
+    } finally {
+      releaseFirst.countDown();
+    }
   }
 
   @Test
@@ -140,6 +228,37 @@ class DefaultAgentRouterTest {
     AgentResult result = router.route(new AgentInvocation(context(), "question"));
 
     assertEquals("Answer without history.", result.content());
+  }
+
+  @Test
+  void returnsCompletedResponseWhenMemoryCannotBePersisted() throws Exception {
+    AgentMemoryStore unavailableMemory =
+        new AgentMemoryStore() {
+          @Override
+          public List<org.saturn.app.agent.llm.LlmMessage> load(
+              AgentContext context, AgentConfig config) {
+            return List.of();
+          }
+
+          @Override
+          public void append(
+              AgentContext context,
+              String userContent,
+              String assistantContent,
+              AgentConfig config) {
+            throw new AgentPersistenceException("database unavailable", null);
+          }
+        };
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 100),
+            new ScriptedClient(new LlmResponse("Unpersisted answer.", List.of(), "stop")),
+            new AgentToolRegistry().freeze(),
+            unavailableMemory);
+
+    AgentResult result = router.route(new AgentInvocation(context(), "question"));
+
+    assertEquals("Unpersisted answer.", result.content());
   }
 
   @Test
@@ -290,11 +409,20 @@ class DefaultAgentRouterTest {
 
   private static final class RecordingMemory implements AgentMemoryStore {
     private final List<String> appended = new ArrayList<>();
+    private final List<org.saturn.app.agent.llm.LlmMessage> loaded;
+
+    private RecordingMemory() {
+      this(List.of());
+    }
+
+    private RecordingMemory(List<org.saturn.app.agent.llm.LlmMessage> loaded) {
+      this.loaded = List.copyOf(loaded);
+    }
 
     @Override
     public List<org.saturn.app.agent.llm.LlmMessage> load(
         AgentContext context, AgentConfig config) {
-      return List.of();
+      return loaded;
     }
 
     @Override
@@ -302,6 +430,23 @@ class DefaultAgentRouterTest {
         AgentContext context, String userContent, String assistantContent, AgentConfig config) {
       appended.add(userContent);
       appended.add(assistantContent);
+    }
+  }
+
+  private static final class SharedRecordingMemory implements AgentMemoryStore {
+    private final List<org.saturn.app.agent.llm.LlmMessage> messages = new ArrayList<>();
+
+    @Override
+    public synchronized List<org.saturn.app.agent.llm.LlmMessage> load(
+        AgentContext context, AgentConfig config) {
+      return List.copyOf(messages);
+    }
+
+    @Override
+    public synchronized void append(
+        AgentContext context, String userContent, String assistantContent, AgentConfig config) {
+      messages.add(org.saturn.app.agent.llm.LlmMessage.user(userContent));
+      messages.add(org.saturn.app.agent.llm.LlmMessage.assistant(assistantContent, List.of()));
     }
   }
 }

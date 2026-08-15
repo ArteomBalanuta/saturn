@@ -23,7 +23,9 @@ public final class UserMessageHistoryTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Fetch a named user's recent messages in the current room for chat-history summaries.";
+    return "Fetch a named user's recent public messages across all rooms. Pass room only to"
+        + " restrict the search to one channel. Use the all-room default for follow-ups such as"
+        + " 'check elsewhere' or 'check it'.";
   }
 
   @Override
@@ -36,9 +38,15 @@ public final class UserMessageHistoryTool implements AgentTool {
     limit.addProperty("type", "integer");
     limit.addProperty("minimum", 1);
     limit.addProperty("maximum", 20);
+    JsonObject room = new JsonObject();
+    room.addProperty("type", "string");
+    room.addProperty("minLength", 1);
+    room.addProperty("maxLength", 100);
+    room.addProperty("description", "Optional room restriction; omit to search all rooms");
     JsonObject properties = new JsonObject();
     properties.add("nick", nick);
     properties.add("limit", limit);
+    properties.add("room", room);
     JsonArray required = new JsonArray();
     required.add("nick");
     JsonObject schema = new JsonObject();
@@ -60,6 +68,15 @@ public final class UserMessageHistoryTool implements AgentTool {
     }
     JsonObject queryArguments = arguments.deepCopy();
     queryArguments.addProperty("nick", nick.getAsString().trim());
+    if (queryArguments.has("room")) {
+      JsonElement room = queryArguments.get("room");
+      if (!room.isJsonPrimitive()
+          || !room.getAsJsonPrimitive().isString()
+          || room.getAsString().isBlank()) {
+        return AgentToolResult.error(null, name(), "A non-blank room is required");
+      }
+      queryArguments.addProperty("room", room.getAsString().trim());
+    }
     try {
       return AgentToolResult.success(
           name(), repository.execute("recent_messages_for_user", queryArguments, context));

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,10 @@ class SaturnAgentToolsTest {
   @Test
   void roomAndDatabaseToolsReturnStructuredData() {
     AgentContext context = context();
-    RoomUsersTool roomUsers = new RoomUsersTool();
+    RoomUsersTool roomUsers =
+        new RoomUsersTool(
+            room ->
+                Optional.of(new AgentRoomDirectory.RoomSnapshot(room, List.of("alice", "bob"))));
     AgentQueryRepository repository =
         (name, arguments, ignored) -> {
           JsonObject result = new JsonObject();
@@ -50,6 +54,29 @@ class SaturnAgentToolsTest {
   }
 
   @Test
+  void roomUsersToolUsesTheExplicitRoomInsteadOfTheCurrentRoom() {
+    AgentRoomDirectory directory =
+        room ->
+            "lounge".equalsIgnoreCase(room)
+                ? Optional.of(
+                    new AgentRoomDirectory.RoomSnapshot(
+                        "lounge", List.of("lounge-user", "another-user")))
+                : Optional.empty();
+    RoomUsersTool tool = new RoomUsersTool(directory);
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("room", "Lounge");
+
+    AgentToolResult result = tool.execute(context(), arguments);
+
+    assertFalse(result.isError());
+    JsonObject content = com.google.gson.JsonParser.parseString(result.content()).getAsJsonObject();
+    assertEquals("lounge", content.get("room").getAsString());
+    assertEquals(2, content.get("count").getAsInt());
+    assertTrue(content.getAsJsonArray("users").toString().contains("lounge-user"));
+    assertFalse(content.getAsJsonArray("users").toString().contains("alice"));
+  }
+
+  @Test
   void userMessageHistoryToolRequiresNickAndDelegatesBoundedNamedQuery() {
     AtomicReference<String> queryName = new AtomicReference<>();
     AtomicReference<JsonObject> queryArguments = new AtomicReference<>();
@@ -64,6 +91,7 @@ class SaturnAgentToolsTest {
     UserMessageHistoryTool tool = new UserMessageHistoryTool(repository);
     JsonObject arguments = new JsonObject();
     arguments.addProperty("nick", "jetty");
+    arguments.addProperty("room", " lounge ");
     arguments.addProperty("limit", 20);
 
     AgentToolResult missingNick = tool.execute(context(), new JsonObject());
@@ -73,7 +101,57 @@ class SaturnAgentToolsTest {
     assertFalse(result.isError());
     assertEquals("recent_messages_for_user", queryName.get());
     assertEquals("jetty", queryArguments.get().get("nick").getAsString());
+    assertEquals("lounge", queryArguments.get().get("room").getAsString());
     assertTrue(result.content().contains("matched"));
+  }
+
+  @Test
+  void userMessageHistoryDefaultsToAllRoomsForFollowUpRequests() {
+    AtomicReference<JsonObject> queryArguments = new AtomicReference<>();
+    AgentQueryRepository repository =
+        (name, arguments, ignored) -> {
+          queryArguments.set(arguments.deepCopy());
+          return new JsonObject();
+        };
+    UserMessageHistoryTool tool = new UserMessageHistoryTool(repository);
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("nick", "sun");
+
+    AgentToolResult result = tool.execute(context(), arguments);
+
+    assertFalse(result.isError());
+    assertFalse(queryArguments.get().has("room"));
+    assertTrue(tool.description().contains("all rooms"));
+  }
+
+  @Test
+  void databaseToolExposesBoundedRoomMessageHistoryQuery() {
+    AtomicReference<String> queryName = new AtomicReference<>();
+    AtomicReference<JsonObject> queryArguments = new AtomicReference<>();
+    AgentQueryRepository repository =
+        (name, arguments, ignored) -> {
+          queryName.set(name);
+          queryArguments.set(arguments.deepCopy());
+          return new JsonObject();
+        };
+    DatabaseQueryTool tool = new DatabaseQueryTool(repository);
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("query", "recent_messages_for_room");
+    arguments.addProperty("room", "lounge");
+    arguments.addProperty("limit", 12);
+
+    AgentToolResult result = tool.execute(context(), arguments);
+
+    assertFalse(result.isError());
+    assertEquals("recent_messages_for_room", queryName.get());
+    assertEquals("lounge", queryArguments.get().get("room").getAsString());
+    assertEquals(12, queryArguments.get().get("limit").getAsInt());
+    assertTrue(
+        tool.parameters()
+            .getAsJsonObject("properties")
+            .getAsJsonObject("query")
+            .getAsJsonArray("enum")
+            .contains(new com.google.gson.JsonPrimitive("recent_messages_for_room")));
   }
 
   @Test

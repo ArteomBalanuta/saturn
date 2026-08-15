@@ -34,7 +34,8 @@ CREATE TABLE "messages" (
     "hash" TEXT,
     "message" TEXT,
     "created_on" INTEGER NOT NULL,
-    "channel" TEXT
+    "channel" TEXT,
+    "visibility" TEXT CHECK(visibility IN ('PUBLIC', 'WHISPER'))
 );
 
 CREATE TABLE "notes" (
@@ -101,6 +102,20 @@ CREATE INDEX IF NOT EXISTS idx_messages_trip_created_on ON messages (trip, creat
 CREATE INDEX IF NOT EXISTS idx_messages_name_created_on ON messages (name, created_on DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_hash_created_on ON messages (hash, created_on DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_channel_created_on ON messages (channel, created_on DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_messages_name_room_visibility_created
+  ON messages (
+    name COLLATE NOCASE,
+    channel COLLATE NOCASE,
+    visibility,
+    created_on DESC,
+    id DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_messages_name_visibility_created
+  ON messages (name COLLATE NOCASE, visibility, created_on DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_messages_room_visibility_created
+  ON messages (channel COLLATE NOCASE, visibility, created_on DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_messages_trip_visibility_created
+  ON messages (trip, visibility, created_on DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_messages_visibility ON messages (visibility);
 CREATE INDEX IF NOT EXISTS idx_mail_status_receiver ON mail (status, receiver);
 CREATE INDEX IF NOT EXISTS idx_notes_trip_created_on ON notes (trip, created_on DESC);
 CREATE INDEX IF NOT EXISTS idx_executed_commands_channel_created_on

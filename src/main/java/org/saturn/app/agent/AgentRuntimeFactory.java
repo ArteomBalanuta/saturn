@@ -12,6 +12,7 @@ import org.saturn.app.agent.sql.JSqlParserAgentSqlPolicy;
 import org.saturn.app.agent.tool.DatabaseQueryTool;
 import org.saturn.app.agent.tool.DatabaseSchemaTool;
 import org.saturn.app.agent.tool.DatabaseSqlTool;
+import org.saturn.app.agent.tool.EngineAgentRoomDirectory;
 import org.saturn.app.agent.tool.EngineSaturnCommandGateway;
 import org.saturn.app.agent.tool.RoomUsersTool;
 import org.saturn.app.agent.tool.RunCommandTool;
@@ -27,12 +28,13 @@ public final class AgentRuntimeFactory {
   public static AgentService create(
       EngineImpl engine, Toml rootConfig, String databasePath, OutService outService) {
     AgentConfig config = AgentConfig.from(rootConfig, System.getenv());
+    Runnable replyFlusher = engine == null ? () -> {} : engine::shareMessages;
     if (!config.enabled()) {
       AgentRouter disabledRouter =
           invocation -> {
             throw new AgentRoutingException("Agent is disabled");
           };
-      return new AgentServiceImpl(config, disabledRouter, outService);
+      return new AgentServiceImpl(config, disabledRouter, outService, replyFlusher);
     }
 
     AgentSchemaMigrator.migrate(databasePath);
@@ -44,7 +46,7 @@ public final class AgentRuntimeFactory {
     var sqlRepository = new SqliteAgentSqlRepository(readOnlyConnectionFactory);
     AgentToolRegistry registry =
         new AgentToolRegistry()
-            .register(new RoomUsersTool())
+            .register(new RoomUsersTool(new EngineAgentRoomDirectory(engine)))
             .register(new DatabaseQueryTool(queryRepository))
             .register(new UserMessageHistoryTool(queryRepository))
             .register(new DatabaseSchemaTool(schemaRepository, sqlConfig))
@@ -58,6 +60,6 @@ public final class AgentRuntimeFactory {
             .freeze();
     AgentRouter router =
         new DefaultAgentRouter(config, new OpenAiCompatibleClient(config), registry, memoryStore);
-    return new AgentServiceImpl(config, router, outService);
+    return new AgentServiceImpl(config, router, outService, replyFlusher);
   }
 }

@@ -1,91 +1,10 @@
 #!/bin/bash
-# Print the current directory
-echo "Current directory: $(pwd)"
+set -euo pipefail
 
-# Kill any running Java processes
-echo "Recreating sqlite3 database file..."
+PROJECT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+DATABASE_DIR="$PROJECT_DIR/database"
+DATABASE_FILE="$DATABASE_DIR/database.db"
 
-mkdir -p ./database
-sqlite3 ./database/database.db <<EOF
-CREATE TABLE banned_users (
-	"id" INTEGER PRIMARY KEY AUTOINCREMENT,
-	"trip" TEXT,
-	"name" TEXT,
-	"hash" TEXT,
-	"reason" TEXT,
-  "created_on" INTEGER NOT NULL
-);
-
-CREATE TABLE "executed_commands" (
-  "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-  "trip" TEXT,
-	"command_name"	TEXT,
-	"arguments"	TEXT,
-	"status"	TEXT,
-	"created_on" INTEGER NOT NULL,
-	"channel" TEXT
-);
-
-CREATE TABLE "mail" (
-  "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-	"owner"	TEXT NOT NULL,
-	"receiver"	TEXT NOT NULL,
-	"message"	TEXT,
-	"status"	TEXT NOT NULL,
-	"created_on"	INTEGER NOT NULL,
-	"is_whisper"	TEXT);
-
-CREATE TABLE "messages" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "trip" TEXT,
-    "name" TEXT NOT NULL,
-    "hash" TEXT,
-    "message" TEXT,
-    "created_on" INTEGER NOT NULL,
-    "channel" TEXT
-);
-
-CREATE TABLE "notes" (
-	"id"	INTEGER PRIMARY KEY AUTOINCREMENT,
-	"trip"	TEXT,
-	"note"	TEXT,
-	"created_on" INTEGER NOT NULL
-);
-
-CREATE TABLE "trips" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "type" TEXT NOT NULL CHECK(type IN ('ADMIN', 'MODERATOR', 'TRUSTED', 'USER', 'REGULAR')),
-    "trip" TEXT,
-    "created_on" INTEGER NOT NULL,
-    UNIQUE ("trip")
-);
-
-CREATE TABLE "names" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" TEXT,
-    "created_on" INTEGER NOT NULL,
-    UNIQUE ("name")
-);
-
-CREATE TABLE "trip_names" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "trip_id" INTEGER NOT NULL,
-    "name_id" INTEGER NOT NULL,
-    FOREIGN KEY ("trip_id") REFERENCES "trips" ("id"),
-    FOREIGN KEY ("name_id") REFERENCES "names" ("id"),
-    UNIQUE ("trip_id", "name_id")
-);
-
-CREATE TABLE "agent_memory" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "identity_key" TEXT NOT NULL,
-    "role" TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
-    "content" TEXT NOT NULL,
-    "created_on" INTEGER NOT NULL,
-    "expires_on" INTEGER NOT NULL
-);
-
-CREATE INDEX idx_agent_memory_identity_created
-  ON agent_memory (identity_key, created_on DESC);
-CREATE INDEX idx_agent_memory_expires ON agent_memory (expires_on);
-EOF
+echo "Creating SQLite database: $DATABASE_FILE"
+mkdir -p "$DATABASE_DIR"
+sqlite3 "$DATABASE_FILE" < "$PROJECT_DIR/schema.sql"

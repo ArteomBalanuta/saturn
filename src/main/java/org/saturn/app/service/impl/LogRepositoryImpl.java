@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
+import org.saturn.app.model.MessageAuditEvent;
 import org.saturn.app.service.LogRepository;
 import org.saturn.app.util.SqlUtil;
 
@@ -40,22 +41,16 @@ public class LogRepositoryImpl implements LogRepository {
   }
 
   @Override
-  public void logMessage(
-      String trip, String name, String hash, String message, String channel, long timestamp) {
-    try {
-      PreparedStatement logEvent =
-          connection.prepareStatement(
-              SqlUtil.INSERT_INTO_MESSAGES_TRIP_NAME_HASH_MESSAGE_CREATED_ON_VALUES);
-      logEvent.setString(1, trip);
-      logEvent.setString(2, name);
-      logEvent.setString(3, hash);
-      logEvent.setString(4, message);
-      logEvent.setLong(5, timestamp);
-      logEvent.setString(6, channel);
-
-      logEvent.executeUpdate();
-
-      logEvent.close();
+  public void logMessage(MessageAuditEvent event) {
+    try (PreparedStatement statement = connection.prepareStatement(SqlUtil.INSERT_INTO_MESSAGES)) {
+      statement.setString(1, event.trip());
+      statement.setString(2, event.nick());
+      statement.setString(3, event.hash());
+      statement.setString(4, event.message());
+      statement.setLong(5, event.createdOn());
+      statement.setString(6, event.channel());
+      statement.setString(7, event.visibility().name());
+      statement.executeUpdate();
     } catch (SQLException e) {
       log.info("Error: {}", e.getMessage());
       log.error("Exception: ", e);

@@ -18,9 +18,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.command.impl.admin.WhiskeyReplicaCommandImpl.ProxyTestResult;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
@@ -33,6 +33,7 @@ import org.apache.http.util.EntityUtils;
 import org.saturn.app.agent.AgentRuntimeFactory;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.command.factory.CommandFactory;
+import org.saturn.app.command.impl.admin.WhiskeyReplicaCommandImpl.ProxyTestResult;
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.facade.EngineType;
@@ -44,6 +45,7 @@ import org.saturn.app.listener.impl.OnlineSetListenerImpl;
 import org.saturn.app.listener.impl.UserJoinedListenerImpl;
 import org.saturn.app.listener.impl.UserLeftListenerImpl;
 import org.saturn.app.listener.impl.UserMessageListenerImpl;
+import org.saturn.app.model.MessageAuditEvent;
 import org.saturn.app.model.dto.Afk;
 import org.saturn.app.model.dto.BanRecord;
 import org.saturn.app.model.dto.Mail;
@@ -54,7 +56,7 @@ import org.saturn.app.util.DateUtil;
 @Slf4j
 public class EngineImpl extends Base implements Engine {
   private static EngineImpl hostRef = null;
-  public final Map<String, EngineImpl> replicasMappedByChannel = new HashMap<>();
+  public final Map<String, EngineImpl> replicasMappedByChannel = new ConcurrentHashMap<>();
   public final Map<String, List<ProxyTestResult>> backupProxiesByChannel = new HashMap<>();
   public List<String> proxies;
   public final CommandFactory commandFactory;
@@ -171,13 +173,22 @@ public class EngineImpl extends Base implements Engine {
     log.debug("Sent join payload: {}", joinPayload);
   }
 
-  public void shareMessages() {
-    if (!outgoingMessageQueue.isEmpty()) {
-      String chatPayload = buildChatPayload(outgoingMessageQueue.poll());
-      flushMessage(chatPayload);
-    }
-    if (!outgoingRawMessageQueue.isEmpty()) {
-      flushMessage(outgoingRawMessageQueue.poll());
+  public synchronized void shareMessages() {
+    while (true) {
+      boolean sent = false;
+      String outgoingMessage = outgoingMessageQueue.poll();
+      if (outgoingMessage != null) {
+        flushMessage(buildChatPayload(outgoingMessage));
+        sent = true;
+      }
+      String outgoingRawMessage = outgoingRawMessageQueue.poll();
+      if (outgoingRawMessage != null) {
+        flushMessage(outgoingRawMessage);
+        sent = true;
+      }
+      if (!sent) {
+        return;
+      }
     }
   }
 
@@ -238,7 +249,8 @@ public class EngineImpl extends Base implements Engine {
       return;
     }
 
-    List<Map.Entry<String, EngineImpl>> replicas = new ArrayList<>(replicasMappedByChannel.entrySet());
+    List<Map.Entry<String, EngineImpl>> replicas =
+        new ArrayList<>(replicasMappedByChannel.entrySet());
     replicasMappedByChannel.clear();
     for (Map.Entry<String, EngineImpl> replicaEntry : replicas) {
       String channel = replicaEntry.getKey();
@@ -246,13 +258,15 @@ public class EngineImpl extends Base implements Engine {
       log.warn("Shutting down replica in channel: {}", channel);
       replica.stop();
       // Trigger reconnection with backup proxy if available (async)
-      CompletableFuture.runAsync(() -> {
-        try {
-          org.saturn.app.command.impl.admin.WhiskeyReplicaCommandImpl.reconnectWithBackupProxy(this, "system", channel, "portal");
-        } catch (Exception e) {
-          log.error("Failed to trigger reconnection for channel: {}", channel, e);
-        }
-      });
+      CompletableFuture.runAsync(
+          () -> {
+            try {
+              org.saturn.app.command.impl.admin.WhiskeyReplicaCommandImpl.reconnectWithBackupProxy(
+                  this, "system", channel, "portal");
+            } catch (Exception e) {
+              log.error("Failed to trigger reconnection for channel: {}", channel, e);
+            }
+          });
     }
   }
 
@@ -314,12 +328,13 @@ public class EngineImpl extends Base implements Engine {
         currentChannelUsers.remove(user);
         log.info("User left: {}", user.getNick());
         logRepository.logMessage(
-            user.getTrip(),
-            user.getNick(),
-            user.getHash(),
-            "LEFT",
-            this.channel,
-            DateUtil.getTimestampNow());
+            MessageAuditEvent.publicMessage(
+                user.getTrip(),
+                user.getNick(),
+                user.getHash(),
+                "LEFT",
+                this.channel,
+                DateUtil.getTimestampNow()));
       }
     }
   }
@@ -328,12 +343,13 @@ public class EngineImpl extends Base implements Engine {
     currentChannelUsers.add(newUser);
     log.info("Added user: {}, to list of active users", newUser.getNick());
     logRepository.logMessage(
-        newUser.getTrip(),
-        newUser.getNick(),
-        newUser.getHash(),
-        "JOINED",
-        this.channel,
-        DateUtil.getTimestampNow());
+        MessageAuditEvent.publicMessage(
+            newUser.getTrip(),
+            newUser.getNick(),
+            newUser.getHash(),
+            "JOINED",
+            this.channel,
+            DateUtil.getTimestampNow()));
   }
 
   //

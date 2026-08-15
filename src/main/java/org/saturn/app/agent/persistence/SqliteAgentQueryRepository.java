@@ -21,10 +21,12 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
   @Override
   public JsonObject execute(String queryName, JsonObject arguments, AgentContext context) {
     return switch (queryName) {
-      case "message_count" -> count("SELECT COUNT(*) FROM messages", "count");
+      case "message_count" ->
+          count("SELECT COUNT(*) FROM messages WHERE visibility = 'PUBLIC'", "count");
       case "registered_user_count" -> count("SELECT COUNT(*) FROM trips", "count");
       case "recent_messages_for_requester" -> recentMessages(context, arguments);
       case "recent_messages_for_user" -> recentMessagesForUser(context, arguments);
+      case "recent_messages_for_room" -> recentMessagesForRoom(context, arguments);
       case "known_nicks_for_trip" -> knownNicks(context, arguments);
       default -> throw new IllegalArgumentException("Unknown agent database query: " + queryName);
     };
@@ -51,7 +53,7 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
         """
         SELECT name, message, created_on, channel
         FROM messages
-        WHERE trip = ?
+        WHERE trip = ? AND visibility = 'PUBLIC'
         ORDER BY created_on DESC, id DESC
         LIMIT ?
         """;
@@ -116,34 +118,92 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
         || arguments.get("nick").getAsString().isBlank()) {
       throw new IllegalArgumentException("nick is required");
     }
+    boolean scopedToRoom = arguments.has("room");
     String sql =
-        """
-        SELECT name, message, created_on, channel
-        FROM messages
-        WHERE name = ? COLLATE NOCASE AND channel = ?
-        ORDER BY created_on DESC, id DESC
-        LIMIT ?
-        """;
+        scopedToRoom
+            ? """
+              SELECT name, trip, hash, message, created_on, channel
+              FROM messages
+              WHERE name = ? COLLATE NOCASE
+                AND channel = ? COLLATE NOCASE
+                AND visibility = 'PUBLIC'
+              ORDER BY created_on DESC, id DESC
+              LIMIT ?
+              """
+            : """
+              SELECT name, trip, hash, message, created_on, channel
+              FROM messages
+              WHERE name = ? COLLATE NOCASE AND visibility = 'PUBLIC'
+              ORDER BY created_on DESC, id DESC
+              LIMIT ?
+              """;
     try (Connection connection = openReadOnly();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       statement.setString(1, arguments.get("nick").getAsString().trim());
-      statement.setString(2, context.room());
-      statement.setInt(3, rowLimit(arguments));
+      if (scopedToRoom) {
+        statement.setString(2, room(arguments, context));
+        statement.setInt(3, rowLimit(arguments));
+      } else {
+        statement.setInt(2, rowLimit(arguments));
+      }
       try (ResultSet resultSet = statement.executeQuery()) {
         JsonArray result = new JsonArray();
         while (resultSet.next()) {
-          JsonObject row = new JsonObject();
-          row.addProperty("name", resultSet.getString("name"));
-          row.addProperty("message", resultSet.getString("message"));
-          row.addProperty("createdOn", resultSet.getLong("created_on"));
-          row.addProperty("channel", resultSet.getString("channel"));
-          result.add(row);
+          result.add(messageRow(resultSet));
         }
         return rows(result);
       }
     } catch (SQLException exception) {
       throw new AgentPersistenceException("Agent user-message-history query failed", exception);
     }
+  }
+
+  private JsonObject recentMessagesForRoom(AgentContext context, JsonObject arguments) {
+    String sql =
+        """
+        SELECT name, trip, hash, message, created_on, channel
+        FROM messages
+        WHERE channel = ? COLLATE NOCASE AND visibility = 'PUBLIC'
+        ORDER BY created_on DESC, id DESC
+        LIMIT ?
+        """;
+    try (Connection connection = openReadOnly();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setString(1, room(arguments, context));
+      statement.setInt(2, rowLimit(arguments));
+      try (ResultSet resultSet = statement.executeQuery()) {
+        JsonArray result = new JsonArray();
+        while (resultSet.next()) {
+          result.add(messageRow(resultSet));
+        }
+        return rows(result);
+      }
+    } catch (SQLException exception) {
+      throw new AgentPersistenceException("Agent room-message-history query failed", exception);
+    }
+  }
+
+  private static String room(JsonObject arguments, AgentContext context) {
+    if (!arguments.has("room")) {
+      return context.room();
+    }
+    if (!arguments.get("room").isJsonPrimitive()
+        || !arguments.getAsJsonPrimitive("room").isString()
+        || arguments.get("room").getAsString().isBlank()) {
+      throw new IllegalArgumentException("room must be a non-blank string");
+    }
+    return arguments.get("room").getAsString().trim();
+  }
+
+  private static JsonObject messageRow(ResultSet resultSet) throws SQLException {
+    JsonObject row = new JsonObject();
+    row.addProperty("name", resultSet.getString("name"));
+    row.addProperty("trip", resultSet.getString("trip"));
+    row.addProperty("hash", resultSet.getString("hash"));
+    row.addProperty("message", resultSet.getString("message"));
+    row.addProperty("createdOn", resultSet.getLong("created_on"));
+    row.addProperty("channel", resultSet.getString("channel"));
+    return row;
   }
 
   private Connection openReadOnly() throws SQLException {

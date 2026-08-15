@@ -28,15 +28,16 @@ class SqliteAgentQueryRepositoryTest {
           """
           CREATE TABLE messages (
             id INTEGER PRIMARY KEY, trip TEXT, name TEXT NOT NULL, hash TEXT,
-            message TEXT, created_on INTEGER NOT NULL, channel TEXT)
+            message TEXT, created_on INTEGER NOT NULL, channel TEXT,
+            visibility TEXT CHECK(visibility IN ('PUBLIC', 'WHISPER')))
           """);
       statement.executeUpdate("CREATE TABLE trips (id INTEGER PRIMARY KEY, type TEXT, trip TEXT)");
       statement.executeUpdate(
           """
-          INSERT INTO messages(trip,name,message,created_on,channel) VALUES
-          ('trip-a','alice','one',1,'programming'),
-          ('trip-b','bob','two',2,'programming'),
-          ('trip-a','alice','three',3,'programming')
+          INSERT INTO messages(trip,name,message,created_on,channel,visibility) VALUES
+          ('trip-a','alice','one',1,'programming','PUBLIC'),
+          ('trip-b','bob','two',2,'programming','PUBLIC'),
+          ('trip-a','alice','three',3,'programming','PUBLIC')
           """);
       statement.executeUpdate(
           "INSERT INTO trips(type,trip) VALUES ('REGULAR','trip-a'),('USER','trip-b')");
@@ -79,13 +80,15 @@ class SqliteAgentQueryRepositoryTest {
     try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
         PreparedStatement statement =
             connection.prepareStatement(
-                "INSERT INTO messages(trip,name,message,created_on,channel) VALUES (?,?,?,?,?)")) {
+                "INSERT INTO messages(trip,name,message,created_on,channel,visibility) "
+                    + "VALUES (?,?,?,?,?,?)")) {
       for (int index = 0; index < 25; index++) {
         statement.setString(1, "trip-a");
         statement.setString(2, "alice");
         statement.setString(3, "message-" + index);
         statement.setLong(4, 10 + index);
         statement.setString(5, "programming");
+        statement.setString(6, "PUBLIC");
         statement.addBatch();
       }
       statement.executeBatch();
@@ -107,14 +110,14 @@ class SqliteAgentQueryRepositoryTest {
   }
 
   @Test
-  void returnsNamedUserMessagesOnlyFromCurrentRoom() throws Exception {
+  void searchesNamedUserAcrossRoomsByDefaultAndSupportsAnExplicitRoom() throws Exception {
     try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
         Statement statement = connection.createStatement()) {
       statement.executeUpdate(
           """
-          INSERT INTO messages(trip,name,message,created_on,channel) VALUES
-          ('trip-j','Jetty','programming message',10,'programming'),
-          ('trip-j','Jetty','lounge message',11,'lounge')
+          INSERT INTO messages(trip,name,message,created_on,channel,visibility) VALUES
+          ('trip-j','Jetty','programming message',10,'programming','PUBLIC'),
+          ('trip-j','Jetty','lounge message',11,'lounge','PUBLIC')
           """);
     }
     SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
@@ -124,13 +127,81 @@ class SqliteAgentQueryRepositoryTest {
     arguments.addProperty("nick", "jetty");
     arguments.addProperty("limit", 100);
 
-    JsonObject result = repository.execute("recent_messages_for_user", arguments, context);
+    JsonObject allRooms = repository.execute("recent_messages_for_user", arguments, context);
+    arguments.addProperty("room", "PROGRAMMING");
+    JsonObject explicitRoom = repository.execute("recent_messages_for_user", arguments, context);
 
-    assertEquals(1, result.getAsJsonArray("rows").size());
-    JsonObject row = result.getAsJsonArray("rows").get(0).getAsJsonObject();
+    assertEquals(2, allRooms.getAsJsonArray("rows").size());
+    assertEquals(
+        "lounge message",
+        allRooms.getAsJsonArray("rows").get(0).getAsJsonObject().get("message").getAsString());
+    JsonObject row = explicitRoom.getAsJsonArray("rows").get(0).getAsJsonObject();
     assertEquals("Jetty", row.get("name").getAsString());
     assertEquals("programming message", row.get("message").getAsString());
     assertEquals("programming", row.get("channel").getAsString());
+    assertEquals(1, explicitRoom.getAsJsonArray("rows").size());
+  }
+
+  @Test
+  void returnsRecentMessagesForAnExplicitRoomWithIdentityFields() throws Exception {
+    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate(
+          """
+          INSERT INTO messages(trip,name,hash,message,created_on,channel,visibility) VALUES
+          ('trip-j','Jetty','hash-j','older lounge message',10,'lounge','PUBLIC'),
+          ('trip-k','Korin','hash-k','newer lounge message',11,'lounge','PUBLIC')
+          """);
+    }
+    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("room", "Lounge");
+    arguments.addProperty("limit", 1);
+
+    JsonObject result = repository.execute("recent_messages_for_room", arguments, context);
+    arguments.addProperty("room", "lounge' OR 1=1 --");
+    JsonObject injectionAttempt =
+        repository.execute("recent_messages_for_room", arguments, context);
+
+    assertEquals(1, result.getAsJsonArray("rows").size());
+    JsonObject row = result.getAsJsonArray("rows").get(0).getAsJsonObject();
+    assertEquals("Korin", row.get("name").getAsString());
+    assertEquals("trip-k", row.get("trip").getAsString());
+    assertEquals("hash-k", row.get("hash").getAsString());
+    assertEquals("lounge", row.get("channel").getAsString());
+    assertEquals(0, injectionAttempt.getAsJsonArray("rows").size());
+  }
+
+  @Test
+  void excludesWhispersAndUnclassifiedLegacyRowsFromPublicHistory() throws Exception {
+    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate(
+          """
+          INSERT INTO messages(trip,name,hash,message,created_on,channel,visibility) VALUES
+          ('trip-j','Jetty','hash-j','public text',20,'private-room','PUBLIC'),
+          ('trip-j','Jetty','hash-j','whisper secret',21,'private-room','WHISPER'),
+          ('trip-j','Jetty','hash-j','legacy unknown',22,'private-room',NULL)
+          """);
+    }
+    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("private-room", "alice", "trip-a", "hash-a", false, List.of());
+    JsonObject roomArguments = new JsonObject();
+    roomArguments.addProperty("room", "private-room");
+    JsonObject userArguments = roomArguments.deepCopy();
+    userArguments.addProperty("nick", "jetty");
+
+    JsonObject room = repository.execute("recent_messages_for_room", roomArguments, context);
+    JsonObject user = repository.execute("recent_messages_for_user", userArguments, context);
+
+    assertEquals(1, room.getAsJsonArray("rows").size());
+    assertEquals(1, user.getAsJsonArray("rows").size());
+    assertEquals(
+        "public text",
+        room.getAsJsonArray("rows").get(0).getAsJsonObject().get("message").getAsString());
   }
 
   @Test

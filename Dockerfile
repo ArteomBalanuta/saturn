@@ -16,6 +16,7 @@ COPY log4j2.xml .
 COPY deploy deploy
 COPY VERSION .
 COPY config.example.toml .
+COPY schema.sql .
 
 # Fix line endings for shell scripts
 RUN dos2unix deploy/*.sh

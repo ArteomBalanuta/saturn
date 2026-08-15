@@ -21,7 +21,8 @@ public final class DatabaseQueryTool implements AgentTool {
 
   @Override
   public String description() {
-    return "Execute one approved read-only Saturn database query. Arbitrary SQL is not accepted.";
+    return "Execute one approved read-only Saturn database query, including bounded recent"
+        + " messages for a requested room. Arbitrary SQL is not accepted.";
   }
 
   @Override
@@ -30,6 +31,7 @@ public final class DatabaseQueryTool implements AgentTool {
     queryNames.add("message_count");
     queryNames.add("registered_user_count");
     queryNames.add("recent_messages_for_requester");
+    queryNames.add("recent_messages_for_room");
     queryNames.add("known_nicks_for_trip");
     JsonObject query = new JsonObject();
     query.addProperty("type", "string");
@@ -40,10 +42,15 @@ public final class DatabaseQueryTool implements AgentTool {
     limit.addProperty("maximum", 20);
     JsonObject trip = new JsonObject();
     trip.addProperty("type", "string");
+    JsonObject room = new JsonObject();
+    room.addProperty("type", "string");
+    room.addProperty("minLength", 1);
+    room.addProperty("maxLength", 100);
     JsonObject properties = new JsonObject();
     properties.add("query", query);
     properties.add("limit", limit);
     properties.add("trip", trip);
+    properties.add("room", room);
     JsonArray required = new JsonArray();
     required.add("query");
     JsonObject schema = new JsonObject();

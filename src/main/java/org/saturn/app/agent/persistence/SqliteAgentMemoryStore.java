@@ -39,11 +39,9 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
         LIMIT ?
         """;
     try (Connection connection = open();
-        PreparedStatement cleanup =
-            connection.prepareStatement("DELETE FROM agent_memory WHERE expires_on <= ?");
+        PreparedStatement queryOnly = connection.prepareStatement("PRAGMA query_only = ON");
         PreparedStatement statement = connection.prepareStatement(sql)) {
-      cleanup.setLong(1, now);
-      cleanup.executeUpdate();
+      queryOnly.execute();
       statement.setString(1, context.memoryKey());
       statement.setLong(2, now);
       statement.setInt(3, config.memoryTurns() * 2);
@@ -61,7 +59,7 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
       Collections.reverse(result);
       return List.copyOf(result);
     } catch (SQLException exception) {
-      throw new AgentPersistenceException("Agent memory load failed", exception);
+      throw persistenceFailure("load", exception);
     }
   }
 
@@ -77,13 +75,17 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
         """;
     try (Connection connection = open()) {
       connection.setAutoCommit(false);
-      try (PreparedStatement statement = connection.prepareStatement(sql)) {
+      try (PreparedStatement cleanup =
+              connection.prepareStatement("DELETE FROM agent_memory WHERE expires_on <= ?");
+          PreparedStatement statement = connection.prepareStatement(sql)) {
+        cleanup.setLong(1, createdOn);
+        cleanup.executeUpdate();
         insert(statement, context.memoryKey(), "user", userContent, createdOn, expiresOn);
         insert(statement, context.memoryKey(), "assistant", assistantContent, createdOn, expiresOn);
       }
       connection.commit();
     } catch (SQLException exception) {
-      throw new AgentPersistenceException("Agent memory append failed", exception);
+      throw persistenceFailure("append", exception);
     }
   }
 
@@ -111,5 +113,15 @@ public final class SqliteAgentMemoryStore implements AgentMemoryStore {
     statement.setLong(4, createdOn);
     statement.setLong(5, expiresOn);
     statement.executeUpdate();
+  }
+
+  private static AgentPersistenceException persistenceFailure(
+      String operation, SQLException exception) {
+    String detail =
+        exception.getMessage() == null ? "unknown SQLite error" : exception.getMessage();
+    return new AgentPersistenceException(
+        "Agent memory %s failed, sqliteCode=%d: %s"
+            .formatted(operation, exception.getErrorCode(), detail),
+        exception);
   }
 }

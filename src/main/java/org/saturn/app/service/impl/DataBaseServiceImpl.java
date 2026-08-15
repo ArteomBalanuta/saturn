@@ -38,14 +38,24 @@ public class DataBaseServiceImpl implements DataBaseService {
     String jdbcUrl = "jdbc:sqlite:" + databasePath;
     log.debug("Using JDBC connection string: {}", jdbcUrl);
     Connection connection = DriverManager.getConnection(jdbcUrl);
-    configureConnection(connection);
-    return connection;
+    try {
+      configureConnection(connection);
+      return connection;
+    } catch (SQLException exception) {
+      try {
+        connection.close();
+      } catch (SQLException closeException) {
+        exception.addSuppressed(closeException);
+      }
+      throw exception;
+    }
   }
 
   private void configureConnection(Connection connection) throws SQLException {
     executePragma(connection, ENABLE_FOREIGN_KEYS);
     executePragma(connection, ENABLE_WAL);
     executePragma(connection, SET_BUSY_TIMEOUT);
+    MessageSchemaMigrator.migrate(connection);
   }
 
   private void executePragma(Connection connection, String pragma) throws SQLException {

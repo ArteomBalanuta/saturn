@@ -92,7 +92,7 @@ Important fields:
 - `agent.apiKeyEnv`: environment variable containing an optional bearer token
 - `agent.maxCompletionTokens`: provider-side output-token limit for each completion
 - `agent.thinkingEnabled`: enables model thinking mode; disabled by default for predictable latency
-- `agent.maxConcurrentRequests`: maximum simultaneous agent requests per engine
+- `agent.maxConcurrentRequests`: maximum accepted active and queued agent requests per engine
 - `agent.maxToolCalls`: total tool-call budget for one request
 - `agent.memoryTurns` and `agent.memoryTtlHours`: bounded SQLite conversation memory
 - `agent.dynamicSqlEnabled`: enables admin-only schema inspection and generated read-only SQL
@@ -110,19 +110,28 @@ network or an HTTPS reverse proxy.
 *l how many users are in the room right now?
 ```
 
-The agent can inspect current room users, retrieve a named user's recent messages from the current
-room, run named read-only database queries, and execute an allowlist of non-destructive Saturn
-commands under the requesting user's existing authorization. It cannot invoke admin commands or
-recursively invoke `l`. Conversation memory is scoped to the room, keyed by trip when available and
-then hash, and expires according to the configured TTL.
+The agent can inspect live users in any Saturn-managed room, retrieve bounded public message history
+for a named user across all rooms or within one named room, run named read-only database queries, and
+execute an allowlist of non-destructive Saturn commands under the requesting user's existing
+authorization. It cannot invoke admin commands or recursively invoke `l`.
+
+Public conversation memory is shared by everyone in the same room, so another participant can
+continue an earlier exchange. Each room uses one FIFO agent worker so routing and replies preserve
+submission order. Whispers use private per-user memory and are never added to the public room
+session. Rooms remain separate, and memory expires according to the configured TTL.
+
+New message audit rows carry an explicit `PUBLIC` or `WHISPER` visibility. Regular agent history
+tools only read `PUBLIC` rows. Existing rows from before this migration remain unclassified and are
+excluded because Saturn cannot safely infer whether they came from public chat or a whisper.
 
 Configured admin trips and users with a persisted `ADMIN` role also receive a generated-SQL
 fallback. The agent must inspect the schema first and may then run one bounded, AST-validated
 `SELECT` on a dedicated read-only SQLite connection. This admin capability can read every Saturn
 application table and column, including cross-room messages, trip/hash identity data, mail, notes,
-moderation data, command history, and agent memory. SQLite internal tables, writes, schema changes,
-pragmas, attached databases, and extension loading remain blocked. Logs contain only a query
-fingerprint, duration, row count, and outcome; raw generated SQL is not logged.
+moderation data, command history, agent memory, whispers, and unclassified legacy message rows.
+SQLite internal tables, writes, schema changes, pragmas, attached databases, and extension loading
+remain blocked. Logs contain only a query fingerprint, duration, row count, and outcome; raw
+generated SQL is not logged.
 
 `config.example.toml` is tracked in git. Your local `config.toml` is intentionally ignored.
 
@@ -136,7 +145,8 @@ fingerprint, duration, row count, and outcome; raw generated SQL is not logged.
 make fresh-db
 ```
 
-This recreates `database/database.db` from `schema.sql` and applies SQL migrations from `database/migrations/`.
+This stops the Docker container, removes the database and any SQLite sidecar files, recreates
+`database/database.db` from `schema.sql`, and applies migrations from `database/migrations/`.
 
 ### Build
 
@@ -196,6 +206,8 @@ make stop       # stop the container
 make rm         # remove the container
 make rmi        # remove the image
 make clean      # remove both container and image
+make db-check   # stop Saturn and verify SQLite integrity
+make backup-db  # stop Saturn and create a consistent database backup
 make logs       # follow container logs
 make shell      # open a shell in the container
 make status     # show container status
@@ -206,6 +218,14 @@ make help       # list all targets
 
 - `./config.toml` to `/app/config.toml`
 - `./database` to `/app/database`
+
+Container removal is graceful: Saturn receives up to 30 seconds to close its WebSocket, replicas,
+agent executor, and SQLite connections before Docker removes it.
+
+Do not open the bind-mounted database with host-side `sqlite3` while Saturn is running. Docker
+Desktop and the host can observe different file-lock state for the same SQLite WAL files, which can
+corrupt the database. Use `make db-check` or `make backup-db`; both stop Saturn before touching the
+database. Run `make start` afterward to resume the existing container.
 
 ### Manual Docker Commands
 
@@ -233,6 +253,7 @@ If you use the local bind-mounted setup, the container will use your local `conf
 ## Project Notes
 
 - SQLite is used for persistence.
+- Startup adds the message-visibility column and matching agent query indexes to legacy databases.
 - The local database is not recreated automatically unless you run `make fresh-db`.
 - Docker image builds also create a database inside the image, but your local mounted `database/` overrides it at runtime.
 

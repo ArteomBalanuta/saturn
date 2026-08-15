@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -16,14 +17,19 @@ public final class AgentServiceImpl implements AgentService {
   private final AgentConfig config;
   private final AgentRouter router;
   private final OutService outService;
-  private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+  private final Runnable replyFlusher;
+  private final ExecutorService executor;
   private final Semaphore admission;
   private final AtomicBoolean closed = new AtomicBoolean();
 
-  public AgentServiceImpl(AgentConfig config, AgentRouter router, OutService outService) {
+  public AgentServiceImpl(
+      AgentConfig config, AgentRouter router, OutService outService, Runnable replyFlusher) {
     this.config = config;
     this.router = router;
     this.outService = outService;
+    this.replyFlusher = Objects.requireNonNull(replyFlusher, "replyFlusher");
+    this.executor =
+        Executors.newSingleThreadExecutor(Thread.ofVirtual().name("saturn-agent-", 0).factory());
     this.admission = new Semaphore(config.maxConcurrentRequests());
   }
 
@@ -81,7 +87,8 @@ public final class AgentServiceImpl implements AgentService {
           invocation.requestId(),
           exception.getClass().getSimpleName(),
           exception.getMessage());
-      log.debug("Unexpected agent routing failure, requestId={}", invocation.requestId(), exception);
+      log.debug(
+          "Unexpected agent routing failure, requestId={}", invocation.requestId(), exception);
       reply(invocation, "The agent could not answer that request.");
     } finally {
       admission.release();
@@ -91,6 +98,11 @@ public final class AgentServiceImpl implements AgentService {
   private void reply(AgentInvocation invocation, String content) {
     var context = invocation.context();
     outService.enqueueMessageForSending(context.nick(), content, context.whisper());
+    try {
+      replyFlusher.run();
+    } catch (RuntimeException exception) {
+      log.error("Agent reply flush failed, requestId={}", invocation.requestId(), exception);
+    }
   }
 
   @Override

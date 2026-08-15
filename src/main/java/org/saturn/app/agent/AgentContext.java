@@ -31,6 +31,10 @@ public record AgentContext(
   }
 
   public String memoryKey() {
+    String roomKey = "%d:%s".formatted(room.length(), room);
+    if (!whisper) {
+      return roomKey + "|public";
+    }
     String identity;
     if (trip != null && !trip.isBlank()) {
       identity = "trip:" + trip;
@@ -39,6 +43,6 @@ public record AgentContext(
     } else {
       identity = "nick:" + nick;
     }
-    return "%d:%s|%s".formatted(room.length(), room, identity);
+    return roomKey + "|whisper|" + identity;
   }
 }

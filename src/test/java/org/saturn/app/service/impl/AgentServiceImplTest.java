@@ -1,5 +1,6 @@
 package org.saturn.app.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -8,6 +9,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -33,7 +35,8 @@ class AgentServiceImplTest {
           return new AgentResult("correlation", "answer");
         };
     ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
-    AgentServiceImpl service = new AgentServiceImpl(config(true, 1), router, new OutService(queue));
+    AgentServiceImpl service =
+        new AgentServiceImpl(config(true, 1), router, new OutService(queue), () -> {});
 
     assertTrue(service.submit(invocation(false)));
     assertTrue(entered.await(1, TimeUnit.SECONDS));
@@ -47,11 +50,67 @@ class AgentServiceImplTest {
   }
 
   @Test
+  void executesAndFlushesSharedSessionRequestsInSubmissionOrder() throws Exception {
+    CountDownLatch firstEntered = new CountDownLatch(1);
+    CountDownLatch releaseFirst = new CountDownLatch(1);
+    CountDownLatch secondEntered = new CountDownLatch(1);
+    List<String> routed = new CopyOnWriteArrayList<>();
+    AgentRouter router =
+        invocation -> {
+          routed.add(invocation.prompt());
+          if ("first".equals(invocation.prompt())) {
+            firstEntered.countDown();
+            try {
+              releaseFirst.await();
+            } catch (InterruptedException exception) {
+              Thread.currentThread().interrupt();
+            }
+          } else {
+            secondEntered.countDown();
+          }
+          return new AgentResult(invocation.requestId(), invocation.prompt() + " answer");
+        };
+    ArrayBlockingQueue<String> replies = new ArrayBlockingQueue<>(10);
+    List<String> flushed = new CopyOnWriteArrayList<>();
+    AgentServiceImpl service =
+        new AgentServiceImpl(
+            config(true, 2),
+            router,
+            new OutService(replies),
+            () -> {
+              String reply;
+              while ((reply = replies.poll()) != null) {
+                flushed.add(reply);
+              }
+            });
+
+    try {
+      assertTrue(service.submit(invocation("alice", "first")));
+      assertTrue(firstEntered.await(1, TimeUnit.SECONDS));
+      assertTrue(service.submit(invocation("bob", "second")));
+
+      assertFalse(secondEntered.await(150, TimeUnit.MILLISECONDS));
+      releaseFirst.countDown();
+      assertTrue(secondEntered.await(1, TimeUnit.SECONDS));
+      awaitListSize(flushed, 2);
+
+      assertEquals(List.of("first", "second"), routed);
+      assertEquals(List.of("@alice first answer", "@bob second answer"), flushed);
+    } finally {
+      releaseFirst.countDown();
+      service.close();
+    }
+  }
+
+  @Test
   void preservesWhisperAndRejectsDisabledOrClosedService() throws Exception {
     ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
     AgentServiceImpl disabled =
         new AgentServiceImpl(
-            config(false, 1), invocation -> new AgentResult("id", "unused"), new OutService(queue));
+            config(false, 1),
+            invocation -> new AgentResult("id", "unused"),
+            new OutService(queue),
+            () -> {});
 
     assertFalse(disabled.submit(invocation(true)));
     assertTrue(queue.take().contains("/whisper @alice"));
@@ -68,7 +127,8 @@ class AgentServiceImplTest {
             invocation -> {
               throw new IllegalStateException("implementation detail");
             },
-            new OutService(queue));
+            new OutService(queue),
+            () -> {});
 
     assertTrue(service.submit(invocation(false)));
 
@@ -82,7 +142,10 @@ class AgentServiceImplTest {
     ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
     AgentServiceImpl service =
         new AgentServiceImpl(
-            config(true, 1), invocation -> new AgentResult("id", "unused"), new OutService(queue));
+            config(true, 1),
+            invocation -> new AgentResult("id", "unused"),
+            new OutService(queue),
+            () -> {});
 
     service.close();
 
@@ -94,6 +157,13 @@ class AgentServiceImplTest {
     return new AgentInvocation(
         new AgentContext("programming", "alice", "trip-a", "hash-a", whisper, List.of("alice")),
         "question");
+  }
+
+  private AgentInvocation invocation(String nick, String prompt) {
+    return new AgentInvocation(
+        new AgentContext(
+            "programming", nick, "trip-" + nick, "hash-" + nick, false, List.of("alice", "bob")),
+        prompt);
   }
 
   private AgentConfig config(boolean enabled, int concurrent) {
@@ -119,6 +189,13 @@ class AgentServiceImplTest {
       throws InterruptedException {
     long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
     while (queue.size() < expected && System.nanoTime() < deadline) {
+      Thread.sleep(5);
+    }
+  }
+
+  private static void awaitListSize(List<String> values, int expected) throws InterruptedException {
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+    while (values.size() < expected && System.nanoTime() < deadline) {
       Thread.sleep(5);
     }
   }
