@@ -8,9 +8,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.llm.LlmClient;
 import org.saturn.app.agent.llm.LlmException;
@@ -28,6 +31,12 @@ public final class DefaultAgentRouter implements AgentRouter {
   private static final String COMMAND_NOT_EXECUTED_CORRECTION = PROMPTS.text("router-command-not-executed-correction.txt");
   private static final String STALE_RESPONSE_CORRECTION = PROMPTS.text("router-stale-response-correction.txt");
   private static final String UNVERIFIED_ACTION_CORRECTION = PROMPTS.text("router-unverified-action-correction.txt");
+  private static final Pattern LEGACY_OPENING =
+      Pattern.compile(
+          "(?is)^\\s*Ah,\\s*[^\\n.!?:]{1,80}[.!?:]\\s*"
+              + "(?:You ask about\\s+[^\\n.!?]{1,120}[.!?]\\s*)?");
+  private static final Pattern MARKDOWN_LIST_ITEM =
+      Pattern.compile("^\\h*(?:[*•]|\\d+[.)])\\h+(.+)$");
 
   private final AgentConfig config;
   private final LlmClient client;
@@ -156,7 +165,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         response = client.complete(new LlmRequest(messages, definitions));
       }
 
-      String content = truncate(response.content(), config.maxOutputChars());
+      String content = truncate(sanitizePersonaArtifacts(response.content()), config.maxOutputChars());
       if (content.isBlank()) {
         throw new AgentRoutingException("Agent returned an empty response");
       }
@@ -229,7 +238,17 @@ public final class DefaultAgentRouter implements AgentRouter {
     messages.add(LlmMessage.user(UNVERIFIED_ACTION_CORRECTION.strip()));
     LlmResponse corrected = client.complete(new LlmRequest(messages, definitions));
     if (corrected.toolCalls().isEmpty() && containsUnverifiedActionClaim(corrected.content())) {
-      throw new AgentRoutingException("Agent repeated an unverified action claim");
+      log.warn(
+          "Agent repeated an unverified action; requesting one final tool-only correction, correlationId={}",
+          correlationId);
+      messages.add(LlmMessage.assistant(corrected.content(), List.of()));
+      messages.add(
+          LlmMessage.user(
+              "Final correction: do not describe or promise the action. Return the matching Saturn tool call now, or answer without claiming that any live lookup or command was performed."));
+      corrected = client.complete(new LlmRequest(messages, definitions));
+      if (corrected.toolCalls().isEmpty() && containsUnverifiedActionClaim(corrected.content())) {
+        throw new AgentRoutingException("Agent repeated an unverified action claim");
+      }
     }
     return corrected;
   }
@@ -451,8 +470,13 @@ public final class DefaultAgentRouter implements AgentRouter {
   private List<LlmMessage> loadMemory(AgentContext context, String correlationId)
       throws AgentRoutingException {
     try {
-      List<LlmMessage> history = memory.load(context, config);
-      log.info("Agent memory loaded, correlationId={}, messages={}", correlationId, history.size());
+      List<LlmMessage> loaded = memory.load(context, config);
+      List<LlmMessage> history = excludeLegacyPersonaTurns(loaded);
+      log.info(
+          "Agent memory loaded, correlationId={}, messages={}, legacyMessagesExcluded={}",
+          correlationId,
+          history.size(),
+          loaded.size() - history.size());
       return history;
     } catch (RuntimeException exception) {
       log.warn(
@@ -483,6 +507,62 @@ public final class DefaultAgentRouter implements AgentRouter {
       return content;
     }
     return content.substring(0, content.offsetByCodePoints(0, maxChars));
+  }
+
+  private static String sanitizePersonaArtifacts(String content) {
+    if (content == null || content.isBlank()) {
+      return "";
+    }
+    String withoutOpening =
+        content
+        .replaceAll("(?i)\\[sips tea(?: slowly)?[^\\]]*\\]\\s*", "")
+        .replaceFirst("(?m)\\A\\s*(?:[*_~`#>]+\\s*)+", "")
+        .strip();
+    withoutOpening = LEGACY_OPENING.matcher(withoutOpening).replaceFirst("");
+
+    return withoutOpening
+        .lines()
+        .filter(line -> !isLegacyPersonaBoilerplate(line))
+        .map(DefaultAgentRouter::formatListItem)
+        .collect(java.util.stream.Collectors.joining("\n"))
+        .stripTrailing();
+  }
+
+  private static List<LlmMessage> excludeLegacyPersonaTurns(List<LlmMessage> loaded) {
+    List<LlmMessage> clean = new ArrayList<>(loaded.size());
+    for (LlmMessage message : loaded) {
+      if ("assistant".equals(message.role()) && containsLegacyPersona(message.content())) {
+        if (!clean.isEmpty() && "user".equals(clean.getLast().role())) {
+          clean.removeLast();
+        }
+        continue;
+      }
+      clean.add(message);
+    }
+    return List.copyOf(clean);
+  }
+
+  private static boolean containsLegacyPersona(String content) {
+    if (content == null || content.isBlank()) {
+      return false;
+    }
+    String normalized = content.toLowerCase(Locale.ROOT);
+    return normalized.contains("sips tea")
+        || normalized.contains("the archives reveal")
+        || normalized.contains("carpe diem")
+        || LEGACY_OPENING.matcher(content.strip()).find();
+  }
+
+  private static boolean isLegacyPersonaBoilerplate(String line) {
+    String normalized = line.strip().toLowerCase(Locale.ROOT);
+    return normalized.startsWith("the archives reveal")
+        || normalized.equals("your history shows:")
+        || normalized.matches("^[*_]*carpe diem[*_]*[,.].*");
+  }
+
+  private static String formatListItem(String line) {
+    Matcher matcher = MARKDOWN_LIST_ITEM.matcher(line);
+    return matcher.matches() ? "\u2009-\u2009" + matcher.group(1) : line.stripTrailing();
   }
 
   private static int codePointCount(String content) {

@@ -66,7 +66,7 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("Conditional or future requests are not immediate commands"));
     assertTrue(rendered.contains("never claim a watcher, rule, or schedule"));
     assertTrue(rendered.contains("Do not use canned openings, repeated"));
-    assertTrue(rendered.contains("never use \"* item\""));
+    assertTrue(rendered.contains("Never use Markdown star, hyphen, or numbered-list syntax"));
     assertTrue(rendered.contains("U+2009 THIN SPACE"));
     assertTrue(rendered.contains("escaped \"\\\\n\" payload newlines"));
     assertTrue(rendered.indexOf("PRIORITY ORDER") < rendered.indexOf("PERSONA"));

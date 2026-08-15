@@ -36,7 +36,7 @@
     "example": "{\"room\":\"lounge\"} - Inspect the lounge roster"
   },
   "user_message_history": {
-    "description": "Fetch a named user's recent public messages across all rooms. Pass room only to restrict the search to one channel; omit it to search all rooms.",
+    "description": "Fetch up to 500 of a named user's latest public messages across all rooms. Pass room only to restrict the search to one channel; omit it to search all rooms.",
     "whenToUse": ["Use for follow-ups about what a named user said, including 'check it' or 'check elsewhere'. Resolve the nick from shared context when possible."],
     "whenNotToUse": ["Do not claim a user's history, current presence, or identity without querying the appropriate tool."],
     "example": "{\"nick\":\"sun\"} - Find recent public messages by sun"

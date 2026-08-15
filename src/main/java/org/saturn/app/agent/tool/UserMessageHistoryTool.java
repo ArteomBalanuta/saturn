@@ -18,6 +18,7 @@ import org.saturn.app.agent.ToolResultMode;
 import org.saturn.app.agent.persistence.AgentQueryRepository;
 
 public final class UserMessageHistoryTool implements AgentTool {
+  private static final int MAX_HISTORY_MESSAGES = 500;
   private final AgentQueryRepository repository;
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
@@ -62,7 +63,7 @@ public final class UserMessageHistoryTool implements AgentTool {
     JsonObject limit = new JsonObject();
     limit.addProperty("type", "integer");
     limit.addProperty("minimum", 1);
-    limit.addProperty("maximum", 60);
+    limit.addProperty("maximum", MAX_HISTORY_MESSAGES);
     JsonObject room = new JsonObject();
     room.addProperty("type", "string");
     room.addProperty("minLength", 1);

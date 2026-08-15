@@ -103,6 +103,41 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void excludesLegacyPersonaTurnsFromSharedHistory() throws Exception {
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @mer in #programming:\ntell me about jill"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(
+                    "*[sips tea]*\nAh, merc. The archives reveal a user. Carpe diem.",
+                    List.of()),
+                org.saturn.app.agent.llm.LlmMessage.user(
+                    "Public Saturn message from @alice in #programming:\nwhere is lounge?"),
+                org.saturn.app.agent.llm.LlmMessage.assistant(
+                    "Lounge is another Saturn room.", List.of())));
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Jill recently discussed food.", List.of(), "stop"));
+
+    routerWithRunCommand(client, memory)
+        .route(new AgentInvocation(context(), "tell me about jill"));
+
+    List<org.saturn.app.agent.llm.LlmMessage> requestMessages =
+        client.requests.getFirst().messages();
+    assertFalse(
+        requestMessages.stream()
+            .filter(message -> "assistant".equals(message.role()))
+            .anyMatch(message -> message.content().contains("sips tea")));
+    assertFalse(
+        requestMessages.stream()
+            .filter(message -> "assistant".equals(message.role()))
+            .anyMatch(message -> message.content().contains("archives reveal")));
+    assertTrue(
+        requestMessages.stream()
+            .anyMatch(message -> message.content().contains("Lounge is another Saturn room.")));
+  }
+
+  @Test
   void serializesRequestsThatBelongToTheSameSharedRoomSession() throws Exception {
     CountDownLatch firstEntered = new CountDownLatch(1);
     CountDownLatch releaseFirst = new CountDownLatch(1);
@@ -838,6 +873,29 @@ class DefaultAgentRouterTest {
 
     assertEquals("Use `List.of()`.", result.content());
     assertEquals(1, client.requests.size());
+  }
+
+  @Test
+  void removesLegacyPersonaArtifactsBeforeRoomDelivery() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "**\n[sips tea]\nAh, merc. You ask about Nex.\n"
+                    + "The archives reveal a user of modest activity.\n"
+                    + "Your history shows:\n"
+                    + "1. **First:** Nex writes short messages.\n"
+                    + "* Second point\n"
+                    + "*Carpe diem*, merc. Seize the day.",
+                List.of(),
+                "stop"));
+
+    AgentResult result =
+        routerWithRunCommand(client, new RecordingMemory())
+            .route(new AgentInvocation(context(), "tell me about nex"));
+
+    assertEquals(
+        "\u2009-\u2009**First:** Nex writes short messages.\n\u2009-\u2009Second point",
+        result.content());
   }
 
   @Test

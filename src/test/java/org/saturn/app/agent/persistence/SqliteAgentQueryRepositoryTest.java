@@ -143,6 +143,37 @@ class SqliteAgentQueryRepositoryTest {
   }
 
   @Test
+  void capsNamedUserHistoryAtFiveHundredWithoutIncreasingGeneralQueryLimit() throws Exception {
+    try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+        PreparedStatement statement =
+            connection.prepareStatement(
+                "INSERT INTO messages(trip,name,message,created_on,channel,visibility) "
+                    + "VALUES (?,?,?,?,?,?)")) {
+      for (int index = 0; index < 550; index++) {
+        statement.setString(1, "trip-history");
+        statement.setString(2, "sun");
+        statement.setString(3, "message-" + index);
+        statement.setLong(4, 10 + index);
+        statement.setString(5, "programming");
+        statement.setString(6, "PUBLIC");
+        statement.addBatch();
+      }
+      statement.executeBatch();
+    }
+
+    SqliteAgentQueryRepository repository = new SqliteAgentQueryRepository(database.toString());
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("nick", "sun");
+    JsonObject history =
+        repository.execute(
+            "recent_messages_for_user",
+            arguments,
+            new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of()));
+
+    assertEquals(500, history.getAsJsonArray("rows").size());
+  }
+
+  @Test
   void returnsRecentMessagesForAnExplicitRoomWithIdentityFields() throws Exception {
     try (var connection = DriverManager.getConnection("jdbc:sqlite:" + database);
         Statement statement = connection.createStatement()) {

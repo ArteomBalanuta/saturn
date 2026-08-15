@@ -12,6 +12,7 @@ import org.saturn.app.agent.AgentContext;
 public final class SqliteAgentQueryRepository implements AgentQueryRepository {
   private static final int DEFAULT_ROW_LIMIT = 10;
   private static final int MAX_ROW_LIMIT = 60;
+  private static final int MAX_USER_HISTORY_ROW_LIMIT = 500;
   private final String jdbcUrl;
 
   public SqliteAgentQueryRepository(String databasePath) {
@@ -142,9 +143,9 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
       statement.setString(1, arguments.get("nick").getAsString().trim());
       if (scopedToRoom) {
         statement.setString(2, room(arguments, context));
-        statement.setInt(3, rowLimit(arguments));
+        statement.setInt(3, userHistoryRowLimit(arguments));
       } else {
-        statement.setInt(2, rowLimit(arguments));
+        statement.setInt(2, userHistoryRowLimit(arguments));
       }
       try (ResultSet resultSet = statement.executeQuery()) {
         JsonArray result = new JsonArray();
@@ -217,8 +218,20 @@ public final class SqliteAgentQueryRepository implements AgentQueryRepository {
   }
 
   private static int rowLimit(JsonObject arguments) {
+    return rowLimit(arguments, MAX_ROW_LIMIT);
+  }
+
+  private static int rowLimit(JsonObject arguments, int maximum) {
     int requested = arguments.has("limit") ? arguments.get("limit").getAsInt() : DEFAULT_ROW_LIMIT;
-    return Math.max(1, Math.min(requested, MAX_ROW_LIMIT));
+    return Math.max(1, Math.min(requested, maximum));
+  }
+
+  private static int userHistoryRowLimit(JsonObject arguments) {
+    int requested =
+        arguments.has("limit")
+            ? arguments.get("limit").getAsInt()
+            : MAX_USER_HISTORY_ROW_LIMIT;
+    return Math.max(1, Math.min(requested, MAX_USER_HISTORY_ROW_LIMIT));
   }
 
   private static JsonObject rows(JsonArray values) {
