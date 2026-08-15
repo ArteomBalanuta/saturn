@@ -30,7 +30,7 @@ public record AgentParticipationConfig(
         readBoolean(table, "ambientEnabled", false),
         toInt(readLong(table, "ambientEveryMessages", 8), "ambientEveryMessages"),
         Duration.ofMinutes(readLong(table, "quietMinutes", 15)),
-        toInt(readLong(table, "contextMessageLimit", 20), "contextMessageLimit"),
+        toInt(readLong(table, "contextMessageLimit", 60), "contextMessageLimit"),
         readString(table, "noReplyMarker", DEFAULT_NO_REPLY_MARKER));
   }
 

@@ -65,7 +65,7 @@ public final class DatabaseQueryTool implements AgentTool {
     JsonObject limit = new JsonObject();
     limit.addProperty("type", "integer");
     limit.addProperty("minimum", 1);
-    limit.addProperty("maximum", 20);
+    limit.addProperty("maximum", 60);
     JsonObject trip = new JsonObject();
     trip.addProperty("type", "string");
     JsonObject room = new JsonObject();

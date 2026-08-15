@@ -32,7 +32,7 @@ class AgentParticipationConfigTest {
     assertFalse(actual.ambientEnabled());
     assertEquals(8, actual.ambientEveryMessages());
     assertEquals(Duration.ofMinutes(15), actual.quietDuration());
-    assertEquals(20, actual.contextMessageLimit());
+    assertEquals(60, actual.contextMessageLimit());
     assertEquals("[[SATURN_NO_REPLY]]", actual.noReplyMarker());
   }
 

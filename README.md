@@ -67,13 +67,13 @@ maxCompletionTokens = 768
 thinkingEnabled = false
 maxConcurrentRequests = 2
 maxToolCalls = 4
-memoryTurns = 10
+memoryTurns = 30
 memoryTtlHours = 168
 creatorTrip = "595754"
 ambientEnabled = false
 ambientEveryMessages = 8
 quietMinutes = 15
-contextMessageLimit = 20
+contextMessageLimit = 60
 moderationEnabled = true
 dynamicSqlEnabled = true
 dynamicSqlMaxSqlChars = 4000
@@ -130,7 +130,7 @@ produces no acknowledgement and suppresses ambient replies to that user in that 
 
 The agent can inspect live users in any Saturn-managed room, retrieve bounded public message history
 for a named user across all rooms or within one named room, and run named read-only database queries.
-Public direct, mention, and ambient turns automatically receive the latest 20 public messages from
+Public direct, mention, and ambient turns automatically receive the latest 60 public messages from
 their room.
 Informational Saturn commands are available to all agent callers. Trusted creator trip `595754`
 also receives captcha, mute, kick, shadow-ban, and direct permanent-ban commands. Recursive `l`, raw

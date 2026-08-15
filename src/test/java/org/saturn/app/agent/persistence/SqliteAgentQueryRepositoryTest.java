@@ -82,7 +82,7 @@ class SqliteAgentQueryRepositoryTest {
             connection.prepareStatement(
                 "INSERT INTO messages(trip,name,message,created_on,channel,visibility) "
                     + "VALUES (?,?,?,?,?,?)")) {
-      for (int index = 0; index < 25; index++) {
+      for (int index = 0; index < 75; index++) {
         statement.setString(1, "trip-a");
         statement.setString(2, "alice");
         statement.setString(3, "message-" + index);
@@ -105,7 +105,7 @@ class SqliteAgentQueryRepositoryTest {
     JsonObject isolated =
         repository.execute("recent_messages_for_requester", new JsonObject(), injection);
 
-    assertEquals(20, capped.getAsJsonArray("rows").size());
+    assertEquals(60, capped.getAsJsonArray("rows").size());
     assertEquals(0, isolated.getAsJsonArray("rows").size());
   }
 

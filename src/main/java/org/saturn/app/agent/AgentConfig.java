@@ -110,7 +110,7 @@ public record AgentConfig(
         toInt(readLong(table, "maxToolFailures", 2), "maxToolFailures"),
         toInt(readLong(table, "maxPromptChars", 8_000), "maxPromptChars"),
         toInt(readLong(table, "maxOutputChars", 8_000), "maxOutputChars"),
-        toInt(readLong(table, "memoryTurns", 10), "memoryTurns"),
+        toInt(readLong(table, "memoryTurns", 30), "memoryTurns"),
         Duration.ofHours(readLong(table, "memoryTtlHours", 168)),
         toInt(readLong(table, "maxRetries", 2), "maxRetries"),
         Duration.ofMillis(readLong(table, "retryBackoffMillis", 250)),

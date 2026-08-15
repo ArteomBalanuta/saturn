@@ -11,7 +11,7 @@ import org.saturn.app.agent.AgentContext;
 
 public final class SqliteAgentQueryRepository implements AgentQueryRepository {
   private static final int DEFAULT_ROW_LIMIT = 10;
-  private static final int MAX_ROW_LIMIT = 20;
+  private static final int MAX_ROW_LIMIT = 60;
   private final String jdbcUrl;
 
   public SqliteAgentQueryRepository(String databasePath) {

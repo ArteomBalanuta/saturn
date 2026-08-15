@@ -62,7 +62,7 @@ public final class UserMessageHistoryTool implements AgentTool {
     JsonObject limit = new JsonObject();
     limit.addProperty("type", "integer");
     limit.addProperty("minimum", 1);
-    limit.addProperty("maximum", 20);
+    limit.addProperty("maximum", 60);
     JsonObject room = new JsonObject();
     room.addProperty("type", "string");
     room.addProperty("minLength", 1);
