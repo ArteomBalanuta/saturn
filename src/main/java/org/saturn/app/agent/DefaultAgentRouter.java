@@ -108,13 +108,13 @@ public final class DefaultAgentRouter implements AgentRouter {
     Set<String> allowedTools =
         invocation.mode() == AgentInvocationMode.MODERATION ? Set.of("run_command") : Set.of();
     AgentToolExecutor toolExecutor = new AgentToolExecutor(registry, config, allowedTools);
-    try {
+    AgentExecutionState executionState = new AgentExecutionState(AgentExecutionLimits.from(config));
+    try (toolExecutor) {
       LlmResponse response =
           requiredFreshTool.isPresent()
               ? client.complete(new LlmRequest(messages, definitions))
               : completeInitialRequest(
                   messages, definitions, history, invocation.prompt(), correlationId);
-      int totalCalls = 0;
       boolean correctionUsed = false;
       boolean freshnessCorrectionUsed = false;
       boolean freshSynthesisCorrectionUsed = false;
@@ -125,6 +125,9 @@ public final class DefaultAgentRouter implements AgentRouter {
       List<AgentToolResult> successfulToolResults = new ArrayList<>();
       boolean toolsEnabled = true;
       while (true) {
+        if (!executionState.advanceStep()) {
+          throw new AgentRoutingException("Agent execution step limit reached");
+        }
         if ("length".equalsIgnoreCase(response.finishReason()) && response.toolCalls().isEmpty()) {
           throw new AgentRoutingException("Agent response was truncated before completion");
         }
@@ -133,7 +136,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         if (missingFreshTool.isPresent()) {
           String tool = missingFreshTool.orElseThrow();
           if ("user_message_history".equals(tool) && requiredFreshNick.isPresent()) {
-            if (totalCalls >= config.maxToolCalls()) {
+            if (!executionState.reserveToolCalls(1)) {
               throw new AgentRoutingException("Agent tool-call limit reached before loading fresh data");
             }
             JsonObject arguments = new JsonObject();
@@ -150,7 +153,6 @@ public final class DefaultAgentRouter implements AgentRouter {
                     freshCall.id(), modelVisibleToolResult(context, freshCall, freshResult)));
             successfulTools.add(tool);
             successfulToolResults.add(freshResult);
-            totalCalls++;
             log.info(
                 "Agent fresh data loaded by router, correlationId={}, tool={}, nick={}",
                 correlationId,
@@ -241,13 +243,12 @@ public final class DefaultAgentRouter implements AgentRouter {
         if (!toolsEnabled) {
           throw new AgentRoutingException("Agent returned a tool call after tools were disabled");
         }
-        if (totalCalls + response.toolCalls().size() > config.maxToolCalls()) {
+        if (!executionState.reserveToolCalls(response.toolCalls().size())) {
           toolsEnabled = false;
           response = finalizeResponse(messages);
           continue;
         }
 
-        totalCalls += response.toolCalls().size();
         messages.add(LlmMessage.assistant(response.content(), response.toolCalls()));
         for (var call : response.toolCalls()) {
           AgentToolResult result = toolExecutor.execute(context, call);
@@ -319,14 +320,17 @@ public final class DefaultAgentRouter implements AgentRouter {
   private String modelVisibleToolResult(
       AgentContext context, org.saturn.app.agent.llm.LlmToolCall call, AgentToolResult result) {
     if (result.isError()) {
-      return result.content();
+      return result.envelopeJson();
     }
     return registry
         .find(context, call.name())
         .map(tool -> tool.descriptor(context).resultMode())
         .filter(mode -> mode == ToolResultMode.ROOM_DELIVERY)
-        .map(mode -> PROMPTS.text("router-room-delivery.txt").strip())
-        .orElse(result.content());
+        .map(
+            mode ->
+                ToolResponseEnvelope.success(PROMPTS.text("router-room-delivery.txt").strip())
+                    .toJson())
+        .orElse(result.envelopeJson());
   }
 
   private LlmResponse completeInitialRequest(

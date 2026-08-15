@@ -39,5 +39,7 @@ class AgentToolDefinitionFactoryTest {
     assertEquals("object", definition.getAsJsonObject("parameters").get("type").getAsString());
     assertTrue(definition.get("description").getAsString().contains("SATURN SDK CONTRACT"));
     assertTrue(definition.get("description").getAsString().contains("label: Room users"));
+    assertTrue(definition.get("description").getAsString().contains("idempotent: false"));
+    assertTrue(definition.get("description").getAsString().contains("result_schema: {\"type\":\"any\"}"));
   }
 }

@@ -19,6 +19,9 @@ class AgentToolDescriptorTest {
         () -> descriptor("", "label", "description", "category", parameters));
     assertThrows(
         IllegalArgumentException.class,
+        () -> descriptor("invalid-name", "label", "description", "category", parameters));
+    assertThrows(
+        IllegalArgumentException.class,
         () -> descriptor("name", "", "description", "category", parameters));
     assertThrows(
         IllegalArgumentException.class,
@@ -97,6 +100,54 @@ class AgentToolDescriptorTest {
         () -> descriptor.examples().add(new ToolExample("other", "{}", "other")));
   }
 
+  @Test
+  void rejectsARequiredParameterThatIsNotDeclared() {
+    JsonObject schema = parameters();
+    com.google.gson.JsonArray required = new com.google.gson.JsonArray();
+    required.add("missing");
+    schema.add("required", required);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> descriptor("tool", "Tool", "Reads data.", "test", schema));
+  }
+
+  @Test
+  void requiresADeclaredNegativeConstraint() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new AgentToolDescriptor(
+                "tool",
+                "Tool",
+                "Reads data.",
+                "test",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.MODEL_DATA,
+                parameters(),
+                List.of(),
+                List.of(),
+                List.of(),
+                Set.of(),
+                Set.of()));
+  }
+
+  @Test
+  void rejectsUnsupportedSchemaTypesBeforeToolRegistration() {
+    JsonObject parameterSchema = parameters();
+    JsonObject property = new JsonObject();
+    property.addProperty("type", "unknown");
+    parameterSchema.getAsJsonObject("properties").add("value", property);
+
+    assertThrows(IllegalArgumentException.class, () -> AgentToolSchemaValidator.validateSchema(parameterSchema));
+
+    JsonObject resultSchema = new JsonObject();
+    resultSchema.addProperty("type", "unknown");
+    assertThrows(
+        IllegalArgumentException.class, () -> AgentToolSchemaValidator.validateResultSchema(resultSchema));
+  }
+
   private AgentToolDescriptor descriptor(
       String name, String label, String description, String category, JsonObject parameters) {
     return new AgentToolDescriptor(
@@ -109,7 +160,7 @@ class AgentToolDescriptorTest {
         ToolResultMode.MODEL_DATA,
         parameters,
         List.of(),
-        List.of(),
+        List.of("Do not use for unrelated work."),
         List.of(),
         Set.of(),
         Set.of());

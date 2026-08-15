@@ -4,17 +4,25 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.llm.LlmToolCall;
 
 @Slf4j
-public final class AgentToolExecutor {
+public final class AgentToolExecutor implements AutoCloseable {
   private final AgentToolRegistry registry;
   private final AgentConfig config;
   private final Gson gson = new Gson();
@@ -24,6 +32,8 @@ public final class AgentToolExecutor {
   private final Set<String> disabledTools = new HashSet<>();
   private final Set<String> successfulTools = new HashSet<>();
   private final Set<String> allowedTools;
+  private final ExecutorService toolExecutor =
+      Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("saturn-agent-tool-", 0).factory());
 
   public AgentToolExecutor(AgentToolRegistry registry, AgentConfig config) {
     this(registry, config, Set.of());
@@ -37,31 +47,30 @@ public final class AgentToolExecutor {
 
   public AgentToolResult execute(AgentContext context, LlmToolCall call) {
     if (!allowedTools.isEmpty() && !allowedTools.contains(call.name())) {
-      return AgentToolResult.error(call.id(), call.name(), "Tool is not allowed in this invocation mode");
+      return error(call, "TOOL_NOT_ALLOWED", "Tool is not allowed in this invocation mode");
     }
     AgentTool tool = registry.find(context, call.name()).orElse(null);
     if (tool == null) {
-      return AgentToolResult.error(call.id(), call.name(), "Unknown tool: " + call.name());
+      return error(call, "UNKNOWN_TOOL", "Unknown tool: " + call.name());
     }
     if (disabledTools.contains(call.name())) {
-      return AgentToolResult.error(
-          call.id(), call.name(), "Tool disabled after repeated failures: " + call.name());
+      return error(call, "TOOL_DISABLED", "Tool disabled after repeated failures: " + call.name());
     }
     AgentToolDescriptor descriptor;
     try {
       descriptor = tool.descriptor(context);
     } catch (RuntimeException exception) {
-      return AgentToolResult.error(call.id(), call.name(), "Invalid tool contract");
+      return error(call, "INVALID_TOOL_CONTRACT", "Invalid tool contract");
     }
     if (!tool.name().equals(descriptor.name())) {
-      return AgentToolResult.error(call.id(), call.name(), "Tool contract name mismatch");
+      return error(call, "INVALID_TOOL_CONTRACT", "Tool contract name mismatch");
     }
     Set<String> missingPrerequisites = new HashSet<>(descriptor.requiredSuccessfulTools());
     missingPrerequisites.removeAll(successfulTools);
     if (!missingPrerequisites.isEmpty()) {
-      return AgentToolResult.error(
-          call.id(),
-          call.name(),
+      return error(
+          call,
+          "MISSING_PREREQUISITE",
           "Required tool must succeed first: " + String.join(", ", missingPrerequisites));
     }
 
@@ -70,42 +79,80 @@ public final class AgentToolExecutor {
       arguments = parseArguments(call.arguments());
     } catch (JsonParseException | IllegalStateException exception) {
       recordFailure(call.name());
-      return AgentToolResult.error(call.id(), call.name(), "Invalid tool arguments");
+      return error(call, "INVALID_ARGUMENTS", "Invalid tool arguments");
     }
 
     String validationError = AgentToolSchemaValidator.validateArguments(descriptor.parameters(), arguments);
     if (validationError != null) {
       recordFailure(call.name());
-      return AgentToolResult.error(call.id(), call.name(), validationError);
+      return error(call, "INVALID_ARGUMENTS", validationError);
     }
 
     String invocationKey = call.name() + "|" + canonicalJson(arguments);
     if (invocationKeys.contains(invocationKey)) {
-      return AgentToolResult.error(
-          call.id(), call.name(), "Duplicate tool call; use the previous result");
+      return error(call, "DUPLICATE_TOOL_CALL", "Duplicate tool call; use the previous result");
     }
 
     int calls = callsByTool.getOrDefault(call.name(), 0);
     if (calls >= config.maxCallsPerTool()) {
-      return AgentToolResult.error(
-          call.id(), call.name(), "Tool call limit reached for " + call.name());
+      return error(call, "TOOL_CALL_LIMIT_REACHED", "Tool call limit reached for " + call.name());
     }
     callsByTool.put(call.name(), calls + 1);
 
     try {
-      AgentToolResult result = tool.execute(context, arguments).withCallId(call.id());
+      AgentToolResult result = executeWithTimeout(tool, context, arguments, descriptor.timeout());
+      result = result.withCallId(call.id());
       if (result.isError()) {
         recordFailure(call.name());
       } else {
+        String resultError =
+            AgentToolSchemaValidator.validateResult(descriptor.resultSchema(), parseResult(result.content()));
+        if (resultError != null) {
+          recordFailure(call.name());
+          return error(call, "INVALID_TOOL_RESULT", resultError);
+        }
         invocationKeys.add(invocationKey);
         successfulTools.add(call.name());
       }
       return result;
-    } catch (RuntimeException exception) {
+    } catch (TimeoutException exception) {
+      recordFailure(call.name());
+      return error(call, "TOOL_TIMEOUT", "Tool execution exceeded its configured timeout");
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      recordFailure(call.name());
+      return error(call, "TOOL_INTERRUPTED", "Tool execution was interrupted");
+    } catch (ExecutionException | RuntimeException exception) {
       recordFailure(call.name());
       log.warn("Agent tool {} failed: {}", call.name(), exception.getMessage());
-      return AgentToolResult.error(call.id(), call.name(), "Tool execution failed");
+      return error(call, "TOOL_EXECUTION_FAILED", "Tool execution failed");
     }
+  }
+
+  @Override
+  public void close() {
+    toolExecutor.shutdownNow();
+  }
+
+  private AgentToolResult executeWithTimeout(
+      AgentTool tool, AgentContext context, JsonObject arguments, Duration descriptorTimeout)
+      throws InterruptedException, ExecutionException, TimeoutException {
+    Duration timeout = descriptorTimeout.isZero() ? config.toolTimeout() : descriptorTimeout;
+    Future<AgentToolResult> future = toolExecutor.submit(() -> tool.execute(context, arguments));
+    try {
+      AgentToolResult result = future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+      if (result == null) {
+        throw new IllegalStateException("Tool returned no result");
+      }
+      return result;
+    } catch (TimeoutException exception) {
+      future.cancel(true);
+      throw exception;
+    }
+  }
+
+  private AgentToolResult error(LlmToolCall call, String code, String message) {
+    return AgentToolResult.error(call.id(), call.name(), code, message);
   }
 
   private JsonObject parseArguments(String rawArguments) {
@@ -117,6 +164,17 @@ public final class AgentToolExecutor {
       throw new JsonParseException("Tool arguments must be a JSON object");
     }
     return arguments;
+  }
+
+  private JsonElement parseResult(String content) {
+    if (content == null) {
+      return com.google.gson.JsonNull.INSTANCE;
+    }
+    try {
+      return JsonParser.parseString(content);
+    } catch (RuntimeException ignored) {
+      return new com.google.gson.JsonPrimitive(content);
+    }
   }
 
   private String canonicalJson(JsonElement element) {

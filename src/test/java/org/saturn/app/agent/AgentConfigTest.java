@@ -28,6 +28,9 @@ class AgentConfigTest {
     assertEquals("secret", actual.apiKey());
     assertEquals(Duration.ofSeconds(30), actual.timeout());
     assertEquals(4, actual.maxToolCalls());
+    assertEquals(8, actual.maxSteps());
+    assertEquals(4, actual.maxToolCallsPerTurn());
+    assertEquals(Duration.ofSeconds(15), actual.toolTimeout());
     assertEquals(2, actual.maxConcurrentRequests());
     assertEquals(768, actual.maxCompletionTokens());
     assertFalse(actual.thinkingEnabled());
@@ -49,6 +52,25 @@ class AgentConfigTest {
 
     assertEquals(321, actual.maxCompletionTokens());
     assertTrue(actual.thinkingEnabled());
+  }
+
+  @Test
+  void readsIndependentSdkExecutionLimits() {
+    Toml config =
+        new Toml()
+            .read(
+                """
+                [agent]
+                maxSteps = 6
+                maxToolCallsPerTurn = 3
+                toolTimeoutMillis = 1200
+                """);
+
+    AgentConfig actual = AgentConfig.from(config, Map.of());
+
+    assertEquals(6, actual.maxSteps());
+    assertEquals(3, actual.maxToolCallsPerTurn());
+    assertEquals(Duration.ofMillis(1200), actual.toolTimeout());
   }
 
   @Test

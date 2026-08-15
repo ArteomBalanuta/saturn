@@ -66,6 +66,9 @@ timeoutSeconds = 30
 maxCompletionTokens = 768
 thinkingEnabled = false
 maxConcurrentRequests = 2
+maxSteps = 8
+maxToolCallsPerTurn = 4
+toolTimeoutMillis = 15000
 maxToolCalls = 4
 memoryTurns = 30
 memoryTtlHours = 168
@@ -99,7 +102,9 @@ Important fields:
 - `agent.maxCompletionTokens`: provider-side output-token limit for each completion
 - `agent.thinkingEnabled`: enables model thinking mode; disabled by default for predictable latency
 - `agent.maxConcurrentRequests`: maximum accepted active and queued agent requests per engine
-- `agent.maxToolCalls`: total tool-call budget for one request
+- `agent.maxSteps`: maximum model/tool loop iterations for one request
+- `agent.maxToolCallsPerTurn`: total tool-call budget for one request; `agent.maxToolCalls` remains a compatible legacy alias
+- `agent.toolTimeoutMillis`: deadline for one tool invocation unless that tool declares a shorter or longer override
 - `agent.memoryTurns` and `agent.memoryTtlHours`: bounded SQLite conversation memory
 - `agent.creatorTrip`: trusted creator identity; keep it authorized in `adminTrips` or the roles table
 - `agent.ambientEnabled`: enables periodic participation in unaddressed public chat; defaults to `false`

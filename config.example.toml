@@ -21,6 +21,10 @@ timeoutSeconds = 30
 maxCompletionTokens = 768
 thinkingEnabled = false
 maxConcurrentRequests = 2
+# SDK execution bounds for one agent turn. `maxToolCalls` remains the legacy alias.
+maxSteps = 8
+maxToolCallsPerTurn = 4
+toolTimeoutMillis = 15000
 maxToolCalls = 4
 maxCallsPerTool = 2
 maxToolFailures = 2

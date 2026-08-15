@@ -44,7 +44,7 @@ public interface AgentTool {
         ToolResultMode.MODEL_DATA,
         parameters(context),
         List.of(),
-        List.of(),
+        List.of("Do not use outside the declared parameters and access rules."),
         List.of(),
         Set.of(),
         requiredSuccessfulTools());

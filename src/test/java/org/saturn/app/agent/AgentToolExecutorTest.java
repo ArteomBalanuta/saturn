@@ -183,6 +183,88 @@ class AgentToolExecutorTest {
     assertEquals(1, executions.get());
   }
 
+  @Test
+  void returnsATimeoutEnvelopeWhenAToolExceedsItsDeadline() {
+    AgentTool slowTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "slow";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            try {
+              Thread.sleep(Duration.ofSeconds(1));
+            } catch (InterruptedException exception) {
+              Thread.currentThread().interrupt();
+            }
+            return AgentToolResult.success(name(), "finished");
+          }
+        };
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(slowTool).freeze(), config(Duration.ofMillis(20)))) {
+      AgentToolResult result = executor.execute(null, new LlmToolCall("slow-1", "slow", "{}"));
+
+      assertTrue(result.isError());
+      assertEquals("TOOL_TIMEOUT", result.errorCode());
+      assertTrue(result.envelopeJson().contains("TOOL_TIMEOUT"));
+    }
+  }
+
+  @Test
+  void rejectsSuccessfulToolOutputThatViolatesItsPublishedResultSchema() {
+    AgentTool invalidResultTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "structured";
+          }
+
+          @Override
+          public AgentToolDescriptor descriptor(AgentContext context) {
+            JsonObject resultSchema = new JsonObject();
+            resultSchema.addProperty("type", "object");
+            com.google.gson.JsonArray required = new com.google.gson.JsonArray();
+            required.add("answer");
+            resultSchema.add("required", required);
+            return new AgentToolDescriptor(
+                name(),
+                "Structured",
+                "Returns a structured answer. Do NOT use for room delivery.",
+                "test",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.MODEL_DATA,
+                parameters(),
+                List.of("Read structured test data."),
+                List.of("Do not deliver chat messages."),
+                List.of(),
+                Set.of(),
+                Set.of(),
+                true,
+                Duration.ZERO,
+                resultSchema);
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), "not-json");
+          }
+        };
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(new AgentToolRegistry().register(invalidResultTool).freeze(), config())) {
+      AgentToolResult result =
+          executor.execute(null, new LlmToolCall("structured-1", "structured", "{}"));
+
+      assertTrue(result.isError());
+      assertEquals("INVALID_TOOL_RESULT", result.errorCode());
+    }
+  }
+
   private AgentTool successfulTool(String name) {
     return new AgentTool() {
       @Override
@@ -213,12 +295,16 @@ class AgentToolExecutorTest {
   }
 
   private AgentConfig config() {
+    return config(Duration.ofSeconds(1));
+  }
+
+  private AgentConfig config(Duration timeout) {
     return new AgentConfig(
         true,
         URI.create("http://localhost"),
         Optional.empty(),
         "",
-        Duration.ofSeconds(1),
+        timeout,
         1,
         4,
         2,
@@ -228,6 +314,11 @@ class AgentToolExecutorTest {
         2,
         Duration.ofHours(1),
         0,
-        Duration.ZERO);
+        Duration.ZERO,
+        768,
+        false,
+        8,
+        4,
+        timeout);
   }
 }

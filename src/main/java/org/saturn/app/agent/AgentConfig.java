@@ -24,9 +24,14 @@ public record AgentConfig(
     int maxRetries,
     Duration retryBackoff,
     int maxCompletionTokens,
-    boolean thinkingEnabled) {
+    boolean thinkingEnabled,
+    int maxSteps,
+    int maxToolCallsPerTurn,
+    Duration toolTimeout) {
   private static final String DEFAULT_ENDPOINT = "http://83.218.196.156:16261";
   private static final int DEFAULT_MAX_COMPLETION_TOKENS = 768;
+  private static final int DEFAULT_MAX_STEPS = 8;
+  private static final Duration DEFAULT_TOOL_TIMEOUT = Duration.ofSeconds(15);
 
   public AgentConfig {
     Objects.requireNonNull(endpoint, "endpoint");
@@ -35,6 +40,7 @@ public record AgentConfig(
     Objects.requireNonNull(timeout, "timeout");
     Objects.requireNonNull(memoryTtl, "memoryTtl");
     Objects.requireNonNull(retryBackoff, "retryBackoff");
+    Objects.requireNonNull(toolTimeout, "toolTimeout");
     validateEndpoint(endpoint);
     requirePositive(timeout, "timeout");
     requirePositive(maxConcurrentRequests, "maxConcurrentRequests");
@@ -46,12 +52,56 @@ public record AgentConfig(
     requirePositive(memoryTurns, "memoryTurns");
     requirePositive(memoryTtl, "memoryTtl");
     requirePositive(maxCompletionTokens, "maxCompletionTokens");
+    requirePositive(maxSteps, "maxSteps");
+    requirePositive(maxToolCallsPerTurn, "maxToolCallsPerTurn");
+    requirePositive(toolTimeout, "toolTimeout");
     if (maxRetries < 0) {
       throw new IllegalArgumentException("agent.maxRetries must not be negative");
     }
     if (retryBackoff.isNegative()) {
       throw new IllegalArgumentException("agent.retryBackoff must not be negative");
     }
+  }
+
+  public AgentConfig(
+      boolean enabled,
+      URI endpoint,
+      Optional<String> model,
+      String apiKey,
+      Duration timeout,
+      int maxConcurrentRequests,
+      int maxToolCalls,
+      int maxCallsPerTool,
+      int maxToolFailures,
+      int maxPromptChars,
+      int maxOutputChars,
+      int memoryTurns,
+      Duration memoryTtl,
+      int maxRetries,
+      Duration retryBackoff,
+      int maxCompletionTokens,
+      boolean thinkingEnabled) {
+    this(
+        enabled,
+        endpoint,
+        model,
+        apiKey,
+        timeout,
+        maxConcurrentRequests,
+        maxToolCalls,
+        maxCallsPerTool,
+        maxToolFailures,
+        maxPromptChars,
+        maxOutputChars,
+        memoryTurns,
+        memoryTtl,
+        maxRetries,
+        retryBackoff,
+        maxCompletionTokens,
+        thinkingEnabled,
+        DEFAULT_MAX_STEPS,
+        maxToolCalls,
+        DEFAULT_TOOL_TIMEOUT);
   }
 
   public AgentConfig(
@@ -87,7 +137,10 @@ public record AgentConfig(
         maxRetries,
         retryBackoff,
         DEFAULT_MAX_COMPLETION_TOKENS,
-        false);
+        false,
+        DEFAULT_MAX_STEPS,
+        maxToolCalls,
+        DEFAULT_TOOL_TIMEOUT);
   }
 
   public static AgentConfig from(Toml root, Map<String, String> environment) {
@@ -117,7 +170,15 @@ public record AgentConfig(
         toInt(
             readLong(table, "maxCompletionTokens", DEFAULT_MAX_COMPLETION_TOKENS),
             "maxCompletionTokens"),
-        readBoolean(table, "thinkingEnabled", false));
+        readBoolean(table, "thinkingEnabled", false),
+        toInt(readLong(table, "maxSteps", DEFAULT_MAX_STEPS), "maxSteps"),
+        toInt(
+            readLong(
+                table,
+                "maxToolCallsPerTurn",
+                readLong(table, "maxToolCalls", 4)),
+            "maxToolCallsPerTurn"),
+        Duration.ofMillis(readLong(table, "toolTimeoutMillis", DEFAULT_TOOL_TIMEOUT.toMillis())));
   }
 
   private static void validateEndpoint(URI endpoint) {

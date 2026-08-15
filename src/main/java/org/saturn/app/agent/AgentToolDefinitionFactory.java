@@ -1,6 +1,7 @@
 package org.saturn.app.agent;
 
 import com.google.gson.JsonObject;
+import java.time.Duration;
 import java.util.StringJoiner;
 
 /** Converts a validated Saturn SDK descriptor into the provider's function-tool payload. */
@@ -25,6 +26,9 @@ public final class AgentToolDefinitionFactory {
     appendLine(description, "access", descriptor.access());
     appendLine(description, "effect", descriptor.effect());
     appendLine(description, "result_mode", descriptor.resultMode());
+    appendLine(description, "idempotent", descriptor.isIdempotent());
+    appendLine(description, "timeout_ms", timeoutMillis(descriptor.timeout()));
+    appendLine(description, "result_schema", descriptor.resultSchema());
     appendList(description, "when_to_use", descriptor.whenToUse());
     appendList(description, "when_not_to_use", descriptor.whenNotToUse());
     appendList(description, "required_capabilities", descriptor.requiredCapabilities());
@@ -39,6 +43,10 @@ public final class AgentToolDefinitionFactory {
           .append('\n');
     }
     return description.toString().stripTrailing();
+  }
+
+  private long timeoutMillis(Duration timeout) {
+    return timeout.isZero() ? 0 : timeout.toMillis();
   }
 
   private void appendLine(StringBuilder description, String label, Object value) {
