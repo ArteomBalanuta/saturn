@@ -17,9 +17,10 @@ effect, result mode, timeout, prerequisites, `read_only`, and `idempotent` metad
 is derived from `ToolEffect.READ_ONLY`. Legacy read-only descriptors are idempotent by default;
 tools with an action effect remain non-idempotent unless explicitly declared otherwise.
 
-`run_command` is always an ordered action tool. Its informational commands, including weather and
-time, are not treated as read-only because command execution can deliver room output. Database SQL
-also remains ordered because its contract requires a successful schema inspection first.
+Every `saturn_*` command tool and the legacy `run_command` compatibility bridge are ordered action
+tools. Weather and time are not treated as read-only because command execution can deliver room
+output. Database SQL also remains ordered because its contract requires a successful schema
+inspection first.
 
 ## Execution Pipeline
 

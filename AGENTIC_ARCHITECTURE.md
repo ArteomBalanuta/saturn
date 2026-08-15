@@ -147,7 +147,8 @@ room lookup is a later turn when it depends on prior observations.
 | `database_query` | Named read-only application queries. | Read-only, subject to descriptor constraints. |
 | `database_schema` | Admin schema inspection for dynamic SQL. | Ordered prerequisite for `database_sql`. |
 | `database_sql` | Admin-only, AST-validated generated `SELECT`. | Sequential; requires schema inspection. |
-| `run_command` | Approved informational and moderation commands. | Always sequential; may deliver room output. |
+| `saturn_<alias>` | One reflected Saturn command handler per named tool contract. | Always sequential; may deliver room output. |
+| `run_command` | Compatibility bridge for existing routing correction and moderation automation. | Always sequential; may deliver room output. |
 
 Tool visibility is contextual. The registry omits unavailable tools, and `RunCommandTool` publishes
 only commands permitted by the current capabilities. The executor enforces the same rules again at

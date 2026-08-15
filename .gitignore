@@ -1,2 +1,4 @@
 .worktrees/
 .superpowers/
+logs/
+target/
