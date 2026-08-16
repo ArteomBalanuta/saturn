@@ -174,7 +174,12 @@ public final class AgentServiceImpl implements AgentService {
 
   private void reply(AgentInvocation invocation, String content) {
     var context = invocation.context();
-    outService.enqueueMessageForSending(context.nick(), content, context.whisper());
+    try {
+      outService.enqueueMessageForSending(context.nick(), content, context.whisper());
+    } catch (RuntimeException exception) {
+      log.error("Agent reply enqueue failed, requestId={}", invocation.requestId(), exception);
+      return;
+    }
     try {
       replyFlusher.run();
     } catch (RuntimeException exception) {

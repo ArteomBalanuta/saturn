@@ -209,6 +209,44 @@ class AgentServiceImplTest {
   }
 
   @Test
+  void continuesRoutingWhenAnOutboundReplyCannotBeQueued() throws Exception {
+    AtomicInteger routed = new AtomicInteger();
+    ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
+    OutService outService =
+        new OutService(queue) {
+          private final AtomicInteger attempts = new AtomicInteger();
+
+          @Override
+          public String enqueueMessageForSending(String author, String message, boolean whisper) {
+            if (attempts.getAndIncrement() == 0) {
+              throw new IllegalStateException("queue unavailable");
+            }
+            return super.enqueueMessageForSending(author, message, whisper);
+          }
+        };
+    AgentServiceImpl service =
+        new AgentServiceImpl(
+            config(true, 1),
+            invocation -> {
+              routed.incrementAndGet();
+              return new AgentResult(invocation.requestId(), "answer");
+            },
+            outService,
+            () -> {});
+
+    try {
+      assertTrue(service.submit(invocation(false)));
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+      while (routed.get() < 1 && System.nanoTime() < deadline) {
+        Thread.sleep(5);
+      }
+      assertEquals(1, routed.get());
+    } finally {
+      service.close();
+    }
+  }
+
+  @Test
   void rejectsSubmissionAfterShutdown() throws Exception {
     ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
     AgentServiceImpl service =
