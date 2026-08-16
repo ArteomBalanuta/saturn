@@ -26,35 +26,16 @@ public record AgentParticipationConfig(
   public static AgentParticipationConfig from(Toml root) {
     Toml table = root == null ? null : root.getTable("agent");
     return new AgentParticipationConfig(
-        readString(table, "creatorTrip", DEFAULT_CREATOR_TRIP),
-        readBoolean(table, "ambientEnabled", false),
-        toInt(readLong(table, "ambientEveryMessages", 8), "ambientEveryMessages"),
-        Duration.ofMinutes(readLong(table, "quietMinutes", 15)),
-        toInt(readLong(table, "contextMessageLimit", 60), "contextMessageLimit"),
-        readString(table, "noReplyMarker", DEFAULT_NO_REPLY_MARKER));
-  }
-
-  private static String readString(Toml table, String key, String fallback) {
-    String value = table == null ? null : table.getString(key);
-    return value == null ? fallback : value;
-  }
-
-  private static long readLong(Toml table, String key, long fallback) {
-    Long value = table == null ? null : table.getLong(key);
-    return value == null ? fallback : value;
-  }
-
-  private static boolean readBoolean(Toml table, String key, boolean fallback) {
-    Boolean value = table == null ? null : table.getBoolean(key);
-    return value == null ? fallback : value;
-  }
-
-  private static int toInt(long value, String name) {
-    try {
-      return Math.toIntExact(value);
-    } catch (ArithmeticException exception) {
-      throw new IllegalArgumentException("agent." + name + " is outside integer range", exception);
-    }
+        AgentConfigValueReader.readString(table, "creatorTrip", DEFAULT_CREATOR_TRIP),
+        AgentConfigValueReader.readBoolean(table, "ambientEnabled", false),
+        AgentConfigValueReader.toInt(
+            AgentConfigValueReader.readLong(table, "ambientEveryMessages", 8),
+            "ambientEveryMessages"),
+        Duration.ofMinutes(AgentConfigValueReader.readLong(table, "quietMinutes", 15)),
+        AgentConfigValueReader.toInt(
+            AgentConfigValueReader.readLong(table, "contextMessageLimit", 60),
+            "contextMessageLimit"),
+        AgentConfigValueReader.readString(table, "noReplyMarker", DEFAULT_NO_REPLY_MARKER));
   }
 
   private static String requireNotBlank(String value, String name) {

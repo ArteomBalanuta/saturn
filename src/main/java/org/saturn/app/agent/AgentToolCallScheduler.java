@@ -86,7 +86,10 @@ final class AgentToolCallScheduler implements AutoCloseable {
 
   private static AgentToolResult execute(LlmToolCall call, ToolCallExecution execution) {
     try {
-      return execution.execute(call);
+      AgentToolResult result = execution.execute(call);
+      return result == null
+          ? error(call, "TOOL_EXECUTION_FAILED", "Tool execution returned no result")
+          : result;
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
       return error(call, "TOOL_INTERRUPTED", "Tool batch execution was interrupted");

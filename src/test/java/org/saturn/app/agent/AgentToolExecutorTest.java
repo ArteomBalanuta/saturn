@@ -218,6 +218,70 @@ class AgentToolExecutorTest {
   }
 
   @Test
+  void convertsNullToolOutputToACodedFailure() {
+    AgentTool nullTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "null_result";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return null;
+          }
+        };
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(new AgentToolRegistry().register(nullTool).freeze(), config())) {
+      AgentToolResult result =
+          executor.execute(null, new LlmToolCall("null-1", "null_result", "{}"));
+
+      assertTrue(result.isError());
+      assertEquals("TOOL_EXECUTION_FAILED", result.errorCode());
+      assertEquals("Tool execution failed", result.content());
+    }
+  }
+
+  @Test
+  void closeInterruptsAnInFlightToolExecution() throws Exception {
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch interrupted = new CountDownLatch(1);
+    AgentTool blockingTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "blocking";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            started.countDown();
+            try {
+              Thread.sleep(Duration.ofHours(1));
+            } catch (InterruptedException exception) {
+              interrupted.countDown();
+              Thread.currentThread().interrupt();
+            }
+            return AgentToolResult.success(name(), "stopped");
+          }
+        };
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(blockingTool).freeze(), config(Duration.ofHours(1)))) {
+      Thread caller =
+          Thread.startVirtualThread(
+              () -> executor.execute(null, new LlmToolCall("blocking-1", "blocking", "{}")));
+
+      assertTrue(started.await(1, TimeUnit.SECONDS));
+      executor.close();
+      assertTrue(interrupted.await(1, TimeUnit.SECONDS));
+      caller.join(Duration.ofSeconds(1));
+    }
+  }
+
+  @Test
   void rejectsSuccessfulToolOutputThatViolatesItsPublishedResultSchema() {
     AgentTool invalidResultTool =
         new AgentTool() {

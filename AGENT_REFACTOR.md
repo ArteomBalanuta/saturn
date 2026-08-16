@@ -32,6 +32,9 @@ completed stages.
 | Turn state | `AgentTurnState` | Request-local budgets, correction flags, command outcomes, and tool evidence. |
 | Tool scheduling | `AgentToolCallScheduler` | Sequential barriers plus ordered fan-out for contiguous safe read calls. |
 | Response recovery | `AgentResponseCorrector` | Bounded recovery from failure placeholders and narrated, unverified actions. |
+| Configuration values | `AgentConfigValueReader` | Shared TOML/environment scalar parsing and checked numeric conversion for agent configuration records. |
+| Tool-call validation | `AgentToolCallValidator` | Contextual tool resolution, authorization ordering, argument/schema validation, and canonical invocation identity. |
+| Tool arguments | `AgentToolArgumentReader` | Shared trimmed, non-blank JSON string extraction without taking ownership of tool-specific error policy. |
 
 ## Implemented Stages
 
@@ -70,10 +73,14 @@ implementations for required fresh tool output and fresh user-history synthesis.
 
 ### 2. Extract Router Turn Policies
 
-**Status: completed.** `AgentCommandChannelPolicy`, `AgentFreshDataPolicy`,
-`AgentResponseCorrector`, and `AgentTurnState` isolate command correction, fresh evidence,
-response recovery, and mutable turn state. The router retains explicit policy order because
-provider calls and observations belong to one stateful session loop.
+**Status: in progress.** `AgentCommandChannelPolicy`, `AgentFreshDataPolicy`,
+`AgentToolBudgetPolicy`, `AgentResponseCorrector`, and `AgentTurnState` isolate command correction,
+fresh evidence, budget exhaustion, response recovery, and mutable turn state. The router retains
+explicit policy order because provider calls and observations belong to one stateful session loop.
+The first explicit `AgentTurnPolicy` boundary now wraps command-channel enforcement through
+immutable `AgentTurnPolicyInput` and `AgentTurnPolicyResult` values. `AgentToolBudgetPolicy`
+separately owns the deterministic reserve-or-finalize transition; fresh-data and response policies
+remain next candidates.
 
 **Problem:** `DefaultAgentRouter.routeInSession` contains routing, tool-loop progression,
 fresh-data enforcement, command prose correction, response finalization, and persistence. It is
@@ -242,8 +249,9 @@ to factories with single composition responsibilities.
 ### 7. Tighten Contracts and Documentation
 
 **Status: completed.** Stable identity fails during registration, contextual descriptors validate
-when definitions are built for a caller, and the architecture documents reflect the implemented
-boundaries.
+when definitions are built for a caller, configuration scalar parsing is centralized, tool-call
+authorization and canonical identity are regression-tested, and the architecture documents reflect
+the implemented boundaries.
 
 **Problem:** the package has strong records and descriptors, but contract invariants are divided
 between constructors, validator code, and runtime execution paths.
@@ -259,6 +267,18 @@ provider-payload boundary in `AgentToolDefinitionFactory`.
 3. Update `AGENTIC_ARCHITECTURE.md`, `TOOL_ROUTING_ARCHITECTURE.md`, and `REFACTORING.md` after
    each completed stage; remove claims that do not match implementation.
 4. Keep prompt resources versioned and list each policy that selects a prompt.
+5. Keep coverage claims behavioral unless a JaCoCo-style percentage gate is explicitly configured;
+   do not report an unmeasured percentage as complete coverage.
+
+JaCoCo now produces a report for `org.saturn.app.agent` during Maven `verify` under
+`target/site/jacoco/`. It is intentionally report-only until the first baseline is reviewed; no
+percentage threshold is claimed or enforced yet.
+The first measured baseline is 89.65% line, 73.92% branch, 89.75% instruction, 94.59% method,
+and 70.81% complexity coverage across 140 instrumented agent classes.
+After repository-query edge-case coverage, the measured baseline is 90.18% line, 74.49% branch,
+90.23% instruction, 94.74% method, and 71.25% complexity coverage.
+After provider transport and payload edge-case coverage, the measured baseline is 90.73% line,
+74.89% branch, 90.79% instruction, 95.05% method, and 71.83% complexity coverage.
 
 **Acceptance criteria:**
 

@@ -48,6 +48,44 @@ class AgentRequestAssemblerTest {
     assertEquals(
         "run_command",
         moderation.definitions().getFirst().getAsJsonObject("function").get("name").getAsString());
+    assertEquals(1, moderation.definitions().size());
+  }
+
+  @Test
+  void preservesSystemHistoryUserOrderingAndDropsOldestHistoryOverBudget() {
+    AgentToolRegistry registry = new AgentToolRegistry().register(tool("run_command")).freeze();
+    AgentRequestAssembler assembler =
+        new AgentRequestAssembler(
+            config(), registry, new AgentSystemPrompt(AgentParticipationConfig.from(null)));
+    AgentContext context = new AgentContext("room", "alice", null, null, false, List.of("alice"));
+    AgentPreparedRequest request =
+        assembler.assemble(
+            new AgentInvocation(context, "current", AgentInvocationMode.DIRECT),
+            List.of(
+                LlmMessage.user("old"),
+                LlmMessage.assistant("middle", List.of()),
+                LlmMessage.user("latest")),
+            "recent");
+
+    assertEquals("system", request.messages().getFirst().role());
+    assertEquals("old", request.messages().get(1).content());
+    assertEquals("middle", request.messages().get(2).content());
+    assertEquals("latest", request.messages().get(3).content());
+    assertEquals("user", request.messages().getLast().role());
+
+    AgentPreparedRequest bounded =
+        assembler.assemble(
+            new AgentInvocation(context, "current", AgentInvocationMode.DIRECT),
+            List.of(
+                LlmMessage.user("first".repeat(20_000)),
+                LlmMessage.assistant("second".repeat(20_000), List.of()),
+                LlmMessage.user("third".repeat(20_000))),
+            "recent");
+
+    assertEquals(2, bounded.messages().size());
+    assertEquals("system", bounded.messages().getFirst().role());
+    assertEquals("user", bounded.messages().getLast().role());
+    assertTrue(bounded.messages().getLast().content().contains("current"));
   }
 
   private AgentTool tool(String name) {

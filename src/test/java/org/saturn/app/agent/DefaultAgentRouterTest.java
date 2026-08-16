@@ -223,6 +223,40 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void rejectsAnUnboundedToolLoopWhenTheStepBudgetIsExhausted() {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("", List.of(new LlmToolCall("1", "echo", "{}")), "tool_calls"),
+            new LlmResponse("", List.of(new LlmToolCall("2", "echo", "{}")), "tool_calls"));
+    AgentTool tool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "echo";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), "ok");
+          }
+        };
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            boundedConfig(1, 4),
+            client,
+            new AgentToolRegistry().register(tool).freeze(),
+            AgentMemoryStore.none());
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "keep working")));
+
+    assertEquals("Agent execution step limit reached", exception.getMessage());
+    assertEquals(2, client.requests.size());
+  }
+
+  @Test
   void rejectsOversizedPromptAndTruncatesOutput() throws Exception {
     DefaultAgentRouter router =
         new DefaultAgentRouter(
@@ -1370,6 +1404,8 @@ class DefaultAgentRouterTest {
 
     assertEquals(freshAnswer, result.content());
     assertEquals(3, client.requests.size());
+    assertEquals("tool", client.requests.get(1).messages().getLast().role());
+    assertTrue(client.requests.get(1).messages().getLast().content().contains("weather in Wuhan"));
     assertTrue(client.requests.get(2).tools().isEmpty());
     assertTrue(client.requests.get(2).messages().getLast().content().contains("fresh history"));
     assertEquals(freshAnswer, memory.appended.getLast());
@@ -1861,6 +1897,30 @@ class DefaultAgentRouterTest {
         Duration.ofHours(1),
         0,
         Duration.ZERO);
+  }
+
+  private AgentConfig boundedConfig(int maxSteps, int maxToolCallsPerTurn) {
+    return new AgentConfig(
+        true,
+        URI.create("http://localhost"),
+        Optional.empty(),
+        "",
+        Duration.ofSeconds(1),
+        1,
+        maxToolCallsPerTurn,
+        3,
+        2,
+        2_000,
+        2_000,
+        2,
+        Duration.ofHours(1),
+        0,
+        Duration.ZERO,
+        768,
+        false,
+        maxSteps,
+        maxToolCallsPerTurn,
+        Duration.ofSeconds(1));
   }
 
   private static final class ScriptedClient implements LlmClient {

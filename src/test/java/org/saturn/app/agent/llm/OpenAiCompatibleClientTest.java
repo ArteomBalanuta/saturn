@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -250,6 +251,110 @@ class OpenAiCompatibleClientTest {
     assertThrows(
         LlmException.class,
         () -> client.complete(new LlmRequest(List.of(LlmMessage.user("hi")), List.of())));
+  }
+
+  @Test
+  void reportsExhaustedTransientHttpFailuresWithoutRetrying() throws Exception {
+    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext("/v1/chat/completions", exchange -> respond(exchange, 503, "unavailable"));
+    server.start();
+    OpenAiCompatibleClient client = new OpenAiCompatibleClient(config("", 0));
+
+    LlmException exception =
+        assertThrows(
+            LlmException.class,
+            () -> client.complete(new LlmRequest(List.of(LlmMessage.user("hi")), List.of())));
+
+    assertEquals("LLM endpoint returned HTTP 503", exception.getMessage());
+    assertTrue(exception.getCause() == null);
+  }
+
+  @Test
+  void retriesRateLimitResponsesBeforeParsingTheSuccessfulResponse() throws Exception {
+    AtomicInteger calls = new AtomicInteger();
+    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext(
+        "/v1/chat/completions",
+        exchange -> {
+          if (calls.incrementAndGet() == 1) {
+            respond(exchange, 429, "rate limited");
+          } else {
+            respond(exchange, 200, "{\"choices\":[{\"message\":{\"content\":\"ok\"}}]}");
+          }
+        });
+    server.start();
+
+    OpenAiCompatibleClient client = new OpenAiCompatibleClient(config("", 1));
+
+    assertEquals(
+        "ok", client.complete(new LlmRequest(List.of(LlmMessage.user("hi")), List.of())).content());
+    assertEquals(2, calls.get());
+  }
+
+  @Test
+  void translatesInterruptedTransportRequestsAndRestoresInterruptStatus() throws Exception {
+    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext("/v1/chat/completions", exchange -> respond(exchange, 200, "{}"));
+    server.start();
+    OpenAiCompatibleClient client = new OpenAiCompatibleClient(config("", 0));
+    Thread.currentThread().interrupt();
+
+    try {
+      LlmException exception =
+          assertThrows(
+              LlmException.class,
+              () -> client.complete(new LlmRequest(List.of(LlmMessage.user("hi")), List.of())));
+      assertEquals("LLM endpoint request interrupted", exception.getMessage());
+      assertTrue(Thread.currentThread().isInterrupted());
+    } finally {
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  void serializesToolsAndToolMessagesWithOptionalFields() throws Exception {
+    AtomicReference<String> body = new AtomicReference<>();
+    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext(
+        "/v1/chat/completions",
+        exchange -> {
+          body.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+          respond(exchange, 200, "{\"choices\":[{\"message\":{\"content\":\"ok\"}}]}");
+        });
+    server.start();
+    OpenAiCompatibleClient client = new OpenAiCompatibleClient(config("", 0));
+    LlmToolCall call = new LlmToolCall("call-1", "echo", "{}");
+    JsonObject tool = new JsonObject();
+    tool.addProperty("type", "function");
+    tool.add("function", JsonParser.parseString("{\"name\":\"echo\"}"));
+
+    client.complete(
+        new LlmRequest(
+            List.of(LlmMessage.assistant(null, List.of(call)), LlmMessage.tool("call-1", "result")),
+            List.of(tool)));
+
+    var request = JsonParser.parseString(body.get()).getAsJsonObject();
+    assertTrue(request.has("tools"));
+    assertEquals("auto", request.get("tool_choice").getAsString());
+    assertEquals(
+        "call-1",
+        request
+            .getAsJsonArray("messages")
+            .get(0)
+            .getAsJsonObject()
+            .getAsJsonArray("tool_calls")
+            .get(0)
+            .getAsJsonObject()
+            .get("id")
+            .getAsString());
+    assertEquals(
+        "call-1",
+        request
+            .getAsJsonArray("messages")
+            .get(1)
+            .getAsJsonObject()
+            .get("tool_call_id")
+            .getAsString());
   }
 
   private AgentConfig config(String apiKey, int retries) {

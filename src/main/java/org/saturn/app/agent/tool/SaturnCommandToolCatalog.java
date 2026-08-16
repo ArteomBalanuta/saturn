@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentToolRegistry;
+import org.saturn.app.agent.AgentToolSchemas;
 import org.saturn.app.agent.ToolEffect;
 import org.saturn.app.agent.ToolExample;
 import org.saturn.app.command.UserCommand;
@@ -124,11 +125,9 @@ public final class SaturnCommandToolCatalog {
         "description", "Exact text after the command alias, without the Saturn prefix.");
     JsonObject properties = new JsonObject();
     properties.add("arguments", argument);
-    JsonObject schema = new JsonObject();
-    schema.addProperty("type", "object");
+    JsonObject schema = AgentToolSchemas.closedObject();
     schema.add("properties", properties);
     schema.add("required", new JsonArray());
-    schema.addProperty("additionalProperties", false);
     return schema;
   }
 

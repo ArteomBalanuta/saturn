@@ -6,17 +6,21 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Objects;
 import org.saturn.app.agent.AgentContext;
-import org.saturn.app.persistence.H2Database;
 
 public final class H2AgentQueryRepository implements AgentQueryRepository {
   private static final int DEFAULT_ROW_LIMIT = 10;
   private static final int MAX_ROW_LIMIT = 60;
   private static final int MAX_USER_HISTORY_ROW_LIMIT = 500;
-  private final String databasePath;
+  private final H2ReadOnlyConnectionFactory connectionFactory;
 
   public H2AgentQueryRepository(String databasePath) {
-    this.databasePath = databasePath;
+    this(new H2ReadOnlyConnectionFactory(databasePath));
+  }
+
+  public H2AgentQueryRepository(H2ReadOnlyConnectionFactory connectionFactory) {
+    this.connectionFactory = Objects.requireNonNull(connectionFactory, "connectionFactory");
   }
 
   @Override
@@ -212,9 +216,7 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
   }
 
   private Connection openReadOnly() throws SQLException {
-    Connection connection = H2Database.open(databasePath);
-    connection.setReadOnly(true);
-    return connection;
+    return connectionFactory.open();
   }
 
   private static int rowLimit(JsonObject arguments) {

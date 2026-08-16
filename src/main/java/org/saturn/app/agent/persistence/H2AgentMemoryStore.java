@@ -103,16 +103,24 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
         VALUES (?, ?, ?, ?, ?)
         """;
     try (Connection connection = open()) {
-      connection.setAutoCommit(false);
-      try (PreparedStatement cleanup =
-              connection.prepareStatement("DELETE FROM agent_memory WHERE expires_on <= ?");
-          PreparedStatement statement = connection.prepareStatement(sql)) {
-        cleanup.setLong(1, createdOn);
-        cleanup.executeUpdate();
-        insert(statement, context.memoryKey(), "user", userContent, createdOn, expiresOn);
-        insert(statement, context.memoryKey(), "assistant", assistantContent, createdOn, expiresOn);
-      }
-      connection.commit();
+      H2TransactionExecutor.execute(
+          connection,
+          transaction -> {
+            try (PreparedStatement cleanup =
+                    transaction.prepareStatement("DELETE FROM agent_memory WHERE expires_on <= ?");
+                PreparedStatement statement = transaction.prepareStatement(sql)) {
+              cleanup.setLong(1, createdOn);
+              cleanup.executeUpdate();
+              insert(statement, context.memoryKey(), "user", userContent, createdOn, expiresOn);
+              insert(
+                  statement,
+                  context.memoryKey(),
+                  "assistant",
+                  assistantContent,
+                  createdOn,
+                  expiresOn);
+            }
+          });
     } catch (SQLException exception) {
       throw persistenceFailure("append", exception);
     }
@@ -128,20 +136,24 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
         INSERT INTO agent_tool_memory(identity_key, tool_name, content, created_on, expires_on)
         VALUES (?, ?, ?, ?, ?)
         """;
-    try (Connection connection = open();
-        PreparedStatement cleanup =
-            connection.prepareStatement("DELETE FROM agent_tool_memory WHERE expires_on <= ?");
-        PreparedStatement statement = connection.prepareStatement(sql)) {
-      connection.setAutoCommit(false);
-      cleanup.setLong(1, createdOn);
-      cleanup.executeUpdate();
-      statement.setString(1, context.memoryKey());
-      statement.setString(2, toolName);
-      statement.setString(3, content);
-      statement.setLong(4, createdOn);
-      statement.setLong(5, expiresOn);
-      statement.executeUpdate();
-      connection.commit();
+    try (Connection connection = open()) {
+      H2TransactionExecutor.execute(
+          connection,
+          transaction -> {
+            try (PreparedStatement cleanup =
+                    transaction.prepareStatement(
+                        "DELETE FROM agent_tool_memory WHERE expires_on <= ?");
+                PreparedStatement statement = transaction.prepareStatement(sql)) {
+              cleanup.setLong(1, createdOn);
+              cleanup.executeUpdate();
+              statement.setString(1, context.memoryKey());
+              statement.setString(2, toolName);
+              statement.setString(3, content);
+              statement.setLong(4, createdOn);
+              statement.setLong(5, expiresOn);
+              statement.executeUpdate();
+            }
+          });
     } catch (SQLException exception) {
       throw persistenceFailure("append tool evidence", exception);
     }

@@ -2,6 +2,8 @@ package org.saturn.app.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import java.time.Duration;
@@ -9,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.llm.LlmMessage;
+import org.saturn.app.agent.llm.LlmRequest;
 import org.saturn.app.agent.llm.LlmResponse;
 import org.saturn.app.agent.llm.LlmToolCall;
 import org.saturn.app.agent.tool.RunCommandTool;
@@ -24,18 +27,119 @@ class AgentCommandChannelPolicyTest {
         new AgentCommandChannelPolicy(request -> new LlmResponse("", List.of(call), "tool_calls"));
     List<LlmMessage> messages = new ArrayList<>();
 
-    AgentCommandChannelPolicy.Result result =
-        policy.enforce(
-            new LlmResponse("`weather Tokyo`", List.of(), "stop"),
-            messages,
-            definitions,
-            AgentCommandProseGuard.from(definitions),
-            new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1))),
-            "show Tokyo weather",
-            "request-1");
+    AgentTurnPolicyResult result =
+        ((AgentTurnPolicy) policy)
+            .apply(
+                new AgentTurnPolicyInput(
+                    new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                    messages,
+                    definitions,
+                    AgentCommandProseGuard.from(definitions),
+                    new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1))),
+                    "show Tokyo weather",
+                    "request-1"));
 
     assertEquals(List.of(call), result.response().toolCalls());
     assertFalse(messages.isEmpty());
+  }
+
+  @Test
+  void acceptsNonCommandFallbackWithExactlyTheDeclaredResponseShape() throws Exception {
+    LlmToolCall call =
+        new LlmToolCall(
+            "call-1",
+            "respond_without_command",
+            "{\"response\":\"The weather tool is unavailable.\"}");
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(request -> new LlmResponse("", List.of(call), "tool_calls"));
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+
+    AgentCommandChannelPolicy.Result result =
+        policy.enforce(
+            new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+            new ArrayList<>(),
+            definitions(),
+            AgentCommandProseGuard.from(definitions()),
+            state,
+            "show Tokyo weather",
+            "request-1");
+
+    assertEquals("The weather tool is unavailable.", result.response().content());
+    assertTrue(result.response().toolCalls().isEmpty());
+  }
+
+  @Test
+  void rejectsMultipleOrMismatchedCorrectionCalls() {
+    List<LlmToolCall> calls =
+        List.of(
+            new LlmToolCall("call-1", "run_command", "{}"),
+            new LlmToolCall("call-2", "run_command", "{}"));
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(request -> new LlmResponse("", calls, "tool_calls"));
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            policy.enforce(
+                new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                new ArrayList<>(),
+                definitions(),
+                AgentCommandProseGuard.from(definitions()),
+                state,
+                "show Tokyo weather",
+                "request-1"));
+  }
+
+  @Test
+  void rejectsMalformedNonCommandFallbackArguments() {
+    LlmToolCall call = new LlmToolCall("call-1", "respond_without_command", "{\"response\":4}");
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(request -> new LlmResponse("", List.of(call), "tool_calls"));
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            policy.enforce(
+                new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                new ArrayList<>(),
+                definitions(),
+                AgentCommandProseGuard.from(definitions()),
+                state,
+                "show Tokyo weather",
+                "request-1"));
+  }
+
+  @Test
+  void doesNotOfferToolsAgainAfterCommandFailure() throws Exception {
+    List<LlmRequest> requests = new ArrayList<>();
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(
+            request -> {
+              requests.add(request);
+              return new LlmResponse("The command did not complete.", List.of(), "stop");
+            });
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+    state.recordFailedCommand("weather");
+
+    AgentCommandChannelPolicy.Result result =
+        policy.enforce(
+            new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+            new ArrayList<>(),
+            definitions(),
+            AgentCommandProseGuard.from(definitions()),
+            state,
+            "show Tokyo weather",
+            "request-failed");
+
+    assertEquals("The command did not complete.", result.response().content());
+    assertEquals(1, requests.size());
+    assertTrue(requests.getFirst().tools().isEmpty());
   }
 
   private static List<JsonObject> definitions() {

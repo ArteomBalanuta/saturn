@@ -2,6 +2,7 @@ package org.saturn.app.agent.tool;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonArray;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentSqlConfig;
+import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema;
 import org.saturn.app.agent.persistence.AgentPersistenceException;
@@ -106,6 +108,48 @@ class SaturnAgentToolsTest {
     assertEquals(2, content.get("count").getAsInt());
     assertTrue(content.getAsJsonArray("users").toString().contains("lounge-user"));
     assertFalse(content.getAsJsonArray("users").toString().contains("alice"));
+  }
+
+  @Test
+  void roomUsersToolReportsInvalidAndUnmanagedRooms() {
+    RoomUsersTool tool = new RoomUsersTool(room -> Optional.empty());
+    JsonObject invalid = new JsonObject();
+    invalid.addProperty("room", " ");
+
+    AgentToolResult invalidResult = tool.execute(context(), invalid);
+    AgentToolResult unmanagedResult = tool.execute(context(), new JsonObject());
+
+    assertTrue(invalidResult.isError());
+    assertTrue(invalidResult.content().contains("non-blank room"));
+    assertTrue(unmanagedResult.isError());
+    assertTrue(unmanagedResult.content().contains("programming"));
+  }
+
+  @Test
+  void roomUsersToolExposesDescriptorAndClosedRoomSchema() {
+    RoomUsersTool tool =
+        new RoomUsersTool(
+            room -> Optional.of(new AgentRoomDirectory.RoomSnapshot(room, List.of())));
+
+    AgentToolDescriptor descriptor = tool.descriptor(context());
+
+    assertEquals("room_users", descriptor.name());
+    assertEquals("room", descriptor.category());
+    assertEquals("object", descriptor.parameters().get("type").getAsString());
+    assertFalse(descriptor.parameters().get("additionalProperties").getAsBoolean());
+    assertEquals(
+        "string",
+        descriptor
+            .parameters()
+            .getAsJsonObject("properties")
+            .getAsJsonObject("room")
+            .get("type")
+            .getAsString());
+  }
+
+  @Test
+  void roomUsersToolRejectsNullDirectory() {
+    assertThrows(NullPointerException.class, () -> new RoomUsersTool(null));
   }
 
   @Test

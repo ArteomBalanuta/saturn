@@ -12,6 +12,7 @@ import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.AgentToolSchemas;
 import org.saturn.app.agent.ToolAccess;
 import org.saturn.app.agent.ToolEffect;
 import org.saturn.app.agent.ToolExample;
@@ -111,11 +112,9 @@ public final class RunCommandTool implements AgentTool {
     properties.add("arguments", arguments);
     JsonArray required = new JsonArray();
     required.add("command");
-    JsonObject schema = new JsonObject();
-    schema.addProperty("type", "object");
+    JsonObject schema = AgentToolSchemas.closedObject();
     schema.add("properties", properties);
     schema.add("required", required);
-    schema.addProperty("additionalProperties", false);
     return schema;
   }
 

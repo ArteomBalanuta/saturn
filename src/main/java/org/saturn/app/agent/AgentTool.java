@@ -18,13 +18,9 @@ public interface AgentTool {
   }
 
   default JsonObject parameters() {
-    JsonObject schema = new JsonObject();
-    schema.addProperty("type", "object");
-    schema.add("properties", new JsonObject());
     // The default descriptor has no declared properties; keep it open for legacy SDK tools.
     // Tools that need a closed contract explicitly publish additionalProperties: false.
-    schema.addProperty("additionalProperties", true);
-    return schema;
+    return AgentToolSchemas.object();
   }
 
   default JsonObject parameters(AgentContext context) {

@@ -101,6 +101,16 @@ public record AgentToolDescriptor(
     return effect == ToolEffect.READ_ONLY;
   }
 
+  @Override
+  public JsonObject parameters() {
+    return parameters.deepCopy();
+  }
+
+  @Override
+  public JsonObject resultSchema() {
+    return resultSchema.deepCopy();
+  }
+
   private static JsonObject anyResultSchema() {
     JsonObject schema = new JsonObject();
     schema.addProperty("type", "any");

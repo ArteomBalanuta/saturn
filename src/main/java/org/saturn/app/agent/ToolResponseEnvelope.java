@@ -5,7 +5,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonParser;
 
-/** Stable model-facing result envelope for every SDK tool invocation. */
 /** Stable model-visible envelope for every successful or failed tool observation. */
 public record ToolResponseEnvelope(String status, JsonElement data, Error error) {
   private static final Gson GSON = new Gson();
@@ -14,7 +13,7 @@ public record ToolResponseEnvelope(String status, JsonElement data, Error error)
     if (!"success".equals(status) && !"error".equals(status)) {
       throw new IllegalArgumentException("status must be success or error");
     }
-    data = data == null ? JsonNull.INSTANCE : data;
+    data = data == null ? JsonNull.INSTANCE : data.deepCopy();
     if ("success".equals(status) && error != null) {
       throw new IllegalArgumentException("successful envelope cannot contain an error");
     }
@@ -41,6 +40,11 @@ public record ToolResponseEnvelope(String status, JsonElement data, Error error)
 
   public String toJson() {
     return GSON.toJson(this);
+  }
+
+  @Override
+  public JsonElement data() {
+    return data.deepCopy();
   }
 
   private static JsonElement parse(String content) {

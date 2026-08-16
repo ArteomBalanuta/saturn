@@ -3,9 +3,6 @@ package org.saturn.app.agent;
 import java.time.Duration;
 import java.util.Objects;
 
-/**
- * Immutable per-turn bounds that prevent a model response from extending execution indefinitely.
- */
 /** Immutable per-request loop and default tool-timeout limits derived from agent configuration. */
 public record AgentExecutionLimits(int maxSteps, int maxToolCallsPerTurn, Duration toolTimeout) {
   public AgentExecutionLimits {

@@ -2,6 +2,7 @@ package org.saturn.app.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -64,6 +65,68 @@ class AgentTurnMemoryTest {
 
     assertEquals("Agent memory persistence failed", exception.getMessage());
     assertEquals(failure, exception.getCause());
+  }
+
+  @Test
+  void translatesMemoryLoadFailuresWithoutLeakingInternalDetails() {
+    RuntimeException failure = new RuntimeException("database detail");
+    AgentMemoryStore store =
+        new AgentMemoryStore() {
+          @Override
+          public List<LlmMessage> load(AgentContext context, AgentConfig config) {
+            throw failure;
+          }
+
+          @Override
+          public void append(
+              AgentContext context,
+              String userContent,
+              String assistantContent,
+              AgentConfig config) {}
+        };
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> new AgentTurnMemory(store, config()).load(context(), "request-3"));
+
+    assertEquals("Agent memory load failed", exception.getMessage());
+    assertEquals(failure, exception.getCause());
+    assertTrue(!exception.getMessage().contains("database detail"));
+  }
+
+  @Test
+  void appendsToolEvidenceInInputOrderAndDoesNothingForEmptyResults() throws Exception {
+    java.util.List<String> observed = new java.util.ArrayList<>();
+    AgentMemoryStore store =
+        new AgentMemoryStore() {
+          @Override
+          public List<LlmMessage> load(AgentContext context, AgentConfig config) {
+            return List.of();
+          }
+
+          @Override
+          public void append(
+              AgentContext context,
+              String userContent,
+              String assistantContent,
+              AgentConfig config) {}
+
+          @Override
+          public void appendToolEvidence(
+              AgentContext context, String toolName, String content, AgentConfig config) {
+            observed.add(toolName + ":" + content);
+          }
+        };
+    AgentTurnMemory memory = new AgentTurnMemory(store, config());
+
+    memory.appendToolEvidence(context(), List.of(), "request-4");
+    memory.appendToolEvidence(
+        context(),
+        List.of(AgentToolResult.success("first", "one"), AgentToolResult.success("second", "two")),
+        "request-5");
+
+    assertEquals(List.of("first:one", "second:two"), observed);
   }
 
   private static AgentConfig config() {

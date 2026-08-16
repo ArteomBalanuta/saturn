@@ -6,6 +6,12 @@ public record AgentToolResult(
     String callId, String toolName, String content, boolean isError, String errorCode) {
   private static final Gson GSON = new Gson();
 
+  public AgentToolResult {
+    if (isError && (errorCode == null || errorCode.isBlank())) {
+      errorCode = "TOOL_EXECUTION_FAILED";
+    }
+  }
+
   public AgentToolResult(String callId, String toolName, String content, boolean isError) {
     this(callId, toolName, content, isError, isError ? "TOOL_EXECUTION_FAILED" : null);
   }

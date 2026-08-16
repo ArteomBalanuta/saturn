@@ -14,7 +14,7 @@ record AgentPreparedRequest(
     Optional<String> requiredFreshNick) {
   AgentPreparedRequest {
     messages = List.copyOf(messages);
-    definitions = List.copyOf(definitions);
+    definitions = definitions.stream().map(JsonObject::deepCopy).toList();
     requiredFreshTool = requiredFreshTool == null ? Optional.empty() : requiredFreshTool;
     requiredFreshNick = requiredFreshNick == null ? Optional.empty() : requiredFreshNick;
   }

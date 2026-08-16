@@ -4,7 +4,6 @@ import com.google.gson.JsonObject;
 import java.time.Duration;
 import java.util.StringJoiner;
 
-/** Converts a validated Saturn SDK descriptor into the provider's function-tool payload. */
 /** Serializes validated tool descriptors into OpenAI-compatible function definitions. */
 public final class AgentToolDefinitionFactory {
   /** Creates a provider payload without changing the descriptor's contract. */
@@ -34,8 +33,9 @@ public final class AgentToolDefinitionFactory {
     appendLine(description, "result_schema", descriptor.resultSchema());
     appendList(description, "when_to_use", descriptor.whenToUse());
     appendList(description, "when_not_to_use", descriptor.whenNotToUse());
-    appendList(description, "required_capabilities", descriptor.requiredCapabilities());
-    appendList(description, "required_successful_tools", descriptor.requiredSuccessfulTools());
+    appendSortedList(description, "required_capabilities", descriptor.requiredCapabilities());
+    appendSortedList(
+        description, "required_successful_tools", descriptor.requiredSuccessfulTools());
     for (ToolExample example : descriptor.examples()) {
       description
           .append("example: ")
@@ -63,5 +63,15 @@ public final class AgentToolDefinitionFactory {
     if (joined.length() > 0) {
       appendLine(description, label, joined);
     }
+  }
+
+  private void appendSortedList(StringBuilder description, String label, Iterable<?> values) {
+    appendList(
+        description,
+        label,
+        java.util.stream.StreamSupport.stream(values.spliterator(), false)
+            .map(String::valueOf)
+            .sorted()
+            .toList());
   }
 }

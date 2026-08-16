@@ -1,6 +1,8 @@
 package org.saturn.app.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import java.time.Duration;
@@ -22,6 +24,25 @@ class AgentToolExecutionPolicyTest {
     assertEquals(
         AgentToolExecutionMode.SEQUENTIAL_DEPENDENT_READ,
         policy.classify(descriptor(ToolEffect.READ_ONLY, false, Set.of())));
+  }
+
+  @Test
+  void treatsNonIdempotenceAndPrerequisitesAsIndependentBarriers() {
+    assertEquals(
+        AgentToolExecutionMode.SEQUENTIAL_DEPENDENT_READ,
+        policy.classify(descriptor(ToolEffect.READ_ONLY, false, Set.of("history"))));
+    assertEquals(
+        AgentToolExecutionMode.SEQUENTIAL_DEPENDENT_READ,
+        policy.classify(descriptor(ToolEffect.READ_ONLY, true, Set.of("history"))));
+  }
+
+  @Test
+  void parallelSafetyMatchesTheExecutionClassification() {
+    assertTrue(policy.isParallelSafe(descriptor(ToolEffect.READ_ONLY, true, Set.of())));
+    assertFalse(policy.isParallelSafe(descriptor(ToolEffect.READ_ONLY, false, Set.of())));
+    assertFalse(
+        policy.isParallelSafe(descriptor(ToolEffect.READ_ONLY, true, Set.of("database_schema"))));
+    assertFalse(policy.isParallelSafe(descriptor(ToolEffect.PERSISTENCE, true, Set.of())));
   }
 
   @Test

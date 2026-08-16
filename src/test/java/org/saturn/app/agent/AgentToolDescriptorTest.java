@@ -111,6 +111,37 @@ class AgentToolDescriptorTest {
   }
 
   @Test
+  void returnsDefensiveCopiesForProviderSchemas() {
+    JsonObject resultSchema = new JsonObject();
+    resultSchema.addProperty("type", "object");
+    resultSchema.add("properties", new JsonObject());
+    AgentToolDescriptor descriptor =
+        new AgentToolDescriptor(
+            "tool",
+            "Tool",
+            "Reads data.",
+            "test",
+            ToolAccess.PUBLIC,
+            ToolEffect.READ_ONLY,
+            ToolResultMode.MODEL_DATA,
+            parameters(),
+            List.of(),
+            List.of("Do not use for unrelated work."),
+            List.of(),
+            Set.of(),
+            Set.of(),
+            true,
+            java.time.Duration.ZERO,
+            resultSchema);
+
+    descriptor.parameters().addProperty("mutated", true);
+    descriptor.resultSchema().addProperty("mutated", true);
+
+    assertEquals(false, descriptor.parameters().has("mutated"));
+    assertEquals(false, descriptor.resultSchema().has("mutated"));
+  }
+
+  @Test
   void requiresADeclaredNegativeConstraint() {
     assertThrows(
         IllegalArgumentException.class,

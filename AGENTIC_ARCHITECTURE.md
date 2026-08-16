@@ -35,6 +35,13 @@ action claims. Persisted tool evidence is supplied as system context rather than
 the final response boundary rejects a repeated evidence envelope before room delivery.
 `AgentTurnState` owns request-local bounds; `AgentResponseSanitizer` owns presentation.
 
+`AgentTurnPolicy` is the package-private boundary for ordered response enforcement. The router
+currently injects `AgentCommandChannelPolicy` through this interface; immutable
+`AgentTurnPolicyInput` and `AgentTurnPolicyResult` values make policy inputs and correction outcomes
+explicit without allowing a policy to execute tools or persist memory.
+`AgentToolBudgetPolicy` separately owns tool-call reservation and the deterministic transition to a
+single no-tools finalization when the per-turn budget is exhausted.
+
 ### Execution Engine
 
 `AgentToolExecutor` is created and closed per routed request. `AgentToolCallValidator` resolves
@@ -46,6 +53,9 @@ owns ordered selective fan-out.
 For each call the facade validates, reserves, invokes, validates the result schema, and records the
 outcome. Malformed arguments, timeouts, and tool exceptions become coded observations rather than
 crashing the router.
+Closing the request-local executor invokes `shutdownNow()` on both scheduling and invocation
+executors, interrupting in-flight tool work; `AgentToolExecutorTest` locks this cancellation
+contract down.
 
 ### Room Automation And Composition
 
@@ -65,8 +75,18 @@ checked-in defaults; non-blank `SATURN_AGENT_*` environment values take preceden
 defaults to disabled and uses `http://localhost:16261` only as a safe local fallback. Enable it
 only after setting `SATURN_AGENT_ENDPOINT` for the target environment.
 
+`AgentConfigValueReader` is the shared scalar-reading boundary used by the provider, SQL,
+participation, and moderation configuration records. It owns TOML fallback, non-blank environment
+precedence, strict boolean parsing, long parsing, and checked integer conversion. Each configuration
+record retains responsibility for domain-level positivity and cross-field invariants.
+
 Sensitive credentials never belong in TOML. `apiKeyEnv` names the environment variable holding the
 token and defaults to `SATURN_AGENT_API_KEY`. The normal deployment variables are:
+
+`OpenAiCompatibleClient` is currently the sole provider implementation, so no provider transport
+abstraction is introduced merely for symmetry. Its injectable constructor validates configuration,
+serialization, and HTTP transport dependencies at the boundary; retry, timeout, interruption, and
+response parsing behavior remains provider-specific and directly tested.
 
 | Environment variable | Overrides |
 | --- | --- |
@@ -87,6 +107,28 @@ Every `AgentTool` publishes an `AgentToolDescriptor`; `AgentToolDefinitionFactor
 as an OpenAI function definition. The descriptor includes stable identity, capability/access
 requirements, side effect, result-delivery mode, JSON parameter and result schemas, positive and
 negative routing guidance, examples, prerequisite tools, idempotency, and timeout.
+
+`AgentToolSchemas` centralizes the common JSON-object contract shape. Legacy SDK-compatible tools
+use `object()` with `additionalProperties: true`; strict built-in contracts use `closedObject()` and
+then add their declared properties and required fields. Tool-specific schema constraints remain in
+the owning tool.
+`AgentToolArgumentReader` centralizes trimmed, non-blank JSON string extraction for tools while
+leaving required versus optional argument policy and user-facing error text with each tool.
+
+Read-only H2 agent repositories depend on `H2ReadOnlyConnectionFactory` for connection acquisition.
+The path-based constructors remain compatibility facades, while the factory-based constructors keep
+connection setup centralized and make the persistence boundary injectable for focused tests.
+
+`H2AgentMemoryStore` delegates append and tool-evidence writes to `H2TransactionExecutor`. The
+executor owns auto-commit transitions, commit, rollback with suppressed rollback failures, and
+restoration of the caller's original connection state; SQL binding and memory-specific cleanup stay
+in the store.
+
+Persistence error translation remains repository-specific: named queries preserve operation-specific
+messages and their `SQLException` causes, memory writes include database diagnostics, schema
+inspection uses a stable schema-boundary message, and validated SQL maps failures to
+`AgentSqlErrorCode`. These contracts are covered independently rather than merged into a generic
+mapper.
 
 `read_only` is derived from `ToolEffect.READ_ONLY`. Legacy read-only descriptors are idempotent by
 default, but new tools should declare their metadata explicitly. The model-visible result protocol
@@ -175,6 +217,18 @@ validation, ordering, timeout, and capability tests. Update resource-based tool 
 
 Never mark an action tool read-only or idempotent merely because it is commonly informational. Only
 a successful tool result, never model prose, proves that a lookup or command occurred.
+
+## Hardening Coverage
+
+The agent package uses focused contract tests for configuration parsing, tool descriptors, tool-call
+validation, execution limits, fresh-data enforcement, response finalization, memory persistence, and
+room automation. `AgentToolCallValidatorTest` specifically protects authorization-before-parsing
+ordering and canonical invocation identity, while `AgentConfigValueReaderTest` protects shared
+configuration semantics. These are additive to the router and full-suite regression tests.
+
+Coverage claims are intentionally expressed as behavioral contracts rather than a percentage: the
+Maven build currently has no JaCoCo or equivalent coverage gate configured. A future coverage gate
+should be introduced separately with agreed thresholds and exclusions for generated/framework glue.
 
 ## Related Documentation
 

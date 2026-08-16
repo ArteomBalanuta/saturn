@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentNickNormalizer;
@@ -14,6 +15,7 @@ import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.AgentToolSchemas;
 import org.saturn.app.agent.ToolAccess;
 import org.saturn.app.agent.ToolEffect;
 import org.saturn.app.agent.ToolExample;
@@ -90,34 +92,27 @@ public final class UserMessageHistoryTool implements AgentTool {
     properties.add("room", room);
     JsonArray required = new JsonArray();
     required.add("nick");
-    JsonObject schema = new JsonObject();
-    schema.addProperty("type", "object");
+    JsonObject schema = AgentToolSchemas.closedObject();
     schema.add("properties", properties);
     schema.add("required", required);
-    schema.addProperty("additionalProperties", false);
     return schema;
   }
 
   @Override
   /** Queries public history for the supplied nick and adds evidence metadata to the result. */
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
-    JsonElement nick = arguments.get("nick");
-    if (nick == null
-        || !nick.isJsonPrimitive()
-        || !nick.getAsJsonPrimitive().isString()
-        || nick.getAsString().isBlank()) {
+    Optional<String> nick = AgentToolArgumentReader.nonBlankString(arguments, "nick");
+    if (nick.isEmpty()) {
       return AgentToolResult.error(null, name(), "A non-blank nick is required");
     }
     JsonObject queryArguments = arguments.deepCopy();
-    queryArguments.addProperty("nick", AgentNickNormalizer.normalize(nick.getAsString()));
+    queryArguments.addProperty("nick", AgentNickNormalizer.normalize(nick.orElseThrow()));
     if (queryArguments.has("room")) {
-      JsonElement room = queryArguments.get("room");
-      if (!room.isJsonPrimitive()
-          || !room.getAsJsonPrimitive().isString()
-          || room.getAsString().isBlank()) {
+      Optional<String> room = AgentToolArgumentReader.nonBlankString(arguments, "room");
+      if (room.isEmpty()) {
         return AgentToolResult.error(null, name(), "A non-blank room is required");
       }
-      queryArguments.addProperty("room", room.getAsString().trim());
+      queryArguments.addProperty("room", room.orElseThrow());
     }
     try {
       JsonObject result = repository.execute("recent_messages_for_user", queryArguments, context);

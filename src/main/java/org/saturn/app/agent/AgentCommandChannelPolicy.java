@@ -17,7 +17,7 @@ import org.saturn.app.agent.llm.LlmResponse;
 
 /** Enforces structured tool calls when a model renders a Saturn command as visible prose. */
 @Slf4j
-final class AgentCommandChannelPolicy {
+final class AgentCommandChannelPolicy implements AgentTurnPolicy {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private static final String RESPOND_WITHOUT_COMMAND = "respond_without_command";
   private static final String TOOL_CORRECTION = PROMPTS.text("router-command-tool-correction.txt");
@@ -29,6 +29,21 @@ final class AgentCommandChannelPolicy {
 
   AgentCommandChannelPolicy(LlmClient client) {
     this.client = client;
+  }
+
+  @Override
+  public AgentTurnPolicyResult apply(AgentTurnPolicyInput input)
+      throws LlmException, AgentRoutingException {
+    Result result =
+        enforce(
+            input.response(),
+            input.messages(),
+            input.definitions(),
+            input.commandProseGuard(),
+            input.turnState(),
+            input.prompt(),
+            input.correlationId());
+    return new AgentTurnPolicyResult(result.response(), result.correctionUsed());
   }
 
   Result enforce(

@@ -2,6 +2,7 @@ package org.saturn.app.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -44,6 +45,22 @@ class AgentResponseFinalizerTest {
 
     assertFalse(result.shouldReply());
     assertEquals("", result.content());
+  }
+
+  @Test
+  void rejectsNoReplyMarkerForARequiredDirectResponse() {
+    AgentResponseFinalizer finalizer = finalizer();
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            finalizer.prepare(
+                invocation(AgentInvocationMode.DIRECT),
+                new LlmResponse("[[SATURN_NO_REPLY]]", List.of(), "stop"),
+                List.of(),
+                Optional.empty(),
+                List.of(),
+                "correlation-3"));
   }
 
   private static AgentResponseFinalizer finalizer() {

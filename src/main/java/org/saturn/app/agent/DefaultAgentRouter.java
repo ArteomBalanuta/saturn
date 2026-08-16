@@ -34,7 +34,8 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentConversationContextProvider conversationContextProvider;
   private final AgentSystemPrompt systemPrompt;
   private final AgentResponseCorrector responseCorrector;
-  private final AgentCommandChannelPolicy commandChannelPolicy;
+  private final AgentTurnPolicy commandChannelPolicy;
+  private final AgentToolBudgetPolicy toolBudgetPolicy = new AgentToolBudgetPolicy();
   private final AgentFreshDataPolicy freshDataPolicy = new AgentFreshDataPolicy();
   private final AgentFreshDataCoordinator freshDataCoordinator;
   private final AgentTurnMemory turnMemory;
@@ -161,15 +162,16 @@ public final class DefaultAgentRouter implements AgentRouter {
                     response, messages, definitions, correlationId);
             turnState.markUnverifiedActionChecked();
           }
-          AgentCommandChannelPolicy.Result guarded =
-              commandChannelPolicy.enforce(
-                  response,
-                  messages,
-                  definitions,
-                  commandProseGuard,
-                  turnState,
-                  invocation.prompt(),
-                  correlationId);
+          AgentTurnPolicyResult guarded =
+              commandChannelPolicy.apply(
+                  new AgentTurnPolicyInput(
+                      response,
+                      messages,
+                      definitions,
+                      commandProseGuard,
+                      turnState,
+                      invocation.prompt(),
+                      correlationId));
           response = guarded.response();
           if (guarded.correctionUsed()) {
             turnState.markCommandCorrectionUsed();
@@ -182,8 +184,9 @@ public final class DefaultAgentRouter implements AgentRouter {
         if (!turnState.toolsEnabled()) {
           throw new AgentRoutingException("Agent returned a tool call after tools were disabled");
         }
-        if (!turnState.reserveToolCalls(response.toolCalls().size())) {
-          turnState.disableTools();
+        AgentToolBudgetPolicy.Result budgetResult =
+            toolBudgetPolicy.reserve(response.toolCalls().size(), turnState);
+        if (budgetResult.finalizeWithoutTools()) {
           response = finalizeResponse(messages);
           continue;
         }

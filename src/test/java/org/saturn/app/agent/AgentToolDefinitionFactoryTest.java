@@ -44,4 +44,33 @@ class AgentToolDefinitionFactoryTest {
     assertTrue(
         definition.get("description").getAsString().contains("result_schema: {\"type\":\"any\"}"));
   }
+
+  @Test
+  void rendersSetBasedContractMetadataInStableOrder() {
+    AgentToolDescriptor descriptor =
+        new AgentToolDescriptor(
+            "ordered",
+            "Ordered",
+            "Test ordering.",
+            "test",
+            ToolAccess.PUBLIC,
+            ToolEffect.READ_ONLY,
+            ToolResultMode.MODEL_DATA,
+            AgentToolSchemas.object(),
+            List.of("Use it."),
+            List.of("Do not misuse it."),
+            List.of(),
+            Set.of("zeta", "alpha"),
+            Set.of("later", "first"));
+
+    String description =
+        new AgentToolDefinitionFactory()
+            .create(descriptor)
+            .getAsJsonObject("function")
+            .get("description")
+            .getAsString();
+
+    assertTrue(description.indexOf("required_capabilities: alpha, zeta") >= 0);
+    assertTrue(description.indexOf("required_successful_tools: first, later") >= 0);
+  }
 }

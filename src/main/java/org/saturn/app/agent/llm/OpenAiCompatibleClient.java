@@ -13,6 +13,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.saturn.app.agent.AgentConfig;
 
 public final class OpenAiCompatibleClient implements LlmClient {
@@ -25,9 +26,9 @@ public final class OpenAiCompatibleClient implements LlmClient {
   }
 
   OpenAiCompatibleClient(AgentConfig config, Gson gson, HttpClient httpClient) {
-    this.config = config;
-    this.gson = gson;
-    this.httpClient = httpClient;
+    this.config = Objects.requireNonNull(config, "config");
+    this.gson = Objects.requireNonNull(gson, "gson");
+    this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
   }
 
   @Override

@@ -2,6 +2,7 @@ package org.saturn.app.agent.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -40,7 +41,8 @@ class H2AgentQueryRepositoryTest {
 
   @Test
   void executesNamedQueriesAndScopesRecentMessagesToRequester() {
-    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    H2AgentQueryRepository repository =
+        new H2AgentQueryRepository(new H2ReadOnlyConnectionFactory(database.toString()));
     AgentContext alice =
         new AgentContext(
             "programming", "alice", "trip-a", "hash-a", false, List.of("alice", "bob"));
@@ -238,5 +240,88 @@ class H2AgentQueryRepositoryTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> repository.execute("recent_messages_for_user", new JsonObject(), context));
+  }
+
+  @Test
+  void returnsKnownNicksForExplicitAndContextTrips() throws Exception {
+    try (var connection = H2Database.open(database.toString());
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate("INSERT INTO names(name,created_on) VALUES ('zeta',1),('alpha',2)");
+      statement.executeUpdate(
+          "INSERT INTO trip_names(trip_id,name_id) "
+              + "SELECT t.id,n.id FROM trips t JOIN names n ON n.name IN ('zeta','alpha') "
+              + "WHERE t.trip = 'trip-a'");
+    }
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
+
+    JsonObject fromContext = repository.execute("known_nicks_for_trip", new JsonObject(), context);
+    JsonObject explicit = new JsonObject();
+    explicit.addProperty("trip", "trip-a");
+    JsonObject fromExplicit = repository.execute("known_nicks_for_trip", explicit, context);
+
+    assertEquals(2, fromContext.getAsJsonArray("rows").size());
+    assertEquals(
+        "alpha",
+        fromContext.getAsJsonArray("rows").get(0).getAsJsonObject().get("name").getAsString());
+    assertEquals(2, fromExplicit.getAsJsonArray("rows").size());
+  }
+
+  @Test
+  void returnsEmptyRowsWhenRequesterTripIsMissing() {
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", " ", "hash-a", false, List.of());
+
+    JsonObject result =
+        repository.execute("recent_messages_for_requester", new JsonObject(), context);
+
+    assertTrue(result.getAsJsonArray("rows").isEmpty());
+  }
+
+  @Test
+  void rejectsInvalidRoomArgumentsBeforeOpeningTheDatabase() {
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("room", " ");
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> repository.execute("recent_messages_for_room", arguments, context));
+  }
+
+  @Test
+  void clampsNonPositiveLimitsToOneRow() {
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("limit", 0);
+
+    JsonObject result = repository.execute("recent_messages_for_room", arguments, context);
+
+    assertEquals(1, result.getAsJsonArray("rows").size());
+  }
+
+  @Test
+  void wrapsNamedQuerySqlFailuresWithoutDiscardingTheDatabaseCause() throws Exception {
+    try (var connection = H2Database.open(database.toString());
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate("ALTER TABLE messages RENAME COLUMN visibility TO visibility_bad");
+    }
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
+
+    AgentPersistenceException exception =
+        assertThrows(
+            AgentPersistenceException.class,
+            () -> repository.execute("message_count", new JsonObject(), context));
+
+    assertEquals("Agent count query failed", exception.getMessage());
+    assertTrue(exception.getCause() instanceof java.sql.SQLException);
   }
 }

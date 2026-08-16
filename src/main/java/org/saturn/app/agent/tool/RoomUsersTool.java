@@ -3,12 +3,14 @@ package org.saturn.app.agent.tool;
 import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.saturn.app.agent.AgentContext;
 import org.saturn.app.agent.AgentPromptCatalog;
 import org.saturn.app.agent.AgentTool;
 import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.AgentToolSchemas;
 import org.saturn.app.agent.ToolAccess;
 import org.saturn.app.agent.ToolEffect;
 import org.saturn.app.agent.ToolExample;
@@ -70,10 +72,8 @@ public final class RoomUsersTool implements AgentTool {
     room.addProperty("description", "Room/channel to inspect, such as lounge");
     JsonObject properties = new JsonObject();
     properties.add("room", room);
-    JsonObject schema = new JsonObject();
-    schema.addProperty("type", "object");
+    JsonObject schema = AgentToolSchemas.closedObject();
     schema.add("properties", properties);
-    schema.addProperty("additionalProperties", false);
     return schema;
   }
 
@@ -82,12 +82,11 @@ public final class RoomUsersTool implements AgentTool {
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     String requestedRoom = context.room();
     if (arguments.has("room")) {
-      if (!arguments.get("room").isJsonPrimitive()
-          || !arguments.getAsJsonPrimitive("room").isString()
-          || arguments.get("room").getAsString().isBlank()) {
+      Optional<String> room = AgentToolArgumentReader.nonBlankString(arguments, "room");
+      if (room.isEmpty()) {
         return AgentToolResult.error(null, name(), "A non-blank room is required");
       }
-      requestedRoom = arguments.get("room").getAsString().trim();
+      requestedRoom = room.orElseThrow();
     }
     AgentRoomDirectory.RoomSnapshot snapshot = roomDirectory.find(requestedRoom).orElse(null);
     if (snapshot == null) {
