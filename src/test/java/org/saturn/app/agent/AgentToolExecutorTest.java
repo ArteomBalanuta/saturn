@@ -294,6 +294,11 @@ class AgentToolExecutorTest {
           public AgentToolDescriptor descriptor(AgentContext context) {
             JsonObject resultSchema = new JsonObject();
             resultSchema.addProperty("type", "object");
+            JsonObject resultProperties = new JsonObject();
+            JsonObject answerProperty = new JsonObject();
+            answerProperty.addProperty("type", "string");
+            resultProperties.add("answer", answerProperty);
+            resultSchema.add("properties", resultProperties);
             com.google.gson.JsonArray required = new com.google.gson.JsonArray();
             required.add("answer");
             resultSchema.add("required", required);

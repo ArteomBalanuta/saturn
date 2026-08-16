@@ -149,7 +149,7 @@ class AgentToolSchemaValidatorTest {
   void validatesResultTypeAndRequiredFields() {
     JsonObject schema = new JsonObject();
     schema.addProperty("type", "object");
-    schema.add("properties", propertyMap(stringProperty("answer")));
+    schema.add("properties", propertyMapWithName("answer", stringProperty("answer")));
     JsonArray required = new JsonArray();
     required.add("answer");
     schema.add("required", required);
@@ -187,6 +187,25 @@ class AgentToolSchemaValidatorTest {
         () -> AgentToolSchemaValidator.validateResultSchema(nonStringType));
   }
 
+  @Test
+  void rejectsMalformedResultRequiredDeclarations() {
+    JsonObject nonArray = new JsonObject();
+    nonArray.addProperty("type", "object");
+    nonArray.addProperty("required", "answer");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(nonArray));
+
+    JsonObject undeclared = new JsonObject();
+    undeclared.addProperty("type", "object");
+    JsonArray required = new JsonArray();
+    required.add("answer");
+    undeclared.add("required", required);
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(undeclared));
+  }
+
   private static JsonObject objectSchema() {
     JsonObject schema = new JsonObject();
     schema.addProperty("type", "object");
@@ -195,8 +214,12 @@ class AgentToolSchemaValidatorTest {
   }
 
   private static JsonObject propertyMap(JsonObject property) {
+    return propertyMapWithName("name", property);
+  }
+
+  private static JsonObject propertyMapWithName(String name, JsonObject property) {
     JsonObject properties = new JsonObject();
-    properties.add("name", property);
+    properties.add(name, property);
     return properties;
   }
 

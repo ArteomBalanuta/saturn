@@ -22,22 +22,7 @@ final class AgentToolSchemaValidator {
             || !schema.get("additionalProperties").getAsJsonPrimitive().isBoolean())) {
       throw new IllegalArgumentException("tool additionalProperties must be a boolean");
     }
-    if (schema.has("required")) {
-      JsonElement required = schema.get("required");
-      if (!required.isJsonArray()) {
-        throw new IllegalArgumentException("tool required must be an array");
-      }
-      JsonObject properties =
-          schema.has("properties") ? schema.getAsJsonObject("properties") : new JsonObject();
-      for (JsonElement name : required.getAsJsonArray()) {
-        if (!name.isJsonPrimitive() || !name.getAsJsonPrimitive().isString()) {
-          throw new IllegalArgumentException("tool required names must be strings");
-        }
-        if (!properties.has(name.getAsString())) {
-          throw new IllegalArgumentException("tool required names must be declared properties");
-        }
-      }
-    }
+    validateRequiredDeclarations(schema, "tool");
   }
 
   static void validateResultSchema(JsonObject schema) {
@@ -53,6 +38,7 @@ final class AgentToolSchemaValidator {
       throw new IllegalArgumentException("tool result schema has an unsupported type");
     }
     validatePropertyTypes(schema, "tool result");
+    validateRequiredDeclarations(schema, "tool result");
   }
 
   static String validateArguments(JsonObject schema, JsonObject arguments) {
@@ -178,6 +164,26 @@ final class AgentToolSchemaValidator {
           || !isSupportedType(definition.get("type").getAsString())) {
         throw new IllegalArgumentException(
             subject + " property has an unsupported type: " + property.getKey());
+      }
+    }
+  }
+
+  private static void validateRequiredDeclarations(JsonObject schema, String subject) {
+    if (!schema.has("required")) {
+      return;
+    }
+    JsonElement required = schema.get("required");
+    if (!required.isJsonArray()) {
+      throw new IllegalArgumentException(subject + " required must be an array");
+    }
+    JsonObject properties =
+        schema.has("properties") ? schema.getAsJsonObject("properties") : new JsonObject();
+    for (JsonElement name : required.getAsJsonArray()) {
+      if (!name.isJsonPrimitive() || !name.getAsJsonPrimitive().isString()) {
+        throw new IllegalArgumentException(subject + " required names must be strings");
+      }
+      if (!properties.has(name.getAsString())) {
+        throw new IllegalArgumentException(subject + " required names must be declared properties");
       }
     }
   }
