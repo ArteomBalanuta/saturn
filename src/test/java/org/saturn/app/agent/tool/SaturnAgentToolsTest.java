@@ -336,6 +336,18 @@ class SaturnAgentToolsTest {
   }
 
   @Test
+  void databaseToolRejectsMalformedQueryNamesWithoutThrowing() {
+    DatabaseQueryTool tool = new DatabaseQueryTool((name, arguments, context) -> new JsonObject());
+    JsonObject arguments = new JsonObject();
+    arguments.add("query", new JsonObject());
+
+    AgentToolResult result = tool.execute(context(), arguments);
+
+    assertTrue(result.isError());
+    assertEquals("Query is not approved", result.content());
+  }
+
+  @Test
   void commandToolPublishesAndEnforcesTheSameCapabilityAwareCatalog() {
     AtomicReference<String> invoked = new AtomicReference<>();
     SaturnCommandGateway gateway =

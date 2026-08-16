@@ -101,8 +101,12 @@ public final class DatabaseQueryTool implements AgentTool {
   @Override
   /** Executes an allow-listed query and converts repository failures into tool errors. */
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
-    if (!arguments.has("query")) {
+    if (arguments == null || !arguments.has("query")) {
       return AgentToolResult.error(null, name(), "Missing required query name");
+    }
+    if (!arguments.get("query").isJsonPrimitive()
+        || !arguments.getAsJsonPrimitive("query").isString()) {
+      return AgentToolResult.error(null, name(), "Query is not approved");
     }
     String queryName = arguments.get("query").getAsString();
     JsonObject queryArguments = arguments.deepCopy();
