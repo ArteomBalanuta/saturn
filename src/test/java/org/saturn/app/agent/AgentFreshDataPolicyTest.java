@@ -77,4 +77,18 @@ class AgentFreshDataPolicyTest {
     assertFalse(
         policy.isExactToolCall(multiple, "user_message_history", java.util.Optional.of("jill")));
   }
+
+  @Test
+  void rejectsNonObjectFreshHistoryArgumentsWithoutThrowing() {
+    AgentFreshDataPolicy policy = new AgentFreshDataPolicy();
+    java.util.Optional<String> expectedNick = java.util.Optional.of("alice");
+
+    for (String arguments : List.of("null", "[]", "{\"nick\":null}", "{\"nick\":{}}")) {
+      assertFalse(
+          policy.matchesTarget(
+              new LlmToolCall("call", AgentFreshnessPolicy.USER_MESSAGE_HISTORY, arguments),
+              expectedNick),
+          arguments);
+    }
+  }
 }
