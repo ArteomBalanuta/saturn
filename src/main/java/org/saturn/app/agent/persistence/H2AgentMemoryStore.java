@@ -81,10 +81,10 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
       try (ResultSet resultSet = statement.executeQuery()) {
         while (resultSet.next()) {
           evidence.add(
-              LlmMessage.assistant(
+              LlmMessage.system(
                   "[Internal tool evidence from %s]\n%s"
-                      .formatted(resultSet.getString("tool_name"), resultSet.getString("content")),
-                  List.of()));
+                      .formatted(
+                          resultSet.getString("tool_name"), resultSet.getString("content"))));
         }
       }
       Collections.reverse(evidence);

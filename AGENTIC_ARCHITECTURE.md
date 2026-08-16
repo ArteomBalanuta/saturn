@@ -30,8 +30,10 @@ schema validation, ordering, timeouts, result validation, room delivery, and per
    persists successful public replies and tool evidence.
 
 `AgentFreshDataPolicy`, `AgentCommandChannelPolicy`, and `AgentResponseCorrector` enforce fresh
-grounding, structured commands, stale-response recovery, and truthful action claims.
-`AgentTurnState` owns their request-local bounds; `AgentResponseSanitizer` owns presentation.
+grounding, structured commands, stale-response recovery, internal evidence isolation, and truthful
+action claims. Persisted tool evidence is supplied as system context rather than assistant speech;
+the final response boundary rejects a repeated evidence envelope before room delivery.
+`AgentTurnState` owns request-local bounds; `AgentResponseSanitizer` owns presentation.
 
 ### Execution Engine
 

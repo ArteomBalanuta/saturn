@@ -22,6 +22,8 @@ final class AgentResponseCorrector {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private static final String FAILURE_PLACEHOLDER_CORRECTION =
       PROMPTS.text("router-failure-placeholder-correction.txt").strip();
+  private static final String INTERNAL_EVIDENCE_CORRECTION =
+      PROMPTS.text("router-internal-evidence-correction.txt").strip();
   private static final String UNVERIFIED_ACTION_CORRECTION =
       PROMPTS.text("router-unverified-action-correction.txt");
   private static final String UNVERIFIED_ACTION_FINAL_CORRECTION =
@@ -116,6 +118,27 @@ final class AgentResponseCorrector {
     return corrected;
   }
 
+  LlmResponse correctInternalEvidenceLeak(
+      LlmResponse response, List<LlmMessage> messages, String correlationId)
+      throws LlmException, AgentRoutingException {
+    if (!containsInternalToolEvidence(response)) {
+      return response;
+    }
+
+    log.warn(
+        "Agent exposed internal tool evidence; requesting a user-facing answer, correlationId={}",
+        correlationId);
+    List<LlmMessage> correctionMessages = new ArrayList<>(messages);
+    correctionMessages.add(LlmMessage.assistant(response.content(), List.of()));
+    correctionMessages.add(LlmMessage.user(INTERNAL_EVIDENCE_CORRECTION));
+    LlmResponse corrected =
+        client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of()));
+    if (!corrected.toolCalls().isEmpty() || containsInternalToolEvidence(corrected)) {
+      throw new AgentRoutingException("Agent repeated internal tool evidence after correction");
+    }
+    return corrected;
+  }
+
   static boolean isFailurePlaceholder(LlmResponse response) {
     if (!response.toolCalls().isEmpty() || response.content() == null) {
       return false;
@@ -125,6 +148,12 @@ final class AgentResponseCorrector {
         || normalized.equals("the agent could not answer that request")
         || normalized.equals("i could not answer that request.")
         || normalized.equals("i could not answer that request");
+  }
+
+  private static boolean containsInternalToolEvidence(LlmResponse response) {
+    return response.toolCalls().isEmpty()
+        && response.content() != null
+        && response.content().contains("[Internal tool evidence from ");
   }
 
   private static boolean isStaleDuplicate(

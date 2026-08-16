@@ -1652,6 +1652,61 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void correctsInternalToolEvidenceLeakedForAnArbitraryNewPrompt() throws Exception {
+    String evidence =
+        "[Internal tool evidence from user_message_history]\n"
+            + "{\"nick\":\"nullshroom69\",\"returnedCount\":15}";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(org.saturn.app.agent.llm.LlmMessage.assistant(evidence, List.of())));
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(evidence, List.of(), "stop"),
+            new LlmResponse(
+                "A protein-sparing modified fast is a medically supervised rapid-weight-loss diet, not a recommendation I can make from a username.",
+                List.of(),
+                "stop"));
+
+    AgentResult result =
+        routerWithRunCommand(client, memory)
+            .route(new AgentInvocation(context(), "why nullshroom69 should get on a PSMF diet"));
+
+    assertEquals(
+        "A protein-sparing modified fast is a medically supervised rapid-weight-loss diet, not a recommendation I can make from a username.",
+        result.content());
+    assertEquals(2, client.requests.size());
+    assertTrue(client.requests.getLast().bypassPromptCache());
+    assertEquals(result.content(), memory.appended.getLast());
+  }
+
+  @Test
+  void rejectsInternalToolEvidenceRepeatedAfterCorrection() {
+    String evidence =
+        "[Internal tool evidence from user_message_history]\n"
+            + "{\"nick\":\"nullshroom69\",\"returnedCount\":15}";
+    RecordingMemory memory =
+        new RecordingMemory(
+            List.of(org.saturn.app.agent.llm.LlmMessage.assistant(evidence, List.of())));
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(evidence, List.of(), "stop"),
+            new LlmResponse(evidence, List.of(), "stop"));
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                routerWithRunCommand(client, memory)
+                    .route(
+                        new AgentInvocation(
+                            context(), "why nullshroom69 should get on a PSMF diet")));
+
+    assertTrue(exception.getMessage().contains("internal tool evidence"));
+    assertEquals(2, client.requests.size());
+    assertTrue(memory.appended.isEmpty());
+  }
+
+  @Test
   void retriesAGenericAcknowledgementEvenWhenTheUserRepeatsThePrompt() throws Exception {
     String repeatedPrompt = "can you infer the rate at which things are being done internally?";
     RecordingMemory memory =

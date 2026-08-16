@@ -69,10 +69,13 @@ class H2AgentMemoryStoreTest {
     store.append(alice, "who is jill", "Jill is active.", config);
     store.appendToolEvidence(alice, "user_message_history", "{\"nick\":\"jill\"}", config);
 
-    assertTrue(
+    var retainedEvidence =
         store.load(alice, config).stream()
-            .map(message -> message.content())
-            .anyMatch(content -> content.contains("user_message_history")));
+            .filter(message -> message.content().contains("user_message_history"))
+            .findFirst()
+            .orElseThrow();
+
+    assertEquals("system", retainedEvidence.role());
   }
 
   @Test

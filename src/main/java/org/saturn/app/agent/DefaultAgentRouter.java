@@ -291,6 +291,7 @@ public final class DefaultAgentRouter implements AgentRouter {
       }
 
       response = responseCorrector.correctFailurePlaceholder(response, messages, correlationId);
+      response = responseCorrector.correctInternalEvidenceLeak(response, messages, correlationId);
       if (freshDataPolicy.requiresHistorySynthesis(requiredFreshTool)
           && !freshDataPolicy.satisfiesProfileContract(
               response, turnState.successfulToolResults())) {
