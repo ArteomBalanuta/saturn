@@ -62,6 +62,20 @@ class AgentToolCallValidatorTest {
   }
 
   @Test
+  void treatsBlankArgumentsAsAnEmptyObjectForZeroArgumentTools() {
+    AgentToolValidatorFixture fixture = new AgentToolValidatorFixture();
+
+    AgentToolCallValidator.Result result =
+        fixture
+            .validator()
+            .validate(fixture.context(), new LlmToolCall("blank", "echo", "  \n  "), Set.of());
+
+    assertTrue(result.isValid());
+    assertEquals("echo|{}", result.call().invocationKey());
+    assertTrue(result.call().arguments().isEmpty());
+  }
+
+  @Test
   void rejectsAResolvedToolWhoseDescriptorCannotBeTrusted() {
     AgentTool tool =
         new AgentTool() {
@@ -146,5 +160,20 @@ class AgentToolCallValidatorTest {
         return AgentToolResult.success(name, arguments);
       }
     };
+  }
+
+  private static final class AgentToolValidatorFixture {
+    private final AgentContext context =
+        new AgentContext("room", "nick", null, null, false, List.of("nick"));
+    private final AgentToolCallValidator validator =
+        new AgentToolCallValidator(new AgentToolRegistry().register(tool("echo")).freeze());
+
+    AgentContext context() {
+      return context;
+    }
+
+    AgentToolCallValidator validator() {
+      return validator;
+    }
   }
 }
