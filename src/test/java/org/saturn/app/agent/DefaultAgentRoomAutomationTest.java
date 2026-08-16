@@ -142,6 +142,19 @@ class DefaultAgentRoomAutomationTest {
   }
 
   @Test
+  void ignoresMessagesWithNoTextWithoutDispatching() {
+    EngineImpl engine = TestSupport.engine();
+    List<AgentInvocation> submissions = new ArrayList<>();
+    DefaultAgentRoomAutomation automation =
+        automation(engine, AgentParticipationConfig.from(new Toml()), submissions);
+    ChatMessage message = new ChatMessage("1", "alice", "trip-a", "hash-a", "now", null);
+
+    assertEquals(AgentRoomAutomation.Outcome.PASS, automation.onMessage(message));
+    assertTrue(submissions.isEmpty());
+    engine.stop();
+  }
+
+  @Test
   void ignoresMessagesAuthoredByBotsToPreventReplyLoops() {
     EngineImpl engine = TestSupport.engine();
     installRoleResolver(engine, Role.REGULAR);

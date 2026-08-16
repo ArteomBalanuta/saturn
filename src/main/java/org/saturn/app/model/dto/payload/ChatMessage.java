@@ -77,7 +77,7 @@ public class ChatMessage {
   }
 
   public String getText() {
-    return text.replace("\n", "\\n");
+    return text == null ? "" : text.replace("\n", "\\n");
   }
 
   public void setText(String text) {
