@@ -37,7 +37,8 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentCommandChannelPolicy commandChannelPolicy;
   private final AgentFreshDataPolicy freshDataPolicy = new AgentFreshDataPolicy();
   private final AgentFreshDataCoordinator freshDataCoordinator;
-  private final AgentResponseSanitizer responseSanitizer = new AgentResponseSanitizer();
+  private final AgentTurnMemory turnMemory;
+  private final AgentResponseFinalizer responseFinalizer;
   private final AgentRequestAssembler requestAssembler;
   private final ReentrantLock[] sessionLocks = sessionLocks();
 
@@ -69,6 +70,10 @@ public final class DefaultAgentRouter implements AgentRouter {
     this.responseCorrector = new AgentResponseCorrector(client);
     this.commandChannelPolicy = new AgentCommandChannelPolicy(client);
     this.freshDataCoordinator = new AgentFreshDataCoordinator(client, freshDataPolicy);
+    this.turnMemory = new AgentTurnMemory(memory, config);
+    this.responseFinalizer =
+        new AgentResponseFinalizer(
+            responseCorrector, freshDataCoordinator, participationConfig, config.maxOutputChars());
     this.requestAssembler = new AgentRequestAssembler(config, registry, systemPrompt);
   }
 
@@ -109,6 +114,8 @@ public final class DefaultAgentRouter implements AgentRouter {
     List<LlmMessage> messages = new ArrayList<>(prepared.messages());
     List<JsonObject> definitions = prepared.definitions();
     AgentCommandProseGuard commandProseGuard = AgentCommandProseGuard.from(definitions);
+    AgentToolResultCoordinator toolResultCoordinator =
+        new AgentToolResultCoordinator(freshDataPolicy, commandProseGuard);
     Set<String> allowedTools =
         invocation.mode() == AgentInvocationMode.MODERATION ? Set.of("run_command") : Set.of();
     AgentToolExecutor toolExecutor = new AgentToolExecutor(registry, config, allowedTools);
@@ -183,98 +190,39 @@ public final class DefaultAgentRouter implements AgentRouter {
 
         messages.add(LlmMessage.assistant(response.content(), response.toolCalls()));
         List<AgentToolResult> toolResults = toolExecutor.executeAll(context, response.toolCalls());
-        for (int index = 0; index < response.toolCalls().size(); index++) {
-          var call = response.toolCalls().get(index);
-          AgentToolResult result = toolResults.get(index);
-          log.info(
-              "Agent tool completed, correlationId={}, tool={}, outcome={}",
-              correlationId,
-              call.name(),
-              result.isError() ? "error" : "success");
-          if (result.isError()
-              && requiredFreshTool.filter(call.name()::equals).isPresent()
-              && !turnState.hasSuccessfulTool(call.name())) {
-            throw new AgentRoutingException("Required fresh-data tool failed: " + call.name());
-          }
-          if (!result.isError()
-              && freshDataPolicy.matchesTarget(call, requiredFreshNick)
-              && turnState.recordSuccessfulTool(call.name())) {
-            requiredFreshTool
-                .filter(call.name()::equals)
-                .ifPresent(
-                    tool ->
-                        log.info(
-                            "Agent fresh data satisfied, correlationId={}, tool={}",
-                            correlationId,
-                            tool));
-          }
-          if (!result.isError()) {
-            turnState.recordSuccessfulToolResult(result);
-          }
-          if (!result.isError() && "run_command".equals(call.name())) {
-            commandProseGuard.executedCommand(call).ifPresent(turnState::recordSuccessfulCommand);
-            turnState.clearCommandCorrection();
-          } else if (result.isError() && "run_command".equals(call.name())) {
-            commandProseGuard.executedCommand(call).ifPresent(turnState::recordFailedCommand);
-          }
-          messages.add(LlmMessage.tool(call.id(), modelVisibleToolResult(context, call, result)));
-        }
+        toolResultCoordinator.record(
+            context,
+            response.toolCalls(),
+            toolResults,
+            requiredFreshTool,
+            requiredFreshNick,
+            turnState,
+            messages,
+            this::modelVisibleToolResult,
+            correlationId);
         turnState.resetUnverifiedActionCheck();
         response = client.complete(new LlmRequest(messages, definitions));
       }
 
-      response = responseCorrector.correctFailurePlaceholder(response, messages, correlationId);
-      response = responseCorrector.correctInternalEvidenceLeak(response, messages, correlationId);
-      freshDataCoordinator.validateFinal(
-          requiredFreshTool, response, turnState.successfulToolResults());
-      String sanitizedContent = responseSanitizer.sanitize(response.content());
-      if (invocation.mode() == AgentInvocationMode.MODERATION) {
+      AgentResponseFinalizer.Result finalResponse =
+          responseFinalizer.prepare(
+              invocation,
+              response,
+              messages,
+              requiredFreshTool,
+              turnState.successfulToolResults(),
+              correlationId);
+      if (!finalResponse.shouldReply()) {
         return AgentResult.silent(correlationId);
       }
-      if (sanitizedContent.strip().equals(participationConfig.noReplyMarker())) {
-        if (!invocation.mode().requiresReply()) {
-          return AgentResult.silent(correlationId);
-        }
-        throw new AgentRoutingException("Agent declined a required response");
-      }
-      String content =
-          AgentTextBounds.truncate(removeNoReplyMarker(sanitizedContent), config.maxOutputChars());
-      if (content.isBlank()) {
-        throw new AgentRoutingException("Agent returned an empty response");
-      }
-      persist(context, contextualizedPrompt, content, correlationId);
-      persistToolEvidence(context, turnState.successfulToolResults(), correlationId);
+      String content = finalResponse.content();
+      turnMemory.append(context, contextualizedPrompt, content, correlationId);
+      turnMemory.appendToolEvidence(context, turnState.successfulToolResults(), correlationId);
       return AgentResult.reply(correlationId, content);
     } catch (LlmException exception) {
       throw new AgentRoutingException(
           "Agent provider failed: " + exception.getMessage(), exception);
     }
-  }
-
-  /** Removes the control-only silence token when a model improperly mixes it into visible prose. */
-  private String removeNoReplyMarker(String content) {
-    String marker = participationConfig.noReplyMarker();
-    if (!content.contains(marker)) {
-      return content;
-    }
-    return trimControlWhitespace(content.replace(marker, ""));
-  }
-
-  /** Trims only ASCII control whitespace so Saturn's U+2009 formatting spaces survive delivery. */
-  private String trimControlWhitespace(String content) {
-    int first = 0;
-    int last = content.length();
-    while (first < last && isControlWhitespace(content.charAt(first))) {
-      first++;
-    }
-    while (last > first && isControlWhitespace(content.charAt(last - 1))) {
-      last--;
-    }
-    return content.substring(first, last);
-  }
-
-  private boolean isControlWhitespace(char character) {
-    return character == ' ' || character == '\t' || character == '\n' || character == '\r';
   }
 
   private String modelVisibleToolResult(
@@ -316,59 +264,9 @@ public final class DefaultAgentRouter implements AgentRouter {
     return client.complete(new LlmRequest(finalMessages, List.of()));
   }
 
-  private void persist(AgentContext context, String user, String assistant, String correlationId)
-      throws AgentRoutingException {
-    try {
-      memory.append(context, user, assistant, config);
-    } catch (RuntimeException exception) {
-      throw memoryPersistenceFailure(correlationId, exception);
-    }
-    log.info("Agent memory persisted, correlationId={}", correlationId);
-  }
-
-  private void persistToolEvidence(
-      AgentContext context, List<AgentToolResult> results, String correlationId)
-      throws AgentRoutingException {
-    try {
-      for (AgentToolResult result : results) {
-        memory.appendToolEvidence(context, result.toolName(), result.content(), config);
-      }
-    } catch (RuntimeException exception) {
-      throw memoryPersistenceFailure(correlationId, exception);
-    }
-  }
-
-  private static AgentRoutingException memoryPersistenceFailure(
-      String correlationId, RuntimeException exception) {
-    log.warn(
-        "Agent memory append failed, correlationId={}: {}", correlationId, exception.getMessage());
-    log.debug("Agent memory append failure, correlationId={}", correlationId, exception);
-    return new AgentRoutingException("Agent memory persistence failed", exception);
-  }
-
   private List<LlmMessage> loadMemory(AgentContext context, String correlationId)
       throws AgentRoutingException {
-    List<LlmMessage> loaded;
-    try {
-      loaded = memory.load(context, config);
-    } catch (RuntimeException exception) {
-      throw memoryLoadFailure(correlationId, exception);
-    }
-    List<LlmMessage> history = responseSanitizer.excludeLegacyPersonaTurns(loaded);
-    log.info(
-        "Agent memory loaded, correlationId={}, messages={}, legacyMessagesExcluded={}",
-        correlationId,
-        history.size(),
-        loaded.size() - history.size());
-    return history;
-  }
-
-  private static AgentRoutingException memoryLoadFailure(
-      String correlationId, RuntimeException exception) {
-    log.warn(
-        "Agent memory load failed, correlationId={}: {}", correlationId, exception.getMessage());
-    log.debug("Agent memory load failure, correlationId={}", correlationId, exception);
-    return new AgentRoutingException("Agent memory load failed", exception);
+    return turnMemory.load(context, correlationId);
   }
 
   private String loadConversationContext(AgentInvocation invocation, String correlationId) {
