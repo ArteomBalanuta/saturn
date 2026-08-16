@@ -1,30 +1,80 @@
 package org.saturn.app.agent;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.llm.LlmMessage;
 import org.saturn.app.agent.llm.LlmResponse;
 import org.saturn.app.agent.llm.LlmToolCall;
 
 class AgentFreshDataPolicyTest {
-  private final AgentFreshDataPolicy policy = new AgentFreshDataPolicy();
-
   @Test
-  void acceptsHistorySynthesisOnlyAfterHistoryEvidence() {
-    LlmResponse response = new LlmResponse("Profile", List.of(), "stop");
-    assertFalse(policy.satisfiesProfileContract(response, List.of()));
-    assertTrue(
-        policy.satisfiesProfileContract(
-            response, List.of(AgentToolResult.success("user_message_history", "{}"))));
+  void identifiesAndRejectsARepeatedAssistantSynthesis() {
+    List<LlmMessage> history = List.of(LlmMessage.assistant("previous answer", List.of()));
+    LlmResponse response = new LlmResponse(" previous answer ", List.of(), "stop");
+
+    assertEquals(true, new AgentFreshDataPolicy().repeatsPreviousAssistant(response, history));
+    assertThrows(
+        AgentRoutingException.class,
+        () -> new AgentFreshDataPolicy().requireFreshSynthesis(response, history));
   }
 
   @Test
-  void matchesExpectedHistoryTarget() {
-    LlmToolCall call = new LlmToolCall("id", "user_message_history", "{\"nick\":\"Jill\"}");
-    assertTrue(policy.matchesTarget(call, Optional.of("jill")));
-    assertFalse(policy.matchesTarget(call, Optional.of("nex")));
+  void acceptsAFreshSynthesisWithoutToolCalls() throws Exception {
+    LlmResponse response = new LlmResponse("new answer", List.of(), "stop");
+
+    assertEquals(response, new AgentFreshDataPolicy().requireFreshSynthesis(response, List.of()));
+  }
+
+  @Test
+  void rejectsToolCallsDuringFreshSynthesis() {
+    LlmResponse response =
+        new LlmResponse(
+            "checking", List.of(new LlmToolCall("call-1", "room_users", "{}")), "tool_calls");
+
+    assertThrows(
+        AgentRoutingException.class,
+        () -> new AgentFreshDataPolicy().requireFreshSynthesis(response, List.of()));
+  }
+
+  @Test
+  void recognizesOnlyTheExactFreshToolCallAndTarget() {
+    AgentFreshDataPolicy policy = new AgentFreshDataPolicy();
+    LlmResponse response =
+        new LlmResponse(
+            "checking",
+            List.of(new LlmToolCall("history-1", "user_message_history", "{\"nick\":\"Jill\"}")),
+            "tool_calls");
+
+    assertTrue(
+        policy.isExactToolCall(response, "user_message_history", java.util.Optional.of("jill")));
+    assertFalse(
+        policy.isExactToolCall(response, "user_message_history", java.util.Optional.of("nex")));
+  }
+
+  @Test
+  void rejectsMalformedArgumentsAndMultipleFreshToolCalls() {
+    AgentFreshDataPolicy policy = new AgentFreshDataPolicy();
+    LlmResponse malformed =
+        new LlmResponse(
+            "checking",
+            List.of(new LlmToolCall("history-1", "user_message_history", "not-json")),
+            "tool_calls");
+    LlmResponse multiple =
+        new LlmResponse(
+            "checking",
+            List.of(
+                new LlmToolCall("history-1", "user_message_history", "{\"nick\":\"jill\"}"),
+                new LlmToolCall("history-2", "user_message_history", "{\"nick\":\"jill\"}")),
+            "tool_calls");
+
+    assertFalse(
+        policy.isExactToolCall(malformed, "user_message_history", java.util.Optional.of("jill")));
+    assertFalse(
+        policy.isExactToolCall(multiple, "user_message_history", java.util.Optional.of("jill")));
   }
 }

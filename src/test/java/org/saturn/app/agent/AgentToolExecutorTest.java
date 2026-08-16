@@ -294,6 +294,41 @@ class AgentToolExecutorTest {
   }
 
   @Test
+  void resolvesEachToolDescriptorOnceWhenExecutingAProviderBatch() {
+    AtomicInteger descriptorCalls = new AtomicInteger();
+    AgentTool delegate = successfulTool("described");
+    AgentTool tool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return delegate.name();
+          }
+
+          @Override
+          public AgentToolDescriptor descriptor(AgentContext context) {
+            descriptorCalls.incrementAndGet();
+            return delegate.descriptor(context);
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return delegate.execute(context, arguments);
+          }
+        };
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(new AgentToolRegistry().register(tool).freeze(), config())) {
+      AgentToolResult result =
+          executor
+              .executeAll(null, List.of(new LlmToolCall("described-1", "described", "{}")))
+              .getFirst();
+
+      assertFalse(result.isError());
+      assertEquals(1, descriptorCalls.get());
+    }
+  }
+
+  @Test
   void runsCommandToolsOnlyAfterThePrecedingReadBatchCompletes() {
     List<String> events = new CopyOnWriteArrayList<>();
     CountDownLatch readsStarted = new CountDownLatch(2);

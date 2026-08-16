@@ -59,7 +59,6 @@ public final class AgentServiceImpl implements AgentService {
     }
 
     try {
-      progress(invocation, "working on it");
       executor.submit(() -> execute(invocation, true));
       return true;
     } catch (RuntimeException exception) {
@@ -112,6 +111,7 @@ public final class AgentServiceImpl implements AgentService {
         context.room(),
         context.nick());
     try {
+      progress(invocation, "working on it");
       var result = router.route(invocation);
       log.info(
           "Agent request completed, requestId={}, correlationId={}",
@@ -130,8 +130,7 @@ public final class AgentServiceImpl implements AgentService {
           context.nick(),
           exception.getMessage());
       log.debug("Agent routing failure, requestId={}", invocation.requestId(), exception);
-      replyIfRequired(
-          invocation, tagged(invocation, "failed: the agent could not answer that request."));
+      replyFailureIfRequired(invocation);
     } catch (RuntimeException exception) {
       log.error(
           "Unexpected agent routing failure, requestId={}, type={}, message={}",
@@ -140,8 +139,7 @@ public final class AgentServiceImpl implements AgentService {
           exception.getMessage());
       log.debug(
           "Unexpected agent routing failure, requestId={}", invocation.requestId(), exception);
-      replyIfRequired(
-          invocation, tagged(invocation, "failed: the agent could not answer that request."));
+      replyFailureIfRequired(invocation);
     } finally {
       if (admitted) {
         admission.release();
@@ -153,6 +151,11 @@ public final class AgentServiceImpl implements AgentService {
     if (invocation.mode().requiresReply()) {
       reply(invocation, content);
     }
+  }
+
+  private void replyFailureIfRequired(AgentInvocation invocation) {
+    replyIfRequired(
+        invocation, tagged(invocation, "failed: the agent could not answer that request."));
   }
 
   private void progress(AgentInvocation invocation, String message) {

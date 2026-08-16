@@ -2,6 +2,7 @@ package org.saturn.app.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -80,6 +81,42 @@ class AgentServiceImplTest {
   }
 
   @Test
+  void doesNotFlushProgressOnTheSubmittingThread() throws Exception {
+    CountDownLatch progressFlushEntered = new CountDownLatch(1);
+    CountDownLatch releaseProgressFlush = new CountDownLatch(1);
+    CountDownLatch routerEntered = new CountDownLatch(1);
+    AtomicInteger flushes = new AtomicInteger();
+    AgentServiceImpl service =
+        new AgentServiceImpl(
+            config(true, 1),
+            invocation -> {
+              routerEntered.countDown();
+              return new AgentResult(invocation.requestId(), "answer");
+            },
+            new OutService(new ArrayBlockingQueue<>(10)),
+            () -> {
+              if (flushes.getAndIncrement() == 0) {
+                progressFlushEntered.countDown();
+                try {
+                  releaseProgressFlush.await();
+                } catch (InterruptedException exception) {
+                  Thread.currentThread().interrupt();
+                }
+              }
+            });
+
+    try {
+      assertTimeoutPreemptively(
+          Duration.ofMillis(200), () -> assertTrue(service.submit(invocation(false))));
+      assertTrue(progressFlushEntered.await(1, TimeUnit.SECONDS));
+      assertFalse(routerEntered.await(100, TimeUnit.MILLISECONDS));
+    } finally {
+      releaseProgressFlush.countDown();
+      service.close();
+    }
+  }
+
+  @Test
   void executesAndFlushesSharedSessionRequestsInSubmissionOrder() throws Exception {
     CountDownLatch firstEntered = new CountDownLatch(1);
     CountDownLatch releaseFirst = new CountDownLatch(1);
@@ -127,8 +164,8 @@ class AgentServiceImplTest {
       assertEquals(List.of("first", "second"), routed);
       assertEquals(4, flushed.size());
       assertTrue(flushed.get(0).contains("working on it"));
-      assertTrue(flushed.get(1).contains("working on it"));
-      assertTrue(flushed.get(2).contains("completed: first answer"));
+      assertTrue(flushed.get(1).contains("completed: first answer"));
+      assertTrue(flushed.get(2).contains("working on it"));
       assertTrue(flushed.get(3).contains("completed: second answer"));
     } finally {
       releaseFirst.countDown();

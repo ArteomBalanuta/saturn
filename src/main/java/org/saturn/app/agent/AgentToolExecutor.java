@@ -4,7 +4,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -31,7 +34,7 @@ public final class AgentToolExecutor implements AutoCloseable {
       Executors.newThreadPerTaskExecutor(
           Thread.ofVirtual().name("saturn-agent-tool-", 0).factory());
   private final AgentToolInvoker toolInvoker = new AgentToolInvoker(toolExecutor);
-  private final AgentToolCallScheduler scheduler = new AgentToolCallScheduler();
+  private final AgentToolCallScheduler scheduler = new AgentToolCallScheduler(toolExecutor);
   private final AgentToolExecutionPolicy executionPolicy = new AgentToolExecutionPolicy();
 
   public AgentToolExecutor(AgentToolRegistry registry, AgentConfig config) {
@@ -51,10 +54,16 @@ public final class AgentToolExecutor implements AutoCloseable {
    * validation. All expected failures are returned as coded {@link AgentToolResult} values.
    */
   public AgentToolResult execute(AgentContext context, LlmToolCall call) {
+    return execute(context, call, null);
+  }
+
+  private AgentToolResult execute(
+      AgentContext context, LlmToolCall call, AgentToolDescriptor classifiedDescriptor) {
     if (ledger.isDisabled(call.name())) {
       return error(call, "TOOL_DISABLED", "Tool disabled after repeated failures: " + call.name());
     }
-    AgentToolCallValidator.Result validation = validator.validate(context, call, allowedTools);
+    AgentToolCallValidator.Result validation =
+        validator.validate(context, call, allowedTools, classifiedDescriptor);
     if (!validation.isValid()) {
       AgentToolResult failure = validation.error();
       if ("INVALID_ARGUMENTS".equals(failure.errorCode())) {
@@ -119,9 +128,21 @@ public final class AgentToolExecutor implements AutoCloseable {
    * <p>Action tools, including {@code run_command}, are order barriers and execute sequentially.
    */
   public List<AgentToolResult> executeAll(AgentContext context, List<LlmToolCall> calls) {
-    List<AgentScheduledToolCall> scheduledCalls =
-        calls.stream().map(call -> classify(context, call)).toList();
-    return scheduler.executeAll(scheduledCalls, call -> execute(context, call));
+    List<AgentScheduledToolCall> scheduledCalls = new ArrayList<>();
+    Map<LlmToolCall, Classification> classifications = new IdentityHashMap<>();
+    for (LlmToolCall call : calls) {
+      Classification classification = classify(context, call);
+      scheduledCalls.add(classification.scheduledCall());
+      classifications.put(call, classification);
+    }
+    return scheduler.executeAll(
+        scheduledCalls,
+        call -> {
+          Classification classification = classifications.get(call);
+          return classification.error() != null
+              ? classification.error()
+              : execute(context, call, classification.descriptor());
+        });
   }
 
   /** Cancels outstanding virtual-thread tool work for this request. */
@@ -142,18 +163,29 @@ public final class AgentToolExecutor implements AutoCloseable {
     return AgentToolResult.error(call.id(), call.name(), code, message);
   }
 
-  private AgentScheduledToolCall classify(AgentContext context, LlmToolCall call) {
+  private Classification classify(AgentContext context, LlmToolCall call) {
     AgentTool tool = registry.find(context, call.name()).orElse(null);
     if (tool == null) {
-      return new AgentScheduledToolCall(call, AgentToolExecutionMode.SEQUENTIAL_ACTION);
+      return new Classification(
+          new AgentScheduledToolCall(call, AgentToolExecutionMode.SEQUENTIAL_ACTION), null, null);
     }
     try {
       AgentToolDescriptor descriptor = tool.descriptor(context);
-      return new AgentScheduledToolCall(call, executionPolicy.classify(descriptor));
+      return new Classification(
+          new AgentScheduledToolCall(call, executionPolicy.classify(descriptor)), descriptor, null);
     } catch (RuntimeException exception) {
-      return new AgentScheduledToolCall(call, AgentToolExecutionMode.SEQUENTIAL_ACTION);
+      return new Classification(
+          new AgentScheduledToolCall(call, AgentToolExecutionMode.SEQUENTIAL_ACTION),
+          null,
+          AgentToolResult.error(
+              call.id(), call.name(), "INVALID_TOOL_CONTRACT", "Invalid tool contract"));
     }
   }
+
+  private record Classification(
+      AgentScheduledToolCall scheduledCall,
+      AgentToolDescriptor descriptor,
+      AgentToolResult error) {}
 
   private JsonElement parseResult(String content) {
     if (content == null) {

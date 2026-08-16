@@ -100,6 +100,18 @@ final class AgentTurnState {
     successfulToolResults.add(result);
   }
 
+  boolean hasSuccessfulCommand(String command) {
+    return successfulCommands.contains(command);
+  }
+
+  boolean hasSuccessfulCommands() {
+    return !successfulCommands.isEmpty();
+  }
+
+  boolean hasSuccessfulTool(String tool) {
+    return successfulTools.contains(tool);
+  }
+
   Set<String> successfulCommands() {
     return Set.copyOf(successfulCommands);
   }

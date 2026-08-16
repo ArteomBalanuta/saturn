@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.llm.LlmToolCall;
 
 /**
@@ -15,10 +16,26 @@ import org.saturn.app.agent.llm.LlmToolCall;
  * always returned in provider order, allowing callers to append stable observations to the model
  * conversation.
  */
+@Slf4j
 final class AgentToolCallScheduler implements AutoCloseable {
-  private final ExecutorService executor =
-      Executors.newThreadPerTaskExecutor(
-          Thread.ofVirtual().name("saturn-agent-schedule-", 0).factory());
+  private final ExecutorService executor;
+  private final boolean ownsExecutor;
+
+  AgentToolCallScheduler() {
+    this(
+        Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("saturn-agent-schedule-", 0).factory()),
+        true);
+  }
+
+  AgentToolCallScheduler(ExecutorService executor) {
+    this(executor, false);
+  }
+
+  private AgentToolCallScheduler(ExecutorService executor, boolean ownsExecutor) {
+    this.executor = executor;
+    this.ownsExecutor = ownsExecutor;
+  }
 
   List<AgentToolResult> executeAll(
       List<AgentScheduledToolCall> calls, ToolCallExecution execution) {
@@ -38,7 +55,9 @@ final class AgentToolCallScheduler implements AutoCloseable {
 
   @Override
   public void close() {
-    executor.shutdownNow();
+    if (ownsExecutor) {
+      executor.shutdownNow();
+    }
   }
 
   private static int parallelBatchEnd(List<AgentScheduledToolCall> calls, int start) {
@@ -72,6 +91,11 @@ final class AgentToolCallScheduler implements AutoCloseable {
       Thread.currentThread().interrupt();
       return error(call, "TOOL_INTERRUPTED", "Tool batch execution was interrupted");
     } catch (Exception exception) {
+      log.warn(
+          "Agent scheduled tool execution failed, tool={}, callId={}",
+          call.name(),
+          call.id(),
+          exception);
       return error(call, "TOOL_EXECUTION_FAILED", "Tool batch execution failed");
     }
   }
@@ -83,6 +107,11 @@ final class AgentToolCallScheduler implements AutoCloseable {
       Thread.currentThread().interrupt();
       return error(call, "TOOL_INTERRUPTED", "Tool batch execution was interrupted");
     } catch (ExecutionException exception) {
+      log.warn(
+          "Agent scheduled tool future failed, tool={}, callId={}",
+          call.name(),
+          call.id(),
+          exception.getCause() == null ? exception : exception.getCause());
       return error(call, "TOOL_EXECUTION_FAILED", "Tool batch execution failed");
     }
   }

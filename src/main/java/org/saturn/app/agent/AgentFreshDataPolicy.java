@@ -5,19 +5,34 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import java.util.List;
 import java.util.Optional;
+import org.saturn.app.agent.llm.LlmMessage;
 import org.saturn.app.agent.llm.LlmResponse;
 import org.saturn.app.agent.llm.LlmToolCall;
 
 /** Validates the evidence required before the router may return a fresh-data synthesis. */
 final class AgentFreshDataPolicy {
   boolean requiresHistorySynthesis(Optional<String> requiredTool) {
-    return requiredTool.filter("user_message_history"::equals).isPresent();
+    return requiredTool.filter(AgentFreshnessPolicy.USER_MESSAGE_HISTORY::equals).isPresent();
   }
 
   boolean satisfiesProfileContract(LlmResponse response, List<AgentToolResult> results) {
     boolean hasHistory =
-        results.stream().anyMatch(result -> "user_message_history".equals(result.toolName()));
+        results.stream()
+            .anyMatch(
+                result -> AgentFreshnessPolicy.USER_MESSAGE_HISTORY.equals(result.toolName()));
     return hasHistory && response.content() != null && !response.content().isBlank();
+  }
+
+  boolean requiresSynthesisCorrection(
+      Optional<String> requiredTool, LlmResponse response, List<AgentToolResult> results) {
+    return requiresHistorySynthesis(requiredTool)
+        && !AgentResponseCorrector.isFailurePlaceholder(response)
+        && !satisfiesProfileContract(response, results);
+  }
+
+  boolean requiresFinalSynthesisValidation(
+      Optional<String> requiredTool, LlmResponse response, List<AgentToolResult> results) {
+    return requiresHistorySynthesis(requiredTool) && !satisfiesProfileContract(response, results);
   }
 
   LlmResponse requireExactToolCall(
@@ -32,8 +47,18 @@ final class AgentFreshDataPolicy {
     return response;
   }
 
+  boolean isExactToolCall(LlmResponse response, String toolName, Optional<String> expectedNick) {
+    try {
+      requireExactToolCall(response, toolName, expectedNick);
+      return true;
+    } catch (AgentRoutingException exception) {
+      return false;
+    }
+  }
+
   boolean matchesTarget(LlmToolCall call, Optional<String> expectedNick) {
-    if (expectedNick.isEmpty() || !"user_message_history".equals(call.name())) return true;
+    if (expectedNick.isEmpty() || !AgentFreshnessPolicy.USER_MESSAGE_HISTORY.equals(call.name()))
+      return true;
     try {
       JsonElement nick = JsonParser.parseString(call.arguments()).getAsJsonObject().get("nick");
       return nick != null
@@ -42,5 +67,29 @@ final class AgentFreshDataPolicy {
     } catch (JsonParseException | IllegalStateException exception) {
       return false;
     }
+  }
+
+  boolean repeatsPreviousAssistant(LlmResponse response, List<LlmMessage> history) {
+    if (!response.toolCalls().isEmpty()
+        || response.content() == null
+        || response.content().isBlank()) {
+      return false;
+    }
+    return AgentMessageHistory.latestContent(history, "assistant")
+        .map(previous -> response.content().strip().equals(previous.strip()))
+        .orElse(false);
+  }
+
+  LlmResponse requireFreshSynthesis(LlmResponse response, List<LlmMessage> history)
+      throws AgentRoutingException {
+    if (!response.toolCalls().isEmpty()) {
+      throw new AgentRoutingException(
+          "Agent returned a tool call instead of a fresh history synthesis");
+    }
+    if (repeatsPreviousAssistant(response, history)) {
+      throw new AgentRoutingException(
+          "Agent reused the previous answer after a fresh history lookup");
+    }
+    return response;
   }
 }

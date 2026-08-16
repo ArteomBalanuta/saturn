@@ -23,6 +23,9 @@ class AgentTurnStateTest {
     state.recordSuccessfulTool("user_message_history");
 
     assertTrue(state.commandCorrectionUsed());
+    assertTrue(state.hasSuccessfulCommand("weather"));
+    assertTrue(state.hasSuccessfulTool("user_message_history"));
+    assertTrue(state.hasSuccessfulCommands());
     assertTrue(state.successfulCommands().contains("weather"));
     assertTrue(state.failedCommands().contains("ping"));
     assertTrue(state.successfulTools().contains("user_message_history"));

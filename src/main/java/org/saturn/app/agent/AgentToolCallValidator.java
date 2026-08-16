@@ -20,6 +20,14 @@ final class AgentToolCallValidator {
   }
 
   Result validate(AgentContext context, LlmToolCall call, Set<String> allowedTools) {
+    return validate(context, call, allowedTools, null);
+  }
+
+  Result validate(
+      AgentContext context,
+      LlmToolCall call,
+      Set<String> allowedTools,
+      AgentToolDescriptor classifiedDescriptor) {
     if (!allowedTools.isEmpty() && !allowedTools.contains(call.name())) {
       return Result.error(
           error(call, "TOOL_NOT_ALLOWED", "Tool is not allowed in this invocation mode"));
@@ -28,11 +36,13 @@ final class AgentToolCallValidator {
     if (tool == null) {
       return Result.error(error(call, "UNKNOWN_TOOL", "Unknown tool: " + call.name()));
     }
-    AgentToolDescriptor descriptor;
-    try {
-      descriptor = tool.descriptor(context);
-    } catch (RuntimeException exception) {
-      return Result.error(error(call, "INVALID_TOOL_CONTRACT", "Invalid tool contract"));
+    AgentToolDescriptor descriptor = classifiedDescriptor;
+    if (descriptor == null) {
+      try {
+        descriptor = tool.descriptor(context);
+      } catch (RuntimeException exception) {
+        return Result.error(error(call, "INVALID_TOOL_CONTRACT", "Invalid tool contract"));
+      }
     }
     if (!tool.name().equals(descriptor.name())) {
       return Result.error(error(call, "INVALID_TOOL_CONTRACT", "Tool contract name mismatch"));

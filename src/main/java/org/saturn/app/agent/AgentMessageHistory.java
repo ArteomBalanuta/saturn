@@ -1,0 +1,37 @@
+package org.saturn.app.agent;
+
+import java.util.List;
+import java.util.Optional;
+import org.saturn.app.agent.llm.LlmMessage;
+
+/** Shared queries for persisted and in-flight conversation messages. */
+final class AgentMessageHistory {
+  private static final String ASSISTANT_ROLE = "assistant";
+  private static final String INTERNAL_TOOL_EVIDENCE_PREFIX = "[Internal tool evidence from ";
+
+  private AgentMessageHistory() {}
+
+  static Optional<String> latestContent(List<LlmMessage> messages, String role) {
+    for (int index = messages.size() - 1; index >= 0; index--) {
+      LlmMessage message = messages.get(index);
+      if (role.equals(message.role())) {
+        return Optional.ofNullable(message.content());
+      }
+    }
+    return Optional.empty();
+  }
+
+  static Optional<String> latestConversationAssistant(List<LlmMessage> messages) {
+    for (int index = messages.size() - 1; index >= 0; index--) {
+      LlmMessage message = messages.get(index);
+      if (ASSISTANT_ROLE.equals(message.role()) && !isToolEvidence(message.content())) {
+        return Optional.ofNullable(message.content());
+      }
+    }
+    return Optional.empty();
+  }
+
+  private static boolean isToolEvidence(String content) {
+    return content != null && content.startsWith(INTERNAL_TOOL_EVIDENCE_PREFIX);
+  }
+}

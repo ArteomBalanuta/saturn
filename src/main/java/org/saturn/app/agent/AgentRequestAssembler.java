@@ -1,6 +1,5 @@
 package org.saturn.app.agent;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +38,9 @@ final class AgentRequestAssembler {
     messages.add(
         LlmMessage.system(
             systemPrompt.render(
-                invocation, invocation.requestId(), truncate(recentRoomContext, contextBudget()))));
+                invocation,
+                invocation.requestId(),
+                AgentTextBounds.truncate(recentRoomContext, contextBudget()))));
     messages.addAll(history);
     messages.add(LlmMessage.user(contextualizedPrompt));
     trimToBudget(messages);
@@ -53,9 +54,12 @@ final class AgentRequestAssembler {
 
   private List<JsonObject> definitions(AgentContext context, AgentInvocationMode mode) {
     List<JsonObject> definitions = new ArrayList<>();
-    for (JsonElement definition : registry.definitions(context)) {
+    for (var definition : registry.definitions(context)) {
       JsonObject object = definition.getAsJsonObject();
-      if (mode != AgentInvocationMode.MODERATION || isNamedDefinition(object, "run_command")) {
+      if (mode != AgentInvocationMode.MODERATION
+          || AgentToolDefinitionJson.functionName(object)
+              .filter("run_command"::equals)
+              .isPresent()) {
         definitions.add(object);
       }
     }
@@ -73,8 +77,10 @@ final class AgentRequestAssembler {
   }
 
   private void trimToBudget(List<LlmMessage> messages) {
-    while (serializedLength(messages) > contextBudget() && messages.size() > 2) {
-      messages.remove(1);
+    int length = serializedLength(messages);
+    while (length > contextBudget() && messages.size() > 2) {
+      LlmMessage removed = messages.remove(1);
+      length -= removed.content() == null ? 0 : removed.content().length();
     }
   }
 
@@ -82,23 +88,5 @@ final class AgentRequestAssembler {
     return messages.stream()
         .mapToInt(message -> message.content() == null ? 0 : message.content().length())
         .sum();
-  }
-
-  private static boolean isNamedDefinition(JsonObject definition, String toolName) {
-    JsonObject function = definition.getAsJsonObject("function");
-    return function != null
-        && function.has("name")
-        && toolName.equals(function.get("name").getAsString());
-  }
-
-  private static String truncate(String content, int maxChars) {
-    if (content == null || codePointCount(content) <= maxChars) {
-      return content == null ? "" : content;
-    }
-    return content.substring(0, content.offsetByCodePoints(0, maxChars));
-  }
-
-  private static int codePointCount(String content) {
-    return content.codePointCount(0, content.length());
   }
 }

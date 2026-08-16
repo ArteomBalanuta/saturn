@@ -44,9 +44,9 @@ final class AgentCommandChannelPolicy {
         response.toolCalls().isEmpty() ? guard.findCommand(response.content()) : Optional.empty();
     if (command.isEmpty()) return new Result(response, state.commandCorrectionUsed());
     String name = command.orElseThrow();
-    if (state.commandCorrectionUsed() && !state.successfulCommands().contains(name))
+    if (state.commandCorrectionUsed() && !state.hasSuccessfulCommand(name))
       throw new AgentRoutingException("Agent emitted a Saturn command as prose after correction");
-    boolean succeeded = state.successfulCommands().contains(name);
+    boolean succeeded = state.hasSuccessfulCommand(name);
     boolean failed = state.failedCommands().contains(name);
     boolean requireTool = state.toolsEnabled() && !succeeded && !failed;
     log.warn("Blocked agent command prose, correlationId={}, command={}", correlationId, name);
@@ -96,10 +96,9 @@ final class AgentCommandChannelPolicy {
   }
 
   private static boolean isRunCommand(JsonObject definition) {
-    JsonObject function = definition.getAsJsonObject("function");
-    return function != null
-        && function.has("name")
-        && "run_command".equals(function.get("name").getAsString());
+    return AgentToolDefinitionJson.functionName(definition)
+        .filter("run_command"::equals)
+        .isPresent();
   }
 
   private static JsonObject responseWithoutCommandDefinition() {

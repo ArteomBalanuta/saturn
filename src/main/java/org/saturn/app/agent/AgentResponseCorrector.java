@@ -3,7 +3,6 @@ package org.saturn.app.agent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.llm.LlmClient;
 import org.saturn.app.agent.llm.LlmException;
@@ -164,8 +163,9 @@ final class AgentResponseCorrector {
       return false;
     }
 
-    String previousUser = latestContent(history, "user").orElse(null);
-    String previousAssistant = latestConversationAssistant(history).orElse(null);
+    String previousUser = AgentMessageHistory.latestContent(history, "user").orElse(null);
+    String previousAssistant =
+        AgentMessageHistory.latestConversationAssistant(history).orElse(null);
     return previousUser != null
         && previousAssistant != null
         && response.content().strip().equals(previousAssistant.strip())
@@ -184,30 +184,6 @@ final class AgentResponseCorrector {
   private static String userAuthoredBody(String prompt) {
     int separator = prompt == null ? -1 : prompt.lastIndexOf("\n");
     return separator < 0 ? String.valueOf(prompt) : prompt.substring(separator + 1);
-  }
-
-  private static Optional<String> latestContent(List<LlmMessage> messages, String role) {
-    for (int index = messages.size() - 1; index >= 0; index--) {
-      LlmMessage message = messages.get(index);
-      if (role.equals(message.role())) {
-        return Optional.ofNullable(message.content());
-      }
-    }
-    return Optional.empty();
-  }
-
-  private static Optional<String> latestConversationAssistant(List<LlmMessage> messages) {
-    for (int index = messages.size() - 1; index >= 0; index--) {
-      LlmMessage message = messages.get(index);
-      if ("assistant".equals(message.role()) && !isToolEvidence(message.content())) {
-        return Optional.ofNullable(message.content());
-      }
-    }
-    return Optional.empty();
-  }
-
-  private static boolean isToolEvidence(String content) {
-    return content != null && content.startsWith("[Internal tool evidence from ");
   }
 
   private static boolean containsUnverifiedActionClaim(String content) {

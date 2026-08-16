@@ -33,7 +33,10 @@ final class AgentCommandProseGuard {
     Set<String> commands = new HashSet<>();
     for (JsonObject definition : definitions) {
       JsonObject function = object(definition, "function");
-      if (function == null || !RUN_COMMAND.equals(string(function, "name"))) {
+      if (function == null
+          || AgentToolDefinitionJson.functionName(definition)
+              .filter(RUN_COMMAND::equals)
+              .isEmpty()) {
         continue;
       }
       JsonObject parameters = object(function, "parameters");
@@ -158,15 +161,5 @@ final class AgentCommandProseGuard {
     }
     JsonElement value = parent.get(name);
     return value != null && value.isJsonArray() ? value.getAsJsonArray() : null;
-  }
-
-  private static String string(JsonObject parent, String name) {
-    if (parent == null) {
-      return "";
-    }
-    JsonElement value = parent.get(name);
-    return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
-        ? value.getAsString()
-        : "";
   }
 }
