@@ -4,8 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -137,7 +141,62 @@ class AgentToolCallSchedulerTest {
     }
   }
 
+  @Test
+  void convertsCancelledParallelFuturesToCodedInterruptions() {
+    LlmToolCall first = new LlmToolCall("first", "room_users", "{}");
+    LlmToolCall second = new LlmToolCall("second", "user_message_history", "{}");
+
+    try (AgentToolCallScheduler scheduler =
+        new AgentToolCallScheduler(new CancelledFutureExecutor())) {
+      List<AgentToolResult> results =
+          scheduler.executeAll(
+              List.of(
+                  scheduled(first, AgentToolExecutionMode.PARALLEL_READ),
+                  scheduled(second, AgentToolExecutionMode.PARALLEL_READ)),
+              call -> AgentToolResult.success(call.name(), "unexpected"));
+
+      assertEquals(2, results.size());
+      assertTrue(
+          results.stream().allMatch(result -> "TOOL_INTERRUPTED".equals(result.errorCode())));
+    }
+  }
+
   private AgentScheduledToolCall scheduled(LlmToolCall call, AgentToolExecutionMode executionMode) {
     return new AgentScheduledToolCall(call, executionMode);
+  }
+
+  private static final class CancelledFutureExecutor extends AbstractExecutorService {
+    @Override
+    public void shutdown() {}
+
+    @Override
+    public List<Runnable> shutdownNow() {
+      return List.of();
+    }
+
+    @Override
+    public boolean isShutdown() {
+      return false;
+    }
+
+    @Override
+    public boolean isTerminated() {
+      return false;
+    }
+
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) {
+      return false;
+    }
+
+    @Override
+    public void execute(Runnable command) {}
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+      FutureTask<T> future = new FutureTask<>(task);
+      future.cancel(false);
+      return future;
+    }
   }
 }

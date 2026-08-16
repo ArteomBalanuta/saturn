@@ -2,6 +2,7 @@ package org.saturn.app.agent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -116,6 +117,8 @@ final class AgentToolCallScheduler implements AutoCloseable {
           call.id(),
           exception.getCause() == null ? exception : exception.getCause());
       return error(call, "TOOL_EXECUTION_FAILED", "Tool batch execution failed");
+    } catch (CancellationException exception) {
+      return error(call, "TOOL_INTERRUPTED", "Tool batch execution was interrupted");
     }
   }
 
