@@ -111,6 +111,32 @@ class AgentToolRegistryTest {
     assertEquals("echo", functionName(second.get(0).getAsJsonObject()));
   }
 
+  @Test
+  void failsClosedWhenAvailabilityCheckThrows() {
+    AgentTool unavailable =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "unstable";
+          }
+
+          @Override
+          public boolean isAvailableTo(AgentContext context) {
+            throw new IllegalStateException("availability backend unavailable");
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), arguments);
+          }
+        };
+    AgentToolRegistry registry = new AgentToolRegistry().register(unavailable).freeze();
+    AgentContext context = new AgentContext("room", "nick", null, null, false, List.of());
+
+    assertTrue(registry.find(context, "unstable").isEmpty());
+    assertTrue(registry.definitions(context).isEmpty());
+  }
+
   private static String functionName(JsonObject definition) {
     return definition.getAsJsonObject("function").get("name").getAsString();
   }

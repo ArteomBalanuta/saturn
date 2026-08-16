@@ -43,16 +43,24 @@ public final class AgentToolRegistry {
 
   /** Resolves a tool only when it is available to the supplied caller context. */
   public Optional<AgentTool> find(AgentContext context, String name) {
-    return Optional.ofNullable(tools.get(name)).filter(tool -> tool.isAvailableTo(context));
+    return Optional.ofNullable(tools.get(name)).filter(tool -> isAvailable(tool, context));
   }
 
   /** Returns provider definitions for every tool visible to the supplied caller context. */
   public JsonArray definitions(AgentContext context) {
     JsonArray definitions = new JsonArray();
     tools.values().stream()
-        .filter(tool -> tool.isAvailableTo(context))
+        .filter(tool -> isAvailable(tool, context))
         .forEach(tool -> definitions.add(definition(tool, context)));
     return definitions;
+  }
+
+  private boolean isAvailable(AgentTool tool, AgentContext context) {
+    try {
+      return tool.isAvailableTo(context);
+    } catch (RuntimeException exception) {
+      return false;
+    }
   }
 
   private JsonObject definition(AgentTool tool, AgentContext context) {
