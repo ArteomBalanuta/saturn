@@ -65,6 +65,17 @@ class EngineModerationActionExecutorTest {
     assertEquals(List.of("kick"), commands);
   }
 
+  @Test
+  void rejectsNullDecisionsWithoutLeakingAnException() {
+    EngineModerationActionExecutor executor =
+        new EngineModerationActionExecutor(
+            (context, command, arguments) -> true,
+            new OutService(new ArrayBlockingQueue<>(2)),
+            botContext());
+
+    assertFalse(executor.execute(null));
+  }
+
   private AgentContext botContext() {
     return new AgentContext(
         "programming",

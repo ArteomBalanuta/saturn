@@ -21,6 +21,10 @@ public final class EngineModerationActionExecutor implements ModerationActionExe
 
   @Override
   public boolean execute(ModerationDecision decision) {
+    if (decision == null) {
+      log.warn("Autonomous moderation action rejected: decision is null");
+      return false;
+    }
     try {
       return switch (decision.action()) {
         case WARN -> warn(decision.target().orElseThrow());
