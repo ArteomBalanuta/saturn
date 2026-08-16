@@ -59,6 +59,7 @@ public final class AgentServiceImpl implements AgentService {
     }
 
     try {
+      progress(invocation, "working on it");
       executor.submit(() -> execute(invocation, true));
       return true;
     } catch (RuntimeException exception) {
@@ -117,7 +118,7 @@ public final class AgentServiceImpl implements AgentService {
           invocation.requestId(),
           result.correlationId());
       if (result.shouldReply()) {
-        reply(invocation, result.content());
+        reply(invocation, tagged(invocation, "completed: " + result.content()));
       } else if (invocation.mode() == AgentInvocationMode.MODERATION) {
         replyFlusher.run();
       }
@@ -129,7 +130,8 @@ public final class AgentServiceImpl implements AgentService {
           context.nick(),
           exception.getMessage());
       log.debug("Agent routing failure, requestId={}", invocation.requestId(), exception);
-      replyIfRequired(invocation, "The agent could not answer that request.");
+      replyIfRequired(
+          invocation, tagged(invocation, "failed: the agent could not answer that request."));
     } catch (RuntimeException exception) {
       log.error(
           "Unexpected agent routing failure, requestId={}, type={}, message={}",
@@ -138,7 +140,8 @@ public final class AgentServiceImpl implements AgentService {
           exception.getMessage());
       log.debug(
           "Unexpected agent routing failure, requestId={}", invocation.requestId(), exception);
-      replyIfRequired(invocation, "The agent could not answer that request.");
+      replyIfRequired(
+          invocation, tagged(invocation, "failed: the agent could not answer that request."));
     } finally {
       if (admitted) {
         admission.release();
@@ -150,6 +153,20 @@ public final class AgentServiceImpl implements AgentService {
     if (invocation.mode().requiresReply()) {
       reply(invocation, content);
     }
+  }
+
+  private void progress(AgentInvocation invocation, String message) {
+    if (invocation.mode().requiresReply()) {
+      reply(invocation, tagged(invocation, message));
+    }
+  }
+
+  private String tagged(AgentInvocation invocation, String message) {
+    return "[agent " + visibleRequestId(invocation.requestId()) + "] " + message;
+  }
+
+  private String visibleRequestId(String requestId) {
+    return requestId.length() <= 12 ? requestId : requestId.substring(0, 12);
   }
 
   private void reply(AgentInvocation invocation, String content) {

@@ -21,7 +21,7 @@ class HelpUserCommandImplTest {
     String payload = engine.outgoingMessageQueue.poll();
     assertTrue(
         payload.startsWith(
-            "@testAuthor All commands can be used through '/whisper'\nPrefix: * \nCommands:\n"));
+            "/whisper @testAuthor All commands can be used through '/whisper'\nPrefix: * \nCommands:\n"));
     assertTrue(
         payload.contains("\u2009\u2009\u2009\u2009\u2009\u2009\u2009\u2009 \n Admin commands:\n"));
     assertTrue(payload.contains("\u2009prefix <char>"));

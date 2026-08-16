@@ -48,7 +48,7 @@ public class HelpUserCommandImpl extends UserCommandBaseImpl {
         .append(userPayload)
         .append(examples);
 
-    super.engine.outService.enqueueMessageForSending(author, helpPayload.toString(), isWhisper());
+    super.engine.outService.enqueueMessageForSending(author, helpPayload.toString(), true);
 
     log.info("Executed [help] command by user: {}", author);
 

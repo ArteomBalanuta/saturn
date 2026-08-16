@@ -45,10 +45,38 @@ class AgentServiceImplTest {
     assertFalse(service.submit(invocation(false)));
     release.countDown();
 
-    awaitQueueSize(queue, 2);
+    awaitQueueSize(queue, 3);
     assertTrue(queue.stream().anyMatch(value -> value.contains("busy")));
-    assertTrue(queue.stream().anyMatch(value -> value.equals("@alice answer")));
+    assertTrue(queue.stream().anyMatch(value -> value.contains("completed: answer")));
     service.close();
+  }
+
+  @Test
+  void emitsVisibleProgressAndStableRequestIdForDirectRequests() throws Exception {
+    ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
+    AgentInvocation invocation =
+        new AgentInvocation(
+            "request-123456789",
+            new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of("alice")),
+            "question");
+    AgentServiceImpl service =
+        new AgentServiceImpl(
+            config(true, 1),
+            request -> new AgentResult(request.requestId(), "answer"),
+            new OutService(queue),
+            () -> {});
+
+    try {
+      assertTrue(service.submit(invocation));
+
+      awaitQueueSize(queue, 2);
+      List<String> messages = List.copyOf(queue);
+      assertTrue(messages.stream().anyMatch(message -> message.contains("working")));
+      assertTrue(messages.stream().anyMatch(message -> message.contains("answer")));
+      assertTrue(messages.stream().allMatch(message -> message.contains("request-1234")));
+    } finally {
+      service.close();
+    }
   }
 
   @Test
@@ -94,10 +122,14 @@ class AgentServiceImplTest {
       assertFalse(secondEntered.await(150, TimeUnit.MILLISECONDS));
       releaseFirst.countDown();
       assertTrue(secondEntered.await(1, TimeUnit.SECONDS));
-      awaitListSize(flushed, 2);
+      awaitListSize(flushed, 4);
 
       assertEquals(List.of("first", "second"), routed);
-      assertEquals(List.of("@alice first answer", "@bob second answer"), flushed);
+      assertEquals(4, flushed.size());
+      assertTrue(flushed.get(0).contains("working on it"));
+      assertTrue(flushed.get(1).contains("working on it"));
+      assertTrue(flushed.get(2).contains("completed: first answer"));
+      assertTrue(flushed.get(3).contains("completed: second answer"));
     } finally {
       releaseFirst.countDown();
       service.close();
@@ -134,8 +166,8 @@ class AgentServiceImplTest {
 
     assertTrue(service.submit(invocation(false)));
 
-    String reply = queue.poll(2, TimeUnit.SECONDS);
-    assertTrue(reply != null && reply.contains("could not answer"));
+    awaitQueueSize(queue, 2);
+    assertTrue(queue.stream().anyMatch(reply -> reply.contains("could not answer")));
     service.close();
   }
 
@@ -187,7 +219,7 @@ class AgentServiceImplTest {
 
       awaitListSize(routed, 3);
       assertEquals(List.of("first ambient", "direct", "latest ambient"), routed);
-      assertTrue(replies.isEmpty());
+      assertTrue(replies.stream().allMatch(reply -> reply.contains("agent ")));
     } finally {
       releaseFirstAmbient.countDown();
       service.close();
