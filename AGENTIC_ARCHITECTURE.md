@@ -29,20 +29,29 @@ schema validation, ordering, timeouts, result validation, room delivery, and per
 4. The router adds results as tool observations, requests the next action or final synthesis, and
    persists successful public replies and tool evidence.
 
-The router also enforces fresh user-history grounding, command-channel correction, stale-response
-detection, response sanitization, and mode-specific reply behavior. Corrective provider calls are
-bounded and do not grant tools additional authority.
+`AgentFreshDataPolicy`, `AgentCommandChannelPolicy`, and `AgentResponseCorrector` enforce fresh
+grounding, structured commands, stale-response recovery, and truthful action claims.
+`AgentTurnState` owns their request-local bounds; `AgentResponseSanitizer` owns presentation.
 
 ### Execution Engine
 
-`AgentToolExecutor` is created and closed per routed request. Its request-local state tracks
-completed and in-flight invocation keys, per-tool call/failure counts, disabled tools, and satisfied
-prerequisites.
+`AgentToolExecutor` is created and closed per routed request. `AgentToolCallValidator` resolves
+contextual contracts into immutable `ValidatedToolCall` values. `AgentToolExecutionLedger` owns
+completed and in-flight keys, limits, failures, disabled tools, and prerequisites.
+`AgentToolInvoker` owns timeout-bound virtual-thread execution, while `AgentToolCallScheduler`
+owns ordered selective fan-out.
 
-For each call it resolves the contextual tool, validates the descriptor and JSON arguments, rejects
-duplicates and unmet prerequisites, executes on a virtual thread with a bounded timeout, validates
-the successful result schema, and returns a `ToolResponseEnvelope`. Malformed arguments, timeouts,
-and tool exceptions become coded observations rather than crashing the router.
+For each call the facade validates, reserves, invokes, validates the result schema, and records the
+outcome. Malformed arguments, timeouts, and tool exceptions become coded observations rather than
+crashing the router.
+
+### Room Automation And Composition
+
+`AgentRoomMessagePipeline` applies deterministic moderation, eligibility filtering, quiet requests,
+mentions, semantic moderation, and ambient participation in a fixed order.
+`DefaultAgentRoomAutomation` is its public compatibility facade. `AgentRuntimeFactory` delegates to
+dedicated infrastructure, tool-registry, router, and automation factories;
+`ProtectedPrincipalPolicy` centralizes creator, admin, host, bot, and replica exemptions.
 
 `AgentExecutionState` separately limits model/tool loop steps and total calls. `AgentConfig`
 supplies `maxSteps`, `maxToolCallsPerTurn`, `maxCallsPerTool`, and `toolTimeoutMillis`.

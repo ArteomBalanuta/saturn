@@ -18,6 +18,9 @@ locking, tool-loop state, retry/correction policy, and persistence boundaries.
 - `AgentResponseSanitizer` is the response-normalization strategy. It contains legacy persona
   migration, stage-direction removal, and Saturn thin-space list formatting independently of
   provider retries and tool execution.
+- `AgentResponseCorrector` owns bounded provider-response recovery. It detects stale cached
+  responses, retries once with prompt caching bypassed, and corrects failure placeholders or
+  narrated actions without leaking recovery prompts into the router.
 
 ## SDK Contract Boundary
 
@@ -32,6 +35,23 @@ The tool loop remains in `DefaultAgentRouter` because it coordinates mutable per
 tool call budget, successful/failing command sets, fresh-data satisfaction, correction attempts,
 and accumulated evidence. Splitting it into independently stateful handlers would obscure those
 ordering guarantees. The extracted collaborators keep the loop focused on that single job.
+
+`AgentCommandChannelPolicy` owns structured command correction, `AgentFreshDataPolicy` validates
+required lookup targets and evidence, and `AgentTurnState` owns request-local facts.
+
+## Tool Execution Pipeline
+
+`AgentToolExecutor` is a request-scoped facade over `AgentToolCallValidator`, immutable
+`ValidatedToolCall` values, `AgentToolExecutionLedger`, `AgentToolExecutionPolicy`,
+`AgentToolInvoker`, and `AgentToolCallScheduler`. Validation precedes accounting; only contiguous
+independent read calls fan out; observations retain provider order.
+
+## Room And Runtime Composition
+
+`AgentRoomMessagePipeline` is an ordered Chain of Responsibility for moderation, filtering, quiet
+requests, mentions, semantic moderation, and ambient participation. Runtime construction delegates
+to infrastructure, registry, router, and automation factories. `ProtectedPrincipalPolicy` is the
+single source for creator, admin, host, replica, and bot exemptions.
 
 ## Compatibility
 

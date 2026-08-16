@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -22,8 +23,14 @@ public final class AgentToolRegistry {
     if (frozen) {
       throw new IllegalStateException("Agent tool registry is frozen");
     }
-    if (tools.putIfAbsent(tool.name(), tool) != null) {
-      throw new IllegalArgumentException("Duplicate agent tool: " + tool.name());
+    AgentTool candidate = Objects.requireNonNull(tool, "tool");
+    String name = candidate.name();
+    if (name == null || !name.matches("[a-z][a-z0-9_]{0,63}")) {
+      throw new IllegalArgumentException(
+          "Agent tool name must be a lowercase alphanumeric identifier");
+    }
+    if (tools.putIfAbsent(name, candidate) != null) {
+      throw new IllegalArgumentException("Duplicate agent tool: " + name);
     }
     return this;
   }
@@ -49,6 +56,7 @@ public final class AgentToolRegistry {
   }
 
   private JsonObject definition(AgentTool tool, AgentContext context) {
+    // Descriptors are contextual, so their full contract can only be validated for a caller.
     AgentToolDescriptor descriptor = tool.descriptor(context);
     if (!tool.name().equals(descriptor.name())) {
       throw new IllegalStateException(

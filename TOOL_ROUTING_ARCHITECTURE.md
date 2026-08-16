@@ -25,10 +25,12 @@ inspection first.
 ## Execution Pipeline
 
 1. `DefaultAgentRouter` receives an LLM response containing zero or more tool calls.
-2. `AgentToolExecutor.executeAll` partitions the calls into contiguous batches.
-3. A batch fans out only when every call is read-only, idempotent, and has no prerequisite.
-4. All other calls execute one at a time in the original LLM order.
-5. Results are collected in original call order and serialized as `ToolResponseEnvelope`
+2. `AgentToolCallValidator` resolves contextual contracts and validates parameters.
+3. `AgentToolExecutionLedger` reserves invocation keys and checks limits and prerequisites.
+4. `AgentToolExecutor.executeAll` delegates batching to `AgentToolCallScheduler`.
+5. A batch fans out only when every call is read-only, idempotent, and has no prerequisite.
+6. All other calls execute one at a time in the original LLM order.
+7. Results are collected in original call order and serialized as `ToolResponseEnvelope`
    observations before the next LLM turn.
 
 This preserves command ordering. A sequence of `room_users`, `room_users`, and `run_command`

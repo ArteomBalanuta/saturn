@@ -32,6 +32,14 @@ class AgentToolRegistryTest {
   }
 
   @Test
+  void rejectsInvalidStableToolIdentityAtRegistration() {
+    assertThrows(NullPointerException.class, () -> new AgentToolRegistry().register(null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new AgentToolRegistry().register(tool("Invalid-Name")));
+  }
+
+  @Test
   void hidesCapabilityRestrictedToolsFromDefinitionsAndLookup() {
     AgentTool dynamicSql =
         new AgentTool() {
