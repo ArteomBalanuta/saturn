@@ -84,7 +84,7 @@ class EngineSaturnCommandGatewayTest {
       EngineSaturnCommandGateway gateway = new EngineSaturnCommandGateway(engine);
 
       SaturnCommandGateway.CommandExecution result =
-          gateway.executeWithResult(context(), "version", "");
+          gateway.executeWithResult(context(), "version", "ignored");
 
       assertTrue(result.executed());
       assertTrue(result.modelData().startsWith("@alice "));
