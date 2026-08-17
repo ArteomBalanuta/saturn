@@ -149,7 +149,7 @@ final class AgentResponseCorrector {
   }
 
   static boolean isFailurePlaceholder(LlmResponse response) {
-    if (!response.toolCalls().isEmpty() || response.content() == null) {
+    if (response == null || !response.toolCalls().isEmpty() || response.content() == null) {
       return false;
     }
     String normalized = response.content().strip().toLowerCase(Locale.ROOT);

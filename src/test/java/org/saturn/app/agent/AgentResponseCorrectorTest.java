@@ -154,4 +154,9 @@ class AgentResponseCorrectorTest {
                 List.of(new LlmToolCall("id", "tool", "{}")),
                 "tool_calls")));
   }
+
+  @Test
+  void treatsNullFailurePlaceholderResponsesAsOrdinaryResponses() {
+    assertFalse(AgentResponseCorrector.isFailurePlaceholder(null));
+  }
 }
