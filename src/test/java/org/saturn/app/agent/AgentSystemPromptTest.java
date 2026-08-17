@@ -84,7 +84,9 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("Never let a roast delay a requested action"));
     assertTrue(rendered.contains("LITERARY VOICE"));
     assertTrue(rendered.contains("exactly one brief, fitting quotation"));
-    assertTrue(rendered.contains("book title and author"));
+    assertTrue(rendered.contains("make the entire reply exactly one brief"));
+    assertTrue(rendered.contains("Do not answer the user's message first"));
+    assertTrue(rendered.contains("— \"quotation\" — Book Title, Author"));
     assertTrue(rendered.contains("Do not invent a quotation"));
     assertTrue(rendered.contains("casual chat, greetings, reflections, and general conversation"));
     assertTrue(rendered.contains("IDENTITY"));

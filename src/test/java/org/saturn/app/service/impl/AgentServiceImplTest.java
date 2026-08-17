@@ -48,7 +48,7 @@ class AgentServiceImplTest {
 
     awaitQueueSize(queue, 2);
     assertTrue(queue.stream().anyMatch(value -> value.contains("busy")));
-    assertTrue(queue.stream().anyMatch(value -> value.contains("@alice answer")));
+    assertTrue(queue.stream().anyMatch(value -> value.contains("@alice \nanswer")));
     service.close();
   }
 
@@ -128,8 +128,9 @@ class AgentServiceImplTest {
 
     try {
       assertTrue(service.submit(invocation));
-      awaitQueueContains(chats, "@alice answer");
+      awaitQueueContains(chats, "@alice \nanswer");
       assertEquals(1, chats.size());
+      assertEquals("@alice \nanswer", chats.peek());
       assertTrue(raw.isEmpty());
     } finally {
       service.close();
@@ -211,8 +212,8 @@ class AgentServiceImplTest {
 
       assertEquals(List.of("first", "second"), routed);
       assertEquals(2, flushed.size());
-      assertTrue(flushed.get(0).contains("@alice first answer"));
-      assertTrue(flushed.get(1).contains("@bob second answer"));
+      assertTrue(flushed.get(0).contains("@alice \nfirst answer"));
+      assertTrue(flushed.get(1).contains("@bob \nsecond answer"));
     } finally {
       releaseFirst.countDown();
       service.close();

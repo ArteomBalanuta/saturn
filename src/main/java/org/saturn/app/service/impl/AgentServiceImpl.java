@@ -117,7 +117,7 @@ public final class AgentServiceImpl implements AgentService {
           invocation.requestId(),
           result.correlationId());
       if (result.shouldReply()) {
-        reply(invocation, mention(invocation, result.content()));
+        reply(invocation, result.content());
       } else if (invocation.mode() == AgentInvocationMode.MODERATION) {
         replyFlusher.run();
       }
@@ -154,18 +154,14 @@ public final class AgentServiceImpl implements AgentService {
 
   private void replyFailureIfRequired(AgentInvocation invocation) {
     if (invocation.mode().requiresReply()) {
-      reply(invocation, mention(invocation, "failed: the agent could not answer that request."));
+      reply(invocation, "failed: the agent could not answer that request.");
     }
-  }
-
-  private String mention(AgentInvocation invocation, String content) {
-    return "@" + invocation.context().nick() + " " + content;
   }
 
   private void reply(AgentInvocation invocation, String content) {
     var context = invocation.context();
     try {
-      outService.enqueueMessageForSending(context.nick(), content, context.whisper());
+      outService.enqueueMessageForSending(context.nick(), "\n" + content, context.whisper());
     } catch (RuntimeException exception) {
       log.error("Agent reply enqueue failed, requestId={}", invocation.requestId(), exception);
       return;
