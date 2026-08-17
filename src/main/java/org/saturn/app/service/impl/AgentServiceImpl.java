@@ -230,8 +230,8 @@ public final class AgentServiceImpl implements AgentService {
             update(invocation, AgentLoadingAnimation.frame(frameIndex++), customId, animationLock);
           }
         },
-        350,
-        350,
+        500,
+        500,
         TimeUnit.MILLISECONDS);
   }
 
