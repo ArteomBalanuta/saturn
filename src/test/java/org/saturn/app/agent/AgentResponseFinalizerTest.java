@@ -64,6 +64,25 @@ class AgentResponseFinalizerTest {
   }
 
   @Test
+  void rejectsAnActuallyEmptyResponse() {
+    AgentResponseFinalizer finalizer = finalizer();
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                finalizer.prepare(
+                    invocation(AgentInvocationMode.DIRECT),
+                    new LlmResponse("", List.of(), "stop"),
+                    List.of(),
+                    Optional.empty(),
+                    List.of(),
+                    "correlation-empty"));
+
+    assertEquals("Agent returned an empty response", exception.getMessage());
+  }
+
+  @Test
   void rejectsNullProviderResponseWithStableRoutingError() {
     AgentResponseFinalizer finalizer = finalizer();
 
