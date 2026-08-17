@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonParser;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -112,6 +113,71 @@ class AgentServiceImplTest {
       assertFalse(routerEntered.await(100, TimeUnit.MILLISECONDS));
     } finally {
       releaseProgressFlush.countDown();
+      service.close();
+    }
+  }
+
+  @Test
+  void updatesOneVisibleMessageInsteadOfPostingProgressAndCompletionSeparately() throws Exception {
+    ArrayBlockingQueue<String> chats = new ArrayBlockingQueue<>(10);
+    ArrayBlockingQueue<String> raw = new ArrayBlockingQueue<>(10);
+    AgentInvocation invocation =
+        new AgentInvocation(
+            "request-123456789",
+            new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of("alice")),
+            "question");
+    AgentServiceImpl service =
+        new AgentServiceImpl(
+            config(true, 1),
+            request -> new AgentResult(request.requestId(), "answer"),
+            new OutService(chats, raw),
+            () -> {});
+
+    try {
+      assertTrue(service.submit(invocation));
+      awaitQueueSize(raw, 2);
+      assertTrue(chats.isEmpty());
+      var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
+      var update = JsonParser.parseString(raw.take()).getAsJsonObject();
+      assertEquals("chat", initial.get("cmd").getAsString());
+      assertEquals("request-123456789", initial.get("customId").getAsString());
+      assertEquals("updateMessage", update.get("cmd").getAsString());
+      assertEquals("complete", update.get("mode").getAsString());
+      assertEquals("request-123456789", update.get("customId").getAsString());
+      assertTrue(update.get("text").getAsString().contains("completed: answer"));
+    } finally {
+      service.close();
+    }
+  }
+
+  @Test
+  void updatesTheVisibleMessageWithStableFailureWhenRoutingFails() throws Exception {
+    ArrayBlockingQueue<String> chats = new ArrayBlockingQueue<>(10);
+    ArrayBlockingQueue<String> raw = new ArrayBlockingQueue<>(10);
+    AgentInvocation invocation =
+        new AgentInvocation(
+            "request-failure-123",
+            new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of("alice")),
+            "question");
+    AgentServiceImpl service =
+        new AgentServiceImpl(
+            config(true, 1),
+            request -> {
+              throw new IllegalStateException("provider detail");
+            },
+            new OutService(chats, raw),
+            () -> {});
+
+    try {
+      assertTrue(service.submit(invocation));
+      awaitQueueSize(raw, 2);
+      var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
+      var update = JsonParser.parseString(raw.take()).getAsJsonObject();
+      assertEquals("request-failure-123", initial.get("customId").getAsString());
+      assertEquals("complete", update.get("mode").getAsString());
+      assertEquals("request-failure-123", update.get("customId").getAsString());
+      assertTrue(update.get("text").getAsString().contains("could not answer"));
+    } finally {
       service.close();
     }
   }

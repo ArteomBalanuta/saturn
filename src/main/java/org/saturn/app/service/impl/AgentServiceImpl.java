@@ -118,7 +118,7 @@ public final class AgentServiceImpl implements AgentService {
           invocation.requestId(),
           result.correlationId());
       if (result.shouldReply()) {
-        reply(invocation, tagged(invocation, "completed: " + result.content()));
+        update(invocation, tagged(invocation, "completed: " + result.content()));
       } else if (invocation.mode() == AgentInvocationMode.MODERATION) {
         replyFlusher.run();
       }
@@ -154,13 +154,36 @@ public final class AgentServiceImpl implements AgentService {
   }
 
   private void replyFailureIfRequired(AgentInvocation invocation) {
-    replyIfRequired(
-        invocation, tagged(invocation, "failed: the agent could not answer that request."));
+    if (invocation.mode().requiresReply()) {
+      update(invocation, tagged(invocation, "failed: the agent could not answer that request."));
+    }
   }
 
   private void progress(AgentInvocation invocation, String message) {
     if (invocation.mode().requiresReply()) {
-      reply(invocation, tagged(invocation, message));
+      replyProgress(invocation, tagged(invocation, message));
+    }
+  }
+
+  private void replyProgress(AgentInvocation invocation, String content) {
+    try {
+      outService.enqueueAgentMessage(
+          invocation.context().nick(),
+          content,
+          invocation.context().whisper(),
+          invocation.requestId());
+      replyFlusher.run();
+    } catch (RuntimeException exception) {
+      log.error("Agent progress enqueue failed, requestId={}", invocation.requestId(), exception);
+    }
+  }
+
+  private void update(AgentInvocation invocation, String content) {
+    try {
+      outService.updateAgentMessage("complete", content, invocation.requestId());
+      replyFlusher.run();
+    } catch (RuntimeException exception) {
+      log.error("Agent reply update failed, requestId={}", invocation.requestId(), exception);
     }
   }
 
