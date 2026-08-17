@@ -257,6 +257,27 @@ class AgentToolSchemaValidatorTest {
   }
 
   @Test
+  void rejectsPrimitiveResultsWithTheWrongPrimitiveKind() {
+    assertEquals(
+        "Tool result does not match declared boolean schema",
+        AgentToolSchemaValidator.validateResult(
+            resultSchema("boolean"), new JsonPrimitive("true")));
+    assertEquals(
+        "Tool result does not match declared number schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("number"), new JsonPrimitive(false)));
+    assertEquals(
+        "Tool result does not match declared integer schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("integer"), new JsonPrimitive("1")));
+  }
+
+  @Test
+  void acceptsArgumentsWhenTheObjectSchemaHasNoProperties() {
+    JsonObject arguments = new JsonObject();
+
+    assertEquals(null, AgentToolSchemaValidator.validateArguments(objectSchema(), arguments));
+  }
+
+  @Test
   void rejectsNonObjectResultPropertiesAndAcceptsAnyArgumentType() {
     JsonObject malformed = resultSchema("object");
     malformed.addProperty("properties", "invalid");
