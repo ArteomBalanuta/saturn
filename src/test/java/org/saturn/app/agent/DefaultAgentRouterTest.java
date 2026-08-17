@@ -1779,6 +1779,30 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void resolvesTheSingleRequiredFreshDataDefinition() throws Exception {
+    var resolver =
+        DefaultAgentRouter.class.getDeclaredMethod("definitionFor", List.class, String.class);
+    resolver.setAccessible(true);
+    JsonObject definition = new JsonObject();
+    JsonObject function = new JsonObject();
+    function.addProperty("name", "user_message_history");
+    definition.add("function", function);
+
+    @SuppressWarnings("unchecked")
+    List<JsonObject> resolved =
+        (List<JsonObject>) resolver.invoke(null, List.of(definition), "user_message_history");
+
+    assertEquals(1, resolved.size());
+    assertEquals(
+        "user_message_history",
+        resolved.getFirst().getAsJsonObject("function").get("name").getAsString());
+    assertTrue(resolved.getFirst() != definition);
+    assertTrue(resolved.getFirst().getAsJsonObject("function") != function);
+    resolved.getFirst().getAsJsonObject("function").addProperty("name", "changed");
+    assertEquals("user_message_history", function.get("name").getAsString());
+  }
+
+  @Test
   void retriesWithoutPromptCacheWhenNewPromptGetsPreviousAnswer() throws Exception {
     String previousAnswer = "Welcome back. The room is still here.";
     RecordingMemory memory =
