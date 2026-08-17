@@ -254,6 +254,22 @@ class OpenAiCompatibleClientTest {
   }
 
   @Test
+  void normalizesNullContentAndMissingFinishReason() throws Exception {
+    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext(
+        "/v1/chat/completions",
+        exchange -> respond(exchange, 200, "{\"choices\":[{\"message\":{\"content\":null}}]}"));
+    server.start();
+    OpenAiCompatibleClient client = new OpenAiCompatibleClient(config("", 0));
+
+    LlmResponse response =
+        client.complete(new LlmRequest(List.of(LlmMessage.user("hi")), List.of()));
+
+    assertEquals("", response.content());
+    assertEquals("", response.finishReason());
+  }
+
+  @Test
   void reportsExhaustedTransientHttpFailuresWithoutRetrying() throws Exception {
     server = HttpServer.create(new InetSocketAddress(0), 0);
     server.createContext("/v1/chat/completions", exchange -> respond(exchange, 503, "unavailable"));
