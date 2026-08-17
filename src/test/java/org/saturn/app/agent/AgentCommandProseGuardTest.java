@@ -87,6 +87,27 @@ class AgentCommandProseGuardTest {
             new LlmToolCall("call-4", "run_command", "{\"command\":\"WEATHER\"}")));
   }
 
+  @Test
+  void rejectsEmptyAndUnauthorizedCommandShapes() {
+    AgentCommandProseGuard guard = guardFor(regularContext());
+
+    assertTrue(guard.findCommand("```text\n\n```").isEmpty());
+    assertFalse(
+        guard.matches(
+            new LlmToolCall("call-1", "other_tool", "{\"command\":\"weather\"}"), "weather"));
+    assertFalse(
+        guard.matches(
+            new LlmToolCall("call-2", "run_command", "{\"command\":\"weather\"}"), "unknown"));
+    assertFalse(guard.matches(new LlmToolCall("call-3", "run_command", "null"), "weather"));
+    assertFalse(
+        guard.matches(new LlmToolCall("call-4", "run_command", "{\"command\":{}}"), "weather"));
+    assertFalse(
+        guard.matches(
+            new LlmToolCall("call-5", "run_command", "{\"command\":\"weather\",\"arguments\":[]}"),
+            "weather"));
+    assertTrue(guard.executedCommand(new LlmToolCall("call-6", "run_command", "null")).isEmpty());
+  }
+
   private AgentCommandProseGuard guardFor(AgentContext context) {
     var definitions =
         new AgentToolRegistry()
