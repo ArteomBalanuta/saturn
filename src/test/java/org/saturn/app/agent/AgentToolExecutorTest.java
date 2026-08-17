@@ -248,6 +248,58 @@ class AgentToolExecutorTest {
   }
 
   @Test
+  void honorsANonZeroDescriptorTimeoutInsteadOfTheDefault() {
+    AgentTool tool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "custom_timeout";
+          }
+
+          @Override
+          public AgentToolDescriptor descriptor(AgentContext context) {
+            return new AgentToolDescriptor(
+                name(),
+                "Custom timeout",
+                "Uses a descriptor-specific timeout.",
+                "test",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.MODEL_DATA,
+                parameters(),
+                List.of("Use for timeout testing."),
+                List.of("Do not use for unrelated operations."),
+                List.of(),
+                Set.of(),
+                Set.of(),
+                true,
+                Duration.ofMillis(20),
+                anyResultSchema());
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            try {
+              Thread.sleep(Duration.ofSeconds(1));
+            } catch (InterruptedException exception) {
+              Thread.currentThread().interrupt();
+            }
+            return AgentToolResult.success(name(), "done");
+          }
+        };
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(tool).freeze(), config(Duration.ofSeconds(2)))) {
+      AgentToolResult result =
+          executor.execute(null, new LlmToolCall("custom-timeout-1", "custom_timeout", "{}"));
+
+      assertTrue(result.isError());
+      assertEquals("TOOL_TIMEOUT", result.errorCode());
+    }
+  }
+
+  @Test
   void convertsNullToolOutputToACodedFailure() {
     AgentTool nullTool =
         new AgentTool() {
@@ -657,6 +709,13 @@ class AgentToolExecutorTest {
     JsonObject schema = new JsonObject();
     schema.addProperty("type", "any");
     return schema;
+  }
+
+  private JsonObject parameters() {
+    JsonObject parameters = new JsonObject();
+    parameters.addProperty("type", "object");
+    parameters.add("properties", new JsonObject());
+    return parameters;
   }
 
   private AgentConfig config() {
