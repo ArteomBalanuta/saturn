@@ -334,6 +334,37 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void failsWithStableMemoryErrorWhenMemoryStoreReturnsNullHistory() {
+    AgentMemoryStore invalidMemory =
+        new AgentMemoryStore() {
+          @Override
+          public List<org.saturn.app.agent.llm.LlmMessage> load(
+              AgentContext context, AgentConfig config) {
+            return null;
+          }
+
+          @Override
+          public void append(
+              AgentContext context,
+              String userContent,
+              String assistantContent,
+              AgentConfig config) {}
+        };
+    ScriptedClient client = new ScriptedClient(new LlmResponse("unused", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 100), client, new AgentToolRegistry().freeze(), invalidMemory);
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "question after invalid history")));
+
+    assertEquals("Agent memory load failed", exception.getMessage());
+    assertTrue(client.requests.isEmpty());
+  }
+
+  @Test
   void failsWhenMemoryPersistenceFails() {
     AgentMemoryStore transientMemory =
         new AgentMemoryStore() {

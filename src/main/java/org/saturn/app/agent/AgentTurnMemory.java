@@ -20,6 +20,9 @@ final class AgentTurnMemory {
     List<LlmMessage> loaded;
     try {
       loaded = store.load(context, config);
+      if (loaded == null) {
+        throw new IllegalStateException("Agent memory store returned null history");
+      }
     } catch (RuntimeException exception) {
       throw memoryLoadFailure(correlationId, exception);
     }
