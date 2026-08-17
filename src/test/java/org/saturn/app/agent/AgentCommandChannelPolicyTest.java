@@ -190,6 +190,61 @@ class AgentCommandChannelPolicyTest {
   }
 
   @Test
+  void doesNotOfferToolsAgainAfterSuccessfulCommand() throws Exception {
+    List<LlmRequest> requests = new ArrayList<>();
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(
+            request -> {
+              requests.add(request);
+              return new LlmResponse("The command already completed.", List.of(), "stop");
+            });
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+    state.recordSuccessfulCommand("weather");
+
+    AgentCommandChannelPolicy.Result result =
+        policy.enforce(
+            new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+            new ArrayList<>(),
+            definitions(),
+            AgentCommandProseGuard.from(definitions()),
+            state,
+            "show Tokyo weather",
+            "request-succeeded");
+
+    assertEquals("The command already completed.", result.response().content());
+    assertEquals(1, requests.size());
+    assertTrue(requests.getFirst().tools().isEmpty());
+  }
+
+  @Test
+  void rejectsBlankOrCommandContainingNonCommandFallbackContent() {
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+
+    for (String response : List.of("   ", "`weather Tokyo`")) {
+      LlmToolCall call =
+          new LlmToolCall(
+              "call-1", "respond_without_command", "{\"response\":" + quote(response) + "}");
+      AgentCommandChannelPolicy policy =
+          new AgentCommandChannelPolicy(
+              request -> new LlmResponse("", List.of(call), "tool_calls"));
+
+      assertThrows(
+          AgentRoutingException.class,
+          () ->
+              policy.enforce(
+                  new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                  new ArrayList<>(),
+                  definitions(),
+                  AgentCommandProseGuard.from(definitions()),
+                  state,
+                  "show Tokyo weather",
+                  "request-invalid-content"));
+    }
+  }
+
+  @Test
   void rejectsNullCommandCorrectionWithStableRoutingError() {
     AgentCommandChannelPolicy policy = new AgentCommandChannelPolicy(request -> null);
     AgentTurnState state =
@@ -242,5 +297,9 @@ class AgentCommandChannelPolicyTest {
     List<JsonObject> definitions = new ArrayList<>();
     values.forEach(value -> definitions.add(value.getAsJsonObject()));
     return List.copyOf(definitions);
+  }
+
+  private static String quote(String value) {
+    return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
   }
 }
