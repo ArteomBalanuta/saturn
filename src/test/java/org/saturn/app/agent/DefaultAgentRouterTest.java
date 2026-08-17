@@ -223,6 +223,41 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void rejectsToolCallReturnedAfterTheToolBudgetDisablesTools() {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse("", List.of(new LlmToolCall("1", "echo", "{}")), "tool_calls"),
+            new LlmResponse("", List.of(new LlmToolCall("2", "echo", "{}")), "tool_calls"),
+            new LlmResponse("", List.of(new LlmToolCall("3", "echo", "{}")), "tool_calls"));
+    AgentTool tool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "echo";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), "ok");
+          }
+        };
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            boundedConfig(4, 1),
+            client,
+            new AgentToolRegistry().register(tool).freeze(),
+            AgentMemoryStore.none());
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "keep tools bounded")));
+
+    assertEquals("Agent returned a tool call after tools were disabled", exception.getMessage());
+    assertEquals(3, client.requests.size());
+  }
+
+  @Test
   void rejectsAnUnboundedToolLoopWhenTheStepBudgetIsExhausted() {
     ScriptedClient client =
         new ScriptedClient(
