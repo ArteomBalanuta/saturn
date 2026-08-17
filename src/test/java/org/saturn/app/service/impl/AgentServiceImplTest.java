@@ -75,7 +75,7 @@ class AgentServiceImplTest {
       List<String> messages = List.copyOf(queue);
       assertTrue(messages.stream().anyMatch(message -> message.contains("thinking")));
       assertTrue(messages.stream().anyMatch(message -> message.contains("answer")));
-      assertTrue(messages.stream().allMatch(message -> message.contains("request-1234")));
+      assertTrue(messages.stream().noneMatch(message -> message.contains("request-1234")));
     } finally {
       service.close();
     }
@@ -140,12 +140,12 @@ class AgentServiceImplTest {
       var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
       var update = JsonParser.parseString(raw.take()).getAsJsonObject();
       assertEquals("chat", initial.get("cmd").getAsString());
-      assertTrue(initial.get("customId").getAsJsonPrimitive().isNumber());
-      int customId = initial.get("customId").getAsInt();
-      assertTrue(customId > 0);
+      assertTrue(initial.get("customId").getAsJsonPrimitive().isString());
+      String customId = initial.get("customId").getAsString();
+      assertTrue(customId.chars().allMatch(Character::isDigit));
       assertEquals("updateMessage", update.get("cmd").getAsString());
       assertEquals("overwrite", update.get("mode").getAsString());
-      assertEquals(customId, update.get("customId").getAsInt());
+      assertEquals(customId, update.get("customId").getAsString());
       assertTrue(update.get("text").getAsString().contains("completed: answer"));
     } finally {
       service.close();
@@ -175,10 +175,10 @@ class AgentServiceImplTest {
       awaitQueueSize(raw, 2);
       var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
       var update = JsonParser.parseString(raw.take()).getAsJsonObject();
-      int customId = initial.get("customId").getAsInt();
-      assertTrue(customId > 0);
+      String customId = initial.get("customId").getAsString();
+      assertTrue(customId.chars().allMatch(Character::isDigit));
       assertEquals("overwrite", update.get("mode").getAsString());
-      assertEquals(customId, update.get("customId").getAsInt());
+      assertEquals(customId, update.get("customId").getAsString());
       assertTrue(update.get("text").getAsString().contains("could not answer"));
     } finally {
       service.close();
@@ -363,7 +363,7 @@ class AgentServiceImplTest {
 
       awaitListSize(routed, 3);
       assertEquals(List.of("first ambient", "direct", "latest ambient"), routed);
-      assertTrue(replies.stream().allMatch(reply -> reply.contains("agent ")));
+      assertTrue(replies.stream().noneMatch(reply -> reply.contains("[agent ")));
     } finally {
       releaseFirstAmbient.countDown();
       service.close();

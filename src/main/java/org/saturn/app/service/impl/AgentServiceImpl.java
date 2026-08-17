@@ -119,7 +119,7 @@ public final class AgentServiceImpl implements AgentService {
         invocation.mode(),
         context.room(),
         context.nick());
-    int customId = nextCustomId();
+    String customId = String.valueOf(nextCustomId());
     Object animationLock = new Object();
     ScheduledFuture<?> animation = null;
     try {
@@ -131,11 +131,7 @@ public final class AgentServiceImpl implements AgentService {
           invocation.requestId(),
           result.correlationId());
       if (result.shouldReply()) {
-        update(
-            invocation,
-            tagged(invocation, "completed: " + result.content()),
-            customId,
-            animationLock);
+        update(invocation, "completed: " + result.content(), customId, animationLock);
       } else if (invocation.mode() == AgentInvocationMode.MODERATION) {
         replyFlusher.run();
       }
@@ -174,23 +170,20 @@ public final class AgentServiceImpl implements AgentService {
   }
 
   private void replyFailureIfRequired(
-      AgentInvocation invocation, int customId, Object animationLock) {
+      AgentInvocation invocation, String customId, Object animationLock) {
     if (invocation.mode().requiresReply()) {
       update(
-          invocation,
-          tagged(invocation, "failed: the agent could not answer that request."),
-          customId,
-          animationLock);
+          invocation, "failed: the agent could not answer that request.", customId, animationLock);
     }
   }
 
-  private void progress(AgentInvocation invocation, String message, int customId) {
+  private void progress(AgentInvocation invocation, String message, String customId) {
     if (invocation.mode().requiresReply()) {
-      replyProgress(invocation, tagged(invocation, message), customId);
+      replyProgress(invocation, message, customId);
     }
   }
 
-  private void replyProgress(AgentInvocation invocation, String content, int customId) {
+  private void replyProgress(AgentInvocation invocation, String content, String customId) {
     try {
       outService.enqueueAgentMessage(
           invocation.context().nick(), content, invocation.context().whisper(), customId);
@@ -201,7 +194,7 @@ public final class AgentServiceImpl implements AgentService {
   }
 
   private void update(
-      AgentInvocation invocation, String content, int customId, Object animationLock) {
+      AgentInvocation invocation, String content, String customId, Object animationLock) {
     synchronized (animationLock) {
       try {
         outService.updateAgentMessage("overwrite", content, customId);
@@ -217,7 +210,7 @@ public final class AgentServiceImpl implements AgentService {
   }
 
   private ScheduledFuture<?> startAnimation(
-      AgentInvocation invocation, int customId, Object animationLock) {
+      AgentInvocation invocation, String customId, Object animationLock) {
     if (!invocation.mode().requiresReply() || !outService.supportsAgentMessageUpdates()) {
       return null;
     }
@@ -233,14 +226,6 @@ public final class AgentServiceImpl implements AgentService {
         500,
         500,
         TimeUnit.MILLISECONDS);
-  }
-
-  private String tagged(AgentInvocation invocation, String message) {
-    return "[agent " + visibleRequestId(invocation.requestId()) + "] " + message;
-  }
-
-  private String visibleRequestId(String requestId) {
-    return requestId.length() <= 12 ? requestId : requestId.substring(0, 12);
   }
 
   private void reply(AgentInvocation invocation, String content) {
