@@ -211,6 +211,28 @@ class AgentCommandChannelPolicyTest {
   }
 
   @Test
+  void rejectsCommandProseRepeatedAfterAFailedCorrection() {
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(
+            request -> new LlmResponse("`weather Tokyo`", List.of(), "stop"));
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+    state.recordFailedCommand("weather");
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            policy.enforce(
+                new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                new ArrayList<>(),
+                definitions(),
+                AgentCommandProseGuard.from(definitions()),
+                state,
+                "show Tokyo weather",
+                "request-repeated-after-failure"));
+  }
+
+  @Test
   void doesNotOfferToolsAgainAfterSuccessfulCommand() throws Exception {
     List<LlmRequest> requests = new ArrayList<>();
     AgentCommandChannelPolicy policy =
