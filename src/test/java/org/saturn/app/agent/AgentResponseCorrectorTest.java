@@ -18,6 +18,12 @@ import org.saturn.app.agent.llm.LlmToolCall;
 
 class AgentResponseCorrectorTest {
   @Test
+  void acceptsQuoteOnlyWithoutLeadingDashAndRejectsLegacyLeadingDash() {
+    assertTrue(AgentResponseCorrector.isQuoteOnly("\"A quotation\" — Book Title, Author"));
+    assertFalse(AgentResponseCorrector.isQuoteOnly("— \"A quotation\" — Book Title, Author"));
+  }
+
+  @Test
   void retriesStaleResponseWithoutPromptCache() throws Exception {
     String staleResponse = "Welcome back. The room is still here.";
     List<LlmRequest> requests = new ArrayList<>();
@@ -49,7 +55,76 @@ class AgentResponseCorrectorTest {
     assertEquals(2, requests.size());
     assertFalse(requests.getFirst().bypassPromptCache());
     assertTrue(requests.getLast().bypassPromptCache());
-    assertTrue(requests.getLast().messages().getLast().content().contains("duplicated an earlier"));
+    assertEquals("system", requests.getLast().messages().getFirst().role());
+    assertTrue(
+        requests.getLast().messages().getFirst().content().contains("duplicated an earlier"));
+  }
+
+  @Test
+  void staleRetryUsesNewestUserRequestWithoutReplayingStaleAssistantAnswer() throws Exception {
+    String staleResponse = "The old answer";
+    List<LlmRequest> requests = new ArrayList<>();
+    ArrayDeque<LlmResponse> responses =
+        new ArrayDeque<>(
+            List.of(
+                new LlmResponse(staleResponse, List.of(), "stop"),
+                new LlmResponse("The new answer", List.of(), "stop")));
+    AgentResponseCorrector corrector =
+        new AgentResponseCorrector(
+            request -> {
+              requests.add(request);
+              return responses.removeFirst();
+            });
+
+    corrector.completeInitialRequest(
+        List.of(
+            LlmMessage.system("persona"),
+            LlmMessage.user("old request"),
+            LlmMessage.assistant(staleResponse, List.of()),
+            LlmMessage.user("new request")),
+        List.of(),
+        List.of(LlmMessage.user("old request"), LlmMessage.assistant(staleResponse, List.of())),
+        "new request",
+        "request-stale-isolation");
+
+    List<LlmMessage> retryMessages = requests.getLast().messages();
+    assertTrue(retryMessages.stream().anyMatch(message -> "new request".equals(message.content())));
+    assertFalse(
+        retryMessages.stream()
+            .anyMatch(
+                message ->
+                    "assistant".equals(message.role()) && staleResponse.equals(message.content())));
+    assertTrue(retryMessages.stream().anyMatch(message -> "system".equals(message.role())));
+  }
+
+  @Test
+  void quoteCorrectionUsesAnIsolatedSystemContractAndNeverDeliversInvalidCorrection()
+      throws Exception {
+    List<LlmRequest> requests = new ArrayList<>();
+    AgentResponseCorrector corrector =
+        new AgentResponseCorrector(
+            request -> {
+              requests.add(request);
+              return new LlmResponse("Still ordinary prose", List.of(), "stop");
+            });
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            corrector.correctQuoteOnly(
+                new LlmResponse("Ordinary prose", List.of(), "stop"),
+                List.of(LlmMessage.system("persona"), LlmMessage.user("new request")),
+                "request-quote-isolation"));
+
+    List<LlmMessage> correctionMessages = requests.getFirst().messages();
+    assertEquals("system", correctionMessages.getFirst().role());
+    assertTrue(correctionMessages.getFirst().content().contains("exactly one line"));
+    assertFalse(
+        correctionMessages.stream()
+            .anyMatch(
+                message ->
+                    "assistant".equals(message.role())
+                        && "Ordinary prose".equals(message.content())));
   }
 
   @Test

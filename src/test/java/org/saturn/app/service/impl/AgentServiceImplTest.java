@@ -83,6 +83,7 @@ class AgentServiceImplTest {
   @Test
   void doesNotFlushBeforeTheFinalReplyIsReady() throws Exception {
     CountDownLatch routerEntered = new CountDownLatch(1);
+    CountDownLatch releaseRouter = new CountDownLatch(1);
     CountDownLatch finalReplyFlushed = new CountDownLatch(1);
     AtomicInteger flushes = new AtomicInteger();
     AgentServiceImpl service =
@@ -90,6 +91,11 @@ class AgentServiceImplTest {
             config(true, 1),
             invocation -> {
               routerEntered.countDown();
+              try {
+                releaseRouter.await();
+              } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+              }
               return new AgentResult(invocation.requestId(), "answer");
             },
             new OutService(new ArrayBlockingQueue<>(10)),
@@ -103,9 +109,11 @@ class AgentServiceImplTest {
           Duration.ofMillis(200), () -> assertTrue(service.submit(invocation(false))));
       assertTrue(routerEntered.await(1, TimeUnit.SECONDS));
       assertEquals(0, flushes.get());
+      releaseRouter.countDown();
       assertTrue(finalReplyFlushed.await(1, TimeUnit.SECONDS));
       assertEquals(1, flushes.get());
     } finally {
+      releaseRouter.countDown();
       service.close();
     }
   }

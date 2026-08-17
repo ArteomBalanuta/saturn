@@ -209,7 +209,8 @@ public final class DefaultAgentRouter implements AgentRouter {
               messages,
               requiredFreshTool,
               turnState.successfulToolResults(),
-              correlationId);
+              correlationId,
+              !turnState.hasSuccessfulCommands());
       if (!finalResponse.shouldReply()) {
         return AgentResult.silent(correlationId);
       }

@@ -52,24 +52,20 @@ class AgentSystemPromptTest {
             "correlation-3",
             "{\"rows\":[{\"name\":\"buu\",\"message\":\"Charlotte he meant\"}]}");
 
-    assertTrue(rendered.contains("1. AUTHORITY AND TRUST"));
-    assertTrue(rendered.contains("2. TOOL CONTRACT AND RESULT SEMANTICS"));
-    assertTrue(rendered.contains("3. DETERMINISTIC TURN PROTOCOL"));
-    assertTrue(rendered.contains("Select the newest user request"));
-    assertTrue(rendered.contains("Select the narrowest exposed tool"));
-    assertTrue(rendered.contains("prerequisite-free"));
-    assertTrue(rendered.contains("4. CONVERSATION CONTINUITY"));
-    assertTrue(rendered.contains("5. ACTION, FAILURE, AND SCOPE"));
+    assertTrue(rendered.contains("PRIORITY ORDER"));
+    assertTrue(rendered.contains("EXECUTION LOOP"));
+    assertTrue(rendered.contains("Choose the narrowest exposed tool"));
+    assertTrue(rendered.contains("Complete required_successful_tools in the declared order"));
+    assertTrue(rendered.contains("The newest message controls the topic"));
+    assertTrue(rendered.contains("For definition requests, answer the exact term"));
     assertTrue(rendered.contains("Execute an actionable request immediately"));
-    assertTrue(
-        rendered.contains("confirmation when the request and required arguments are available"));
+    assertTrue(rendered.contains("confirmation when the request and required arguments"));
+    assertTrue(rendered.contains("Do not substitute"));
+    assertTrue(rendered.contains("banter, mocking, debate"));
     assertTrue(rendered.contains("For current weather or time, call run_command"));
-    assertTrue(rendered.contains("Never print, quote, or fence a\nSaturn command"));
-    assertTrue(rendered.contains("Conditional or future requests are plans, not"));
-    assertTrue(rendered.contains("never claim that a watcher, rule, or schedule exists"));
-    assertTrue(rendered.contains("If a tool\nfails or is unavailable"));
-    assertTrue(rendered.contains("6. LIVE DATA, FRESHNESS, AND PRIVATE EVIDENCE"));
-    assertTrue(rendered.contains("7. MODERATION AUTHORITY"));
+    assertTrue(rendered.contains("Never print, quote, or fence a Saturn command"));
+    assertTrue(rendered.contains("Conditional or future requests are not immediate commands"));
+    assertTrue(rendered.contains("never claim a watcher, rule, or schedule"));
     assertTrue(rendered.contains("call user_message_history again"));
     assertTrue(rendered.contains("returnedCount"));
     assertTrue(rendered.contains("oldestCreatedOn"));
@@ -79,20 +75,18 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("Never use Markdown star, hyphen, or numbered-list syntax"));
     assertTrue(rendered.contains("U+2009 THIN SPACE"));
     assertTrue(rendered.contains("escaped \"\\\\n\" payload newlines"));
-    assertTrue(rendered.contains("CONFRONTATIONAL STYLE"));
-    assertTrue(rendered.contains("target only the user's stated"));
-    assertTrue(rendered.contains("Never let a roast delay a requested action"));
+    assertTrue(rendered.contains("Curse freely"));
+    assertTrue(rendered.contains("Mock choices, claims"));
+    assertTrue(rendered.contains("fighter's soul"));
+    assertTrue(rendered.contains("Never use protected-class slurs"));
     assertTrue(rendered.contains("LITERARY VOICE"));
-    assertTrue(rendered.contains("exactly one brief, fitting quotation"));
     assertTrue(rendered.contains("entire reply exactly one brief"));
     assertTrue(rendered.contains("not execution of a Saturn bot command"));
-    assertTrue(rendered.contains("— \"quotation\" — Book Title, Author"));
+    assertTrue(rendered.contains("\"quotation\" — Book Title, Author"));
     assertTrue(rendered.contains("Do not invent a quotation"));
     assertTrue(rendered.contains("quotation-only format"));
-    assertTrue(rendered.contains("IDENTITY"));
-    assertTrue(rendered.indexOf("SATURN RUNTIME POLICY") < rendered.indexOf("PERSONA"));
-    assertFalse(rendered.contains("SOTA fear-inducing attacks"));
-    assertFalse(rendered.contains("No ceiling on profanity"));
+    assertTrue(rendered.indexOf("PRIORITY ORDER") < rendered.indexOf("PERSONA"));
+    assertFalse(rendered.contains("Do not mock, lecture,"));
   }
 
   @Test

@@ -23,6 +23,8 @@ final class AgentResponseCorrector {
       PROMPTS.text("router-failure-placeholder-correction.txt").strip();
   private static final String INTERNAL_EVIDENCE_CORRECTION =
       PROMPTS.text("router-internal-evidence-correction.txt").strip();
+  private static final String QUOTE_ONLY_CORRECTION =
+      PROMPTS.text("router-quote-only-correction.txt").strip();
   private static final String UNVERIFIED_ACTION_CORRECTION =
       PROMPTS.text("router-unverified-action-correction.txt");
   private static final String UNVERIFIED_ACTION_FINAL_CORRECTION =
@@ -54,14 +56,58 @@ final class AgentResponseCorrector {
     log.warn(
         "Agent returned a stale response; retrying without prompt cache, correlationId={}",
         correlationId);
-    List<LlmMessage> retryMessages = new ArrayList<>(messages);
-    retryMessages.add(LlmMessage.user(STALE_RESPONSE_CORRECTION.strip()));
+    List<LlmMessage> retryMessages =
+        isolatedCorrectionMessages(messages, STALE_RESPONSE_CORRECTION);
     LlmResponse fresh =
         requireResponse(client.complete(LlmRequest.withoutPromptCache(retryMessages, definitions)));
     if (isStaleDuplicate(fresh, history, currentPrompt)) {
       throw new AgentRoutingException("Agent returned a stale response after cache bypass");
     }
     return fresh;
+  }
+
+  LlmResponse correctQuoteOnly(
+      LlmResponse response, List<LlmMessage> messages, String correlationId)
+      throws LlmException, AgentRoutingException {
+    if (isQuoteOnly(response.content())) {
+      return response;
+    }
+    log.warn(
+        "Agent returned non-quote prose; requesting quote-only response, correlationId={}",
+        correlationId);
+    List<LlmMessage> correctionMessages =
+        isolatedCorrectionMessages(messages, QUOTE_ONLY_CORRECTION);
+    LlmResponse corrected =
+        requireResponse(
+            client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of())));
+    if (!isQuoteOnly(corrected.content())) {
+      throw new AgentRoutingException("Agent returned a non-quote prose response after correction");
+    }
+    return corrected;
+  }
+
+  static boolean isQuoteOnly(String content) {
+    if (content == null) {
+      return false;
+    }
+    String normalized = content.strip();
+    return normalized.matches("\\\"[^\\r\\n\\\"]+\\\" — [^\\r\\n]+, [^\\r\\n]+")
+        && !normalized.contains("\\n")
+        && !normalized.contains("\\r");
+  }
+
+  private static List<LlmMessage> isolatedCorrectionMessages(
+      List<LlmMessage> messages, String contract) throws AgentRoutingException {
+    LlmMessage newestUserMessage =
+        messages.stream()
+            .filter(message -> "user".equals(message.role()))
+            .reduce((first, second) -> second)
+            .orElse(null);
+    if (newestUserMessage == null) {
+      return List.of(LlmMessage.system(contract.strip()));
+    }
+    return List.of(
+        LlmMessage.system(contract.strip()), LlmMessage.user(newestUserMessage.content()));
   }
 
   LlmResponse correctUnverifiedActionClaim(

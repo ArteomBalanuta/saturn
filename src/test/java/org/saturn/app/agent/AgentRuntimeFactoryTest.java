@@ -59,7 +59,7 @@ class AgentRuntimeFactoryTest {
           "{\"cmd\":\"chat\",\"text\":\"already queued\"}",
           engine.flushedMessages.poll(1, TimeUnit.SECONDS));
       assertEquals(
-          "{\"cmd\":\"chat\",\"text\":\"@alice The agent is disabled.\"}",
+          "{\"cmd\":\"chat\",\"text\":\"@alice \\nThe agent is disabled.\"}",
           engine.flushedMessages.poll(1, TimeUnit.SECONDS));
     } finally {
       service.close();

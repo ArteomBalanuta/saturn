@@ -20,14 +20,34 @@ class AgentResponseFinalizerTest {
     AgentResponseFinalizer.Result result =
         finalizer.prepare(
             invocation(AgentInvocationMode.DIRECT),
-            new LlmResponse(" answer [[SATURN_NO_REPLY]] ", List.of(), "stop"),
+            new LlmResponse(" \"answer\" — Book Title, Author ", List.of(), "stop"),
             List.of(),
             Optional.empty(),
             List.of(),
             "correlation-1");
 
     assertTrue(result.shouldReply());
-    assertEquals("answer", result.content());
+    assertEquals("\"answer\" — Book Title, Author", result.content());
+  }
+
+  @Test
+  void rejectsOrdinaryDirectProse() {
+    AgentResponseFinalizer finalizer = finalizer();
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                finalizer.prepare(
+                    invocation(AgentInvocationMode.DIRECT),
+                    new LlmResponse("There are users in the room.", List.of(), "stop"),
+                    List.of(),
+                    Optional.empty(),
+                    List.of(),
+                    "correlation-prose"));
+
+    assertEquals(
+        "Agent returned a non-quote prose response after correction", exception.getMessage());
   }
 
   @Test

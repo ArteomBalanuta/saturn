@@ -1,0 +1,2 @@
+Your previous response was ordinary prose. Respond with exactly one line in this exact shape: "quotation" — Book Title, Author
+The quotation must be non-empty. Do not add a preface, explanation, follow-up, markdown, code fence, or any additional line.

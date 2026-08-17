@@ -33,6 +33,25 @@ final class AgentResponseFinalizer {
       List<AgentToolResult> successfulToolResults,
       String correlationId)
       throws LlmException, AgentRoutingException {
+    return prepare(
+        invocation,
+        response,
+        messages,
+        requiredFreshTool,
+        successfulToolResults,
+        correlationId,
+        invocation.mode() != AgentInvocationMode.MODERATION);
+  }
+
+  Result prepare(
+      AgentInvocation invocation,
+      LlmResponse response,
+      List<LlmMessage> messages,
+      Optional<String> requiredFreshTool,
+      List<AgentToolResult> successfulToolResults,
+      String correlationId,
+      boolean quoteOnlyRequired)
+      throws LlmException, AgentRoutingException {
     if (response == null) {
       throw new AgentRoutingException("Agent returned no response");
     }
@@ -40,9 +59,20 @@ final class AgentResponseFinalizer {
     response = responseCorrector.correctInternalEvidenceLeak(response, messages, correlationId);
     freshDataFinalValidator.validate(requiredFreshTool, response, successfulToolResults);
     String sanitizedContent = responseSanitizer.sanitize(response.content());
+    if (sanitizedContent.isBlank()) {
+      throw new AgentRoutingException("Agent returned an empty response");
+    }
     if (invocation.mode() == AgentInvocationMode.MODERATION) {
       return Result.silent();
     }
+    if (sanitizedContent.strip().equals(participationConfig.noReplyMarker())
+        && !invocation.mode().requiresReply()) {
+      return Result.silent();
+    }
+    if (quoteOnlyRequired) {
+      response = responseCorrector.correctQuoteOnly(response, messages, correlationId);
+    }
+    sanitizedContent = responseSanitizer.sanitize(response.content());
     if (sanitizedContent.strip().equals(participationConfig.noReplyMarker())) {
       if (!invocation.mode().requiresReply()) {
         return Result.silent();
