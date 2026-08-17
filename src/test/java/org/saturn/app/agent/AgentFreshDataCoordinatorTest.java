@@ -198,4 +198,70 @@ class AgentFreshDataCoordinatorTest {
 
     assertEquals("Agent did not call the required fresh-data tool", exception.getMessage());
   }
+
+  @Test
+  void rejectsSynthesisWhenTheCorrectionWasAlreadyUsed() {
+    AgentFreshDataCoordinator coordinator =
+        new AgentFreshDataCoordinator(
+            request -> new LlmResponse("unused", List.of(), "stop"), new AgentFreshDataPolicy());
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(3, 2, java.time.Duration.ofSeconds(1)));
+    state.recordSuccessfulTool(AgentFreshnessPolicy.USER_MESSAGE_HISTORY);
+    state.recordSuccessfulToolResult(AgentToolResult.success("other_tool", "{}"));
+    state.markFreshSynthesisCorrectionUsed();
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                coordinator.process(
+                    new LlmResponse("answer", List.of(), "stop"),
+                    new java.util.ArrayList<>(),
+                    List.<JsonObject>of(),
+                    List.of(),
+                    Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY),
+                    Optional.empty(),
+                    new AgentContext("room", "nick", null, null, false, List.of()),
+                    null,
+                    state,
+                    "correlation",
+                    (context, call, toolResult) -> toolResult.content(),
+                    (definitions, toolName) -> definitions));
+
+    assertEquals(
+        "Agent did not produce a complete fresh history synthesis", exception.getMessage());
+  }
+
+  @Test
+  void rejectsACorrectionResponseThatStillLacksFreshEvidence() {
+    AgentFreshDataCoordinator coordinator =
+        new AgentFreshDataCoordinator(
+            request -> new LlmResponse("still incomplete", List.of(), "stop"),
+            new AgentFreshDataPolicy());
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(3, 2, java.time.Duration.ofSeconds(1)));
+    state.recordSuccessfulTool(AgentFreshnessPolicy.USER_MESSAGE_HISTORY);
+    state.recordSuccessfulToolResult(AgentToolResult.success("other_tool", "{}"));
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                coordinator.process(
+                    new LlmResponse("answer", List.of(), "stop"),
+                    new java.util.ArrayList<>(),
+                    List.<JsonObject>of(),
+                    List.of(),
+                    Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY),
+                    Optional.empty(),
+                    new AgentContext("room", "nick", null, null, false, List.of()),
+                    null,
+                    state,
+                    "correlation",
+                    (context, call, toolResult) -> toolResult.content(),
+                    (definitions, toolName) -> definitions));
+
+    assertEquals(
+        "Agent did not produce a complete fresh history synthesis", exception.getMessage());
+  }
 }
