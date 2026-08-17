@@ -44,6 +44,15 @@ class EngineAgentRoomDirectoryTest {
     assertTrue(directory.find("missing").isEmpty());
   }
 
+  @Test
+  void ignoresNullAndBlankRoomLookups() {
+    host = engine(EngineType.HOST);
+    EngineAgentRoomDirectory directory = new EngineAgentRoomDirectory(host);
+
+    assertTrue(directory.find(null).isEmpty());
+    assertTrue(directory.find(" \t").isEmpty());
+  }
+
   private static EngineImpl engine(EngineType type) {
     return new EngineImpl(noopConnection(), config(), type);
   }
