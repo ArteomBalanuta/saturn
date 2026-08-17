@@ -33,6 +33,18 @@ class AgentToolExecutorTest {
   }
 
   @Test
+  void reportsUnknownToolsWhenClassifyingProviderBatches() {
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(new AgentToolRegistry().freeze(), config())) {
+      List<AgentToolResult> results =
+          executor.executeAll(null, List.of(new LlmToolCall("unknown-1", "missing", "{}")));
+
+      assertEquals(1, results.size());
+      assertTrue(results.getFirst().isError());
+    }
+  }
+
+  @Test
   void rejectsNullArgumentsAndDeduplicatesEquivalentJsonObjects() {
     AtomicInteger executions = new AtomicInteger();
     AgentToolExecutor executor =
