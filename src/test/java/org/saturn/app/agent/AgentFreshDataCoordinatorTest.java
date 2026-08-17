@@ -95,6 +95,36 @@ class AgentFreshDataCoordinatorTest {
   }
 
   @Test
+  void rejectsFreshHistoryWhenTheToolCallBudgetIsAlreadyConsumed() {
+    AgentFreshDataCoordinator coordinator =
+        new AgentFreshDataCoordinator(
+            request -> new LlmResponse("unused", List.of(), "stop"), new AgentFreshDataPolicy());
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(3, 1, java.time.Duration.ofSeconds(1)));
+    assertTrue(state.reserveToolCalls(1));
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                coordinator.process(
+                    new LlmResponse("I can answer from memory.", List.of(), "stop"),
+                    new java.util.ArrayList<>(),
+                    List.<JsonObject>of(),
+                    List.of(),
+                    Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY),
+                    Optional.of("alice"),
+                    new AgentContext("room", "nick", null, null, false, List.of()),
+                    null,
+                    state,
+                    "correlation",
+                    (context, call, toolResult) -> toolResult.content(),
+                    (definitions, toolName) -> definitions));
+
+    assertEquals("Agent tool-call limit reached before loading fresh data", exception.getMessage());
+  }
+
+  @Test
   void rejectsNullFreshToolCorrectionWithStableRoutingError() {
     AgentFreshDataCoordinator coordinator =
         new AgentFreshDataCoordinator(request -> null, new AgentFreshDataPolicy());
