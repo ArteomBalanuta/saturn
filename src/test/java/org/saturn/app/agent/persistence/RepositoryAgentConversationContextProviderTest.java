@@ -2,8 +2,11 @@ package org.saturn.app.agent.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.nio.file.Path;
 import java.sql.Statement;
@@ -15,6 +18,47 @@ import org.saturn.app.persistence.H2Database;
 
 class RepositoryAgentConversationContextProviderTest {
   @TempDir Path tempDir;
+
+  @Test
+  void rejectsMissingRepositoryAndNonPositiveMessageLimit() {
+    assertThrows(
+        NullPointerException.class, () -> new RepositoryAgentConversationContextProvider(null, 1));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new RepositoryAgentConversationContextProvider(
+                (name, args, context) -> new JsonObject(), 0));
+  }
+
+  @Test
+  void preservesResultsWithMissingOrMalformedRowsAndNullInboundValues() {
+    AgentContext context =
+        new AgentContext("lounge", "alice", "trip-a", "hash-a", false, List.of("alice"));
+    JsonObject result = new JsonObject();
+    JsonArray rows = new JsonArray();
+    rows.add("not an object");
+    JsonObject missingFields = new JsonObject();
+    missingFields.add("name", com.google.gson.JsonNull.INSTANCE);
+    missingFields.add("message", com.google.gson.JsonNull.INSTANCE);
+    rows.add(missingFields);
+    result.add("rows", rows);
+    RepositoryAgentConversationContextProvider provider =
+        new RepositoryAgentConversationContextProvider((name, args, supplied) -> result, 2);
+
+    String loaded = provider.load(context, null, "message");
+    assertEquals(result.toString(), loaded);
+    assertEquals(2, result.getAsJsonArray("rows").size());
+
+    assertEquals(result.toString(), provider.load(context, "nobody", "message"));
+
+    assertEquals(result.toString(), provider.load(context, "alice", null));
+
+    JsonObject withoutRows = new JsonObject();
+    withoutRows.add("rows", new JsonObject());
+    RepositoryAgentConversationContextProvider nonArrayProvider =
+        new RepositoryAgentConversationContextProvider((name, args, supplied) -> withoutRows, 2);
+    assertEquals(withoutRows.toString(), nonArrayProvider.load(context, "alice", "message"));
+  }
 
   @Test
   void hydratesOnlyBoundedPublicMessagesFromTheCurrentRoom() throws Exception {
