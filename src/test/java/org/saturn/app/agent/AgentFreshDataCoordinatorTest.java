@@ -3,6 +3,7 @@ package org.saturn.app.agent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import java.util.List;
@@ -116,5 +117,55 @@ class AgentFreshDataCoordinatorTest {
                 "correlation",
                 (context, call, toolResult) -> toolResult.content(),
                 (definitions, toolName) -> definitions));
+  }
+
+  @Test
+  void rejectsASecondMissingRequiredToolCorrection() throws Exception {
+    AgentFreshDataCoordinator coordinator =
+        new AgentFreshDataCoordinator(
+            request ->
+                new LlmResponse(
+                    "",
+                    List.of(new org.saturn.app.agent.llm.LlmToolCall("call-1", "room_users", "{}")),
+                    "tool_calls"),
+            new AgentFreshDataPolicy());
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(3, 2, java.time.Duration.ofSeconds(1)));
+    AgentContext context = new AgentContext("room", "nick", null, null, false, List.of());
+
+    coordinator.process(
+        new LlmResponse("I can answer from memory.", List.of(), "stop"),
+        new java.util.ArrayList<>(),
+        List.<JsonObject>of(),
+        List.of(),
+        Optional.of("room_users"),
+        Optional.empty(),
+        context,
+        null,
+        state,
+        "correlation",
+        (ignoredContext, ignoredCall, ignoredResult) -> "{}",
+        (definitions, toolName) -> definitions);
+    assertTrue(state.freshnessCorrectionUsed());
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                coordinator.process(
+                    new LlmResponse("I can answer from memory again.", List.of(), "stop"),
+                    new java.util.ArrayList<>(),
+                    List.<JsonObject>of(),
+                    List.of(),
+                    Optional.of("room_users"),
+                    Optional.empty(),
+                    context,
+                    null,
+                    state,
+                    "correlation",
+                    (ignoredContext, ignoredCall, ignoredResult) -> "{}",
+                    (definitions, toolName) -> definitions));
+
+    assertEquals("Agent did not call the required fresh-data tool", exception.getMessage());
   }
 }
