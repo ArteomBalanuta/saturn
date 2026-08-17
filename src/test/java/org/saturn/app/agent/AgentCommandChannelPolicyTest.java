@@ -142,6 +142,25 @@ class AgentCommandChannelPolicyTest {
     assertTrue(requests.getFirst().tools().isEmpty());
   }
 
+  @Test
+  void rejectsNullCommandCorrectionWithStableRoutingError() {
+    AgentCommandChannelPolicy policy = new AgentCommandChannelPolicy(request -> null);
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            policy.enforce(
+                new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                new ArrayList<>(),
+                definitions(),
+                AgentCommandProseGuard.from(definitions()),
+                state,
+                "show Tokyo weather",
+                "request-null"));
+  }
+
   private static List<JsonObject> definitions() {
     AgentContext context =
         new AgentContext("programming", "alice", "trip", "hash", false, List.of("alice"));

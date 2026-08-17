@@ -33,6 +33,9 @@ final class AgentResponseFinalizer {
       List<AgentToolResult> successfulToolResults,
       String correlationId)
       throws LlmException, AgentRoutingException {
+    if (response == null) {
+      throw new AgentRoutingException("Agent returned no response");
+    }
     response = responseCorrector.correctFailurePlaceholder(response, messages, correlationId);
     response = responseCorrector.correctInternalEvidenceLeak(response, messages, correlationId);
     freshDataCoordinator.validateFinal(requiredFreshTool, response, successfulToolResults);

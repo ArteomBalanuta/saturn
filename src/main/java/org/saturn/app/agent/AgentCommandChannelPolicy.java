@@ -73,8 +73,10 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
                     : succeeded ? OUTPUT_CORRECTION : NOT_EXECUTED_CORRECTION)
                 .strip()));
     LlmResponse corrected =
-        client.complete(
-            new LlmRequest(messages, requireTool ? correctionDefinitions(definitions) : List.of()));
+        AgentResponseCorrector.requireResponse(
+            client.complete(
+                new LlmRequest(
+                    messages, requireTool ? correctionDefinitions(definitions) : List.of())));
     if (requireTool) corrected = resolve(corrected, guard, name);
     if (!requireTool
         && (!corrected.toolCalls().isEmpty() || guard.findCommand(corrected.content()).isPresent()))

@@ -92,4 +92,29 @@ class AgentFreshDataCoordinatorTest {
                 (context, call, toolResult) -> toolResult.content(),
                 (definitions, toolName) -> definitions));
   }
+
+  @Test
+  void rejectsNullFreshToolCorrectionWithStableRoutingError() {
+    AgentFreshDataCoordinator coordinator =
+        new AgentFreshDataCoordinator(request -> null, new AgentFreshDataPolicy());
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(3, 2, java.time.Duration.ofSeconds(1)));
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            coordinator.process(
+                new LlmResponse("I can answer from memory.", List.of(), "stop"),
+                new java.util.ArrayList<>(),
+                List.<JsonObject>of(),
+                List.of(),
+                Optional.of("room_users"),
+                Optional.empty(),
+                new AgentContext("room", "nick", null, null, false, List.of()),
+                null,
+                state,
+                "correlation",
+                (context, call, toolResult) -> toolResult.content(),
+                (definitions, toolName) -> definitions));
+  }
 }

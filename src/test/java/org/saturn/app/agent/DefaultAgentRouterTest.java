@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonObject;
 import java.net.URI;
 import java.time.Duration;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -1954,12 +1954,57 @@ class DefaultAgentRouterTest {
         Duration.ofSeconds(1));
   }
 
+  @Test
+  void failsWithStableErrorWhenProviderReturnsNullResponse() {
+    LlmClient client = request -> null;
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 100), client, new AgentToolRegistry().freeze(), AgentMemoryStore.none());
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "provider null")));
+
+    assertEquals("Agent returned no response", exception.getMessage());
+  }
+
+  @Test
+  void failsWithStableErrorWhenFinalizeProviderReturnsNullResponse() {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "working",
+                List.of(
+                    new LlmToolCall(
+                        "call-1", "run_command", "{\"command\":\"echo\",\"arguments\":\"ok\"}"),
+                    new LlmToolCall(
+                        "call-2", "run_command", "{\"command\":\"echo\",\"arguments\":\"again\"}")),
+                "tool_calls"),
+            null);
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(1, 2_000),
+            client,
+            new AgentToolRegistry()
+                .register(new RunCommandTool((context, command, arguments) -> true))
+                .freeze(),
+            new RecordingMemory());
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "use the tool")));
+
+    assertEquals("Agent returned no response", exception.getMessage());
+  }
+
   private static final class ScriptedClient implements LlmClient {
-    private final ArrayDeque<LlmResponse> responses;
+    private final List<LlmResponse> responses;
     private final List<LlmRequest> requests = new ArrayList<>();
 
     private ScriptedClient(LlmResponse... responses) {
-      this.responses = new ArrayDeque<>(List.of(responses));
+      this.responses = new ArrayList<>(Arrays.asList(responses));
     }
 
     @Override
@@ -1968,7 +2013,7 @@ class DefaultAgentRouterTest {
       if (responses.isEmpty()) {
         throw new LlmException("No scripted response");
       }
-      return responses.removeFirst();
+      return responses.remove(0);
     }
   }
 

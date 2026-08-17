@@ -63,6 +63,25 @@ class AgentResponseFinalizerTest {
                 "correlation-3"));
   }
 
+  @Test
+  void rejectsNullProviderResponseWithStableRoutingError() {
+    AgentResponseFinalizer finalizer = finalizer();
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                finalizer.prepare(
+                    invocation(AgentInvocationMode.DIRECT),
+                    null,
+                    List.of(),
+                    Optional.empty(),
+                    List.of(),
+                    "correlation-null"));
+
+    assertEquals("Agent returned no response", exception.getMessage());
+  }
+
   private static AgentResponseFinalizer finalizer() {
     LlmClient client = request -> new LlmResponse("unused", List.of(), "stop");
     AgentConfig config = AgentConfig.from(null, Map.of());

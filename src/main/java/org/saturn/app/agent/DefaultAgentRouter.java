@@ -127,6 +127,7 @@ public final class DefaultAgentRouter implements AgentRouter {
               ? client.complete(new LlmRequest(messages, definitions))
               : responseCorrector.completeInitialRequest(
                   messages, definitions, history, invocation.prompt(), correlationId);
+      response = AgentResponseCorrector.requireResponse(response);
       while (true) {
         if (!turnState.advanceStep()) {
           throw new AgentRoutingException("Agent execution step limit reached");
@@ -149,6 +150,7 @@ public final class DefaultAgentRouter implements AgentRouter {
                 this::modelVisibleToolResult,
                 DefaultAgentRouter::definitionFor);
         response = freshDataResult.response();
+        response = AgentResponseCorrector.requireResponse(response);
         if (freshDataResult.restartLoop()) {
           continue;
         }
@@ -204,7 +206,9 @@ public final class DefaultAgentRouter implements AgentRouter {
             this::modelVisibleToolResult,
             correlationId);
         turnState.resetUnverifiedActionCheck();
-        response = client.complete(new LlmRequest(messages, definitions));
+        response =
+            AgentResponseCorrector.requireResponse(
+                client.complete(new LlmRequest(messages, definitions)));
       }
 
       AgentResponseFinalizer.Result finalResponse =
@@ -261,10 +265,12 @@ public final class DefaultAgentRouter implements AgentRouter {
     return matches;
   }
 
-  private LlmResponse finalizeResponse(List<LlmMessage> messages) throws LlmException {
+  private LlmResponse finalizeResponse(List<LlmMessage> messages)
+      throws LlmException, AgentRoutingException {
     List<LlmMessage> finalMessages = new ArrayList<>(messages);
     finalMessages.add(LlmMessage.user(FINALIZE_PROMPT));
-    return client.complete(new LlmRequest(finalMessages, List.of()));
+    return AgentResponseCorrector.requireResponse(
+        client.complete(new LlmRequest(finalMessages, List.of())));
   }
 
   private List<LlmMessage> loadMemory(AgentContext context, String correlationId)

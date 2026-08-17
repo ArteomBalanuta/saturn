@@ -46,7 +46,7 @@ final class AgentResponseCorrector {
       String currentPrompt,
       String correlationId)
       throws LlmException, AgentRoutingException {
-    LlmResponse response = client.complete(new LlmRequest(messages, definitions));
+    LlmResponse response = requireResponse(client.complete(new LlmRequest(messages, definitions)));
     if (!isStaleDuplicate(response, history, currentPrompt)) {
       return response;
     }
@@ -56,7 +56,8 @@ final class AgentResponseCorrector {
         correlationId);
     List<LlmMessage> retryMessages = new ArrayList<>(messages);
     retryMessages.add(LlmMessage.user(STALE_RESPONSE_CORRECTION.strip()));
-    LlmResponse fresh = client.complete(LlmRequest.withoutPromptCache(retryMessages, definitions));
+    LlmResponse fresh =
+        requireResponse(client.complete(LlmRequest.withoutPromptCache(retryMessages, definitions)));
     if (isStaleDuplicate(fresh, history, currentPrompt)) {
       throw new AgentRoutingException("Agent returned a stale response after cache bypass");
     }
@@ -68,7 +69,7 @@ final class AgentResponseCorrector {
       List<LlmMessage> messages,
       List<com.google.gson.JsonObject> definitions,
       String correlationId)
-      throws LlmException {
+      throws LlmException, AgentRoutingException {
     if (!response.toolCalls().isEmpty() || !containsUnverifiedActionClaim(response.content())) {
       return response;
     }
@@ -78,14 +79,14 @@ final class AgentResponseCorrector {
         correlationId);
     messages.add(LlmMessage.assistant(response.content(), List.of()));
     messages.add(LlmMessage.user(UNVERIFIED_ACTION_CORRECTION.strip()));
-    LlmResponse corrected = client.complete(new LlmRequest(messages, definitions));
+    LlmResponse corrected = requireResponse(client.complete(new LlmRequest(messages, definitions)));
     if (corrected.toolCalls().isEmpty() && containsUnverifiedActionClaim(corrected.content())) {
       log.warn(
           "Agent repeated an unverified action; requesting one final tool-only correction, correlationId={}",
           correlationId);
       messages.add(LlmMessage.assistant(corrected.content(), List.of()));
       messages.add(LlmMessage.user(UNVERIFIED_ACTION_FINAL_CORRECTION));
-      corrected = client.complete(new LlmRequest(messages, definitions));
+      corrected = requireResponse(client.complete(new LlmRequest(messages, definitions)));
       if (corrected.toolCalls().isEmpty() && containsUnverifiedActionClaim(corrected.content())) {
         log.warn(
             "Agent repeated an unverified action after corrections; returning capability limitation, correlationId={}",
@@ -110,7 +111,8 @@ final class AgentResponseCorrector {
     correctionMessages.add(LlmMessage.assistant(response.content(), List.of()));
     correctionMessages.add(LlmMessage.user(FAILURE_PLACEHOLDER_CORRECTION));
     LlmResponse corrected =
-        client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of()));
+        requireResponse(
+            client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of())));
     if (!corrected.toolCalls().isEmpty() || isFailurePlaceholder(corrected)) {
       throw new AgentRoutingException("Agent repeated a failure placeholder after correction");
     }
@@ -131,11 +133,19 @@ final class AgentResponseCorrector {
     correctionMessages.add(LlmMessage.assistant(response.content(), List.of()));
     correctionMessages.add(LlmMessage.user(INTERNAL_EVIDENCE_CORRECTION));
     LlmResponse corrected =
-        client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of()));
+        requireResponse(
+            client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of())));
     if (!corrected.toolCalls().isEmpty() || containsInternalToolEvidence(corrected)) {
       throw new AgentRoutingException("Agent repeated internal tool evidence after correction");
     }
     return corrected;
+  }
+
+  static LlmResponse requireResponse(LlmResponse response) throws AgentRoutingException {
+    if (response == null) {
+      throw new AgentRoutingException("Agent returned no response");
+    }
+    return response;
   }
 
   static boolean isFailurePlaceholder(LlmResponse response) {

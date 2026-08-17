@@ -72,8 +72,10 @@ final class AgentFreshDataCoordinator {
         messages.add(LlmMessage.user(FRESH_TOOL_CORRECTION.formatted(tool).strip()));
         response =
             policy.requireExactToolCall(
-                client.complete(
-                    new LlmRequest(messages, definitionProvider.definitionsFor(definitions, tool))),
+                AgentResponseCorrector.requireResponse(
+                    client.complete(
+                        new LlmRequest(
+                            messages, definitionProvider.definitionsFor(definitions, tool)))),
                 tool,
                 requiredFreshNick);
         turnState.markFreshnessCorrectionUsed();
@@ -88,7 +90,9 @@ final class AgentFreshDataCoordinator {
         messages.add(LlmMessage.user(FRESH_SYNTHESIS_CORRECTION));
         response =
             policy.requireFreshSynthesis(
-                client.complete(new LlmRequest(messages, List.of())), history);
+                AgentResponseCorrector.requireResponse(
+                    client.complete(new LlmRequest(messages, List.of()))),
+                history);
       }
       if (policy.requiresSynthesisCorrection(
           requiredFreshTool, response, turnState.successfulToolResults())) {
@@ -103,7 +107,9 @@ final class AgentFreshDataCoordinator {
         messages.add(LlmMessage.user(FRESH_SYNTHESIS_CORRECTION));
         response =
             policy.requireFreshSynthesis(
-                client.complete(new LlmRequest(messages, List.of())), history);
+                AgentResponseCorrector.requireResponse(
+                    client.complete(new LlmRequest(messages, List.of()))),
+                history);
         turnState.markFreshSynthesisCorrectionUsed();
         if (!policy.satisfiesProfileContract(response, turnState.successfulToolResults())) {
           throw new AgentRoutingException(
@@ -158,7 +164,10 @@ final class AgentFreshDataCoordinator {
         correlationId,
         tool,
         nick);
-    return new Result(client.complete(new LlmRequest(messages, definitions)), true);
+    return new Result(
+        AgentResponseCorrector.requireResponse(
+            client.complete(new LlmRequest(messages, definitions))),
+        true);
   }
 
   record Result(LlmResponse response, boolean restartLoop) {}
