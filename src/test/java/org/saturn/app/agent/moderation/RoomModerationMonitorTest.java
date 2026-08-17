@@ -140,6 +140,33 @@ class RoomModerationMonitorTest {
   }
 
   @Test
+  void ignoresWhispersAndPrunesExpiredMessageHistory() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
+    RoomModerationMonitor monitor =
+        new RoomModerationMonitor(AgentModerationConfig.from(new Toml()), clock);
+    ChatMessage whisper = message("alice", "trip-a", "hash-a", "message");
+    whisper.setWhisper(true);
+
+    assertTrue(monitor.onMessage(whisper).isEmpty());
+    for (int index = 0; index < 5; index++) {
+      assertTrue(
+          monitor.onMessage(message("alice", "trip-a", "hash-a", "burst" + index)).isEmpty());
+    }
+    clock.advance(Duration.ofMinutes(11));
+    assertTrue(monitor.onMessage(message("alice", "trip-a", "hash-a", "new message")).isEmpty());
+  }
+
+  @Test
+  void acceptsJoinsWithoutHashesAndShortNameClusters() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
+    RoomModerationMonitor monitor =
+        new RoomModerationMonitor(AgentModerationConfig.from(new Toml()), clock);
+
+    assertTrue(monitor.onJoin(user("ab1", "trip-a", null)).isEmpty());
+    assertTrue(monitor.onJoin(user("ab2", "trip-b", "   ")).isEmpty());
+  }
+
+  @Test
   void shadowbansRepeatedSameHashRaidsAfterTheSecondVariantWave() {
     MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
     RoomModerationMonitor monitor =
