@@ -176,6 +176,54 @@ class H2AgentMemoryStoreTest {
     assertTrue(exception.getCause() instanceof java.sql.SQLException);
   }
 
+  @Test
+  void wrapsAppendSqlFailuresWithoutDiscardingTheDatabaseCause() throws Exception {
+    try (var connection = H2Database.open(database.toString());
+        var statement = connection.createStatement()) {
+      statement.executeUpdate("ALTER TABLE agent_memory RENAME COLUMN content TO content_bad");
+    }
+
+    AgentPersistenceException exception =
+        assertThrows(
+            AgentPersistenceException.class,
+            () ->
+                new H2AgentMemoryStore(
+                        database.toString(),
+                        Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC))
+                    .append(
+                        context("alice", "trip-a"),
+                        "question",
+                        "answer",
+                        config(2, Duration.ofHours(1))));
+
+    assertTrue(exception.getMessage().startsWith("Agent memory append failed"));
+    assertTrue(exception.getCause() instanceof java.sql.SQLException);
+  }
+
+  @Test
+  void wrapsToolEvidenceAppendFailuresWithoutDiscardingTheDatabaseCause() throws Exception {
+    try (var connection = H2Database.open(database.toString());
+        var statement = connection.createStatement()) {
+      statement.executeUpdate("ALTER TABLE agent_tool_memory RENAME COLUMN content TO content_bad");
+    }
+
+    AgentPersistenceException exception =
+        assertThrows(
+            AgentPersistenceException.class,
+            () ->
+                new H2AgentMemoryStore(
+                        database.toString(),
+                        Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC))
+                    .appendToolEvidence(
+                        context("alice", "trip-a"),
+                        "user_message_history",
+                        "{}",
+                        config(2, Duration.ofHours(1))));
+
+    assertTrue(exception.getMessage().startsWith("Agent memory append tool evidence failed"));
+    assertTrue(exception.getCause() instanceof java.sql.SQLException);
+  }
+
   private AgentContext context(String nick, String trip) {
     return new AgentContext("programming", nick, trip, "hash-" + nick, false, List.of());
   }
