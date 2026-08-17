@@ -71,6 +71,22 @@ class UserMessageHistoryToolTest {
     assertEquals(30, content.get("newestCreatedOn").getAsLong());
   }
 
+  @Test
+  void mapsInvalidRepositoryRequestsToStableErrors() {
+    AgentQueryRepository repository =
+        (queryName, arguments, context) -> {
+          throw new IllegalArgumentException("invalid query");
+        };
+    UserMessageHistoryTool tool = new UserMessageHistoryTool(repository);
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("nick", "alice");
+
+    AgentToolResult result = tool.execute(context(), arguments);
+
+    assertTrue(result.isError());
+    assertEquals("Invalid message-history request", result.content());
+  }
+
   private static AgentContext context() {
     return new AgentContext("programming", "alice", "trip", "hash", false, List.of("alice"));
   }
