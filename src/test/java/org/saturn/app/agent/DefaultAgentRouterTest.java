@@ -1763,6 +1763,22 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void rejectsFreshDataCorrectionWhenRequiredToolIsNotExposed() throws Exception {
+    var resolver =
+        DefaultAgentRouter.class.getDeclaredMethod("definitionFor", List.class, String.class);
+    resolver.setAccessible(true);
+
+    var exception =
+        assertThrows(
+            java.lang.reflect.InvocationTargetException.class,
+            () -> resolver.invoke(null, List.of(), "user_message_history"));
+
+    assertEquals(
+        "Required fresh-data tool is not exposed: user_message_history",
+        exception.getCause().getMessage());
+  }
+
+  @Test
   void retriesWithoutPromptCacheWhenNewPromptGetsPreviousAnswer() throws Exception {
     String previousAnswer = "Welcome back. The room is still here.";
     RecordingMemory memory =
