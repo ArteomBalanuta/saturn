@@ -107,11 +107,72 @@ class AgentRequestAssemblerTest {
     assertTrue(bounded.messages().getLast().content().contains("current"));
   }
 
+  @Test
+  void excludesHistoricalRoomDeliveryEvidenceFromNewProviderRequests() {
+    AgentToolRegistry registry =
+        new AgentToolRegistry()
+            .register(tool("room_data"))
+            .register(tool("announce", ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA))
+            .freeze();
+    AgentRequestAssembler assembler =
+        new AgentRequestAssembler(
+            config(), registry, new AgentSystemPrompt(AgentParticipationConfig.from(null)));
+    AgentContext context = new AgentContext("room", "alice", null, null, false, List.of("alice"));
+
+    AgentPreparedRequest request =
+        assembler.assemble(
+            new AgentInvocation(context, "try again", AgentInvocationMode.DIRECT),
+            List.of(
+                LlmMessage.system("[Internal tool evidence from announce]\nold room action"),
+                LlmMessage.system("[Internal tool evidence from retired_tool]\nold retired action"),
+                LlmMessage.system("[Internal tool evidence from announce\r\nmalformed action"),
+                LlmMessage.system("[Internal tool evidence from room_data]\nfresh facts")),
+            "recent");
+
+    assertFalse(
+        request.messages().stream()
+            .anyMatch(message -> message.content().contains("old room action")));
+    assertFalse(
+        request.messages().stream()
+            .anyMatch(message -> message.content().contains("old retired action")));
+    assertFalse(
+        request.messages().stream()
+            .anyMatch(message -> message.content().contains("malformed action")));
+    assertTrue(
+        request.messages().stream().anyMatch(message -> message.content().contains("fresh facts")));
+  }
+
   private AgentTool tool(String name) {
+    return tool(name, ToolResultMode.MODEL_DATA);
+  }
+
+  private AgentTool tool(String name, ToolResultMode resultMode) {
     return new AgentTool() {
       @Override
       public String name() {
         return name;
+      }
+
+      @Override
+      public AgentToolDescriptor descriptor(AgentContext context) {
+        AgentToolDescriptor descriptor = AgentTool.super.descriptor(context);
+        return new AgentToolDescriptor(
+            descriptor.name(),
+            descriptor.label(),
+            descriptor.description(),
+            descriptor.category(),
+            descriptor.access(),
+            descriptor.effect(),
+            resultMode,
+            descriptor.parameters(),
+            descriptor.whenToUse(),
+            descriptor.whenNotToUse(),
+            descriptor.examples(),
+            descriptor.requiredCapabilities(),
+            descriptor.requiredSuccessfulTools(),
+            descriptor.isIdempotent(),
+            descriptor.timeout(),
+            descriptor.resultSchema());
       }
 
       @Override

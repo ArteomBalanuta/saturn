@@ -215,7 +215,10 @@ public final class DefaultAgentRouter implements AgentRouter {
       }
       String content = finalResponse.content();
       turnMemory.append(context, contextualizedPrompt, content, correlationId);
-      turnMemory.appendToolEvidence(context, turnState.successfulToolResults(), correlationId);
+      turnMemory.appendToolEvidence(
+          context,
+          persistentToolEvidence(context, turnState.successfulToolResults()),
+          correlationId);
       return AgentResult.reply(correlationId, content);
     } catch (LlmException exception) {
       throw new AgentRoutingException(
@@ -238,6 +241,18 @@ public final class DefaultAgentRouter implements AgentRouter {
       throw new AgentRoutingException("Required fresh-data tool is not exposed: " + toolName);
     }
     return matches;
+  }
+
+  private List<AgentToolResult> persistentToolEvidence(
+      AgentContext context, List<AgentToolResult> results) {
+    return results.stream()
+        .filter(
+            result ->
+                registry
+                    .find(context, result.toolName())
+                    .map(tool -> tool.descriptor(context).resultMode() == ToolResultMode.MODEL_DATA)
+                    .orElse(false))
+        .toList();
   }
 
   private LlmResponse finalizeResponse(List<LlmMessage> messages)

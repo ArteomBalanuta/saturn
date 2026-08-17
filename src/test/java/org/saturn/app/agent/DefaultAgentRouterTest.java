@@ -72,6 +72,7 @@ class DefaultAgentRouterTest {
     assertTrue(memory.appended.getFirst().contains("@alice"));
     assertTrue(memory.appended.getFirst().contains("who is here?"));
     assertEquals("There are users in the room.", memory.appended.getLast());
+    assertEquals(List.of("echo:room"), memory.toolEvidence);
   }
 
   @Test
@@ -99,7 +100,7 @@ class DefaultAgentRouterTest {
                 "general",
                 ToolAccess.PUBLIC,
                 ToolEffect.READ_ONLY,
-                ToolResultMode.ROOM_DELIVERY,
+                ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA,
                 parameters(context),
                 List.of(),
                 List.of("Use only for announcements."),
@@ -113,17 +114,16 @@ class DefaultAgentRouterTest {
             return AgentToolResult.success(name(), arguments.get("text").getAsString());
           }
         };
+    RecordingMemory memory = new RecordingMemory();
     DefaultAgentRouter router =
         new DefaultAgentRouter(
-            config(4, 100),
-            client,
-            new AgentToolRegistry().register(tool).freeze(),
-            new RecordingMemory());
+            config(4, 100), client, new AgentToolRegistry().register(tool).freeze(), memory);
 
     router.route(new AgentInvocation(context(), "announce hello"));
 
     assertTrue(
         client.requests.get(1).messages().getLast().content().contains("\"status\":\"success\""));
+    assertTrue(memory.toolEvidence.isEmpty());
   }
 
   @Test
@@ -2163,6 +2163,7 @@ class DefaultAgentRouterTest {
 
   private static final class RecordingMemory implements AgentMemoryStore {
     private final List<String> appended = new ArrayList<>();
+    private final List<String> toolEvidence = new ArrayList<>();
     private final List<org.saturn.app.agent.llm.LlmMessage> loaded;
 
     private RecordingMemory() {
@@ -2184,6 +2185,12 @@ class DefaultAgentRouterTest {
         AgentContext context, String userContent, String assistantContent, AgentConfig config) {
       appended.add(userContent);
       appended.add(assistantContent);
+    }
+
+    @Override
+    public void appendToolEvidence(
+        AgentContext context, String toolName, String content, AgentConfig config) {
+      toolEvidence.add(toolName + ":" + content);
     }
   }
 

@@ -41,7 +41,7 @@ final class AgentRequestAssembler {
                 invocation,
                 invocation.requestId(),
                 AgentTextBounds.truncate(recentRoomContext, contextBudget()))));
-    messages.addAll(history);
+    messages.addAll(history.stream().filter(message -> retainHistory(context, message)).toList());
     messages.add(LlmMessage.user(contextualizedPrompt));
     trimToBudget(messages);
     return new AgentPreparedRequest(
@@ -64,6 +64,17 @@ final class AgentRequestAssembler {
       }
     }
     return List.copyOf(definitions);
+  }
+
+  private boolean retainHistory(AgentContext context, LlmMessage message) {
+    Optional<String> evidenceTool = AgentMessageHistory.internalToolEvidenceName(message.content());
+    if (evidenceTool.isEmpty()) {
+      return !AgentMessageHistory.isInternalToolEvidence(message.content());
+    }
+    return registry
+        .find(context, evidenceTool.orElseThrow())
+        .map(tool -> tool.descriptor(context).resultMode() == ToolResultMode.MODEL_DATA)
+        .orElse(false);
   }
 
   private String contextualize(AgentContext context, String prompt) {
