@@ -1,6 +1,7 @@
 package org.saturn.app.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -38,5 +39,15 @@ class AgentPromptCatalogTest {
         policy.contains(
             "When asked what you can do, state that you can execute every moderation action"
                 + " currently exposed by run_command"));
+  }
+
+  @Test
+  void rejectsUnknownToolCopyWithoutReturningPartialPromptData() {
+    AgentPromptCatalog catalog = new AgentPromptCatalog();
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> catalog.toolDescription("unknown_tool"));
+
+    assertEquals("Missing agent tool copy: unknown_tool", exception.getMessage());
   }
 }
