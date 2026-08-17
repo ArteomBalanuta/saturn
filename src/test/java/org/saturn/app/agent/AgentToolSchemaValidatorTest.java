@@ -17,6 +17,18 @@ class AgentToolSchemaValidatorTest {
     assertThrows(
         IllegalArgumentException.class, () -> AgentToolSchemaValidator.validateSchema(missingType));
 
+    JsonObject nonPrimitiveType = new JsonObject();
+    nonPrimitiveType.add("type", new JsonArray());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonPrimitiveType));
+
+    JsonObject propertyWithoutType = objectSchema();
+    propertyWithoutType.add("properties", propertyMap(new JsonObject()));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(propertyWithoutType));
+
     JsonObject nonObjectProperties = objectSchema();
     nonObjectProperties.addProperty("properties", "invalid");
     assertThrows(
@@ -28,6 +40,12 @@ class AgentToolSchemaValidatorTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> AgentToolSchemaValidator.validateSchema(nonBooleanAdditionalProperties));
+
+    JsonObject nonPrimitiveAdditionalProperties = objectSchema();
+    nonPrimitiveAdditionalProperties.add("additionalProperties", new JsonObject());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonPrimitiveAdditionalProperties));
   }
 
   @Test
