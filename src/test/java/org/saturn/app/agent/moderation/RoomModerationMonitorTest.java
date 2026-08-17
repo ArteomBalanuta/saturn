@@ -124,6 +124,39 @@ class RoomModerationMonitorTest {
         1, decisions.stream().filter(d -> d.action() == ModerationAction.CAPTCHA_ON).count());
   }
 
+  @Test
+  void ignoresEmptyMessagesAndDisabledMonitoring() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
+    RoomModerationMonitor monitor =
+        new RoomModerationMonitor(AgentModerationConfig.from(new Toml()), clock);
+
+    assertTrue(monitor.onMessage(message("alice", "trip-a", "hash-a", " \\n")).isEmpty());
+    assertTrue(
+        RoomModerationMonitor.disabled()
+            .onMessage(message("alice", "trip-a", "hash-a", "message"))
+            .isEmpty());
+    assertTrue(
+        RoomModerationMonitor.disabled().onJoin(user("alice", "trip-a", "hash-a")).isEmpty());
+  }
+
+  @Test
+  void shadowbansRepeatedSameHashRaidsAfterTheSecondVariantWave() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
+    RoomModerationMonitor monitor =
+        new RoomModerationMonitor(AgentModerationConfig.from(new Toml()), clock);
+    List<ModerationDecision> decisions = new ArrayList<>();
+
+    for (int wave = 0; wave < 2; wave++) {
+      for (int index = 0; index < 5; index++) {
+        decisions.addAll(monitor.onJoin(user("variant" + wave + index, null, "shared-hash")));
+      }
+      clock.advance(Duration.ofSeconds(1));
+    }
+
+    assertTrue(
+        decisions.stream().anyMatch(decision -> decision.action() == ModerationAction.SHADOWBAN));
+  }
+
   private void repeat(
       RoomModerationMonitor monitor, List<ModerationDecision> decisions, String text, int count) {
     for (int index = 0; index < count; index++) {
