@@ -144,6 +144,26 @@ class RoomModerationMonitorTest {
   }
 
   @Test
+  void startsASecondBreachAtWarningAfterTheWarningWindowExpires() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
+    RoomModerationMonitor monitor =
+        new RoomModerationMonitor(AgentModerationConfig.from(new Toml()), clock);
+    List<ModerationDecision> decisions = new ArrayList<>();
+
+    for (int index = 0; index < 6; index++) {
+      decisions.addAll(monitor.onMessage(message("spammer", "trip-s", "hash-s", "burst-" + index)));
+    }
+    clock.advance(Duration.ofSeconds(31));
+    for (int index = 0; index < 6; index++) {
+      decisions.addAll(monitor.onMessage(message("spammer", "trip-s", "hash-s", "again-" + index)));
+    }
+
+    assertEquals(
+        List.of(ModerationAction.WARN, ModerationAction.WARN),
+        decisions.stream().map(ModerationDecision::action).toList());
+  }
+
+  @Test
   void ignoresEmptyMessagesAndDisabledMonitoring() {
     MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
     RoomModerationMonitor monitor =
