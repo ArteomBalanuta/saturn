@@ -254,6 +254,9 @@ class AgentToolSchemaValidatorTest {
     JsonObject anySchema = resultSchema("any");
     assertEquals(
         null, AgentToolSchemaValidator.validateResult(anySchema, new JsonPrimitive("anything")));
+
+    JsonObject objectSchema = resultSchema("object");
+    assertEquals(null, AgentToolSchemaValidator.validateResult(objectSchema, new JsonObject()));
   }
 
   @Test
