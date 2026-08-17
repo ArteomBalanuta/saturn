@@ -48,6 +48,9 @@ final class AgentTurnMemory {
   void appendToolEvidence(AgentContext context, List<AgentToolResult> results, String correlationId)
       throws AgentRoutingException {
     try {
+      if (results == null || results.stream().anyMatch(result -> result == null)) {
+        throw new IllegalStateException("Agent tool evidence contained a null result");
+      }
       for (AgentToolResult result : results) {
         store.appendToolEvidence(context, result.toolName(), result.content(), config);
       }

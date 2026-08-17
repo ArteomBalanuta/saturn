@@ -129,6 +129,42 @@ class AgentTurnMemoryTest {
     assertEquals(List.of("first:one", "second:two"), observed);
   }
 
+  @Test
+  void rejectsNullToolEvidenceBeforePartiallyPersistingResults() {
+    java.util.List<String> observed = new java.util.ArrayList<>();
+    AgentMemoryStore store =
+        new AgentMemoryStore() {
+          @Override
+          public List<LlmMessage> load(AgentContext context, AgentConfig config) {
+            return List.of();
+          }
+
+          @Override
+          public void append(
+              AgentContext context,
+              String userContent,
+              String assistantContent,
+              AgentConfig config) {}
+
+          @Override
+          public void appendToolEvidence(
+              AgentContext context, String toolName, String content, AgentConfig config) {
+            observed.add(toolName + ":" + content);
+          }
+        };
+    AgentTurnMemory memory = new AgentTurnMemory(store, config());
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            memory.appendToolEvidence(
+                context(),
+                java.util.Arrays.asList(AgentToolResult.success("first", "one"), null),
+                "request-6"));
+
+    assertTrue(observed.isEmpty());
+  }
+
   private static AgentConfig config() {
     return AgentConfig.from(null, Map.of());
   }
