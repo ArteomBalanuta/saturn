@@ -50,4 +50,18 @@ class AgentPromptCatalogTest {
 
     assertEquals("Missing agent tool copy: unknown_tool", exception.getMessage());
   }
+
+  @Test
+  void formatsPromptResourcesAndReportsMissingResourcesClearly() {
+    AgentPromptCatalog catalog = new AgentPromptCatalog();
+
+    assertEquals(
+        "Saturn command 'weather' executed; its output was sent to the room. No other Saturn command was executed.",
+        catalog.formatted("command-executed-result.txt", "weather"));
+
+    IllegalStateException exception =
+        assertThrows(IllegalStateException.class, () -> catalog.text("missing-prompt.txt"));
+    assertEquals(
+        "Missing agent prompt resource: /agent/missing-prompt.txt", exception.getMessage());
+  }
 }
