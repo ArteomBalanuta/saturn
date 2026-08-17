@@ -94,6 +94,27 @@ class AgentCommandChannelPolicyTest {
   }
 
   @Test
+  void rejectsASingleCorrectionCallForAnUnrelatedTool() {
+    LlmToolCall call = new LlmToolCall("call-1", "other_tool", "{}");
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(request -> new LlmResponse("", List.of(call), "tool_calls"));
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            policy.enforce(
+                new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                new ArrayList<>(),
+                definitions(),
+                AgentCommandProseGuard.from(definitions()),
+                state,
+                "show Tokyo weather",
+                "request-unrelated-tool"));
+  }
+
+  @Test
   void rejectsMalformedNonCommandFallbackArguments() {
     LlmToolCall call = new LlmToolCall("call-1", "respond_without_command", "{\"response\":4}");
     AgentCommandChannelPolicy policy =
