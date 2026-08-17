@@ -274,6 +274,23 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void rejectsAProviderResponseTruncatedBeforeCompletion() {
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 100),
+            new ScriptedClient(new LlmResponse("partial", List.of(), "length")),
+            new AgentToolRegistry().freeze(),
+            AgentMemoryStore.none());
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () -> router.route(new AgentInvocation(context(), "finish this answer")));
+
+    assertEquals("Agent response was truncated before completion", exception.getMessage());
+  }
+
+  @Test
   void failsRatherThanAnsweringStatelesslyWhenMemoryCannotBeRead() {
     AgentMemoryStore unavailableMemory =
         new AgentMemoryStore() {
