@@ -2,11 +2,9 @@ package org.saturn.app.agent;
 
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.llm.LlmClient;
 import org.saturn.app.agent.llm.LlmException;
@@ -41,7 +39,7 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentTurnMemory turnMemory;
   private final AgentResponseFinalizer responseFinalizer;
   private final AgentRequestAssembler requestAssembler;
-  private final ReentrantLock[] sessionLocks = sessionLocks();
+  private final AgentSessionLockManager sessionLockManager = new AgentSessionLockManager();
 
   public DefaultAgentRouter(
       AgentConfig config, LlmClient client, AgentToolRegistry registry, AgentMemoryStore memory) {
@@ -91,15 +89,8 @@ public final class DefaultAgentRouter implements AgentRouter {
       throw new AgentRoutingException("Prompt exceeds configured limit");
     }
 
-    ReentrantLock sessionLock =
-        sessionLocks[
-            Math.floorMod(invocation.context().memoryKey().hashCode(), sessionLocks.length)];
-    sessionLock.lock();
-    try {
-      return routeInSession(invocation);
-    } finally {
-      sessionLock.unlock();
-    }
+    return sessionLockManager.withLock(
+        invocation.context().memoryKey(), () -> routeInSession(invocation));
   }
 
   private AgentResult routeInSession(AgentInvocation invocation) throws AgentRoutingException {
@@ -293,11 +284,5 @@ public final class DefaultAgentRouter implements AgentRouter {
       log.debug("Agent room context load failure, correlationId={}", correlationId, exception);
       return "";
     }
-  }
-
-  private static ReentrantLock[] sessionLocks() {
-    ReentrantLock[] locks = new ReentrantLock[64];
-    Arrays.setAll(locks, ignored -> new ReentrantLock(true));
-    return locks;
   }
 }
