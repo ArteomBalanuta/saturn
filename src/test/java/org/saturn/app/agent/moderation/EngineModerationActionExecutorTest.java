@@ -76,6 +76,38 @@ class EngineModerationActionExecutorTest {
     assertFalse(executor.execute(null));
   }
 
+  @Test
+  void isolatesGatewayExceptionsAndDoesNotAttemptAnotherAction() {
+    List<String> commands = new ArrayList<>();
+    EngineModerationActionExecutor executor =
+        new EngineModerationActionExecutor(
+            (context, command, arguments) -> {
+              commands.add(command);
+              throw new IllegalStateException("gateway unavailable");
+            },
+            new OutService(new ArrayBlockingQueue<>(2)),
+            botContext());
+
+    assertFalse(
+        executor.execute(
+            ModerationDecision.targeted(ModerationAction.SHADOWBAN, "spammer", "repeat")));
+    assertEquals(List.of("shadowban"), commands);
+  }
+
+  @Test
+  void isolatesWarningDeliveryExceptions() {
+    ArrayBlockingQueue<String> messages = new ArrayBlockingQueue<>(1);
+    messages.add("already queued");
+    EngineModerationActionExecutor executor =
+        new EngineModerationActionExecutor(
+            (context, command, arguments) -> true, new OutService(messages), botContext());
+
+    assertFalse(
+        executor.execute(
+            ModerationDecision.targeted(ModerationAction.WARN, "spammer", "flooding")));
+    assertEquals("already queued", messages.poll());
+  }
+
   private AgentContext botContext() {
     return new AgentContext(
         "programming",
