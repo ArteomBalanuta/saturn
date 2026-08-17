@@ -171,6 +171,17 @@ class H2AgentSqlRepositoryTest {
   }
 
   @Test
+  void boundsDirectBinaryValuesAsTruncatedBase64() {
+    AgentSqlResult result =
+        repository.execute(
+            sql("SELECT CAST(X'00FF10203040' AS VARBINARY)"),
+            config(50, 32, 4, 32_000, Duration.ofSeconds(1)));
+
+    assertEquals("AP8Q", result.rows().getFirst().getFirst());
+    assertTrue(result.truncated());
+  }
+
+  @Test
   void interruptsQueryAfterConfiguredDeadline() {
     String expensiveQuery =
         """
