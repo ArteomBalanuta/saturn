@@ -39,8 +39,7 @@ public class OutService {
     return message;
   }
 
-  public void enqueueAgentMessage(
-      String author, String message, boolean isWhisper, String customId) {
+  public void enqueueAgentMessage(String author, String message, boolean isWhisper, int customId) {
     message = formatAddressedMessage(author, message, isWhisper);
     if (rawMessages == null) {
       queue.add(message);
@@ -54,7 +53,7 @@ public class OutService {
     enqueueRawMessageForSending(payload.toString());
   }
 
-  public void updateAgentMessage(String mode, String message, String customId) {
+  public void updateAgentMessage(String mode, String message, int customId) {
     if (rawMessages == null) {
       queue.add(normalizeForChatPayload(message));
       CommandOutputCapture.recordChat(message);

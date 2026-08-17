@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.AgentConfig;
@@ -23,6 +24,7 @@ public final class AgentServiceImpl implements AgentService {
   private final ExecutorService executor;
   private final Semaphore admission;
   private final AtomicBoolean closed = new AtomicBoolean();
+  private final AtomicInteger nextCustomId = new AtomicInteger();
   private final AtomicReference<AgentInvocation> pendingAmbient = new AtomicReference<>();
   private final AtomicBoolean ambientScheduled = new AtomicBoolean();
 
@@ -110,15 +112,16 @@ public final class AgentServiceImpl implements AgentService {
         invocation.mode(),
         context.room(),
         context.nick());
+    int customId = nextCustomId();
     try {
-      progress(invocation, "working on it");
+      progress(invocation, "working on it", customId);
       var result = router.route(invocation);
       log.info(
           "Agent request completed, requestId={}, correlationId={}",
           invocation.requestId(),
           result.correlationId());
       if (result.shouldReply()) {
-        update(invocation, tagged(invocation, "completed: " + result.content()));
+        update(invocation, tagged(invocation, "completed: " + result.content()), customId);
       } else if (invocation.mode() == AgentInvocationMode.MODERATION) {
         replyFlusher.run();
       }
@@ -130,7 +133,7 @@ public final class AgentServiceImpl implements AgentService {
           context.nick(),
           exception.getMessage());
       log.debug("Agent routing failure, requestId={}", invocation.requestId(), exception);
-      replyFailureIfRequired(invocation);
+      replyFailureIfRequired(invocation, customId);
     } catch (RuntimeException exception) {
       log.error(
           "Unexpected agent routing failure, requestId={}, type={}, message={}",
@@ -139,7 +142,7 @@ public final class AgentServiceImpl implements AgentService {
           exception.getMessage());
       log.debug(
           "Unexpected agent routing failure, requestId={}", invocation.requestId(), exception);
-      replyFailureIfRequired(invocation);
+      replyFailureIfRequired(invocation, customId);
     } finally {
       if (admitted) {
         admission.release();
@@ -153,38 +156,42 @@ public final class AgentServiceImpl implements AgentService {
     }
   }
 
-  private void replyFailureIfRequired(AgentInvocation invocation) {
+  private void replyFailureIfRequired(AgentInvocation invocation, int customId) {
     if (invocation.mode().requiresReply()) {
-      update(invocation, tagged(invocation, "failed: the agent could not answer that request."));
+      update(
+          invocation,
+          tagged(invocation, "failed: the agent could not answer that request."),
+          customId);
     }
   }
 
-  private void progress(AgentInvocation invocation, String message) {
+  private void progress(AgentInvocation invocation, String message, int customId) {
     if (invocation.mode().requiresReply()) {
-      replyProgress(invocation, tagged(invocation, message));
+      replyProgress(invocation, tagged(invocation, message), customId);
     }
   }
 
-  private void replyProgress(AgentInvocation invocation, String content) {
+  private void replyProgress(AgentInvocation invocation, String content, int customId) {
     try {
       outService.enqueueAgentMessage(
-          invocation.context().nick(),
-          content,
-          invocation.context().whisper(),
-          invocation.requestId());
+          invocation.context().nick(), content, invocation.context().whisper(), customId);
       replyFlusher.run();
     } catch (RuntimeException exception) {
       log.error("Agent progress enqueue failed, requestId={}", invocation.requestId(), exception);
     }
   }
 
-  private void update(AgentInvocation invocation, String content) {
+  private void update(AgentInvocation invocation, String content, int customId) {
     try {
-      outService.updateAgentMessage("overwrite", content, invocation.requestId());
+      outService.updateAgentMessage("overwrite", content, customId);
       replyFlusher.run();
     } catch (RuntimeException exception) {
       log.error("Agent reply update failed, requestId={}", invocation.requestId(), exception);
     }
+  }
+
+  private int nextCustomId() {
+    return nextCustomId.updateAndGet(current -> current == Integer.MAX_VALUE ? 1 : current + 1);
   }
 
   private String tagged(AgentInvocation invocation, String message) {

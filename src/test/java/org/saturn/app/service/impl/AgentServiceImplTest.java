@@ -140,10 +140,12 @@ class AgentServiceImplTest {
       var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
       var update = JsonParser.parseString(raw.take()).getAsJsonObject();
       assertEquals("chat", initial.get("cmd").getAsString());
-      assertEquals("request-123456789", initial.get("customId").getAsString());
+      assertTrue(initial.get("customId").getAsJsonPrimitive().isNumber());
+      int customId = initial.get("customId").getAsInt();
+      assertTrue(customId > 0);
       assertEquals("updateMessage", update.get("cmd").getAsString());
       assertEquals("overwrite", update.get("mode").getAsString());
-      assertEquals("request-123456789", update.get("customId").getAsString());
+      assertEquals(customId, update.get("customId").getAsInt());
       assertTrue(update.get("text").getAsString().contains("completed: answer"));
     } finally {
       service.close();
@@ -173,9 +175,10 @@ class AgentServiceImplTest {
       awaitQueueSize(raw, 2);
       var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
       var update = JsonParser.parseString(raw.take()).getAsJsonObject();
-      assertEquals("request-failure-123", initial.get("customId").getAsString());
+      int customId = initial.get("customId").getAsInt();
+      assertTrue(customId > 0);
       assertEquals("overwrite", update.get("mode").getAsString());
-      assertEquals("request-failure-123", update.get("customId").getAsString());
+      assertEquals(customId, update.get("customId").getAsInt());
       assertTrue(update.get("text").getAsString().contains("could not answer"));
     } finally {
       service.close();
