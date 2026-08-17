@@ -101,6 +101,9 @@ class JSqlParserAgentSqlPolicyTest {
   void distinguishesBlankMalformedAndOverlongSql() {
     assertEquals(
         AgentSqlErrorCode.EMPTY_SQL,
+        assertThrows(AgentSqlPolicyException.class, () -> policy.validate(null, schema)).code());
+    assertEquals(
+        AgentSqlErrorCode.EMPTY_SQL,
         assertThrows(AgentSqlPolicyException.class, () -> policy.validate("  ", schema)).code());
     assertEquals(
         AgentSqlErrorCode.MALFORMED_SQL,
@@ -115,6 +118,13 @@ class JSqlParserAgentSqlPolicyTest {
                 AgentSqlPolicyException.class,
                 () -> shortPolicy.validate("SELECT * FROM messages", schema))
             .code());
+  }
+
+  @Test
+  void acceptsQuotedIdentifiersAcrossSupportedSqlQuotingStyles() {
+    for (String sql : List.of("SELECT * FROM \"messages\"", "SELECT * FROM `messages`")) {
+      assertDoesNotThrow(() -> policy.validate(sql, schema), sql);
+    }
   }
 
   @Test
