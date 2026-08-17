@@ -65,6 +65,28 @@ class AgentCommandProseGuardTest {
             "weather"));
   }
 
+  @Test
+  void rejectsMalformedExecutedCommandsAndEmptyProse() {
+    AgentCommandProseGuard guard = guardFor(regularContext());
+
+    assertTrue(guard.findCommand(null).isEmpty());
+    assertTrue(guard.findCommand("   ").isEmpty());
+    assertTrue(
+        guard
+            .executedCommand(new LlmToolCall("call-1", "say", "{\"command\":\"weather\"}"))
+            .isEmpty());
+    assertTrue(
+        guard.executedCommand(new LlmToolCall("call-2", "run_command", "not-json")).isEmpty());
+    assertTrue(
+        guard
+            .executedCommand(new LlmToolCall("call-3", "run_command", "{\"command\":42}"))
+            .isEmpty());
+    assertEquals(
+        Optional.of("weather"),
+        guard.executedCommand(
+            new LlmToolCall("call-4", "run_command", "{\"command\":\"WEATHER\"}")));
+  }
+
   private AgentCommandProseGuard guardFor(AgentContext context) {
     var definitions =
         new AgentToolRegistry()
