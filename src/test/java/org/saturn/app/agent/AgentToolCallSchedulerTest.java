@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
@@ -207,6 +208,29 @@ class AgentToolCallSchedulerTest {
     }
   }
 
+  @Test
+  void convertsFailedParallelFuturesToCodedResults() {
+    LlmToolCall withCause = new LlmToolCall("with-cause", "room_users", "{}");
+    LlmToolCall withoutCause = new LlmToolCall("without-cause", "user_message_history", "{}");
+
+    try (AgentToolCallScheduler scheduler =
+        new AgentToolCallScheduler(new FailedFutureExecutor())) {
+      List<AgentToolResult> results =
+          scheduler.executeAll(
+              List.of(
+                  scheduled(withCause, AgentToolExecutionMode.PARALLEL_READ),
+                  scheduled(withoutCause, AgentToolExecutionMode.PARALLEL_READ)),
+              call -> AgentToolResult.success(call.name(), "unexpected"));
+
+      assertEquals(2, results.size());
+      assertEquals(
+          List.of("with-cause", "without-cause"),
+          results.stream().map(AgentToolResult::callId).toList());
+      assertTrue(
+          results.stream().allMatch(result -> "TOOL_EXECUTION_FAILED".equals(result.errorCode())));
+    }
+  }
+
   private AgentScheduledToolCall scheduled(LlmToolCall call, AgentToolExecutionMode executionMode) {
     return new AgentScheduledToolCall(call, executionMode);
   }
@@ -273,6 +297,41 @@ class AgentToolCallSchedulerTest {
         @Override
         public T get(long timeout, TimeUnit unit) throws InterruptedException {
           throw new InterruptedException("interrupted");
+        }
+      };
+    }
+  }
+
+  private static final class FailedFutureExecutor extends CancelledFutureExecutor {
+    private int submissions;
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+      boolean withCause = submissions++ == 0;
+      return new Future<>() {
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+          return false;
+        }
+
+        @Override
+        public boolean isCancelled() {
+          return false;
+        }
+
+        @Override
+        public boolean isDone() {
+          return true;
+        }
+
+        @Override
+        public T get() throws ExecutionException {
+          throw new ExecutionException(withCause ? new IllegalStateException("failed") : null);
+        }
+
+        @Override
+        public T get(long timeout, TimeUnit unit) throws ExecutionException {
+          return get();
         }
       };
     }
