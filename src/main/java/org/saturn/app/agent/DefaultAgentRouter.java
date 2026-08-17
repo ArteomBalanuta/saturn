@@ -36,6 +36,7 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentToolBudgetPolicy toolBudgetPolicy = new AgentToolBudgetPolicy();
   private final AgentFreshDataPolicy freshDataPolicy = new AgentFreshDataPolicy();
   private final AgentFreshDataCoordinator freshDataCoordinator;
+  private final AgentModelVisibleToolResultRenderer modelVisibleToolResultRenderer;
   private final AgentTurnMemory turnMemory;
   private final AgentResponseFinalizer responseFinalizer;
   private final AgentRequestAssembler requestAssembler;
@@ -73,6 +74,7 @@ public final class DefaultAgentRouter implements AgentRouter {
                 new AgentUnverifiedActionPolicy(responseCorrector),
                 new AgentCommandChannelPolicy(client)));
     this.freshDataCoordinator = new AgentFreshDataCoordinator(client, freshDataPolicy);
+    this.modelVisibleToolResultRenderer = new AgentModelVisibleToolResultRenderer(registry);
     this.turnMemory = new AgentTurnMemory(memory, config);
     this.responseFinalizer =
         new AgentResponseFinalizer(
@@ -142,7 +144,7 @@ public final class DefaultAgentRouter implements AgentRouter {
                 toolExecutor,
                 turnState,
                 correlationId,
-                this::modelVisibleToolResult,
+                modelVisibleToolResultRenderer::render,
                 DefaultAgentRouter::definitionFor);
         response = freshDataResult.response();
         response = AgentResponseCorrector.requireResponse(response);
@@ -190,7 +192,7 @@ public final class DefaultAgentRouter implements AgentRouter {
             requiredFreshNick,
             turnState,
             messages,
-            this::modelVisibleToolResult,
+            modelVisibleToolResultRenderer::render,
             correlationId);
         turnState.resetUnverifiedActionCheck();
         response =
@@ -217,22 +219,6 @@ public final class DefaultAgentRouter implements AgentRouter {
       throw new AgentRoutingException(
           "Agent provider failed: " + exception.getMessage(), exception);
     }
-  }
-
-  private String modelVisibleToolResult(
-      AgentContext context, org.saturn.app.agent.llm.LlmToolCall call, AgentToolResult result) {
-    if (result.isError()) {
-      return result.envelopeJson();
-    }
-    return registry
-        .find(context, call.name())
-        .map(tool -> tool.descriptor(context).resultMode())
-        .filter(mode -> mode == ToolResultMode.ROOM_DELIVERY)
-        .map(
-            mode ->
-                ToolResponseEnvelope.success(PROMPTS.text("router-room-delivery.txt").strip())
-                    .toJson())
-        .orElse(result.envelopeJson());
   }
 
   private static List<JsonObject> definitionFor(List<JsonObject> definitions, String toolName)

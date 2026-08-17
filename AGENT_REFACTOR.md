@@ -31,6 +31,7 @@ completed stages.
 | --- | --- | --- |
 | Turn state | `AgentTurnState` | Request-local budgets, correction flags, command outcomes, and tool evidence. |
 | Session locking | `AgentSessionLockManager` | Fair striped locking and unlock lifecycle for shared memory keys. |
+| Tool-result rendering | `AgentModelVisibleToolResultRenderer` | Converts executed tool outcomes into model-visible envelopes, including room-delivery results. |
 | Tool scheduling | `AgentToolCallScheduler` | Sequential barriers plus ordered fan-out for contiguous safe read calls. |
 | Response recovery | `AgentResponseCorrector` | Bounded recovery from failure placeholders and narrated, unverified actions. |
 | Configuration values | `AgentConfigValueReader` | Shared TOML/environment scalar parsing and checked numeric conversion for agent configuration records. |
