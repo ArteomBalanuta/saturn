@@ -55,6 +55,7 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
       String prompt,
       String correlationId)
       throws LlmException, AgentRoutingException {
+    response = AgentResponseCorrector.requireResponse(response);
     Optional<String> command =
         response.toolCalls().isEmpty() ? guard.findCommand(response.content()) : Optional.empty();
     if (command.isEmpty()) return new Result(response, state.commandCorrectionUsed());

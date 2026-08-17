@@ -161,6 +161,29 @@ class AgentCommandChannelPolicyTest {
                 "request-null"));
   }
 
+  @Test
+  void rejectsNullInitialResponseWithStableRoutingError() {
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(request -> new LlmResponse("", List.of(), "stop"));
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+
+    AgentRoutingException exception =
+        assertThrows(
+            AgentRoutingException.class,
+            () ->
+                policy.enforce(
+                    null,
+                    new ArrayList<>(),
+                    definitions(),
+                    AgentCommandProseGuard.from(definitions()),
+                    state,
+                    "show Tokyo weather",
+                    "request-null-initial"));
+
+    assertEquals("Agent returned no response", exception.getMessage());
+  }
+
   private static List<JsonObject> definitions() {
     AgentContext context =
         new AgentContext("programming", "alice", "trip", "hash", false, List.of("alice"));
