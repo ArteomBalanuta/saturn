@@ -300,6 +300,25 @@ class AgentToolExecutorTest {
   }
 
   @Test
+  void translatesAnInterruptedToolWaitAndRestoresTheInterruptFlag() {
+    AgentTool tool = successfulTool("interruptible");
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(new AgentToolRegistry().register(tool).freeze(), config())) {
+      Thread.currentThread().interrupt();
+      try {
+        AgentToolResult result =
+            executor.execute(null, new LlmToolCall("interrupt-1", "interruptible", "{}"));
+
+        assertTrue(result.isError());
+        assertEquals("TOOL_INTERRUPTED", result.errorCode());
+        assertTrue(Thread.currentThread().isInterrupted());
+      } finally {
+        Thread.interrupted();
+      }
+    }
+  }
+
+  @Test
   void convertsNullToolOutputToACodedFailure() {
     AgentTool nullTool =
         new AgentTool() {
