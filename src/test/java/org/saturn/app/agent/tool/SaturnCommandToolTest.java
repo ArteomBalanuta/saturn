@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.AgentCapability;
 import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.AgentToolDescriptor;
 import org.saturn.app.agent.AgentToolResult;
 import org.saturn.app.agent.ToolEffect;
 
@@ -67,6 +68,39 @@ class SaturnCommandToolTest {
     assertTrue(result.isError());
     assertEquals("TOOL_NOT_AUTHORIZED", result.errorCode());
     assertEquals(null, command.get());
+  }
+
+  @Test
+  void reportsRejectedGatewayExecutionAndRequiresAContextForAvailability() {
+    SaturnCommandTool tool =
+        new SaturnCommandTool(
+            definition("weather"), (context, requestedCommand, arguments) -> false);
+
+    AgentToolResult result = tool.execute(regularContext(), new JsonObject());
+
+    assertTrue(result.isError());
+    assertEquals("COMMAND_REJECTED", result.errorCode());
+    assertFalse(tool.isAvailableTo(null));
+  }
+
+  @Test
+  void exposesModerationCommandsToAuthorizedCallers() {
+    SaturnCommandTool tool =
+        new SaturnCommandTool(definition("mute"), (context, requestedCommand, arguments) -> true);
+
+    AgentToolDescriptor descriptor = tool.descriptor(regularContext());
+    AgentContext moderator =
+        new AgentContext(
+            "programming",
+            "moderator",
+            "moderator-trip",
+            "hash",
+            false,
+            List.of(),
+            Set.of(AgentCapability.MODERATION_COMMANDS));
+
+    assertEquals(org.saturn.app.agent.ToolAccess.AUTHORIZED_CALLER, descriptor.access());
+    assertTrue(tool.isAvailableTo(moderator));
   }
 
   private static SaturnCommandToolCatalog.CommandToolDefinition definition(String alias) {
