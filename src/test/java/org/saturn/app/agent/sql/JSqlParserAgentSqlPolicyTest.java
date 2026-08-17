@@ -52,6 +52,7 @@ class JSqlParserAgentSqlPolicyTest {
             "DELETE FROM messages",
             "CREATE TABLE secrets(value TEXT)",
             "DROP TABLE messages",
+            "VALUES (1)",
             "PRAGMA table_info(messages)",
             "ATTACH DATABASE '/tmp/other.db' AS other",
             "DETACH DATABASE other",
