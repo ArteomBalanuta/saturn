@@ -119,7 +119,7 @@ class AgentCommandChannelPolicyTest {
     AgentTurnState state =
         new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
 
-    for (String arguments : List.of("{}", "{\"response\":{}}")) {
+    for (String arguments : List.of("{}", "{\"response\":{}}", "{\"response\":null}")) {
       LlmToolCall call = new LlmToolCall("call-1", "respond_without_command", arguments);
       AgentCommandChannelPolicy policy =
           new AgentCommandChannelPolicy(
