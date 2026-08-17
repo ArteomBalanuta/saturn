@@ -49,7 +49,7 @@ class AgentServiceImplTest {
 
     awaitQueueSize(queue, 3);
     assertTrue(queue.stream().anyMatch(value -> value.contains("busy")));
-    assertTrue(queue.stream().anyMatch(value -> value.contains("completed: answer")));
+    assertTrue(queue.stream().anyMatch(value -> value.contains("@alice answer")));
     service.close();
   }
 
@@ -146,7 +146,7 @@ class AgentServiceImplTest {
       assertEquals("updateMessage", update.get("cmd").getAsString());
       assertEquals("overwrite", update.get("mode").getAsString());
       assertEquals(customId, update.get("customId").getAsString());
-      assertTrue(update.get("text").getAsString().contains("completed: answer"));
+      assertTrue(update.get("text").getAsString().contains("@alice answer"));
     } finally {
       service.close();
     }
@@ -233,9 +233,9 @@ class AgentServiceImplTest {
       assertEquals(List.of("first", "second"), routed);
       assertEquals(4, flushed.size());
       assertTrue(flushed.get(0).contains("thinking"));
-      assertTrue(flushed.get(1).contains("completed: first answer"));
+      assertTrue(flushed.get(1).contains("@alice first answer"));
       assertTrue(flushed.get(2).contains("thinking"));
-      assertTrue(flushed.get(3).contains("completed: second answer"));
+      assertTrue(flushed.get(3).contains("@bob second answer"));
     } finally {
       releaseFirst.countDown();
       service.close();

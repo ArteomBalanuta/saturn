@@ -131,7 +131,7 @@ public final class AgentServiceImpl implements AgentService {
           invocation.requestId(),
           result.correlationId());
       if (result.shouldReply()) {
-        update(invocation, "completed: " + result.content(), customId, animationLock);
+        update(invocation, mention(invocation, result.content()), customId, animationLock);
       } else if (invocation.mode() == AgentInvocationMode.MODERATION) {
         replyFlusher.run();
       }
@@ -173,7 +173,10 @@ public final class AgentServiceImpl implements AgentService {
       AgentInvocation invocation, String customId, Object animationLock) {
     if (invocation.mode().requiresReply()) {
       update(
-          invocation, "failed: the agent could not answer that request.", customId, animationLock);
+          invocation,
+          mention(invocation, "failed: the agent could not answer that request."),
+          customId,
+          animationLock);
     }
   }
 
@@ -226,6 +229,10 @@ public final class AgentServiceImpl implements AgentService {
         500,
         500,
         TimeUnit.MILLISECONDS);
+  }
+
+  private String mention(AgentInvocation invocation, String content) {
+    return "@" + invocation.context().nick() + " " + content;
   }
 
   private void reply(AgentInvocation invocation, String content) {
