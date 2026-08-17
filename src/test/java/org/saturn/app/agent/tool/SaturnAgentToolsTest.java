@@ -348,6 +348,59 @@ class SaturnAgentToolsTest {
   }
 
   @Test
+  void databaseToolRejectsMissingQueryNamesWithoutCallingTheRepository() {
+    AtomicInteger calls = new AtomicInteger();
+    DatabaseQueryTool tool =
+        new DatabaseQueryTool(
+            (name, arguments, context) -> {
+              calls.incrementAndGet();
+              return new JsonObject();
+            });
+
+    AgentToolResult result = tool.execute(context(), new JsonObject());
+
+    assertTrue(result.isError());
+    assertEquals("Missing required query name", result.content());
+    assertEquals(0, calls.get());
+  }
+
+  @Test
+  void databaseToolTranslatesRepositoryFailuresToStableToolErrors() {
+    DatabaseQueryTool rejected =
+        new DatabaseQueryTool(
+            (name, arguments, context) -> {
+              throw new IllegalArgumentException("unknown query");
+            });
+    DatabaseQueryTool failed =
+        new DatabaseQueryTool(
+            (name, arguments, context) -> {
+              throw new IllegalStateException("database unavailable");
+            });
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("query", "message_count");
+
+    AgentToolResult rejectedResult = rejected.execute(context(), arguments);
+    AgentToolResult failedResult = failed.execute(context(), arguments);
+
+    assertTrue(rejectedResult.isError());
+    assertEquals("Query is not approved", rejectedResult.content());
+    assertTrue(failedResult.isError());
+    assertEquals("Database query failed", failedResult.content());
+  }
+
+  @Test
+  void databaseToolDescriptorPublishesTheApprovedQueryContract() {
+    DatabaseQueryTool tool = new DatabaseQueryTool((name, arguments, context) -> new JsonObject());
+
+    AgentToolDescriptor descriptor = tool.descriptor(context());
+
+    assertEquals("database_query", descriptor.name());
+    assertEquals("database", descriptor.category());
+    assertFalse(descriptor.parameters().get("additionalProperties").getAsBoolean());
+    assertTrue(descriptor.examples().getFirst().arguments().contains("recent_messages_for_room"));
+  }
+
+  @Test
   void commandToolPublishesAndEnforcesTheSameCapabilityAwareCatalog() {
     AtomicReference<String> invoked = new AtomicReference<>();
     SaturnCommandGateway gateway =
