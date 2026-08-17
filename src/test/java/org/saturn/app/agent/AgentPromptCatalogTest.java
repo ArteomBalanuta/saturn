@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.Gson;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 class AgentPromptCatalogTest {
@@ -63,5 +67,70 @@ class AgentPromptCatalogTest {
         assertThrows(IllegalStateException.class, () -> catalog.text("missing-prompt.txt"));
     assertEquals(
         "Missing agent prompt resource: /agent/missing-prompt.txt", exception.getMessage());
+  }
+
+  @Test
+  void reportsTextResourceIoFailuresWithTheOriginalCause() {
+    IOException failure = new IOException("read failed");
+    AgentPromptCatalog catalog =
+        new AgentPromptCatalog(
+            new Gson(),
+            resource -> {
+              if ("tool-copy.json".equals(resource)) {
+                return stream("{}");
+              }
+              throw failure;
+            });
+
+    IllegalStateException exception =
+        assertThrows(IllegalStateException.class, () -> catalog.text("broken.txt"));
+
+    assertEquals("Cannot load agent prompt resource: /agent/broken.txt", exception.getMessage());
+    assertEquals(failure, exception.getCause());
+  }
+
+  @Test
+  void reportsToolCopyIoFailuresDuringConstruction() {
+    IOException failure = new IOException("open failed");
+
+    IllegalStateException exception =
+        assertThrows(
+            IllegalStateException.class,
+            () ->
+                new AgentPromptCatalog(
+                    new Gson(),
+                    resource -> {
+                      throw failure;
+                    }));
+
+    assertEquals(
+        "Cannot load agent prompt resource: /agent/tool-copy.json", exception.getMessage());
+    assertEquals(failure, exception.getCause());
+  }
+
+  @Test
+  void rejectsNullToolCopyDuringConstruction() {
+    IllegalStateException exception =
+        assertThrows(
+            IllegalStateException.class,
+            () -> new AgentPromptCatalog(new Gson(), resource -> stream("null")));
+
+    assertEquals(
+        "Cannot load agent prompt resource: /agent/tool-copy.json", exception.getMessage());
+  }
+
+  @Test
+  void rejectsNonObjectToolCopyEntries() {
+    AgentPromptCatalog catalog =
+        new AgentPromptCatalog(new Gson(), resource -> stream("{\"broken\":\"not-an-object\"}"));
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> catalog.toolDescription("broken"));
+
+    assertEquals("Missing agent tool copy: broken", exception.getMessage());
+  }
+
+  private static ByteArrayInputStream stream(String value) {
+    return new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8));
   }
 }

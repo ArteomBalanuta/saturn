@@ -285,14 +285,18 @@ After provider transport and payload edge-case coverage, the measured baseline i
 After the completed policy-chain extraction and all subsequent behavioral coverage, a clean full
 verification measures 98.35% line, 87.07% branch, 98.12% instruction, 97.67% method, and 84.97%
 complexity coverage across `org.saturn.app.agent` and its subpackages. This remains report-only.
+After prompt-catalog resource-boundary hardening, the clean full-suite report measures 98.48% line,
+87.12% branch, 98.23% instruction, 97.82% method, and 85.11% complexity coverage. The catalog
+itself has no missed lines or branches.
 
-The remaining low-coverage paths in `AgentPromptCatalog` and `H2AgentSqlRepository` are
-intentional exclusions from percentage-driven test work unless a production defect makes them
-observable. Prompt-catalog misses are malformed or unreadable classpath-resource paths and a
-non-object tool-copy shape that cannot occur with the versioned `agent/tool-copy.json` resource.
-H2 repository misses are JDBC-driver-dependent result states and defensive Base64-boundary loops
-that valid configured limits do not reach. Production behavior is preserved; these paths are
-documented rather than covered with artificial fixtures.
+`AgentPromptCatalog` now isolates classpath access behind a package-private resource source while
+retaining its public constructor. Deterministic tests cover text and JSON I/O failure translation,
+null JSON rejection during construction, missing resources, and malformed non-object tool entries.
+The remaining low-coverage paths in `H2AgentSqlRepository` are intentional exclusions from
+percentage-driven test work unless a production defect makes them observable. They are
+JDBC-driver-dependent result states and defensive Base64-boundary loops that valid configured
+limits do not reach. Production behavior is preserved; these paths are documented rather than
+covered with artificial fixtures.
 
 `SaturnCommandToolCatalog` has the largest remaining line gap after the completed policy-chain
 work, but its misses are also defensive reflection failures: duplicate generated tool names,

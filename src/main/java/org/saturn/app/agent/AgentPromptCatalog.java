@@ -16,14 +16,16 @@ import java.util.Objects;
 public final class AgentPromptCatalog {
   private static final String ROOT = "/agent/";
   private final Gson gson;
+  private final ResourceSource resources;
   private final JsonObject toolCopy;
 
   public AgentPromptCatalog() {
-    this(new Gson());
+    this(new Gson(), AgentPromptCatalog::classpathResource);
   }
 
-  AgentPromptCatalog(Gson gson) {
+  AgentPromptCatalog(Gson gson, ResourceSource resources) {
     this.gson = Objects.requireNonNull(gson, "gson");
+    this.resources = Objects.requireNonNull(resources, "resources");
     this.toolCopy = loadJson("tool-copy.json");
   }
 
@@ -62,22 +64,32 @@ public final class AgentPromptCatalog {
 
   private JsonObject loadJson(String resource) {
     try (Reader reader = new InputStreamReader(resource(resource), StandardCharsets.UTF_8)) {
-      return gson.fromJson(reader, JsonObject.class);
+      return Objects.requireNonNull(
+          gson.fromJson(reader, JsonObject.class), "Agent tool copy must be a JSON object");
     } catch (IOException | RuntimeException exception) {
       throw failure(resource, exception);
     }
   }
 
-  private InputStream resource(String resource) {
-    InputStream stream = AgentPromptCatalog.class.getResourceAsStream(ROOT + resource);
+  private InputStream resource(String resource) throws IOException {
+    InputStream stream = resources.open(resource);
     if (stream == null) {
       throw new IllegalStateException("Missing agent prompt resource: " + ROOT + resource);
     }
     return stream;
   }
 
+  private static InputStream classpathResource(String resource) {
+    return AgentPromptCatalog.class.getResourceAsStream(ROOT + resource);
+  }
+
   private IllegalStateException failure(String resource, Exception exception) {
     return new IllegalStateException(
         "Cannot load agent prompt resource: " + ROOT + resource, exception);
+  }
+
+  @FunctionalInterface
+  interface ResourceSource {
+    InputStream open(String resource) throws IOException;
   }
 }
