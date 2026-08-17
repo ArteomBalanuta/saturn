@@ -76,6 +76,24 @@ class AgentToolExecutorTest {
   }
 
   @Test
+  void rejectsAValidToolCallAfterItsPerToolLimitIsReached() {
+    AtomicInteger executions = new AtomicInteger();
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(countingTool(executions)).freeze(),
+            configWithLimit(1))) {
+
+      assertFalse(executor.execute(null, new LlmToolCall("1", "count", "{\"value\":1}")).isError());
+      AgentToolResult limited =
+          executor.execute(null, new LlmToolCall("2", "count", "{\"value\":2}"));
+
+      assertTrue(limited.isError());
+      assertEquals("TOOL_CALL_LIMIT_REACHED", limited.errorCode());
+      assertEquals(1, executions.get());
+    }
+  }
+
+  @Test
   void requiresSuccessfulPrerequisiteWithinTheSameInvocation() {
     AtomicInteger sqlExecutions = new AtomicInteger();
     AgentTool schema = successfulTool("database_schema");
@@ -564,6 +582,27 @@ class AgentToolExecutorTest {
 
   private AgentConfig config() {
     return config(Duration.ofSeconds(1));
+  }
+
+  private AgentConfig configWithLimit(int maxCallsPerTool) {
+    return new AgentConfig(
+        true,
+        URI.create("http://localhost"),
+        Optional.empty(),
+        "",
+        Duration.ofSeconds(1),
+        1,
+        4,
+        maxCallsPerTool,
+        2,
+        100,
+        100,
+        2,
+        Duration.ofHours(1),
+        0,
+        Duration.ZERO,
+        768,
+        false);
   }
 
   private AgentConfig config(Duration timeout) {
