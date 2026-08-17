@@ -108,6 +108,30 @@ class AgentCommandProseGuardTest {
     assertTrue(guard.executedCommand(new LlmToolCall("call-6", "run_command", "null")).isEmpty());
   }
 
+  @Test
+  void ignoresMalformedDefinitionsAndNonStringCommandValues() {
+    JsonObject missingFunction = new JsonObject();
+    JsonObject unrelated = new JsonObject();
+    JsonObject unrelatedFunction = new JsonObject();
+    unrelatedFunction.addProperty("name", "other_tool");
+    unrelated.add("function", unrelatedFunction);
+    JsonObject missingEnum = new JsonObject();
+    JsonObject missingEnumFunction = new JsonObject();
+    missingEnumFunction.addProperty("name", "run_command");
+    missingEnum.add("function", missingEnumFunction);
+
+    AgentCommandProseGuard guard =
+        AgentCommandProseGuard.from(List.of(missingFunction, unrelated, missingEnum));
+
+    assertTrue(guard.findCommand("`weather city`").isEmpty());
+    assertFalse(
+        guard.matches(new LlmToolCall("call-1", "run_command", "{\"command\":true}"), "weather"));
+    assertTrue(
+        guard
+            .executedCommand(new LlmToolCall("call-2", "run_command", "{\"command\":{}}"))
+            .isEmpty());
+  }
+
   private AgentCommandProseGuard guardFor(AgentContext context) {
     var definitions =
         new AgentToolRegistry()
