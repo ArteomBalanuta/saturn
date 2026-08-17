@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonObject;
 import io.github.classgraph.ClassGraph;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -41,5 +42,15 @@ class SaturnCommandToolCatalogTest {
                 entry -> entry.parameters().get("additionalProperties").getAsBoolean() == false));
     assertTrue(entries.stream().allMatch(entry -> !entry.whenNotToUse().isEmpty()));
     assertFalse(entries.isEmpty());
+  }
+
+  @Test
+  void rendersOptionalArgumentsAndDefaultsWhenAbsent() {
+    var definition = SaturnCommandToolCatalog.entries().getFirst();
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("arguments", "  --value  ");
+
+    assertEquals("--value", definition.renderArguments(arguments));
+    assertEquals("", definition.renderArguments(new JsonObject()));
   }
 }
