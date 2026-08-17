@@ -48,10 +48,13 @@ class H2AgentQueryRepositoryTest {
             "programming", "alice", "trip-a", "hash-a", false, List.of("alice", "bob"));
 
     JsonObject count = repository.execute("message_count", new JsonObject(), alice);
+    JsonObject registeredUserCount =
+        repository.execute("registered_user_count", new JsonObject(), alice);
     JsonObject recent =
         repository.execute("recent_messages_for_requester", new JsonObject(), alice);
 
     assertEquals(3, count.get("count").getAsInt());
+    assertEquals(2, registeredUserCount.get("count").getAsInt());
     assertEquals(2, recent.getAsJsonArray("rows").size());
     assertEquals(
         "three",
