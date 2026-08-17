@@ -91,4 +91,24 @@ class AgentFreshDataPolicyTest {
           arguments);
     }
   }
+
+  @Test
+  void rejectsNullResponsesWithoutLeakingNullPointerExceptions() {
+    AgentFreshDataPolicy policy = new AgentFreshDataPolicy();
+
+    assertFalse(policy.satisfiesProfileContract(null, List.of()));
+    assertFalse(
+        policy.requiresSynthesisCorrection(
+            java.util.Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY), null, List.of()));
+    assertFalse(
+        policy.requiresFinalSynthesisValidation(
+            java.util.Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY), null, List.of()));
+    assertFalse(
+        policy.repeatsPreviousAssistant(
+            null, List.of(LlmMessage.assistant("previous answer", List.of()))));
+    assertThrows(
+        AgentRoutingException.class,
+        () -> policy.requireExactToolCall(null, "room_users", java.util.Optional.empty()));
+    assertThrows(AgentRoutingException.class, () -> policy.requireFreshSynthesis(null, List.of()));
+  }
 }

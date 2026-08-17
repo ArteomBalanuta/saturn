@@ -16,6 +16,7 @@ final class AgentFreshDataPolicy {
   }
 
   boolean satisfiesProfileContract(LlmResponse response, List<AgentToolResult> results) {
+    if (response == null) return false;
     boolean hasHistory =
         results.stream()
             .anyMatch(
@@ -26,19 +27,23 @@ final class AgentFreshDataPolicy {
   boolean requiresSynthesisCorrection(
       Optional<String> requiredTool, LlmResponse response, List<AgentToolResult> results) {
     return requiresHistorySynthesis(requiredTool)
+        && response != null
         && !AgentResponseCorrector.isFailurePlaceholder(response)
         && !satisfiesProfileContract(response, results);
   }
 
   boolean requiresFinalSynthesisValidation(
       Optional<String> requiredTool, LlmResponse response, List<AgentToolResult> results) {
-    return requiresHistorySynthesis(requiredTool) && !satisfiesProfileContract(response, results);
+    return requiresHistorySynthesis(requiredTool)
+        && response != null
+        && !satisfiesProfileContract(response, results);
   }
 
   LlmResponse requireExactToolCall(
       LlmResponse response, String toolName, Optional<String> expectedNick)
       throws AgentRoutingException {
-    if (response.toolCalls().size() != 1
+    if (response == null
+        || response.toolCalls().size() != 1
         || !toolName.equals(response.toolCalls().getFirst().name())
         || !matchesTarget(response.toolCalls().getFirst(), expectedNick)) {
       throw new AgentRoutingException(
@@ -70,7 +75,8 @@ final class AgentFreshDataPolicy {
   }
 
   boolean repeatsPreviousAssistant(LlmResponse response, List<LlmMessage> history) {
-    if (!response.toolCalls().isEmpty()
+    if (response == null
+        || !response.toolCalls().isEmpty()
         || response.content() == null
         || response.content().isBlank()) {
       return false;
@@ -82,6 +88,9 @@ final class AgentFreshDataPolicy {
 
   LlmResponse requireFreshSynthesis(LlmResponse response, List<LlmMessage> history)
       throws AgentRoutingException {
+    if (response == null) {
+      throw new AgentRoutingException("Agent returned no response");
+    }
     if (!response.toolCalls().isEmpty()) {
       throw new AgentRoutingException(
           "Agent returned a tool call instead of a fresh history synthesis");
