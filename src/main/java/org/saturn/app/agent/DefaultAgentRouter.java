@@ -32,7 +32,7 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentConversationContextProvider conversationContextProvider;
   private final AgentSystemPrompt systemPrompt;
   private final AgentResponseCorrector responseCorrector;
-  private final AgentTurnPolicy commandChannelPolicy;
+  private final AgentTurnPolicyChain turnPolicyChain;
   private final AgentToolBudgetPolicy toolBudgetPolicy = new AgentToolBudgetPolicy();
   private final AgentFreshDataPolicy freshDataPolicy = new AgentFreshDataPolicy();
   private final AgentFreshDataCoordinator freshDataCoordinator;
@@ -67,7 +67,7 @@ public final class DefaultAgentRouter implements AgentRouter {
     this.conversationContextProvider = conversationContextProvider;
     this.systemPrompt = new AgentSystemPrompt(participationConfig);
     this.responseCorrector = new AgentResponseCorrector(client);
-    this.commandChannelPolicy = new AgentCommandChannelPolicy(client);
+    this.turnPolicyChain = new AgentTurnPolicyChain(List.of(new AgentCommandChannelPolicy(client)));
     this.freshDataCoordinator = new AgentFreshDataCoordinator(client, freshDataPolicy);
     this.turnMemory = new AgentTurnMemory(memory, config);
     this.responseFinalizer =
@@ -156,7 +156,7 @@ public final class DefaultAgentRouter implements AgentRouter {
             turnState.markUnverifiedActionChecked();
           }
           AgentTurnPolicyResult guarded =
-              commandChannelPolicy.apply(
+              turnPolicyChain.apply(
                   new AgentTurnPolicyInput(
                       response,
                       messages,

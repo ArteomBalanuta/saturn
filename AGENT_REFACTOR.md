@@ -76,12 +76,10 @@ implementations for required fresh tool output and fresh user-history synthesis.
 
 **Status: in progress.** `AgentCommandChannelPolicy`, `AgentFreshDataPolicy`,
 `AgentToolBudgetPolicy`, `AgentResponseCorrector`, and `AgentTurnState` isolate command correction,
-fresh evidence, budget exhaustion, response recovery, and mutable turn state. The router retains
-explicit policy order because provider calls and observations belong to one stateful session loop.
-The first explicit `AgentTurnPolicy` boundary now wraps command-channel enforcement through
-immutable `AgentTurnPolicyInput` and `AgentTurnPolicyResult` values. `AgentToolBudgetPolicy`
-separately owns the deterministic reserve-or-finalize transition; fresh-data and response policies
-remain next candidates.
+fresh evidence, budget exhaustion, response recovery, and mutable turn state. `AgentTurnPolicyChain`
+now owns deterministic policy ordering and response propagation; it currently wraps command-channel
+enforcement while fresh-data and response policies remain next candidates. The router retains explicit
+policy order because provider calls and observations belong to one stateful session loop.
 
 **Problem:** `DefaultAgentRouter.routeInSession` contains routing, tool-loop progression,
 fresh-data enforcement, command prose correction, response finalization, and persistence. It is
