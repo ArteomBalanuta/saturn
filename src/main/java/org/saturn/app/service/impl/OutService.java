@@ -67,6 +67,10 @@ public class OutService {
     enqueueRawMessageForSending(payload.toString());
   }
 
+  boolean supportsAgentMessageUpdates() {
+    return rawMessages != null;
+  }
+
   public void enqueueRawMessageForSending(String message) {
     log.debug("raw payload sent: {}", message);
     rawMessages.add(message);

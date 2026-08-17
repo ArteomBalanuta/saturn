@@ -218,7 +218,7 @@ public final class AgentServiceImpl implements AgentService {
 
   private ScheduledFuture<?> startAnimation(
       AgentInvocation invocation, int customId, Object animationLock) {
-    if (!invocation.mode().requiresReply()) {
+    if (!invocation.mode().requiresReply() || !outService.supportsAgentMessageUpdates()) {
       return null;
     }
     return animationExecutor.scheduleAtFixedRate(
