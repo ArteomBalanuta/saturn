@@ -10,6 +10,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.Authenticator;
 import java.net.CookieHandler;
 import java.net.InetSocketAddress;
@@ -414,6 +416,42 @@ class OpenAiCompatibleClientTest {
             .getAsJsonObject()
             .get("tool_call_id")
             .getAsString());
+  }
+
+  @Test
+  void capsOverflowingRetryBackoffAndTranslatesInterruptedBackoff() throws Exception {
+    AgentConfig config =
+        new AgentConfig(
+            true,
+            URI.create("http://localhost"),
+            Optional.empty(),
+            "",
+            Duration.ofMillis(1),
+            2,
+            4,
+            2,
+            2,
+            8_000,
+            8_000,
+            10,
+            Duration.ofMillis(Long.MAX_VALUE),
+            1,
+            Duration.ofMillis(1));
+    OpenAiCompatibleClient client =
+        new OpenAiCompatibleClient(config, new com.google.gson.Gson(), new FailingHttpClient());
+    Method backoff = OpenAiCompatibleClient.class.getDeclaredMethod("backoff", int.class);
+    backoff.setAccessible(true);
+
+    backoff.invoke(client, 20);
+    Thread.currentThread().interrupt();
+    try {
+      InvocationTargetException exception =
+          assertThrows(InvocationTargetException.class, () -> backoff.invoke(client, 0));
+      assertEquals("LLM retry interrupted", exception.getCause().getMessage());
+      assertTrue(Thread.currentThread().isInterrupted());
+    } finally {
+      Thread.interrupted();
+    }
   }
 
   private AgentConfig config(String apiKey, int retries) {
