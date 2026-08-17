@@ -111,4 +111,14 @@ class AgentFreshDataPolicyTest {
         () -> policy.requireExactToolCall(null, "room_users", java.util.Optional.empty()));
     assertThrows(AgentRoutingException.class, () -> policy.requireFreshSynthesis(null, List.of()));
   }
+
+  @Test
+  void treatsNullFreshDataResultCollectionsAndEntriesAsUnsatisfied() {
+    AgentFreshDataPolicy policy = new AgentFreshDataPolicy();
+    LlmResponse response = new LlmResponse("fresh", List.of(), "stop");
+
+    assertFalse(policy.satisfiesProfileContract(response, null));
+    assertFalse(
+        policy.satisfiesProfileContract(response, java.util.Arrays.asList((AgentToolResult) null)));
+  }
 }

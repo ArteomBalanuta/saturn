@@ -16,11 +16,13 @@ final class AgentFreshDataPolicy {
   }
 
   boolean satisfiesProfileContract(LlmResponse response, List<AgentToolResult> results) {
-    if (response == null) return false;
+    if (response == null || results == null) return false;
     boolean hasHistory =
         results.stream()
             .anyMatch(
-                result -> AgentFreshnessPolicy.USER_MESSAGE_HISTORY.equals(result.toolName()));
+                result ->
+                    result != null
+                        && AgentFreshnessPolicy.USER_MESSAGE_HISTORY.equals(result.toolName()));
     return hasHistory && response.content() != null && !response.content().isBlank();
   }
 
