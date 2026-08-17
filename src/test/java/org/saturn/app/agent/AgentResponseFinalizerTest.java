@@ -107,7 +107,7 @@ class AgentResponseFinalizerTest {
     AgentParticipationConfig participation = AgentParticipationConfig.from(null);
     return new AgentResponseFinalizer(
         new AgentResponseCorrector(client),
-        new AgentFreshDataCoordinator(client, new AgentFreshDataPolicy()),
+        new AgentFreshDataFinalValidator(new AgentFreshDataPolicy()),
         participation,
         config.maxOutputChars());
   }

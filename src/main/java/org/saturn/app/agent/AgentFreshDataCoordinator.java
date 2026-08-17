@@ -120,17 +120,6 @@ final class AgentFreshDataCoordinator {
     return new Result(response, false);
   }
 
-  void validateFinal(
-      Optional<String> requiredFreshTool,
-      LlmResponse response,
-      List<AgentToolResult> successfulToolResults)
-      throws AgentRoutingException {
-    if (policy.requiresFinalSynthesisValidation(
-        requiredFreshTool, response, successfulToolResults)) {
-      throw new AgentRoutingException("Agent did not produce a complete fresh history synthesis");
-    }
-  }
-
   private Result loadRequiredHistory(
       LlmResponse response,
       List<LlmMessage> messages,

@@ -42,14 +42,13 @@ class AgentFreshDataCoordinatorTest {
 
   @Test
   void finalValidationRejectsMissingFreshEvidence() {
-    AgentFreshDataCoordinator coordinator =
-        new AgentFreshDataCoordinator(
-            request -> new LlmResponse("unused", List.of(), "stop"), new AgentFreshDataPolicy());
+    AgentFreshDataFinalValidator validator =
+        new AgentFreshDataFinalValidator(new AgentFreshDataPolicy());
 
     assertThrows(
         AgentRoutingException.class,
         () ->
-            coordinator.validateFinal(
+            validator.validate(
                 Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY),
                 new LlmResponse("answer", List.of(), "stop"),
                 List.of()));
@@ -57,11 +56,10 @@ class AgentFreshDataCoordinatorTest {
 
   @Test
   void finalValidationAcceptsFreshHistoryEvidence() throws Exception {
-    AgentFreshDataCoordinator coordinator =
-        new AgentFreshDataCoordinator(
-            request -> new LlmResponse("unused", List.of(), "stop"), new AgentFreshDataPolicy());
+    AgentFreshDataFinalValidator validator =
+        new AgentFreshDataFinalValidator(new AgentFreshDataPolicy());
 
-    coordinator.validateFinal(
+    validator.validate(
         Optional.of(AgentFreshnessPolicy.USER_MESSAGE_HISTORY),
         new LlmResponse("answer", List.of(), "stop"),
         List.of(AgentToolResult.success(AgentFreshnessPolicy.USER_MESSAGE_HISTORY, "{}")));

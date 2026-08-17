@@ -78,7 +78,10 @@ public final class DefaultAgentRouter implements AgentRouter {
     this.turnMemory = new AgentTurnMemory(memory, config);
     this.responseFinalizer =
         new AgentResponseFinalizer(
-            responseCorrector, freshDataCoordinator, participationConfig, config.maxOutputChars());
+            responseCorrector,
+            new AgentFreshDataFinalValidator(freshDataPolicy),
+            participationConfig,
+            config.maxOutputChars());
     this.requestAssembler = new AgentRequestAssembler(config, registry, systemPrompt);
   }
 

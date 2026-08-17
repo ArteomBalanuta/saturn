@@ -9,18 +9,18 @@ import org.saturn.app.agent.llm.LlmResponse;
 /** Owns final model-response correction, validation, sanitization, and reply-mode decisions. */
 final class AgentResponseFinalizer {
   private final AgentResponseCorrector responseCorrector;
-  private final AgentFreshDataCoordinator freshDataCoordinator;
+  private final AgentFreshDataFinalValidator freshDataFinalValidator;
   private final AgentParticipationConfig participationConfig;
   private final int maxOutputChars;
   private final AgentResponseSanitizer responseSanitizer = new AgentResponseSanitizer();
 
   AgentResponseFinalizer(
       AgentResponseCorrector responseCorrector,
-      AgentFreshDataCoordinator freshDataCoordinator,
+      AgentFreshDataFinalValidator freshDataFinalValidator,
       AgentParticipationConfig participationConfig,
       int maxOutputChars) {
     this.responseCorrector = responseCorrector;
-    this.freshDataCoordinator = freshDataCoordinator;
+    this.freshDataFinalValidator = freshDataFinalValidator;
     this.participationConfig = participationConfig;
     this.maxOutputChars = maxOutputChars;
   }
@@ -38,7 +38,7 @@ final class AgentResponseFinalizer {
     }
     response = responseCorrector.correctFailurePlaceholder(response, messages, correlationId);
     response = responseCorrector.correctInternalEvidenceLeak(response, messages, correlationId);
-    freshDataCoordinator.validateFinal(requiredFreshTool, response, successfulToolResults);
+    freshDataFinalValidator.validate(requiredFreshTool, response, successfulToolResults);
     String sanitizedContent = responseSanitizer.sanitize(response.content());
     if (invocation.mode() == AgentInvocationMode.MODERATION) {
       return Result.silent();
