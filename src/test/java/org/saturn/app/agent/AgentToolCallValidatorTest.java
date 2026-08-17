@@ -106,6 +106,44 @@ class AgentToolCallValidatorTest {
   }
 
   @Test
+  void rejectsAClassifiedDescriptorWithAMismatchedToolName() {
+    AgentToolValidatorFixture fixture = new AgentToolValidatorFixture();
+    AgentToolDescriptor descriptor =
+        fixture
+            .validator()
+            .validate(fixture.context(), new LlmToolCall("descriptor", "echo", "{}"), Set.of())
+            .call()
+            .descriptor();
+    AgentToolDescriptor mismatched =
+        new AgentToolDescriptor(
+            "other",
+            descriptor.label(),
+            descriptor.description(),
+            descriptor.category(),
+            descriptor.access(),
+            descriptor.effect(),
+            descriptor.resultMode(),
+            descriptor.parameters(),
+            descriptor.whenToUse(),
+            descriptor.whenNotToUse(),
+            descriptor.examples(),
+            descriptor.requiredCapabilities(),
+            descriptor.requiredSuccessfulTools());
+
+    AgentToolCallValidator.Result result =
+        fixture
+            .validator()
+            .validate(
+                fixture.context(),
+                new LlmToolCall("descriptor-mismatch", "echo", "{}"),
+                Set.of(),
+                mismatched);
+
+    assertFalse(result.isValid());
+    assertEquals("INVALID_TOOL_CONTRACT", result.error().errorCode());
+  }
+
+  @Test
   void canonicalizesNestedObjectKeysWithoutReorderingArrays() {
     AgentToolCallValidator validator =
         new AgentToolCallValidator(new AgentToolRegistry().register(tool("echo")).freeze());
