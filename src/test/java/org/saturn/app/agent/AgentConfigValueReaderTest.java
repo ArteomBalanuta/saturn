@@ -35,6 +35,27 @@ class AgentConfigValueReaderTest {
                 AgentConfigValueReader.readBoolean(
                     null, Map.of("SATURN_ENABLED", "yes"), "enabled", "SATURN_ENABLED", false));
     assertEquals("SATURN_ENABLED must be true or false", exception.getMessage());
+    assertEquals(
+        false,
+        AgentConfigValueReader.readBoolean(
+            null, Map.of("SATURN_ENABLED", " false "), "enabled", "SATURN_ENABLED", true));
+  }
+
+  @Test
+  void rejectsMalformedEnvironmentIntegersAndNonPositiveValues() {
+    IllegalArgumentException integerException =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                AgentConfigValueReader.readLong(
+                    null, Map.of("SATURN_LIMIT", "not-a-number"), "limit", "SATURN_LIMIT", 3));
+    assertEquals("SATURN_LIMIT must be an integer", integerException.getMessage());
+
+    IllegalArgumentException positiveException =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> AgentConfigValueReader.requirePositive(0, "limit"));
+    assertEquals("agent.limit must be positive", positiveException.getMessage());
   }
 
   @Test
