@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -590,6 +591,38 @@ class SaturnAgentToolsTest {
     assertEquals(AgentSqlErrorCode.TIMEOUT.name(), errorCode(executionError));
     assertTrue(policyError.isError());
     assertTrue(executionError.isError());
+  }
+
+  @Test
+  void dynamicSqlToolReturnsStableUnavailableAndRuntimeErrors() {
+    AgentDatabaseSchema schema = new AgentDatabaseSchema(List.of());
+    AgentSqlConfig disabledConfig =
+        new AgentSqlConfig(false, 4_000, 50, 32, 2_000, 32_000, Duration.ofSeconds(1));
+    DatabaseSqlTool disabled =
+        new DatabaseSqlTool(
+            () -> schema,
+            (sql, ignoredSchema) -> new ValidatedAgentSql(sql, "fingerprint"),
+            (sql, ignoredConfig) -> new AgentSqlResult(List.of(), List.of(), false, 0),
+            disabledConfig);
+    AgentSqlConfig enabledConfig = AgentSqlConfig.from(new com.moandjiezana.toml.Toml());
+    DatabaseSqlTool runtimeFailure =
+        new DatabaseSqlTool(
+            () -> schema,
+            (sql, ignoredSchema) -> new ValidatedAgentSql(sql, "fingerprint"),
+            (sql, ignoredConfig) -> {
+              throw new IllegalStateException("internal detail");
+            },
+            enabledConfig);
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("sql", "SELECT 1");
+
+    AgentToolResult unavailable = disabled.execute(adminContext(), arguments);
+    AgentToolResult failed = runtimeFailure.execute(adminContext(), arguments);
+
+    assertTrue(unavailable.isError());
+    assertEquals("Tool is unavailable for this caller", unavailable.content());
+    assertTrue(failed.isError());
+    assertEquals(AgentSqlErrorCode.EXECUTION_FAILED.name(), errorCode(failed));
   }
 
   private AgentContext context() {
