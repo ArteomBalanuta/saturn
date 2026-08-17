@@ -625,6 +625,50 @@ class SaturnAgentToolsTest {
     assertEquals(AgentSqlErrorCode.EXECUTION_FAILED.name(), errorCode(failed));
   }
 
+  @Test
+  void dynamicSqlToolMapsPolicyCodesToSafeMessagesAndRejectsNullContext() {
+    AgentDatabaseSchema schema = new AgentDatabaseSchema(List.of());
+    AgentSqlConfig config = AgentSqlConfig.from(new com.moandjiezana.toml.Toml());
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("sql", "SELECT 1");
+
+    assertFalse(
+        new DatabaseSqlTool(
+                () -> schema,
+                (sql, ignoredSchema) -> new ValidatedAgentSql(sql, "fingerprint"),
+                (sql, ignoredConfig) -> new AgentSqlResult(List.of(), List.of(), false, 0),
+                config)
+            .isAvailableTo(null));
+
+    for (var entry :
+        List.of(
+            new Object[] {AgentSqlErrorCode.SQL_TOO_LONG, "SQL exceeds the configured limit"},
+            new Object[] {AgentSqlErrorCode.MALFORMED_SQL, "SQL could not be parsed"},
+            new Object[] {
+              AgentSqlErrorCode.FORBIDDEN_STATEMENT, "Only one read-only SELECT is allowed"
+            },
+            new Object[] {
+              AgentSqlErrorCode.FORBIDDEN_FUNCTION, "SQL references a forbidden function"
+            },
+            new Object[] {
+              AgentSqlErrorCode.RESULT_TOO_LARGE, "SQL output exceeded a configured limit"
+            })) {
+      DatabaseSqlTool tool =
+          new DatabaseSqlTool(
+              () -> schema,
+              (sql, ignoredSchema) -> {
+                throw new AgentSqlPolicyException((AgentSqlErrorCode) entry[0], "internal detail");
+              },
+              (sql, ignoredConfig) -> new AgentSqlResult(List.of(), List.of(), false, 0),
+              config);
+
+      AgentToolResult result = tool.execute(adminContext(), arguments);
+
+      assertEquals(entry[0].toString(), errorCode(result));
+      assertTrue(result.content().contains((String) entry[1]));
+    }
+  }
+
   private AgentContext context() {
     return new AgentContext(
         "programming", "alice", "trip-a", "hash-a", false, List.of("alice", "bob"));
