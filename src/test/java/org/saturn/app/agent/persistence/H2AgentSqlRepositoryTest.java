@@ -204,6 +204,21 @@ class H2AgentSqlRepositoryTest {
   }
 
   @Test
+  void normalizesNarrowIntegerTypesAndBoundsBase64ToTheCellLimit() {
+    AgentSqlResult result =
+        repository.execute(
+            sql(
+                "SELECT CAST(7 AS TINYINT), CAST(8 AS SMALLINT), "
+                    + "CAST(X'00FF10203040' AS VARBINARY)"),
+            config(50, 32, 1, 32_000, Duration.ofSeconds(1)));
+
+    assertEquals(7L, result.rows().getFirst().get(0));
+    assertEquals(8L, result.rows().getFirst().get(1));
+    assertEquals("", result.rows().getFirst().get(2));
+    assertTrue(result.truncated());
+  }
+
+  @Test
   void interruptsQueryAfterConfiguredDeadline() {
     String expensiveQuery =
         """
