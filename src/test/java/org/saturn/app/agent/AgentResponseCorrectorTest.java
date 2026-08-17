@@ -159,4 +159,19 @@ class AgentResponseCorrectorTest {
   void treatsNullFailurePlaceholderResponsesAsOrdinaryResponses() {
     assertFalse(AgentResponseCorrector.isFailurePlaceholder(null));
   }
+
+  @Test
+  void leavesEmptyAndBlankActionClaimsUnchanged() throws Exception {
+    AgentResponseCorrector corrector =
+        new AgentResponseCorrector(request -> new LlmResponse("unexpected", List.of(), "stop"));
+
+    assertEquals(
+        new LlmResponse("", List.of(), "stop"),
+        corrector.correctUnverifiedActionClaim(
+            new LlmResponse("", List.of(), "stop"), new ArrayList<>(), List.of(), "request-1"));
+    assertEquals(
+        new LlmResponse("   ", List.of(), "stop"),
+        corrector.correctUnverifiedActionClaim(
+            new LlmResponse("   ", List.of(), "stop"), new ArrayList<>(), List.of(), "request-1"));
+  }
 }
