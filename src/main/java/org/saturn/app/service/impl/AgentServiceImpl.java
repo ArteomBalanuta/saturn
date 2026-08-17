@@ -180,7 +180,7 @@ public final class AgentServiceImpl implements AgentService {
 
   private void update(AgentInvocation invocation, String content) {
     try {
-      outService.updateAgentMessage("complete", content, invocation.requestId());
+      outService.updateAgentMessage("overwrite", content, invocation.requestId());
       replyFlusher.run();
     } catch (RuntimeException exception) {
       log.error("Agent reply update failed, requestId={}", invocation.requestId(), exception);

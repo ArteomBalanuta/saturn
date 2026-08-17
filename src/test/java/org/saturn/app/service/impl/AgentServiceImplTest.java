@@ -142,7 +142,7 @@ class AgentServiceImplTest {
       assertEquals("chat", initial.get("cmd").getAsString());
       assertEquals("request-123456789", initial.get("customId").getAsString());
       assertEquals("updateMessage", update.get("cmd").getAsString());
-      assertEquals("complete", update.get("mode").getAsString());
+      assertEquals("overwrite", update.get("mode").getAsString());
       assertEquals("request-123456789", update.get("customId").getAsString());
       assertTrue(update.get("text").getAsString().contains("completed: answer"));
     } finally {
@@ -174,7 +174,7 @@ class AgentServiceImplTest {
       var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
       var update = JsonParser.parseString(raw.take()).getAsJsonObject();
       assertEquals("request-failure-123", initial.get("customId").getAsString());
-      assertEquals("complete", update.get("mode").getAsString());
+      assertEquals("overwrite", update.get("mode").getAsString());
       assertEquals("request-failure-123", update.get("customId").getAsString());
       assertTrue(update.get("text").getAsString().contains("could not answer"));
     } finally {
