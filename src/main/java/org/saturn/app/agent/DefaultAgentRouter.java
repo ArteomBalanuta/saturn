@@ -71,6 +71,7 @@ public final class DefaultAgentRouter implements AgentRouter {
     this.turnPolicyChain =
         new AgentTurnPolicyChain(
             List.of(
+                new AgentFreshDataTurnPolicy(),
                 new AgentUnverifiedActionPolicy(responseCorrector),
                 new AgentCommandChannelPolicy(client)));
     this.freshDataCoordinator = new AgentFreshDataCoordinator(client, freshDataPolicy);
@@ -154,22 +155,20 @@ public final class DefaultAgentRouter implements AgentRouter {
         if (freshDataResult.restartLoop()) {
           continue;
         }
-        if (requiredFreshTool.isEmpty()
-            || turnState.hasSuccessfulTool(requiredFreshTool.orElseThrow())) {
-          AgentTurnPolicyResult guarded =
-              turnPolicyChain.apply(
-                  new AgentTurnPolicyInput(
-                      response,
-                      messages,
-                      definitions,
-                      commandProseGuard,
-                      turnState,
-                      invocation.prompt(),
-                      correlationId));
-          response = guarded.response();
-          if (guarded.correctionUsed()) {
-            turnState.markCommandCorrectionUsed();
-          }
+        AgentTurnPolicyResult guarded =
+            turnPolicyChain.apply(
+                new AgentTurnPolicyInput(
+                    response,
+                    messages,
+                    definitions,
+                    commandProseGuard,
+                    turnState,
+                    invocation.prompt(),
+                    correlationId,
+                    requiredFreshTool));
+        response = guarded.response();
+        if (guarded.correctionUsed()) {
+          turnState.markCommandCorrectionUsed();
         }
 
         if (response.toolCalls().isEmpty()) {

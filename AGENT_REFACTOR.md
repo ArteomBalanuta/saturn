@@ -33,6 +33,7 @@ completed stages.
 | Session locking | `AgentSessionLockManager` | Fair striped locking and unlock lifecycle for shared memory keys. |
 | Tool-result rendering | `AgentModelVisibleToolResultRenderer` | Converts executed tool outcomes into model-visible envelopes, including room-delivery results. |
 | Fresh-data final validation | `AgentFreshDataFinalValidator` | Validates that required fresh-data evidence is present before response finalization. |
+| Fresh-data policy gating | `AgentFreshDataTurnPolicy` | Stops later response policies until the required fresh-data tool has succeeded. |
 | Tool scheduling | `AgentToolCallScheduler` | Sequential barriers plus ordered fan-out for contiguous safe read calls. |
 | Response recovery | `AgentResponseCorrector` | Bounded recovery from failure placeholders and narrated, unverified actions. |
 | Configuration values | `AgentConfigValueReader` | Shared TOML/environment scalar parsing and checked numeric conversion for agent configuration records. |
@@ -76,13 +77,13 @@ implementations for required fresh tool output and fresh user-history synthesis.
 
 ### 2. Extract Router Turn Policies
 
-**Status: in progress.** `AgentCommandChannelPolicy`, `AgentFreshDataPolicy`,
+**Status: completed.** `AgentCommandChannelPolicy`, `AgentFreshDataPolicy`,
 `AgentToolBudgetPolicy`, `AgentResponseCorrector`, and `AgentTurnState` isolate command correction,
 fresh evidence, budget exhaustion, response recovery, and mutable turn state. `AgentTurnPolicyChain`
-now owns deterministic policy ordering and response propagation; it applies unverified-action
-correction before command-channel enforcement. Fresh-data and other response policies remain next
-candidates. The router retains explicit policy order because provider calls and observations belong to
-one stateful session loop.
+now owns deterministic policy ordering, response propagation, and explicit short-circuiting. It
+applies `AgentFreshDataTurnPolicy`, unverified-action correction, and command-channel enforcement in
+that order. The router no longer owns the fresh-evidence gate, while provider calls, tool execution,
+and observations remain in one stateful session loop.
 
 **Problem:** `DefaultAgentRouter.routeInSession` contains routing, tool-loop progression,
 fresh-data enforcement, command prose correction, response finalization, and persistence. It is
@@ -281,6 +282,9 @@ After repository-query edge-case coverage, the measured baseline is 90.18% line,
 90.23% instruction, 94.74% method, and 71.25% complexity coverage.
 After provider transport and payload edge-case coverage, the measured baseline is 90.73% line,
 74.89% branch, 90.79% instruction, 95.05% method, and 71.83% complexity coverage.
+After the completed policy-chain extraction and all subsequent behavioral coverage, a clean full
+verification measures 98.35% line, 87.07% branch, 98.12% instruction, 97.67% method, and 84.97%
+complexity coverage across `org.saturn.app.agent` and its subpackages. This remains report-only.
 
 The remaining low-coverage paths in `AgentPromptCatalog` and `H2AgentSqlRepository` are
 intentional exclusions from percentage-driven test work unless a production defect makes them
@@ -289,6 +293,14 @@ non-object tool-copy shape that cannot occur with the versioned `agent/tool-copy
 H2 repository misses are JDBC-driver-dependent result states and defensive Base64-boundary loops
 that valid configured limits do not reach. Production behavior is preserved; these paths are
 documented rather than covered with artificial fixtures.
+
+`SaturnCommandToolCatalog` has the largest remaining line gap after the completed policy-chain
+work, but its misses are also defensive reflection failures: duplicate generated tool names,
+annotated classes that do not implement `UserCommand`, empty or missing alias metadata, and class
+loading exception translation. The live-catalog test already proves complete annotated-command
+discovery, unique names, nonempty aliases, closed schemas, and argument rendering. These failure
+paths require synthetic classpath manipulation and are intentionally excluded unless a real command
+contract makes one observable.
 
 **Acceptance criteria:**
 

@@ -16,9 +16,11 @@ final class AgentTurnPolicyChain implements AgentTurnPolicy {
       throws AgentRoutingException, org.saturn.app.agent.llm.LlmException {
     AgentTurnPolicyInput current = input;
     boolean correctionUsed = false;
+    boolean continuePolicyEvaluation = true;
     for (AgentTurnPolicy policy : policies) {
       AgentTurnPolicyResult result = policy.apply(current);
       correctionUsed |= result.correctionUsed();
+      continuePolicyEvaluation = result.continuePolicyEvaluation();
       current =
           new AgentTurnPolicyInput(
               result.response(),
@@ -27,8 +29,12 @@ final class AgentTurnPolicyChain implements AgentTurnPolicy {
               current.commandProseGuard(),
               current.turnState(),
               current.prompt(),
-              current.correlationId());
+              current.correlationId(),
+              current.requiredFreshTool());
+      if (!result.continuePolicyEvaluation()) {
+        break;
+      }
     }
-    return new AgentTurnPolicyResult(current.response(), correctionUsed);
+    return new AgentTurnPolicyResult(current.response(), correctionUsed, continuePolicyEvaluation);
   }
 }

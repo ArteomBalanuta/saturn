@@ -36,9 +36,11 @@ the final response boundary rejects a repeated evidence envelope before room del
 `AgentTurnState` owns request-local bounds; `AgentResponseSanitizer` owns presentation.
 
 `AgentTurnPolicy` is the package-private boundary for ordered response enforcement. The router
-currently injects `AgentCommandChannelPolicy` through this interface; immutable
-`AgentTurnPolicyInput` and `AgentTurnPolicyResult` values make policy inputs and correction outcomes
-explicit without allowing a policy to execute tools or persist memory.
+injects `AgentFreshDataTurnPolicy`, `AgentUnverifiedActionPolicy`, and
+`AgentCommandChannelPolicy` in that order. Immutable `AgentTurnPolicyInput` and
+`AgentTurnPolicyResult` values make policy inputs, short-circuit decisions, and correction outcomes
+explicit without allowing a policy to execute tools or persist memory. The fresh-data gate stops
+later policies until the required tool succeeds.
 `AgentToolBudgetPolicy` separately owns tool-call reservation and the deterministic transition to a
 single no-tools finalization when the per-turn budget is exhausted.
 

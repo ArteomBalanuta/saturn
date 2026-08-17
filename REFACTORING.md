@@ -37,7 +37,9 @@ and accumulated evidence. Splitting it into independently stateful handlers woul
 ordering guarantees. The extracted collaborators keep the loop focused on that single job.
 
 `AgentCommandChannelPolicy` owns structured command correction, `AgentFreshDataPolicy` validates
-required lookup targets and evidence, and `AgentTurnState` owns request-local facts.
+required lookup targets and evidence, and `AgentTurnState` owns request-local facts. The ordered
+`AgentTurnPolicyChain` applies the fresh-data gate, unverified-action correction, and command-channel
+enforcement; it short-circuits later policies until required fresh-tool evidence exists.
 
 ## Tool Execution Pipeline
 
