@@ -125,6 +125,25 @@ class RoomModerationMonitorTest {
   }
 
   @Test
+  void allowsCaptchaAgainAfterTheActionCooldownExpires() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
+    RoomModerationMonitor monitor =
+        new RoomModerationMonitor(AgentModerationConfig.from(new Toml()), clock);
+    List<ModerationDecision> decisions = new ArrayList<>();
+
+    for (int wave = 0; wave < 2; wave++) {
+      for (int index = 0; index < 5; index++) {
+        decisions.addAll(
+            monitor.onJoin(user("cooldown" + wave + "raid00" + index, null, "hash-" + wave)));
+      }
+      clock.advance(Duration.ofSeconds(31));
+    }
+
+    assertEquals(
+        2, decisions.stream().filter(d -> d.action() == ModerationAction.CAPTCHA_ON).count());
+  }
+
+  @Test
   void ignoresEmptyMessagesAndDisabledMonitoring() {
     MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
     RoomModerationMonitor monitor =
