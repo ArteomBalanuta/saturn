@@ -49,6 +49,44 @@ class AgentToolSchemaValidatorTest {
   }
 
   @Test
+  void rejectsNonObjectRootsAndInvalidPrimitiveArgumentTypes() {
+    JsonObject nonObjectRoot = new JsonObject();
+    nonObjectRoot.addProperty("type", "string");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonObjectRoot));
+
+    JsonObject nonPrimitiveResultType = new JsonObject();
+    nonPrimitiveResultType.add("type", new JsonArray());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(nonPrimitiveResultType));
+
+    JsonObject schema = objectSchema();
+    JsonObject properties = new JsonObject();
+    properties.add("text", typedProperty("string"));
+    properties.add("flag", typedProperty("boolean"));
+    properties.add("count", typedProperty("number"));
+    schema.add("properties", properties);
+
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("text", 1);
+    assertEquals(
+        "Invalid type for parameter: text",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("text", "ok");
+    arguments.addProperty("flag", "yes");
+    assertEquals(
+        "Invalid type for parameter: flag",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("flag", true);
+    arguments.addProperty("count", false);
+    assertEquals(
+        "Invalid type for parameter: count",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+  }
+
+  @Test
   void rejectsMalformedRequiredDeclarations() {
     JsonObject nonArray = objectSchema();
     nonArray.addProperty("required", "value");
