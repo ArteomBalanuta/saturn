@@ -280,6 +280,14 @@ After repository-query edge-case coverage, the measured baseline is 90.18% line,
 After provider transport and payload edge-case coverage, the measured baseline is 90.73% line,
 74.89% branch, 90.79% instruction, 95.05% method, and 71.83% complexity coverage.
 
+The remaining low-coverage paths in `AgentPromptCatalog` and `H2AgentSqlRepository` are
+intentional exclusions from percentage-driven test work unless a production defect makes them
+observable. Prompt-catalog misses are malformed or unreadable classpath-resource paths and a
+non-object tool-copy shape that cannot occur with the versioned `agent/tool-copy.json` resource.
+H2 repository misses are JDBC-driver-dependent result states and defensive Base64-boundary loops
+that valid configured limits do not reach. Production behavior is preserved; these paths are
+documented rather than covered with artificial fixtures.
+
 **Acceptance criteria:**
 
 - A malformed tool contract fails during registration/freeze rather than in a live agent turn.
