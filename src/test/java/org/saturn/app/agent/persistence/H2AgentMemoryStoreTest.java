@@ -1,6 +1,7 @@
 package org.saturn.app.agent.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -154,6 +155,25 @@ class H2AgentMemoryStoreTest {
     assertEquals(
         List.of("private question", "private answer"),
         store.load(privateRoom, config).stream().map(message -> message.content()).toList());
+  }
+
+  @Test
+  void wrapsLoadSqlFailuresWithoutDiscardingTheDatabaseCause() throws Exception {
+    try (var connection = H2Database.open(database.toString());
+        var statement = connection.createStatement()) {
+      statement.executeUpdate("ALTER TABLE agent_memory RENAME COLUMN content TO content_bad");
+    }
+    H2AgentMemoryStore store =
+        new H2AgentMemoryStore(
+            database.toString(), Clock.fixed(Instant.ofEpochSecond(100), ZoneOffset.UTC));
+
+    AgentPersistenceException exception =
+        assertThrows(
+            AgentPersistenceException.class,
+            () -> store.load(context("alice", "trip-a"), config(2, Duration.ofHours(1))));
+
+    assertTrue(exception.getMessage().startsWith("Agent memory load failed"));
+    assertTrue(exception.getCause() instanceof java.sql.SQLException);
   }
 
   private AgentContext context(String nick, String trip) {
