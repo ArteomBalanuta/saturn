@@ -137,6 +137,10 @@ For production, choose one of these supported paths:
 
 ### Vaelen Agent
 
+Maintainers should start with [`AGENTIC_ARCHITECTURE.md`](AGENTIC_ARCHITECTURE.md) for the package
+map, end-to-end request lifecycle, extension workflow, focused tests, and troubleshooting. The
+section below describes operator-visible behavior and deployment constraints.
+
 ```text
 *l how many users are in the room right now?
 @alphaBot can you check what sun discussed recently?
@@ -150,16 +154,18 @@ produces no acknowledgement and suppresses ambient replies to that user in that 
 The agent can inspect live users in any Saturn-managed room, retrieve bounded public message history
 for a named user across all rooms or within one named room (up to 500 messages), and run named
 read-only database queries.
-Public direct, mention, and ambient turns automatically receive the latest 60 public messages from
-their room.
-Informational Saturn commands are available to all agent callers. Trusted creator trip `595754`
-also receives captcha, mute, kick, shadow-ban, and direct permanent-ban commands. Recursive `l`, raw
-SQL commands, shutdown, unban-all, and unrelated admin commands are never exposed.
+By default, public direct, mention, and ambient turns automatically receive the latest 20 public
+messages from their room; `agent.contextMessageLimit` can change that bound.
+Informational Saturn commands are available to all agent callers. The configured creator, configured
+admin trips, persisted admins, and persisted moderators receive moderation commands when their
+invocation mode is eligible. Only a direct creator invocation receives permanent-ban and admin
+commands. Recursive `l`, raw SQL commands, shutdown, unban-all, and unrelated admin commands are
+never exposed.
 
 Public conversation memory is shared by everyone in the same room, so another participant can
-continue an earlier exchange. Each room uses one FIFO agent worker so routing and replies preserve
-submission order. Whispers use private per-user memory and are never added to the public room
-session. Rooms remain separate, and memory expires according to the configured TTL.
+continue an earlier exchange. Each engine has one FIFO agent worker, so accepted work across its
+rooms is serialized in submission order. Whispers use private per-user memory and are never added to
+the public room session. Rooms remain separate, and memory expires according to the configured TTL.
 
 New message audit rows carry an explicit `PUBLIC` or `WHISPER` visibility. Regular agent history
 tools only read `PUBLIC` rows. Existing rows from before this migration remain unclassified and are
@@ -170,8 +176,8 @@ fallback. The agent must inspect the schema first and may then run one bounded, 
 `SELECT` on a dedicated read-only H2 connection. This admin capability can read every Saturn
 application table and column, including cross-room messages, trip/hash identity data, mail, notes,
 moderation data, command history, agent memory, whispers, and unclassified legacy message rows.
-database metadata tables, writes, schema changes, and administrative statements
-remain blocked. Logs contain only a query fingerprint, duration, row count, and outcome; raw
+Database metadata tables, writes, schema changes, and administrative statements remain blocked.
+Logs contain only a query fingerprint, duration, row count, and outcome; raw
 generated SQL is not logged.
 
 ### Autonomous Moderation

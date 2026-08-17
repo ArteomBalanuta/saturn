@@ -1,16 +1,17 @@
-# Tool Routing Architecture
+# Tool routing architecture
 
 > This is the concise execution-policy reference. See `AGENTIC_ARCHITECTURE.md` for the complete
-> component, context, and tool-contract guide.
+> request lifecycle, component map, extension workflow, and troubleshooting guide. The completed
+> refactor history lives in `AGENT_REFACTOR.md` and is not repeated here.
 
-## Planning Boundary
+## Planning boundary
 
 Saturn uses the provider's existing array of function calls as one planning turn. The system policy
 asks the model to decompose compound requests, emit independent lookups together, observe all
 results, then request dependent work on a later turn. This removes unnecessary LLM round trips
 without exposing hidden reasoning or adding a separate planner protocol.
 
-## Tool Contract Rules
+## Tool contract rules
 
 Every `AgentToolDescriptor` publishes its JSON parameter schema, examples, negative guidance,
 effect, result mode, timeout, prerequisites, `read_only`, and `idempotent` metadata. `read_only`
@@ -22,15 +23,18 @@ tools. Weather and time are not treated as read-only because command execution c
 output. Database SQL also remains ordered because its contract requires a successful schema
 inspection first.
 
-## Execution Pipeline
+## Execution pipeline
 
 1. `DefaultAgentRouter` receives an LLM response containing zero or more tool calls.
-2. `AgentToolCallValidator` resolves contextual contracts and validates parameters.
-3. `AgentToolExecutionLedger` reserves invocation keys and checks limits and prerequisites.
-4. `AgentToolExecutor.executeAll` delegates batching to `AgentToolCallScheduler`.
-5. A batch fans out only when every call is read-only, idempotent, and has no prerequisite.
-6. All other calls execute one at a time in the original LLM order.
-7. Results are collected in original call order and serialized as `ToolResponseEnvelope`
+2. `AgentToolExecutor.executeAll` resolves each currently available tool, materializes its contextual
+   descriptor, and classifies the complete provider batch.
+3. `AgentToolCallScheduler` forms sequential calls and contiguous parallel-read batches. A batch
+   fans out only when every call is read-only, idempotent, and has no prerequisite.
+4. Inside each scheduled callback, `AgentToolCallValidator` validates the contextual contract and
+   arguments before `AgentToolExecutionLedger` checks prerequisites and reserves the invocation key.
+5. Validated calls execute under their timeout; result schemas and accounting are applied before the
+   callback returns.
+6. Results are collected in original call order and serialized as `ToolResponseEnvelope`
    observations before the next LLM turn.
 
 This preserves command ordering. A sequence of `room_users`, `room_users`, and `run_command`
@@ -38,7 +42,7 @@ may run the two room lookups concurrently, but `run_command` starts only after b
 complete. A sequence containing `run_command`, `room_users`, and `room_users` runs the command
 first, then fans out the two read-only lookups.
 
-## Safety Bounds
+## Safety bounds
 
 The router enforces `maxSteps` and `maxToolCallsPerTurn`. The executor validates arguments before
 dispatch, applies each tool's timeout, deduplicates in-flight and completed calls, validates result

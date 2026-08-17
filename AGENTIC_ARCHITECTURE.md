@@ -1,6 +1,6 @@
-# Saturn Agentic Architecture
+# Saturn agent architecture
 
-## Executive Overview
+## Purpose and document map
 
 Saturn's agentic layer turns direct `*l` requests, exact mentions, approved ambient turns, and
 autonomous moderation signals into bounded OpenAI-compatible tool-calling sessions. It orchestrates
@@ -14,9 +14,92 @@ monitoring in `agent.moderation`. `AgentRuntimeFactory` constructs the runtime.
 The provider selects from advertised tools. Saturn remains authoritative for capability checks,
 schema validation, ordering, timeouts, result validation, room delivery, and persistence.
 
-## Core Components
+Use this file as the current maintainer guide. The other agent documents have narrower roles:
 
-### Router And Planning
+| Document | Use it for |
+| --- | --- |
+| [`README.md`](README.md#vaelen-agent) | Operator setup, user-visible capabilities, and deployment. |
+| [`TOOL_ROUTING_ARCHITECTURE.md`](TOOL_ROUTING_ARCHITECTURE.md) | The concise tool classification, batching, and ordering rules. |
+| [`REFACTORING.md`](REFACTORING.md) | A compact summary of the implemented responsibility boundaries. |
+| [`AGENT_REFACTOR.md`](AGENT_REFACTOR.md) | The completed refactor plan, acceptance evidence, coverage history, and intentional exclusions. |
+
+## Package map
+
+| Location | Responsibility |
+| --- | --- |
+| `org.saturn.app.agent` | Public contracts, immutable request models, configuration, runtime composition, routing policies, and the tool-execution facade. |
+| `org.saturn.app.agent.llm` | Provider-neutral request/response records and the OpenAI-compatible HTTP client. |
+| `org.saturn.app.agent.tool` | Built-in tools, Saturn command adapters, contextual command discovery, and engine-backed room access. |
+| `org.saturn.app.agent.persistence` | H2 memory, named-query, schema, and generated-SQL repositories. |
+| `org.saturn.app.agent.sql` | AST validation and the read-only generated-SQL policy. |
+| `org.saturn.app.agent.moderation` | Deterministic moderation detection and approved action execution. |
+| `org.saturn.app.service.impl.AgentServiceImpl` | Asynchronous admission, request execution, progress updates, output delivery, and shutdown. |
+| `src/main/resources/agent` | Versioned system prompts, correction prompts, and tool-facing copy. |
+
+Keep orchestration in the root package. Put transport, persistence, SQL parsing, moderation, and
+concrete tool behavior in their existing subpackages rather than creating another parallel runtime.
+
+## End-to-end request path
+
+There are two command/event ingress paths:
+
+- Public `*l` messages pass through `UserMessageListenerImpl`, command dispatch, and
+  `LUserCommandImpl`. Whispered `*l` messages are converted by the whisper dispatch path before they
+  reach the same command. `LUserCommandImpl` creates a `DIRECT` invocation and submits it to
+  `AgentService`.
+- Eligible public messages pass from `UserMessageListenerImpl` through `AgentParticipationHandler`
+  to `AgentRoomMessagePipeline`. The pipeline creates `MENTION` and `AMBIENT` invocations after
+  deterministic moderation and eligibility checks. A bounded semantic-abuse candidate creates a
+  separate `MODERATION` invocation with the bot's moderation context.
+
+`AgentInvocationFactory` snapshots the room, caller identity, whisper state, live room users, and
+trusted capabilities for direct, mention, and ambient work. Non-creator ambient turns do not inherit
+role-derived dynamic-SQL or moderation capabilities. The configured creator retains those
+capabilities, but creator-only permanent-ban and admin commands require a `DIRECT` invocation.
+
+| Mode | Source | Reply contract |
+| --- | --- | --- |
+| `DIRECT` | `*l <prompt>` | A user-visible reply is required. |
+| `MENTION` | Exact public `@<bot-nick>` mention | A user-visible reply is required. |
+| `AMBIENT` | Sampled eligible public room message | No acknowledgement is required; the model may return the configured no-reply marker. Only the newest pending ambient invocation is retained while ambient work is queued. |
+| `MODERATION` | Semantic moderation candidate | The conversational result is always silent. Approved command side effects are flushed separately. |
+
+```mermaid
+flowchart LR
+    C[LUserCommandImpl] --> I[AgentInvocationFactory]
+    M[AgentRoomMessagePipeline] --> I
+    I --> S[AgentServiceImpl]
+    S --> R[DefaultAgentRouter]
+    R --> P[LLM client]
+    R --> E[AgentToolExecutor]
+    E --> T[Saturn tools and repositories]
+    R --> D[AgentResult]
+    D --> S
+    S --> O[OutService and WebSocket queues]
+```
+
+## Runtime components
+
+### Service admission and output
+
+Each `AgentServiceImpl` owns one single-thread virtual-thread executor, so accepted turns for that
+engine run in submission order. A semaphore limits accepted non-ambient work, including the active
+turn and queued turns. Rejected direct or mention requests receive stable disabled, shutdown, busy,
+or acceptance-failure messages. Ambient work uses a separate latest-value slot: repeated ambient
+submissions coalesce instead of consuming the non-ambient admission budget.
+
+Direct and mention turns initially enqueue one loading message with a request-local, numeric-looking
+string `customId`. When raw WebSocket updates are available, a 500 ms Braille animation overwrites
+that message and the terminal success or stable failure reuses the same ID. The final success text
+mentions the invoker. Queue-only output disables animation because it cannot overwrite an existing
+message; it falls back to ordinary chat messages. Ambient and moderation modes do not emit loading
+or animation messages.
+
+`close()` marks the service unavailable, drops pending ambient work, and closes both executors.
+Admission permits are released in `finally`, including routing failures. Public errors stay stable;
+request IDs, exception types, and causes remain in logs.
+
+### Router and planning
 
 `DefaultAgentRouter` implements `AgentRouter` and owns a complete agent turn.
 
@@ -27,12 +110,12 @@ schema validation, ordering, timeouts, result validation, room delivery, and per
 3. The provider may return zero, one, or many function calls in one response. The system policy
    asks it to decompose compound requests and emit independent lookups together.
 4. The router adds results as tool observations, requests the next action or final synthesis, and
-   persists successful public replies and tool evidence.
+   persists every non-silent finalized turn. Public and whisper turns use separate memory keys.
 
 `AgentFreshDataPolicy`, `AgentCommandChannelPolicy`, and `AgentResponseCorrector` enforce fresh
 grounding, structured commands, stale-response recovery, internal evidence isolation, and truthful
-action claims. Persisted tool evidence is supplied as system context rather than assistant speech;
-the final response boundary rejects a repeated evidence envelope before room delivery.
+action claims. Reusable `MODEL_DATA` evidence is supplied as system context rather than assistant
+speech; the final response boundary rejects a repeated evidence envelope before room delivery.
 `AgentTurnState` owns request-local bounds; `AgentResponseSanitizer` owns presentation.
 
 `AgentTurnPolicy` is the package-private boundary for ordered response enforcement. The router
@@ -44,22 +127,44 @@ later policies until the required tool succeeds.
 `AgentToolBudgetPolicy` separately owns tool-call reservation and the deterministic transition to a
 single no-tools finalization when the per-turn budget is exhausted.
 
-### Execution Engine
+### Session identity and persistence
 
-`AgentToolExecutor` is created and closed per routed request. `AgentToolCallValidator` resolves
-contextual contracts into immutable `ValidatedToolCall` values. `AgentToolExecutionLedger` owns
-completed and in-flight keys, limits, failures, disabled tools, and prerequisites.
-`AgentToolInvoker` owns timeout-bound virtual-thread execution, while `AgentToolCallScheduler`
-owns ordered selective fan-out.
+`AgentContext.memoryKey()` defines serialization and memory scope. Public turns use
+`<length>:<room>|public`, so everyone in one room shares ordered memory. Whisper turns use the same
+room prefix plus the strongest available private identity: trip, then hash, then nick. The
+length-prefixed room component prevents ambiguous concatenations.
 
-For each call the facade validates, reserves, invokes, validates the result schema, and records the
-outcome. Malformed arguments, timeouts, and tool exceptions become coded observations rather than
-crashing the router.
-Closing the request-local executor invokes `shutdownNow()` on both scheduling and invocation
-executors, interrupting in-flight tool work; `AgentToolExecutorTest` locks this cancellation
-contract down.
+`AgentSessionLockManager` maps each key onto one of 64 fair striped locks. Requests sharing a key
+always serialize; unrelated keys can also serialize when their hashes select the same stripe.
+Different stripes may route concurrently when callers use the router outside the single-engine
+service executor. Whisper turns do not load public room context. Public context loading is
+best-effort; memory loading and final memory writes are required boundaries and become stable
+routing errors on failure.
 
-### Room Automation And Composition
+`AgentTurnMemory` loads bounded history before request assembly and removes legacy persona turns.
+After final validation, the router appends the user/assistant pair first and reusable tool evidence
+second. Silent results return before either write. A conversation append failure prevents evidence
+persistence; an evidence append failure can occur after the conversation pair was stored. Only pure
+`MODEL_DATA` results cross turns. Results that delivered room actions, including
+`ROOM_DELIVERY_AND_MODEL_DATA`, are neither persisted nor included in later provider requests.
+Existing unknown or malformed internal evidence also fails closed during request assembly.
+
+### Execution engine
+
+`AgentToolExecutor` is created and closed per routed request. It first resolves and classifies every
+call in the provider batch. `AgentToolCallScheduler` then forms sequential calls and contiguous
+parallel-read batches. Inside each scheduled callback, `AgentToolCallValidator` resolves the
+contextual contract into an immutable `ValidatedToolCall`; `AgentToolExecutionLedger` checks
+prerequisites and owns reservations, completed and in-flight keys, limits, failures, and disabled
+tools. Result schemas are validated before outcomes are recorded.
+
+The scheduler and `AgentToolInvoker` share one request-scoped thread-per-task virtual-thread
+executor. The scheduler owns batching and ordered collection but does not own the injected executor;
+the invoker applies timeouts and shuts the shared executor down when the facade closes. Malformed
+arguments, timeouts, and tool exceptions become coded observations rather than crashing the router.
+`AgentToolExecutorTest` covers cancellation of in-flight work.
+
+### Room automation and composition
 
 `AgentRoomMessagePipeline` applies deterministic moderation, eligibility filtering, quiet requests,
 mentions, semantic moderation, and ambient participation in a fixed order.
@@ -93,9 +198,11 @@ response parsing behavior remains provider-specific and directly tested.
 | Environment variable | Overrides |
 | --- | --- |
 | `SATURN_AGENT_ENABLED`, `SATURN_AGENT_ENDPOINT`, `SATURN_AGENT_MODEL` | Agent activation and provider selection. |
+| `SATURN_AGENT_API_KEY_ENV` | The name of the environment variable that contains the bearer token. |
 | `SATURN_AGENT_API_KEY` | Bearer token named by `apiKeyEnv`. |
 | `SATURN_AGENT_TIMEOUT_SECONDS`, `SATURN_AGENT_MAX_COMPLETION_TOKENS`, `SATURN_AGENT_THINKING_ENABLED` | Provider request behavior. |
 | `SATURN_AGENT_MAX_STEPS`, `SATURN_AGENT_MAX_TOOL_CALLS_PER_TURN`, `SATURN_AGENT_MAX_CALLS_PER_TOOL`, `SATURN_AGENT_MAX_TOOL_FAILURES`, `SATURN_AGENT_TOOL_TIMEOUT_MILLIS` | Bounded execution behavior. |
+| `SATURN_AGENT_MAX_TOOL_CALLS` | Legacy alias and fallback for the per-turn tool-call budget. |
 | `SATURN_AGENT_MAX_CONCURRENT_REQUESTS`, `SATURN_AGENT_MAX_PROMPT_CHARS`, `SATURN_AGENT_MAX_OUTPUT_CHARS`, `SATURN_AGENT_MEMORY_TURNS`, `SATURN_AGENT_MEMORY_TTL_HOURS`, `SATURN_AGENT_MAX_RETRIES`, `SATURN_AGENT_RETRY_BACKOFF_MILLIS` | Queue, payload, memory, and retry limits. |
 | `SATURN_AGENT_DYNAMIC_SQL_*` | Dynamic-SQL enablement and every SQL size/time bound. |
 
@@ -103,7 +210,7 @@ Use [`.env.example`](.env.example) as the complete sanitized template. The conse
 are five model/tool steps and a 10-second tool timeout. `AgentSqlConfig` applies the same
 environment-first pattern to dynamic-SQL limits.
 
-### Tool Contracts And Metadata
+### Tool contracts and metadata
 
 Every `AgentTool` publishes an `AgentToolDescriptor`; `AgentToolDefinitionFactory` serializes it
 as an OpenAI function definition. The descriptor includes stable identity, capability/access
@@ -141,28 +248,28 @@ is always one of:
 {"status":"error","data":null,"error":{"code":"...","message":"..."}}
 ```
 
-## Tool Execution Policy
+## Tool execution policy
 
-### Sequential First
+### Sequential first
 
 Side effects and ordering are Saturn's default. `run_command` always runs sequentially, including
 weather and time, because commands may deliver room output. Moderation, room messaging, writes,
 and any descriptor with prerequisites retain provider order.
 
-### Selective Read Parallelism
+### Selective read parallelism
 
 The executor fans out a *contiguous* batch only when every call is read-only, idempotent, and has
 no prerequisite. `room_users`, `user_message_history`, and eligible named read-only queries can
 qualify. Results are collected and appended to the model context in the original provider-call
 order. A command before or after a read batch is an ordering barrier.
 
-### Latency Strategy
+### Latency strategy
 
 The main optimization is allowing several independent calls in one provider response, avoiding a
 provider round trip. Local virtual-thread fan-out is a safe secondary optimization; it never
 relaxes action ordering.
 
-## Multi-Tool Lifecycle
+## Multi-tool lifecycle
 
 ```mermaid
 sequenceDiagram
@@ -193,7 +300,7 @@ For weather plus two room counts, the model can emit weather and the first looku
 uses `run_command` and stays sequential; only an independent read-only batch can fan out. A second
 room lookup is a later turn when it depends on prior observations.
 
-## Built-In Tools
+## Built-in tools
 
 | Tool | Role | Execution Rule |
 | --- | --- | --- |
@@ -209,18 +316,75 @@ Tool visibility is contextual. The registry omits unavailable tools, and `RunCom
 only commands permitted by the current capabilities. The executor enforces the same rules again at
 runtime, so provider payloads are never authorization.
 
-## Extension Guide
+## Extension guide
 
 For a new tool, follow [the command skill](.skills/adding-saturn-command/SKILL.md) when it invokes
 Saturn commands, then implement `AgentTool`, publish a closed parameter schema and result schema,
-declare effect/idempotency/timeout/capabilities, register it in `AgentRuntimeFactory`, and add
+declare effect/idempotency/timeout/capabilities, register it in `AgentToolRegistryFactory`, and add
 validation, ordering, timeout, and capability tests. Update resource-based tool copy under
 `src/main/resources/agent/` as part of the same change.
+
+For other changes:
+
+- Add a response policy by implementing package-private `AgentTurnPolicy`, placing it deliberately
+  in the list built by `DefaultAgentRouter`, and testing its direct behavior plus chain ordering.
+- Add provider behavior behind `LlmClient`; keep provider-specific transport, retry, timeout, and
+  response parsing in `agent.llm`.
+- Add named read behavior through `AgentQueryRepository`. Use the schema and SQL path only for the
+  explicitly authorized dynamic-SQL capability.
+- Add prompt or correction copy under `src/main/resources/agent`; load it through
+  `AgentPromptCatalog` instead of embedding model instructions in Java.
+- Change room participation by preserving the handler order in `AgentRoomMessagePipeline` and its
+  `PASS`, `CONTINUE`, and `CLAIMED` semantics.
 
 Never mark an action tool read-only or idempotent merely because it is commonly informational. Only
 a successful tool result, never model prose, proves that a lookup or command occurred.
 
-## Hardening Coverage
+## Testing and verification
+
+Run the smallest owning test first, then widen:
+
+```bash
+./mvnw -Dtest=AgentServiceImplTest test
+./mvnw -Dtest=DefaultAgentRouterTest test
+./mvnw -Dtest=AgentToolExecutorTest,AgentToolCallSchedulerTest test
+./mvnw -Dtest=DefaultAgentRoomAutomationTest test
+./mvnw spotless:check
+./mvnw test
+./mvnw package
+```
+
+Use `AgentServiceImplTest` for admission, visible progress, fallback, ambient coalescing, and
+shutdown. Use `DefaultAgentRouterTest` for provider/tool-loop ordering, corrections, persistence,
+and final response behavior. Tool contract and scheduling changes belong in the focused registry,
+validator, executor, and scheduler tests. Room precedence belongs in
+`DefaultAgentRoomAutomationTest`; deterministic moderation thresholds belong under
+`agent.moderation` tests.
+
+JaCoCo runs in report-only mode during Maven verification and writes
+`target/site/jacoco/index.html`. The current measured baseline and justified exclusions live in
+`AGENT_REFACTOR.md`; there is no enforced percentage gate.
+
+## Troubleshooting
+
+| Symptom | First checks |
+| --- | --- |
+| `The agent is disabled.` | Check `agent.enabled` or `SATURN_AGENT_ENABLED`, then verify an explicit endpoint is configured. |
+| `The agent is busy; try again shortly.` | Inspect `maxConcurrentRequests` and long-running provider/tool calls. Accepted non-ambient work includes queued requests. |
+| No animation | Raw WebSocket output must be available. Queue-only output intentionally disables animation. |
+| No ambient response | Confirm ambient participation is enabled and sampled. Quiet suppression, eligibility filters, latest-pending coalescing, and the no-reply marker can all produce intentional silence. |
+| An exact mention is ignored | Confirm the message is public, names the current bot nick exactly, and is not a command or bot-authored message. Whispered commands use the command path instead. |
+| A tool is absent from provider definitions | Check contextual capabilities, descriptor validity, registry registration/freeze, and invocation mode. Tool visibility is not authorization. |
+| `Agent execution step limit reached` or tool-budget finalization | Inspect `maxSteps`, `maxToolCallsPerTurn`, repeated calls, prerequisites, and provider behavior. Do not raise bounds before finding the loop. |
+| Fresh-data correction repeats | Confirm the required tool is exposed, targets the normalized nick, succeeds, and returns evidence metadata. |
+| Memory load or persistence failure | Inspect the request/correlation ID in logs and the H2 cause at debug level. User/model-visible errors intentionally omit database details. |
+| Dynamic SQL is unavailable | Confirm the feature flag, caller capability, schema-first prerequisite, SQL bounds, and read-only H2 connection setup. |
+
+Correlate lifecycle logs by `requestId` and provider/router work by `correlationId`. In Docker, use
+`make logs`; use `make db-check` and `make backup-db` for H2 operations instead of opening the live
+database file concurrently.
+
+## Hardening coverage
 
 The agent package uses focused contract tests for configuration parsing, tool descriptors, tool-call
 validation, execution limits, fresh-data enforcement, response finalization, memory persistence, and
@@ -228,11 +392,11 @@ room automation. `AgentToolCallValidatorTest` specifically protects authorizatio
 ordering and canonical invocation identity, while `AgentConfigValueReaderTest` protects shared
 configuration semantics. These are additive to the router and full-suite regression tests.
 
-Coverage claims are intentionally expressed as behavioral contracts rather than a percentage: the
-Maven build currently has no JaCoCo or equivalent coverage gate configured. A future coverage gate
-should be introduced separately with agreed thresholds and exclusions for generated/framework glue.
+Coverage is evaluated through both behavioral contracts and a report-only JaCoCo baseline. A future
+enforced gate should be introduced separately with agreed thresholds and exclusions for generated
+or framework glue.
 
-## Related Documentation
+## Related documentation
 
 - [Tool routing rules](TOOL_ROUTING_ARCHITECTURE.md)
 - [SDK hardening checklist](HARDENING_CHECKLIST.md)

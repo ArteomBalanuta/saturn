@@ -1,5 +1,9 @@
 # Agent Package Refactor Plan
 
+> **Status: completed.** This is the implementation ledger and evidence record for the refactor.
+> Use [`AGENTIC_ARCHITECTURE.md`](AGENTIC_ARCHITECTURE.md) for the current request lifecycle,
+> package map, extension guide, tests, and troubleshooting.
+
 ## Purpose
 
 This document records the implemented object-oriented refactor of
@@ -13,7 +17,8 @@ preserve public contracts and land with focused regression coverage before the n
 
 - Keep `AgentRouter`, `AgentTool`, `AgentToolRegistry`, and command-gateway public APIs backward
   compatible unless a bug cannot be fixed otherwise.
-- Preserve one session lock per memory key and request-local execution state.
+- Preserve deterministic serialization by memory key through the fixed striped-lock manager and
+  keep execution state request-local.
 - Keep command and other action tools sequential. Only independent, read-only, idempotent calls
   may fan out.
 - Retain tool observations in provider order, even when a read batch runs in parallel.
@@ -123,10 +128,10 @@ or terminate with a routing error.
 
 **Status: completed.** `AgentToolCallValidator` produces immutable `ValidatedToolCall` values,
 `AgentToolExecutionLedger` owns synchronized request accounting, and `AgentToolInvoker` owns
-timeout-bound virtual-thread invocation. The scheduler and invoker intentionally retain separate
-request-scoped virtual-thread executors: the scheduler owns batch fan-out and ordered collection,
-while the invoker owns cancellable timeout futures for individual tools. This keeps cancellation
-and lifecycle ownership explicit without sharing an executor that either collaborator could close.
+timeout-bound virtual-thread invocation. The scheduler and invoker share one request-scoped
+thread-per-task virtual-thread executor. The scheduler owns batch fan-out and ordered collection but
+does not close the injected executor; the invoker performs the single shutdown when the facade
+closes.
 
 **Problem:** `AgentToolExecutor` currently combines registry lookup, descriptor retrieval, JSON
 parsing, schema validation, duplicate detection, prerequisite checks, timeouts, failure accounting,
@@ -179,8 +184,8 @@ descriptor into `SEQUENTIAL_ACTION`, `SEQUENTIAL_DEPENDENT_READ`, or `PARALLEL_R
 
 1. Make the policy the single source of truth for `readOnly`, `isIdempotent`, and prerequisite
    interpretation.
-2. Validate descriptor consistency at registry freeze time, including nonblank descriptions,
-   parameter schema validity, timeout bounds, and incompatible metadata combinations.
+2. Validate stable identity during registration. Validate contextual descriptor consistency when a
+   caller's definitions are built and when execution materializes the descriptor.
 3. Have the scheduler receive already classified calls rather than re-resolving tools for its
    predicate.
 4. Document each built-in tool's classification and expected ordering.
@@ -259,8 +264,8 @@ the implemented boundaries.
 **Problem:** the package has strong records and descriptors, but contract invariants are divided
 between constructors, validator code, and runtime execution paths.
 
-**Design:** define and enforce a single validity boundary at registry freeze and a separate
-provider-payload boundary in `AgentToolDefinitionFactory`.
+**Design:** keep stable identity and uniqueness at registration, then validate caller-specific
+descriptors at materialization and provider-payload boundaries.
 
 **Steps:**
 
@@ -308,7 +313,8 @@ contract makes one observable.
 
 **Acceptance criteria:**
 
-- A malformed tool contract fails during registration/freeze rather than in a live agent turn.
+- Stable malformed identity fails during registration. Invalid contextual contracts are omitted or
+  returned as `INVALID_TOOL_CONTRACT` when materialized for a caller.
 - Architectural documentation accurately reflects the final policy chain and execution pipeline.
 
 ## Recommended Order

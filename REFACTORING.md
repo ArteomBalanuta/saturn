@@ -1,5 +1,10 @@
 # Agentic Package Refactoring
 
+> This file summarizes the responsibility boundaries produced by the completed refactor. Use
+> [`AGENTIC_ARCHITECTURE.md`](AGENTIC_ARCHITECTURE.md) for the current maintainer guide and
+> [`AGENT_REFACTOR.md`](AGENT_REFACTOR.md) for the stage-by-stage plan, verification evidence, and
+> coverage history.
+
 ## Design Changes
 
 The agentic package now separates provider-facing payload construction from session orchestration.
