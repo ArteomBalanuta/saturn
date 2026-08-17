@@ -284,6 +284,18 @@ class H2AgentQueryRepositoryTest {
   }
 
   @Test
+  void returnsEmptyRowsWhenRequesterTripIsNull() {
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", null, "hash-a", false, List.of());
+
+    JsonObject result =
+        repository.execute("recent_messages_for_requester", new JsonObject(), context);
+
+    assertTrue(result.getAsJsonArray("rows").isEmpty());
+  }
+
+  @Test
   void returnsEmptyRowsWhenKnownNicksTripIsBlank() {
     H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext context =
@@ -307,6 +319,24 @@ class H2AgentQueryRepositoryTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> repository.execute("recent_messages_for_room", arguments, context));
+  }
+
+  @Test
+  void rejectsNonStringNickAndRoomArguments() {
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
+    JsonObject nickArguments = new JsonObject();
+    nickArguments.addProperty("nick", 42);
+    JsonObject roomArguments = new JsonObject();
+    roomArguments.addProperty("room", 42);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> repository.execute("recent_messages_for_user", nickArguments, context));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> repository.execute("recent_messages_for_room", roomArguments, context));
   }
 
   @Test
