@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.llm.LlmMessage;
@@ -55,5 +56,14 @@ class AgentResponseSanitizerTest {
     assertEquals("answer", clean.getLast().content());
     assertTrue(sanitizer.excludeLegacyPersonaTurns(List.of()).isEmpty());
     assertThrows(UnsupportedOperationException.class, () -> clean.add(LlmMessage.user("mutated")));
+  }
+
+  @Test
+  void ignoresNullHistoryEntries() {
+    List<LlmMessage> loaded = new ArrayList<>(List.of(LlmMessage.user("question")));
+    loaded.add(null);
+    List<LlmMessage> clean = sanitizer.excludeLegacyPersonaTurns(loaded);
+
+    assertEquals(List.of(LlmMessage.user("question")), clean);
   }
 }

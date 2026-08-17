@@ -39,6 +39,9 @@ final class AgentResponseSanitizer {
   List<LlmMessage> excludeLegacyPersonaTurns(List<LlmMessage> loaded) {
     List<LlmMessage> clean = new ArrayList<>(loaded.size());
     for (LlmMessage message : loaded) {
+      if (message == null) {
+        continue;
+      }
       if ("assistant".equals(message.role()) && containsLegacyPersona(message.content())) {
         if (!clean.isEmpty() && "user".equals(clean.getLast().role())) {
           clean.removeLast();
