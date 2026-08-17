@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -47,14 +46,14 @@ class AgentServiceImplTest {
     assertFalse(service.submit(invocation(false)));
     release.countDown();
 
-    awaitQueueSize(queue, 3);
+    awaitQueueSize(queue, 2);
     assertTrue(queue.stream().anyMatch(value -> value.contains("busy")));
     assertTrue(queue.stream().anyMatch(value -> value.contains("@alice answer")));
     service.close();
   }
 
   @Test
-  void emitsVisibleProgressAndStableRequestIdForDirectRequests() throws Exception {
+  void emitsOnlyTheFinalReplyForDirectRequests() throws Exception {
     ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<>(10);
     AgentInvocation invocation =
         new AgentInvocation(
@@ -73,7 +72,7 @@ class AgentServiceImplTest {
 
       awaitQueueContains(queue, "answer");
       List<String> messages = List.copyOf(queue);
-      assertTrue(messages.stream().anyMatch(message -> message.contains("thinking")));
+      assertEquals(1, messages.size());
       assertTrue(messages.stream().anyMatch(message -> message.contains("answer")));
       assertTrue(messages.stream().noneMatch(message -> message.contains("request-1234")));
     } finally {
@@ -82,10 +81,9 @@ class AgentServiceImplTest {
   }
 
   @Test
-  void doesNotFlushProgressOnTheSubmittingThread() throws Exception {
-    CountDownLatch progressFlushEntered = new CountDownLatch(1);
-    CountDownLatch releaseProgressFlush = new CountDownLatch(1);
+  void doesNotFlushBeforeTheFinalReplyIsReady() throws Exception {
     CountDownLatch routerEntered = new CountDownLatch(1);
+    CountDownLatch finalReplyFlushed = new CountDownLatch(1);
     AtomicInteger flushes = new AtomicInteger();
     AgentServiceImpl service =
         new AgentServiceImpl(
@@ -96,29 +94,24 @@ class AgentServiceImplTest {
             },
             new OutService(new ArrayBlockingQueue<>(10)),
             () -> {
-              if (flushes.getAndIncrement() == 0) {
-                progressFlushEntered.countDown();
-                try {
-                  releaseProgressFlush.await();
-                } catch (InterruptedException exception) {
-                  Thread.currentThread().interrupt();
-                }
-              }
+              flushes.incrementAndGet();
+              finalReplyFlushed.countDown();
             });
 
     try {
       assertTimeoutPreemptively(
           Duration.ofMillis(200), () -> assertTrue(service.submit(invocation(false))));
-      assertTrue(progressFlushEntered.await(1, TimeUnit.SECONDS));
-      assertFalse(routerEntered.await(100, TimeUnit.MILLISECONDS));
+      assertTrue(routerEntered.await(1, TimeUnit.SECONDS));
+      assertEquals(0, flushes.get());
+      assertTrue(finalReplyFlushed.await(1, TimeUnit.SECONDS));
+      assertEquals(1, flushes.get());
     } finally {
-      releaseProgressFlush.countDown();
       service.close();
     }
   }
 
   @Test
-  void updatesOneVisibleMessageInsteadOfPostingProgressAndCompletionSeparately() throws Exception {
+  void postsOnlyOneFinalChatMessageWithoutRawUpdates() throws Exception {
     ArrayBlockingQueue<String> chats = new ArrayBlockingQueue<>(10);
     ArrayBlockingQueue<String> raw = new ArrayBlockingQueue<>(10);
     AgentInvocation invocation =
@@ -135,25 +128,16 @@ class AgentServiceImplTest {
 
     try {
       assertTrue(service.submit(invocation));
-      awaitQueueSize(raw, 2);
-      assertTrue(chats.isEmpty());
-      var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
-      var update = JsonParser.parseString(raw.take()).getAsJsonObject();
-      assertEquals("chat", initial.get("cmd").getAsString());
-      assertTrue(initial.get("customId").getAsJsonPrimitive().isString());
-      String customId = initial.get("customId").getAsString();
-      assertTrue(customId.chars().allMatch(Character::isDigit));
-      assertEquals("updateMessage", update.get("cmd").getAsString());
-      assertEquals("overwrite", update.get("mode").getAsString());
-      assertEquals(customId, update.get("customId").getAsString());
-      assertTrue(update.get("text").getAsString().contains("@alice answer"));
+      awaitQueueContains(chats, "@alice answer");
+      assertEquals(1, chats.size());
+      assertTrue(raw.isEmpty());
     } finally {
       service.close();
     }
   }
 
   @Test
-  void updatesTheVisibleMessageWithStableFailureWhenRoutingFails() throws Exception {
+  void postsOneStableFailureWhenRoutingFails() throws Exception {
     ArrayBlockingQueue<String> chats = new ArrayBlockingQueue<>(10);
     ArrayBlockingQueue<String> raw = new ArrayBlockingQueue<>(10);
     AgentInvocation invocation =
@@ -172,14 +156,9 @@ class AgentServiceImplTest {
 
     try {
       assertTrue(service.submit(invocation));
-      awaitQueueSize(raw, 2);
-      var initial = JsonParser.parseString(raw.take()).getAsJsonObject();
-      var update = JsonParser.parseString(raw.take()).getAsJsonObject();
-      String customId = initial.get("customId").getAsString();
-      assertTrue(customId.chars().allMatch(Character::isDigit));
-      assertEquals("overwrite", update.get("mode").getAsString());
-      assertEquals(customId, update.get("customId").getAsString());
-      assertTrue(update.get("text").getAsString().contains("could not answer"));
+      awaitQueueContains(chats, "could not answer");
+      assertEquals(1, chats.size());
+      assertTrue(raw.isEmpty());
     } finally {
       service.close();
     }
@@ -228,14 +207,12 @@ class AgentServiceImplTest {
       assertFalse(secondEntered.await(150, TimeUnit.MILLISECONDS));
       releaseFirst.countDown();
       assertTrue(secondEntered.await(1, TimeUnit.SECONDS));
-      awaitListSize(flushed, 4);
+      awaitListSize(flushed, 2);
 
       assertEquals(List.of("first", "second"), routed);
-      assertEquals(4, flushed.size());
-      assertTrue(flushed.get(0).contains("thinking"));
-      assertTrue(flushed.get(1).contains("@alice first answer"));
-      assertTrue(flushed.get(2).contains("thinking"));
-      assertTrue(flushed.get(3).contains("@bob second answer"));
+      assertEquals(2, flushed.size());
+      assertTrue(flushed.get(0).contains("@alice first answer"));
+      assertTrue(flushed.get(1).contains("@bob second answer"));
     } finally {
       releaseFirst.countDown();
       service.close();
@@ -272,7 +249,7 @@ class AgentServiceImplTest {
 
     assertTrue(service.submit(invocation(false)));
 
-    awaitQueueSize(queue, 2);
+    awaitQueueSize(queue, 1);
     assertTrue(queue.stream().anyMatch(reply -> reply.contains("could not answer")));
     service.close();
   }

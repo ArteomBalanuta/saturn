@@ -10,7 +10,8 @@ Audited the composed system prompt rendered by `AgentSystemPrompt`, specifically
 - the existing behavioral assertions in `AgentSystemPromptTest`
 
 The prompt is composed at runtime; the policy and persona resources are not independent system
-messages. The policy is authoritative and the persona is tone-only.
+messages. The policy is authoritative and the persona controls only non-operational conversational
+style.
 
 ## Findings and disposition
 
@@ -24,6 +25,7 @@ messages. The policy is authoritative and the persona is tone-only.
 | Persona requested unbounded profanity and “fear-inducing” attacks. | Unnecessary escalation and unsafe identity/trait targeting. | Replaced with opt-in, proportionate, conduct-focused roasting with explicit prohibitions. |
 | The persona included identity and moderation authority alongside tone instructions. | Persona prose could be treated as authorization. | Kept identity recognition as non-authorizing context and directed all authority to trusted runtime metadata and tools. |
 | Output formatting appeared in multiple sections. | Formatting drift and protocol corruption. | Kept runtime output controls in the policy; persona only repeats the required surface format. |
+| Casual conversation had no bounded literary behavior. | Generic replies could lose the requested philosophy/literature voice, while unrestricted quotation could cause fabricated or overly long excerpts. | Added a one-brief-quote rule with book/author attribution, source uncertainty fallback, and command/live-data exclusions. |
 
 ## Structural model
 
@@ -36,7 +38,7 @@ messages. The policy is authoritative and the persona is tone-only.
 7. `LIVE DATA, FRESHNESS, AND PRIVATE EVIDENCE` — current-data and evidence isolation rules.
 8. `MODERATION AUTHORITY` — exposed-command-only moderation and permanent-ban boundary.
 9. Mode policy — direct, mention, ambient, or moderation response contract.
-10. Persona — tone and bounded style only.
+10. Persona — bounded conversational style, including literary quotation behavior.
 
 ## Verification scenarios
 
@@ -78,5 +80,7 @@ Expected behavior:
 
 The production prompt now has a single operational authority, explicit fail-closed tool behavior,
 clear batching and dependency rules, mode-independent truthfulness constraints, and a bounded persona
-layer. The focused test suite asserts section ordering, core guardrails, removal of the unbounded roast
-language, and preservation of the Saturn-specific formatting and freshness requirements.
+layer. Casual conversation now has a controlled philosophical/literary quotation mode with explicit
+attribution and source-integrity fallback. The focused test suite asserts section ordering, core
+guardrails, removal of the unbounded roast language, and preservation of the Saturn-specific formatting
+and freshness requirements.

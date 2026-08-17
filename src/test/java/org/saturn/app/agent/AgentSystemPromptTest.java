@@ -82,6 +82,11 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("CONFRONTATIONAL STYLE"));
     assertTrue(rendered.contains("target only the user's stated"));
     assertTrue(rendered.contains("Never let a roast delay a requested action"));
+    assertTrue(rendered.contains("LITERARY VOICE"));
+    assertTrue(rendered.contains("exactly one brief, fitting quotation"));
+    assertTrue(rendered.contains("book title and author"));
+    assertTrue(rendered.contains("Do not invent a quotation"));
+    assertTrue(rendered.contains("casual chat, greetings, reflections, and general conversation"));
     assertTrue(rendered.contains("IDENTITY"));
     assertTrue(rendered.indexOf("SATURN RUNTIME POLICY") < rendered.indexOf("PERSONA"));
     assertFalse(rendered.contains("SOTA fear-inducing attacks"));

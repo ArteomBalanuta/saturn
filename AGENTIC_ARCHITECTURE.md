@@ -88,12 +88,10 @@ turn and queued turns. Rejected direct or mention requests receive stable disabl
 or acceptance-failure messages. Ambient work uses a separate latest-value slot: repeated ambient
 submissions coalesce instead of consuming the non-ambient admission budget.
 
-Direct and mention turns initially enqueue one loading message with a request-local, numeric-looking
-string `customId`. When raw WebSocket updates are available, a 500 ms Braille animation overwrites
-that message and the terminal success or stable failure reuses the same ID. The final success text
-mentions the invoker. Queue-only output disables animation because it cannot overwrite an existing
-message; it falls back to ordinary chat messages. Ambient and moderation modes do not emit loading
-or animation messages.
+Direct and mention turns enqueue only one final chat message after routing completes. The final
+success or stable failure text mentions the invoker. No loading message, thinking animation, raw
+WebSocket `updateMessage`, or intermediate progress event is emitted. Ambient and moderation modes
+remain silent for conversational output.
 
 `close()` marks the service unavailable, drops pending ambient work, and closes both executors.
 Admission permits are released in `finally`, including routing failures. Public errors stay stable;
@@ -371,7 +369,7 @@ JaCoCo runs in report-only mode during Maven verification and writes
 | --- | --- |
 | `The agent is disabled.` | Check `agent.enabled` or `SATURN_AGENT_ENABLED`, then verify an explicit endpoint is configured. |
 | `The agent is busy; try again shortly.` | Inspect `maxConcurrentRequests` and long-running provider/tool calls. Accepted non-ambient work includes queued requests. |
-| No animation | Raw WebSocket output must be available. Queue-only output intentionally disables animation. |
+| No intermediate progress message | This is intentional: direct and mention turns emit only the final reply after routing completes. |
 | No ambient response | Confirm ambient participation is enabled and sampled. Quiet suppression, eligibility filters, latest-pending coalescing, and the no-reply marker can all produce intentional silence. |
 | An exact mention is ignored | Confirm the message is public, names the current bot nick exactly, and is not a command or bot-authored message. Whispered commands use the command path instead. |
 | A tool is absent from provider definitions | Check contextual capabilities, descriptor validity, registry registration/freeze, and invocation mode. Tool visibility is not authorization. |
