@@ -122,6 +122,20 @@ class H2AgentSqlRepositoryTest {
   }
 
   @Test
+  void rejectsOversizedMetadataWhenTheQueryReturnsNoRows() {
+    AgentPersistenceException exception =
+        assertThrows(
+            AgentPersistenceException.class,
+            () ->
+                repository.execute(
+                    sql("SELECT id, real_value, text_value FROM samples WHERE false"),
+                    config(50, 32, 2_000, 1, Duration.ofSeconds(1))));
+
+    assertEquals(AgentSqlErrorCode.RESULT_TOO_LARGE, exception.code());
+    assertEquals("Agent SQL metadata exceeds the result limit", exception.getMessage());
+  }
+
+  @Test
   void acceptsUnicodeSqlWithinConfiguredCharacterLimit() {
     String unicode = "😀".repeat(1_000);
 
