@@ -1,6 +1,7 @@
 package org.saturn.app.agent;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Clock;
@@ -52,6 +53,24 @@ class AgentQuietRegistryTest {
     assertTrue(
         AgentUserIdentity.from(context("room", "Alice", null, null))
             .equals(AgentUserIdentity.from(context("room", "ALICE", "", ""))));
+  }
+
+  @Test
+  void rejectsNonPositiveQuietDurations() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new AgentQuietRegistry(Duration.ZERO, Clock.systemUTC()));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new AgentQuietRegistry(Duration.ofSeconds(-1), Clock.systemUTC()));
+  }
+
+  @Test
+  void ignoresNullAndBlankQuietRequests() {
+    AgentQuietRegistry registry = new AgentQuietRegistry(Duration.ofMinutes(15), Clock.systemUTC());
+
+    assertFalse(registry.isPoliteQuietRequest(null, "korin"));
+    assertFalse(registry.isPoliteQuietRequest("  \n  ", "korin"));
   }
 
   private AgentContext context(String room, String nick, String trip, String hash) {
