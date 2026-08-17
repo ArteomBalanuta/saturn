@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import org.junit.jupiter.api.Test;
 
 class AgentToolSchemaValidatorTest {
@@ -168,6 +169,53 @@ class AgentToolSchemaValidatorTest {
   }
 
   @Test
+  void validatesPrimitiveArrayNullAndAnyResultTypes() {
+    JsonObject stringSchema = resultSchema("string");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(stringSchema, new JsonPrimitive("ok")));
+    assertEquals(
+        "Tool result does not match declared string schema",
+        AgentToolSchemaValidator.validateResult(stringSchema, new JsonPrimitive(true)));
+
+    JsonObject booleanSchema = resultSchema("boolean");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(booleanSchema, new JsonPrimitive(true)));
+
+    JsonObject numberSchema = resultSchema("number");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(numberSchema, new JsonPrimitive(1.5)));
+
+    JsonObject integerSchema = resultSchema("integer");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(integerSchema, new JsonPrimitive(2)));
+
+    JsonObject arraySchema = resultSchema("array");
+    assertEquals(null, AgentToolSchemaValidator.validateResult(arraySchema, new JsonArray()));
+
+    JsonObject nullSchema = resultSchema("null");
+    assertEquals(null, AgentToolSchemaValidator.validateResult(nullSchema, JsonNull.INSTANCE));
+
+    JsonObject anySchema = resultSchema("any");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(anySchema, new JsonPrimitive("anything")));
+  }
+
+  @Test
+  void rejectsNonObjectResultPropertiesAndAcceptsAnyArgumentType() {
+    JsonObject malformed = resultSchema("object");
+    malformed.addProperty("properties", "invalid");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(malformed));
+
+    JsonObject schema = objectSchema();
+    schema.add("properties", propertyMapWithName("value", typedProperty("any")));
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("value", "anything");
+    assertEquals(null, AgentToolSchemaValidator.validateArguments(schema, arguments));
+  }
+
+  @Test
   void acceptsSupportedResultTypesAndRejectsMalformedResultSchemas() {
     for (String type :
         new String[] {"any", "string", "boolean", "number", "integer", "object", "array", "null"}) {
@@ -210,6 +258,12 @@ class AgentToolSchemaValidatorTest {
     JsonObject schema = new JsonObject();
     schema.addProperty("type", "object");
     schema.addProperty("additionalProperties", false);
+    return schema;
+  }
+
+  private static JsonObject resultSchema(String type) {
+    JsonObject schema = new JsonObject();
+    schema.addProperty("type", type);
     return schema;
   }
 
