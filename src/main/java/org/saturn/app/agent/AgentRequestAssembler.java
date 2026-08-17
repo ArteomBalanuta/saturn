@@ -73,7 +73,8 @@ final class AgentRequestAssembler {
   }
 
   private int contextBudget() {
-    return Math.max(32_000, config.maxPromptChars() * 8);
+    long scaledBudget = (long) config.maxPromptChars() * 8L;
+    return (int) Math.min(Integer.MAX_VALUE, Math.max(32_000L, scaledBudget));
   }
 
   private void trimToBudget(List<LlmMessage> messages) {

@@ -52,6 +52,25 @@ class AgentRequestAssemblerTest {
   }
 
   @Test
+  void doesNotOverflowContextBudgetForLargePromptLimits() {
+    AgentRequestAssembler assembler =
+        new AgentRequestAssembler(
+            configWithPromptChars(Integer.MAX_VALUE),
+            new AgentToolRegistry().register(tool("run_command")).freeze(),
+            new AgentSystemPrompt(AgentParticipationConfig.from(null)));
+    AgentContext context = new AgentContext("room", "alice", null, null, false, List.of("alice"));
+
+    AgentPreparedRequest request =
+        assembler.assemble(
+            new AgentInvocation(context, "current", AgentInvocationMode.DIRECT),
+            List.of(LlmMessage.user("history".repeat(40_000))),
+            "recent");
+
+    assertEquals(3, request.messages().size());
+    assertEquals("history".repeat(40_000), request.messages().get(1).content());
+  }
+
+  @Test
   void preservesSystemHistoryUserOrderingAndDropsOldestHistoryOverBudget() {
     AgentToolRegistry registry = new AgentToolRegistry().register(tool("run_command")).freeze();
     AgentRequestAssembler assembler =
@@ -103,6 +122,10 @@ class AgentRequestAssemblerTest {
   }
 
   private AgentConfig config() {
+    return configWithPromptChars(100);
+  }
+
+  private AgentConfig configWithPromptChars(int maxPromptChars) {
     return new AgentConfig(
         true,
         URI.create("http://localhost"),
@@ -113,7 +136,7 @@ class AgentRequestAssemblerTest {
         4,
         2,
         2,
-        100,
+        maxPromptChars,
         100,
         2,
         Duration.ofHours(1),
