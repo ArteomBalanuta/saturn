@@ -271,6 +271,9 @@ class AgentToolSchemaValidatorTest {
     assertEquals(
         "Tool result does not match declared integer schema",
         AgentToolSchemaValidator.validateResult(resultSchema("integer"), new JsonPrimitive("1")));
+    assertEquals(
+        "Tool result does not match declared integer schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("integer"), new JsonPrimitive(1.5)));
   }
 
   @Test

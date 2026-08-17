@@ -140,7 +140,11 @@ final class AgentToolSchemaValidator {
       case "any" -> true;
       case "string" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isString();
       case "boolean" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean();
-      case "number", "integer" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber();
+      case "number" -> value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber();
+      case "integer" ->
+          value.isJsonPrimitive()
+              && value.getAsJsonPrimitive().isNumber()
+              && value.getAsDouble() == Math.rint(value.getAsDouble());
       case "object" -> value.isJsonObject();
       case "array" -> value.isJsonArray();
       case "null" -> value.isJsonNull();
