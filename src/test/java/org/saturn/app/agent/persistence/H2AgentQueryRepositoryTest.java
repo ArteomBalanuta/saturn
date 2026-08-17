@@ -309,6 +309,17 @@ class H2AgentQueryRepositoryTest {
   }
 
   @Test
+  void returnsEmptyRowsWhenKnownNicksContextTripIsNull() {
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", null, "hash-a", false, List.of());
+
+    JsonObject result = repository.execute("known_nicks_for_trip", new JsonObject(), context);
+
+    assertTrue(result.getAsJsonArray("rows").isEmpty());
+  }
+
+  @Test
   void rejectsInvalidRoomArgumentsBeforeOpeningTheDatabase() {
     H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext context =
@@ -369,5 +380,40 @@ class H2AgentQueryRepositoryTest {
 
     assertEquals("Agent count query failed", exception.getMessage());
     assertTrue(exception.getCause() instanceof java.sql.SQLException);
+
+    assertEquals(
+        "Agent recent-messages query failed",
+        assertThrows(
+                AgentPersistenceException.class,
+                () ->
+                    repository.execute("recent_messages_for_requester", new JsonObject(), context))
+            .getMessage());
+    JsonObject userArguments = new JsonObject();
+    userArguments.addProperty("nick", "alice");
+    assertEquals(
+        "Agent user-message-history query failed",
+        assertThrows(
+                AgentPersistenceException.class,
+                () -> repository.execute("recent_messages_for_user", userArguments, context))
+            .getMessage());
+    JsonObject roomArguments = new JsonObject();
+    roomArguments.addProperty("room", "programming");
+    assertEquals(
+        "Agent room-message-history query failed",
+        assertThrows(
+                AgentPersistenceException.class,
+                () -> repository.execute("recent_messages_for_room", roomArguments, context))
+            .getMessage());
+
+    try (var connection = H2Database.open(database.toString());
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate("ALTER TABLE names RENAME COLUMN name TO name_bad");
+    }
+    assertEquals(
+        "Agent known-nicks query failed",
+        assertThrows(
+                AgentPersistenceException.class,
+                () -> repository.execute("known_nicks_for_trip", new JsonObject(), context))
+            .getMessage());
   }
 }
