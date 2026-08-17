@@ -71,9 +71,9 @@ class AgentServiceImplTest {
     try {
       assertTrue(service.submit(invocation));
 
-      awaitQueueSize(queue, 2);
+      awaitQueueContains(queue, "answer");
       List<String> messages = List.copyOf(queue);
-      assertTrue(messages.stream().anyMatch(message -> message.contains("working")));
+      assertTrue(messages.stream().anyMatch(message -> message.contains("thinking")));
       assertTrue(messages.stream().anyMatch(message -> message.contains("answer")));
       assertTrue(messages.stream().allMatch(message -> message.contains("request-1234")));
     } finally {
@@ -232,9 +232,9 @@ class AgentServiceImplTest {
 
       assertEquals(List.of("first", "second"), routed);
       assertEquals(4, flushed.size());
-      assertTrue(flushed.get(0).contains("working on it"));
+      assertTrue(flushed.get(0).contains("thinking"));
       assertTrue(flushed.get(1).contains("completed: first answer"));
-      assertTrue(flushed.get(2).contains("working on it"));
+      assertTrue(flushed.get(2).contains("thinking"));
       assertTrue(flushed.get(3).contains("completed: second answer"));
     } finally {
       releaseFirst.countDown();
@@ -445,6 +445,15 @@ class AgentServiceImplTest {
       throws InterruptedException {
     long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
     while (queue.size() < expected && System.nanoTime() < deadline) {
+      Thread.sleep(5);
+    }
+  }
+
+  private static void awaitQueueContains(ArrayBlockingQueue<String> queue, String expected)
+      throws InterruptedException {
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+    while (queue.stream().noneMatch(message -> message.contains(expected))
+        && System.nanoTime() < deadline) {
       Thread.sleep(5);
     }
   }

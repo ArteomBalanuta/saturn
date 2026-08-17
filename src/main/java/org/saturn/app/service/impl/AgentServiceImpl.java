@@ -3,7 +3,10 @@ package org.saturn.app.service.impl;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -22,6 +25,7 @@ public final class AgentServiceImpl implements AgentService {
   private final OutService outService;
   private final Runnable replyFlusher;
   private final ExecutorService executor;
+  private final ScheduledExecutorService animationExecutor;
   private final Semaphore admission;
   private final AtomicBoolean closed = new AtomicBoolean();
   private final AtomicInteger nextCustomId = new AtomicInteger();
@@ -36,6 +40,9 @@ public final class AgentServiceImpl implements AgentService {
     this.replyFlusher = Objects.requireNonNull(replyFlusher, "replyFlusher");
     this.executor =
         Executors.newSingleThreadExecutor(Thread.ofVirtual().name("saturn-agent-", 0).factory());
+    this.animationExecutor =
+        Executors.newSingleThreadScheduledExecutor(
+            Thread.ofVirtual().name("saturn-agent-animation-", 0).factory());
     this.admission = new Semaphore(config.maxConcurrentRequests());
   }
 
@@ -113,15 +120,22 @@ public final class AgentServiceImpl implements AgentService {
         context.room(),
         context.nick());
     int customId = nextCustomId();
+    Object animationLock = new Object();
+    ScheduledFuture<?> animation = null;
     try {
-      progress(invocation, "working on it", customId);
+      progress(invocation, AgentLoadingAnimation.frame(0), customId);
+      animation = startAnimation(invocation, customId, animationLock);
       var result = router.route(invocation);
       log.info(
           "Agent request completed, requestId={}, correlationId={}",
           invocation.requestId(),
           result.correlationId());
       if (result.shouldReply()) {
-        update(invocation, tagged(invocation, "completed: " + result.content()), customId);
+        update(
+            invocation,
+            tagged(invocation, "completed: " + result.content()),
+            customId,
+            animationLock);
       } else if (invocation.mode() == AgentInvocationMode.MODERATION) {
         replyFlusher.run();
       }
@@ -133,7 +147,7 @@ public final class AgentServiceImpl implements AgentService {
           context.nick(),
           exception.getMessage());
       log.debug("Agent routing failure, requestId={}", invocation.requestId(), exception);
-      replyFailureIfRequired(invocation, customId);
+      replyFailureIfRequired(invocation, customId, animationLock);
     } catch (RuntimeException exception) {
       log.error(
           "Unexpected agent routing failure, requestId={}, type={}, message={}",
@@ -142,8 +156,11 @@ public final class AgentServiceImpl implements AgentService {
           exception.getMessage());
       log.debug(
           "Unexpected agent routing failure, requestId={}", invocation.requestId(), exception);
-      replyFailureIfRequired(invocation, customId);
+      replyFailureIfRequired(invocation, customId, animationLock);
     } finally {
+      if (animation != null) {
+        animation.cancel(false);
+      }
       if (admitted) {
         admission.release();
       }
@@ -156,12 +173,14 @@ public final class AgentServiceImpl implements AgentService {
     }
   }
 
-  private void replyFailureIfRequired(AgentInvocation invocation, int customId) {
+  private void replyFailureIfRequired(
+      AgentInvocation invocation, int customId, Object animationLock) {
     if (invocation.mode().requiresReply()) {
       update(
           invocation,
           tagged(invocation, "failed: the agent could not answer that request."),
-          customId);
+          customId,
+          animationLock);
     }
   }
 
@@ -181,17 +200,39 @@ public final class AgentServiceImpl implements AgentService {
     }
   }
 
-  private void update(AgentInvocation invocation, String content, int customId) {
-    try {
-      outService.updateAgentMessage("overwrite", content, customId);
-      replyFlusher.run();
-    } catch (RuntimeException exception) {
-      log.error("Agent reply update failed, requestId={}", invocation.requestId(), exception);
+  private void update(
+      AgentInvocation invocation, String content, int customId, Object animationLock) {
+    synchronized (animationLock) {
+      try {
+        outService.updateAgentMessage("overwrite", content, customId);
+        replyFlusher.run();
+      } catch (RuntimeException exception) {
+        log.error("Agent reply update failed, requestId={}", invocation.requestId(), exception);
+      }
     }
   }
 
   private int nextCustomId() {
     return nextCustomId.updateAndGet(current -> current == Integer.MAX_VALUE ? 1 : current + 1);
+  }
+
+  private ScheduledFuture<?> startAnimation(
+      AgentInvocation invocation, int customId, Object animationLock) {
+    if (!invocation.mode().requiresReply()) {
+      return null;
+    }
+    return animationExecutor.scheduleAtFixedRate(
+        new Runnable() {
+          private int frameIndex = 1;
+
+          @Override
+          public void run() {
+            update(invocation, AgentLoadingAnimation.frame(frameIndex++), customId, animationLock);
+          }
+        },
+        350,
+        350,
+        TimeUnit.MILLISECONDS);
   }
 
   private String tagged(AgentInvocation invocation, String message) {
@@ -222,6 +263,7 @@ public final class AgentServiceImpl implements AgentService {
     if (closed.compareAndSet(false, true)) {
       pendingAmbient.set(null);
       executor.close();
+      animationExecutor.close();
     }
   }
 }
