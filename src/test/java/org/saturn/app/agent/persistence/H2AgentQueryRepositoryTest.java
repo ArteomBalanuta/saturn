@@ -284,6 +284,19 @@ class H2AgentQueryRepositoryTest {
   }
 
   @Test
+  void returnsEmptyRowsWhenKnownNicksTripIsBlank() {
+    H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
+    AgentContext context =
+        new AgentContext("programming", "alice", "trip-a", "hash-a", false, List.of());
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("trip", " ");
+
+    JsonObject result = repository.execute("known_nicks_for_trip", arguments, context);
+
+    assertTrue(result.getAsJsonArray("rows").isEmpty());
+  }
+
+  @Test
   void rejectsInvalidRoomArgumentsBeforeOpeningTheDatabase() {
     H2AgentQueryRepository repository = new H2AgentQueryRepository(database.toString());
     AgentContext context =
