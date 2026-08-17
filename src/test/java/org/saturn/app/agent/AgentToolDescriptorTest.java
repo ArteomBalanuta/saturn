@@ -163,6 +163,51 @@ class AgentToolDescriptorTest {
   }
 
   @Test
+  void rejectsExamplesForAnotherTool() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new AgentToolDescriptor(
+                "tool",
+                "Tool",
+                "Reads data.",
+                "test",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.MODEL_DATA,
+                parameters(),
+                List.of(),
+                List.of("Do not use for unrelated work."),
+                List.of(new ToolExample("other", "{}", "Other tool.")),
+                Set.of(),
+                Set.of()));
+  }
+
+  @Test
+  void rejectsNegativeTimeouts() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new AgentToolDescriptor(
+                "tool",
+                "Tool",
+                "Reads data.",
+                "test",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.MODEL_DATA,
+                parameters(),
+                List.of(),
+                List.of("Do not use for unrelated work."),
+                List.of(),
+                Set.of(),
+                Set.of(),
+                true,
+                java.time.Duration.ofSeconds(-1),
+                new JsonObject()));
+  }
+
+  @Test
   void rejectsUnsupportedSchemaTypesBeforeToolRegistration() {
     JsonObject parameterSchema = parameters();
     JsonObject property = new JsonObject();
