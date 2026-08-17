@@ -32,6 +32,11 @@ final class AgentToolResultCoordinator {
     if (calls.size() != results.size()) {
       throw new AgentRoutingException("Agent tool result count did not match tool call count");
     }
+    for (AgentToolResult result : results) {
+      if (result == null) {
+        throw new AgentRoutingException("Agent tool result was null");
+      }
+    }
     for (int index = 0; index < calls.size(); index++) {
       LlmToolCall call = calls.get(index);
       AgentToolResult result = results.get(index);

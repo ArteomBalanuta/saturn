@@ -64,4 +64,62 @@ class AgentToolResultCoordinatorTest {
                 (ignoredContext, ignoredCall, result) -> result.envelopeJson(),
                 "correlation-2"));
   }
+
+  @Test
+  void rejectsNullToolResultsWithStableRoutingError() {
+    AgentToolResultCoordinator coordinator =
+        new AgentToolResultCoordinator(
+            new AgentFreshDataPolicy(), AgentCommandProseGuard.from(List.of()));
+    AgentTurnState state =
+        new AgentTurnState(AgentExecutionLimits.from(AgentConfig.from(null, Map.of())));
+    LlmToolCall call = new LlmToolCall("call-null", "echo", "{}");
+
+    AgentRoutingException exception =
+        org.junit.jupiter.api.Assertions.assertThrows(
+            AgentRoutingException.class,
+            () ->
+                coordinator.record(
+                    new AgentContext(
+                        "programming", "alice", "trip", "hash", false, List.of("alice")),
+                    List.of(call),
+                    java.util.Collections.singletonList(null),
+                    Optional.empty(),
+                    Optional.empty(),
+                    state,
+                    new java.util.ArrayList<>(),
+                    (ignoredContext, ignoredCall, result) -> result.envelopeJson(),
+                    "correlation-null"));
+
+    assertEquals("Agent tool result was null", exception.getMessage());
+  }
+
+  @Test
+  void rejectsNullToolResultsBeforePartiallyRecordingTheBatch() {
+    AgentToolResultCoordinator coordinator =
+        new AgentToolResultCoordinator(
+            new AgentFreshDataPolicy(), AgentCommandProseGuard.from(List.of()));
+    AgentTurnState state =
+        new AgentTurnState(AgentExecutionLimits.from(AgentConfig.from(null, Map.of())));
+    LlmToolCall firstCall = new LlmToolCall("call-first", "echo", "{}");
+    LlmToolCall secondCall = new LlmToolCall("call-second", "echo", "{}");
+    List<LlmMessage> messages = new java.util.ArrayList<>();
+
+    org.junit.jupiter.api.Assertions.assertThrows(
+        AgentRoutingException.class,
+        () ->
+            coordinator.record(
+                new AgentContext("programming", "alice", "trip", "hash", false, List.of("alice")),
+                List.of(firstCall, secondCall),
+                java.util.Arrays.asList(
+                    new AgentToolResult("call-first", "echo", "ok", false), null),
+                Optional.empty(),
+                Optional.empty(),
+                state,
+                messages,
+                (ignoredContext, ignoredCall, result) -> result.envelopeJson(),
+                "correlation-partial"));
+
+    assertTrue(state.successfulToolResults().isEmpty());
+    assertTrue(messages.isEmpty());
+  }
 }
