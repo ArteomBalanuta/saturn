@@ -164,6 +164,32 @@ class RoomModerationMonitorTest {
   }
 
   @Test
+  void suppressesARepeatedWarningWhileTheActionCooldownIsActive() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
+    Toml config =
+        new Toml()
+            .read(
+                """
+                [agent]
+                moderationMessageBurstCount = 2
+                moderationRepeatedMessageCount = 10
+                moderationSecondBreachWindowSeconds = 1
+                moderationActionCooldownSeconds = 30
+                """);
+    RoomModerationMonitor monitor =
+        new RoomModerationMonitor(AgentModerationConfig.from(config), clock);
+    List<ModerationDecision> decisions = new ArrayList<>();
+
+    decisions.addAll(monitor.onMessage(message("spammer", "trip-s", "hash-s", "burst-1")));
+    decisions.addAll(monitor.onMessage(message("spammer", "trip-s", "hash-s", "burst-2")));
+    clock.advance(Duration.ofSeconds(2));
+    decisions.addAll(monitor.onMessage(message("spammer", "trip-s", "hash-s", "again-1")));
+    decisions.addAll(monitor.onMessage(message("spammer", "trip-s", "hash-s", "again-2")));
+
+    assertEquals(List.of(ModerationAction.WARN), actions(decisions));
+  }
+
+  @Test
   void ignoresEmptyMessagesAndDisabledMonitoring() {
     MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
     RoomModerationMonitor monitor =
