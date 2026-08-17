@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.moandjiezana.toml.Toml;
+import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class AgentConfigTest {
@@ -148,5 +150,53 @@ class AgentConfigTest {
     assertThrows(IllegalArgumentException.class, () -> AgentConfig.from(badEndpoint, Map.of()));
     assertThrows(IllegalArgumentException.class, () -> AgentConfig.from(badLimit, Map.of()));
     assertThrows(IllegalArgumentException.class, () -> AgentConfig.from(missingHost, Map.of()));
+  }
+
+  @Test
+  void rejectsNegativeRetrySettings() {
+    Toml negativeRetries =
+        new Toml()
+            .read(
+                """
+                [agent]
+                maxRetries = -1
+                """);
+    Toml negativeBackoff =
+        new Toml()
+            .read(
+                """
+                [agent]
+                retryBackoffMillis = -1
+                """);
+
+    assertThrows(IllegalArgumentException.class, () -> AgentConfig.from(negativeRetries, Map.of()));
+    assertThrows(IllegalArgumentException.class, () -> AgentConfig.from(negativeBackoff, Map.of()));
+  }
+
+  @Test
+  void supportsLegacyConstructorDefaults() {
+    AgentConfig config =
+        new AgentConfig(
+            true,
+            URI.create("http://localhost:16261"),
+            Optional.empty(),
+            "",
+            Duration.ofSeconds(1),
+            2,
+            4,
+            2,
+            2,
+            100,
+            100,
+            2,
+            Duration.ofMinutes(1),
+            0,
+            Duration.ZERO,
+            128,
+            true);
+
+    assertEquals(5, config.maxSteps());
+    assertEquals(4, config.maxToolCallsPerTurn());
+    assertEquals(Duration.ofSeconds(10), config.toolTimeout());
   }
 }
