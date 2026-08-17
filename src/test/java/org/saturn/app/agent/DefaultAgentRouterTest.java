@@ -75,6 +75,58 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void replacesRoomDeliveryToolResultWithSuccessfulEnvelope() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "",
+                List.of(new LlmToolCall("call-1", "announce", "{\"text\":\"hello\"}")),
+                "tool_calls"),
+            new LlmResponse("The announcement was delivered.", List.of(), "stop"));
+    AgentTool tool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "announce";
+          }
+
+          @Override
+          public AgentToolDescriptor descriptor(AgentContext context) {
+            return new AgentToolDescriptor(
+                name(),
+                name(),
+                name(),
+                "general",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.ROOM_DELIVERY,
+                parameters(context),
+                List.of(),
+                List.of("Use only for announcements."),
+                List.of(),
+                Set.of(),
+                Set.of());
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), arguments.get("text").getAsString());
+          }
+        };
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(4, 100),
+            client,
+            new AgentToolRegistry().register(tool).freeze(),
+            new RecordingMemory());
+
+    router.route(new AgentInvocation(context(), "announce hello"));
+
+    assertTrue(
+        client.requests.get(1).messages().getLast().content().contains("\"status\":\"success\""));
+  }
+
+  @Test
   void labelsPersistedSharedHistoryAndDirectsTheModelToUseItForFollowUps() throws Exception {
     RecordingMemory memory =
         new RecordingMemory(
