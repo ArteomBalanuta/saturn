@@ -269,6 +269,65 @@ class DefaultAgentRoomAutomationTest {
     engine.stop();
   }
 
+  @Test
+  void dispatchesSevereSemanticModerationSignalsToTheModerationMode() {
+    EngineImpl engine = TestSupport.engine();
+    installRoleResolver(engine, Role.REGULAR);
+    List<AgentInvocation> submissions = new ArrayList<>();
+    AgentContext botContext =
+        new AgentContext(
+            engine.channel,
+            engine.nick,
+            "creator-trip",
+            null,
+            false,
+            List.of("saturn", "alice"),
+            Set.of(AgentCapability.MODERATION_COMMANDS));
+    DefaultAgentRoomAutomation automation =
+        new DefaultAgentRoomAutomation(
+            engine,
+            AgentParticipationConfig.from(new Toml()),
+            recordingService(submissions),
+            new AgentInvocationFactory(AgentParticipationConfig.from(new Toml())),
+            new AgentMentionParser(),
+            new AgentQuietRegistry(java.time.Duration.ofMinutes(5), Clock.systemUTC()),
+            RoomModerationMonitor.disabled(),
+            decision -> true,
+            botContext,
+            message -> true);
+
+    automation.onMessage(TestSupport.chatMessage("I will doxx you", "alice", "trip-a"));
+
+    assertEquals(1, submissions.size());
+    assertEquals(AgentInvocationMode.MODERATION, submissions.getFirst().mode());
+    assertTrue(submissions.getFirst().prompt().contains("doxx"));
+    engine.stop();
+  }
+
+  @Test
+  void toleratesModerationActionRejectionWithoutChangingMessageRouting() {
+    EngineImpl engine = TestSupport.engine();
+    List<AgentInvocation> submissions = new ArrayList<>();
+    AgentModerationConfig moderationConfig =
+        AgentModerationConfig.from(new Toml().read("[agent]\nmoderationMessageBurstCount = 1"));
+    DefaultAgentRoomAutomation automation =
+        new DefaultAgentRoomAutomation(
+            engine,
+            AgentParticipationConfig.from(new Toml()),
+            recordingService(submissions),
+            new AgentInvocationFactory(AgentParticipationConfig.from(new Toml())),
+            new AgentMentionParser(),
+            new AgentQuietRegistry(java.time.Duration.ofMinutes(5), Clock.systemUTC()),
+            new RoomModerationMonitor(moderationConfig, Clock.systemUTC()),
+            decision -> false);
+
+    assertEquals(
+        AgentRoomAutomation.Outcome.PASS,
+        automation.onMessage(TestSupport.chatMessage("ordinary chat", "alice", "trip-a")));
+    assertTrue(submissions.isEmpty());
+    engine.stop();
+  }
+
   private DefaultAgentRoomAutomation automation(
       EngineImpl engine, AgentParticipationConfig config, List<AgentInvocation> submissions) {
     return new DefaultAgentRoomAutomation(
