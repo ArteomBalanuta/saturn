@@ -10,17 +10,27 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.net.Authenticator;
+import java.net.CookieHandler;
 import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.AgentConfig;
@@ -240,6 +250,39 @@ class OpenAiCompatibleClientTest {
   }
 
   @Test
+  void retriesTransportIOExceptionBeforeReturningStableFailure() {
+    AgentConfig config =
+        new AgentConfig(
+            true,
+            URI.create("http://localhost"),
+            Optional.empty(),
+            "",
+            Duration.ofMillis(100),
+            2,
+            4,
+            2,
+            2,
+            8_000,
+            8_000,
+            10,
+            Duration.ofHours(1),
+            1,
+            Duration.ofMillis(1));
+    FailingHttpClient httpClient = new FailingHttpClient();
+    OpenAiCompatibleClient client =
+        new OpenAiCompatibleClient(config, new com.google.gson.Gson(), httpClient);
+
+    LlmException exception =
+        assertThrows(
+            LlmException.class,
+            () -> client.complete(new LlmRequest(List.of(LlmMessage.user("hi")), List.of())));
+
+    assertEquals("LLM endpoint request failed", exception.getMessage());
+    assertTrue(exception.getCause() instanceof IOException);
+    assertEquals(2, httpClient.sendCount.get());
+  }
+
+  @Test
   void rejectsMalformedSuccessfulResponse() throws Exception {
     server = HttpServer.create(new InetSocketAddress(0), 0);
     server.createContext(
@@ -390,6 +433,80 @@ class OpenAiCompatibleClientTest {
         Duration.ofHours(1),
         retries,
         Duration.ofMillis(1));
+  }
+
+  private static final class FailingHttpClient extends HttpClient {
+    private final AtomicInteger sendCount = new AtomicInteger();
+
+    @Override
+    public <T> HttpResponse<T> send(
+        HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) throws IOException {
+      sendCount.incrementAndGet();
+      throw new IOException("transport unavailable");
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+        HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler) {
+      return CompletableFuture.failedFuture(new IOException("transport unavailable"));
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+        HttpRequest request,
+        HttpResponse.BodyHandler<T> responseBodyHandler,
+        HttpResponse.PushPromiseHandler<T> pushPromiseHandler) {
+      return CompletableFuture.failedFuture(new IOException("transport unavailable"));
+    }
+
+    @Override
+    public Optional<CookieHandler> cookieHandler() {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<Duration> connectTimeout() {
+      return Optional.empty();
+    }
+
+    @Override
+    public Redirect followRedirects() {
+      return Redirect.NEVER;
+    }
+
+    @Override
+    public Optional<ProxySelector> proxy() {
+      return Optional.empty();
+    }
+
+    @Override
+    public SSLContext sslContext() {
+      try {
+        return SSLContext.getDefault();
+      } catch (Exception exception) {
+        throw new AssertionError(exception);
+      }
+    }
+
+    @Override
+    public SSLParameters sslParameters() {
+      return new SSLParameters();
+    }
+
+    @Override
+    public Optional<Authenticator> authenticator() {
+      return Optional.empty();
+    }
+
+    @Override
+    public Version version() {
+      return Version.HTTP_1_1;
+    }
+
+    @Override
+    public Optional<Executor> executor() {
+      return Optional.empty();
+    }
   }
 
   private static void respond(com.sun.net.httpserver.HttpExchange exchange, int status, String body)
