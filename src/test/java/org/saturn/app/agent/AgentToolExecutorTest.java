@@ -274,6 +274,73 @@ class AgentToolExecutorTest {
   }
 
   @Test
+  void rejectsAProviderBatchWhenItsToolContractThrows() {
+    AgentTool invalidContract =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "invalid_contract";
+          }
+
+          @Override
+          public AgentToolDescriptor descriptor(AgentContext context) {
+            throw new IllegalStateException("invalid descriptor");
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            throw new AssertionError("invalid contract must not execute");
+          }
+        };
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(invalidContract).freeze(), config())) {
+      AgentToolResult result =
+          executor
+              .executeAll(null, List.of(new LlmToolCall("invalid-1", "invalid_contract", "{}")))
+              .getFirst();
+
+      assertTrue(result.isError());
+      assertEquals("INVALID_TOOL_CONTRACT", result.errorCode());
+      assertEquals("Invalid tool contract", result.content());
+    }
+  }
+
+  @Test
+  void acceptsSuccessfulToolOutputWithNullContent() {
+    AgentTool nullContentTool =
+        new AgentTool() {
+          private final AgentTool delegate = successfulTool("null_content");
+
+          @Override
+          public String name() {
+            return delegate.name();
+          }
+
+          @Override
+          public AgentToolDescriptor descriptor(AgentContext context) {
+            return delegate.descriptor(context);
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return new AgentToolResult(null, name(), null, false, null);
+          }
+        };
+
+    try (AgentToolExecutor executor =
+        new AgentToolExecutor(
+            new AgentToolRegistry().register(nullContentTool).freeze(), config())) {
+      AgentToolResult result =
+          executor.execute(null, new LlmToolCall("null-content-1", "null_content", "{}"));
+
+      assertFalse(result.isError());
+      assertEquals("null-content-1", result.callId());
+    }
+  }
+
+  @Test
   void closeInterruptsAnInFlightToolExecution() throws Exception {
     CountDownLatch started = new CountDownLatch(1);
     CountDownLatch interrupted = new CountDownLatch(1);
