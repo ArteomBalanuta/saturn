@@ -130,6 +130,7 @@ public class Connection {
   }
 
   public void write(String message) {
+    log.info("Outgoing WS payload: {}", message);
     client.send(message);
   }
 
