@@ -115,6 +115,53 @@ class AgentCommandChannelPolicyTest {
   }
 
   @Test
+  void rejectsMissingOrObjectNonCommandFallbackResponse() {
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+
+    for (String arguments : List.of("{}", "{\"response\":{}}")) {
+      LlmToolCall call = new LlmToolCall("call-1", "respond_without_command", arguments);
+      AgentCommandChannelPolicy policy =
+          new AgentCommandChannelPolicy(
+              request -> new LlmResponse("", List.of(call), "tool_calls"));
+
+      assertThrows(
+          AgentRoutingException.class,
+          () ->
+              policy.enforce(
+                  new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                  new ArrayList<>(),
+                  definitions(),
+                  AgentCommandProseGuard.from(definitions()),
+                  state,
+                  "show Tokyo weather",
+                  "request-invalid-shape"));
+    }
+  }
+
+  @Test
+  void rejectsCommandProseRepeatedAfterAnUnsuccessfulCorrection() {
+    AgentCommandChannelPolicy policy =
+        new AgentCommandChannelPolicy(
+            request -> new LlmResponse("`weather Tokyo`", List.of(), "stop"));
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 10, Duration.ofSeconds(1)));
+    state.markCommandCorrectionUsed();
+
+    assertThrows(
+        AgentRoutingException.class,
+        () ->
+            policy.enforce(
+                new LlmResponse("`weather Tokyo`", List.of(), "stop"),
+                new ArrayList<>(),
+                definitions(),
+                AgentCommandProseGuard.from(definitions()),
+                state,
+                "show Tokyo weather",
+                "request-repeated-command"));
+  }
+
+  @Test
   void doesNotOfferToolsAgainAfterCommandFailure() throws Exception {
     List<LlmRequest> requests = new ArrayList<>();
     AgentCommandChannelPolicy policy =
