@@ -161,11 +161,57 @@ class AgentToolCallSchedulerTest {
     }
   }
 
+  @Test
+  void convertsSequentialInterruptionsToCodedResultsAndRestoresInterruptFlag() {
+    LlmToolCall call = new LlmToolCall("interrupted", "run_command", "{}");
+
+    try {
+      try (AgentToolCallScheduler scheduler = new AgentToolCallScheduler()) {
+        List<AgentToolResult> results =
+            scheduler.executeAll(
+                List.of(scheduled(call, AgentToolExecutionMode.SEQUENTIAL_ACTION)),
+                ignored -> {
+                  throw new InterruptedException("interrupted");
+                });
+
+        assertEquals("TOOL_INTERRUPTED", results.getFirst().errorCode());
+        assertTrue(Thread.currentThread().isInterrupted());
+      }
+    } finally {
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  void convertsInterruptedParallelWaitsToCodedResultsAndRestoresInterruptFlag() {
+    LlmToolCall first = new LlmToolCall("first", "room_users", "{}");
+    LlmToolCall second = new LlmToolCall("second", "user_message_history", "{}");
+
+    try {
+      try (AgentToolCallScheduler scheduler =
+          new AgentToolCallScheduler(new InterruptedFutureExecutor())) {
+        List<AgentToolResult> results =
+            scheduler.executeAll(
+                List.of(
+                    scheduled(first, AgentToolExecutionMode.PARALLEL_READ),
+                    scheduled(second, AgentToolExecutionMode.PARALLEL_READ)),
+                call -> AgentToolResult.success(call.name(), "unexpected"));
+
+        assertEquals(2, results.size());
+        assertTrue(
+            results.stream().allMatch(result -> "TOOL_INTERRUPTED".equals(result.errorCode())));
+        assertTrue(Thread.currentThread().isInterrupted());
+      }
+    } finally {
+      Thread.interrupted();
+    }
+  }
+
   private AgentScheduledToolCall scheduled(LlmToolCall call, AgentToolExecutionMode executionMode) {
     return new AgentScheduledToolCall(call, executionMode);
   }
 
-  private static final class CancelledFutureExecutor extends AbstractExecutorService {
+  private static class CancelledFutureExecutor extends AbstractExecutorService {
     @Override
     public void shutdown() {}
 
@@ -197,6 +243,38 @@ class AgentToolCallSchedulerTest {
       FutureTask<T> future = new FutureTask<>(task);
       future.cancel(false);
       return future;
+    }
+  }
+
+  private static final class InterruptedFutureExecutor extends CancelledFutureExecutor {
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+      return new Future<>() {
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+          return false;
+        }
+
+        @Override
+        public boolean isCancelled() {
+          return false;
+        }
+
+        @Override
+        public boolean isDone() {
+          return false;
+        }
+
+        @Override
+        public T get() throws InterruptedException {
+          throw new InterruptedException("interrupted");
+        }
+
+        @Override
+        public T get(long timeout, TimeUnit unit) throws InterruptedException {
+          throw new InterruptedException("interrupted");
+        }
+      };
     }
   }
 }
