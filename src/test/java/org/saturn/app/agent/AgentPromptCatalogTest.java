@@ -29,7 +29,7 @@ class AgentPromptCatalogTest {
 
     String prompt = catalog.text("vaelen-system-prompt.txt");
 
-    assertTrue(prompt.startsWith("You are **Vaelen**"));
+    assertTrue(prompt.startsWith("You are Vaelen"));
     assertTrue(prompt.endsWith("\n"));
   }
 

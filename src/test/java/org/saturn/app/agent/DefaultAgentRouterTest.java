@@ -151,7 +151,11 @@ class DefaultAgentRouterTest {
         request.messages().stream().map(org.saturn.app.agent.llm.LlmMessage::role).toList());
     assertTrue(request.messages().getFirst().content().contains("CONVERSATION CONTINUITY"));
     assertTrue(
-        request.messages().getFirst().content().contains("same conversation, not a new session"));
+        request
+            .messages()
+            .getFirst()
+            .content()
+            .contains("Treat that\nhistory as the same conversation"));
     assertTrue(request.messages().getLast().content().contains("@bob"));
     assertTrue(request.messages().getLast().content().contains("Which room did Alice ask about?"));
   }
