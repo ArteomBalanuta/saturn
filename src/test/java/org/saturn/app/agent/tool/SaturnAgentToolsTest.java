@@ -521,6 +521,9 @@ class SaturnAgentToolsTest {
             config);
 
     AgentToolResult missing = tool.execute(adminContext(), new JsonObject());
+    JsonObject blankArguments = new JsonObject();
+    blankArguments.addProperty("sql", "   ");
+    AgentToolResult blank = tool.execute(adminContext(), blankArguments);
     JsonObject wrongTypeArguments = new JsonObject();
     wrongTypeArguments.add("sql", new JsonObject());
     AgentToolResult wrongType = tool.execute(adminContext(), wrongTypeArguments);
@@ -530,6 +533,7 @@ class SaturnAgentToolsTest {
     AgentToolResult result = tool.execute(adminContext(), arguments);
 
     assertTrue(missing.isError());
+    assertTrue(blank.isError());
     assertTrue(wrongType.isError());
     assertTrue(regularCaller.isError());
     assertEquals(
@@ -538,6 +542,7 @@ class SaturnAgentToolsTest {
             .getAsJsonObject()
             .get("code")
             .getAsString());
+    assertEquals(AgentSqlErrorCode.EMPTY_SQL.name(), errorCode(blank));
     assertFalse(result.isError());
     assertEquals(
         42,
