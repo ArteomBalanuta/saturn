@@ -223,6 +223,29 @@ class RoomModerationMonitorTest {
         decisions.stream().anyMatch(decision -> decision.action() == ModerationAction.SHADOWBAN));
   }
 
+  @Test
+  void doesNotShadowbanWhenThePreviousSameHashSignalHasExpired() {
+    MutableClock clock = new MutableClock(Instant.parse("2026-08-15T00:00:00Z"));
+    RoomModerationMonitor monitor =
+        new RoomModerationMonitor(AgentModerationConfig.from(new Toml()), clock);
+    List<ModerationDecision> decisions = new ArrayList<>();
+
+    for (int wave = 0; wave < 2; wave++) {
+      for (int index = 0; index < 5; index++) {
+        decisions.addAll(monitor.onJoin(user("expired" + wave + index, null, "shared-hash")));
+      }
+      clock.advance(Duration.ofSeconds(601));
+    }
+
+    assertEquals(
+        2,
+        decisions.stream()
+            .filter(decision -> decision.action() == ModerationAction.CAPTCHA_ON)
+            .count());
+    assertTrue(
+        decisions.stream().noneMatch(decision -> decision.action() == ModerationAction.SHADOWBAN));
+  }
+
   private void repeat(
       RoomModerationMonitor monitor, List<ModerationDecision> decisions, String text, int count) {
     for (int index = 0; index < count; index++) {
