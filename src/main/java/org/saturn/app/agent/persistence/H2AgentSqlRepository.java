@@ -192,8 +192,8 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     } catch (ArithmeticException exception) {
       millis = Integer.MAX_VALUE;
     }
-    long seconds = Math.max(1, (millis + 999) / 1_000);
-    return (int) Math.clamp(seconds, 1, Integer.MAX_VALUE);
+    long seconds = Math.max(1, Math.ceilDiv(millis, 1_000L));
+    return (int) Math.clamp(seconds, 1, Integer.MAX_VALUE / 1_000);
   }
 
   private long elapsedMillis(long startedAt) {

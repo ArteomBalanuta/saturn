@@ -147,6 +147,28 @@ class H2AgentSqlRepositoryTest {
   }
 
   @Test
+  void acceptsValidFingerprintAndHandlesUnboundedRowsAndTimeoutDuration() throws Exception {
+    AgentSqlConfig config =
+        config(Integer.MAX_VALUE, 32, 2_000, 32_000, Duration.ofSeconds(Long.MAX_VALUE));
+
+    AgentSqlResult result =
+        repository.execute(
+            new ValidatedAgentSql(
+                "SELECT value FROM many_values ORDER BY value",
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+            config);
+
+    assertEquals(100, result.rows().size());
+    assertEquals(99L, result.rows().getLast().getFirst());
+
+    var method =
+        H2AgentSqlRepository.class.getDeclaredMethod("queryTimeoutSeconds", Duration.class);
+    method.setAccessible(true);
+    assertEquals(
+        Integer.MAX_VALUE / 1_000, method.invoke(repository, Duration.ofSeconds(Long.MAX_VALUE)));
+  }
+
+  @Test
   void rejectsResultsWithTooManyColumns() {
     AgentPersistenceException exception =
         assertThrows(
