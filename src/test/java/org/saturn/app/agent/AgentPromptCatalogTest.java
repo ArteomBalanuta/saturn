@@ -1,6 +1,7 @@
 package org.saturn.app.agent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,8 +30,20 @@ class AgentPromptCatalogTest {
 
     String prompt = catalog.text("vaelen-system-prompt.txt");
 
-    assertTrue(prompt.startsWith("You are Vaelen"));
+    assertTrue(prompt.startsWith("You are **Vaelen**"));
     assertTrue(prompt.endsWith("\n"));
+  }
+
+  @Test
+  void quoteOnlyCorrectionRequiresKnownRelatedQuoteAndRejectsOriginalAphorisms() {
+    AgentPromptCatalog catalog = new AgentPromptCatalog();
+
+    String prompt = catalog.text("router-quote-only-correction.txt");
+
+    assertTrue(
+        prompt.contains(
+            "For fragmentary or nonsense input, select a known quotation that is contextually related"));
+    assertTrue(prompt.contains("Do not write an original aphorism"));
   }
 
   @Test
@@ -43,6 +56,22 @@ class AgentPromptCatalogTest {
         policy.contains(
             "When asked what you can do, state that you can execute every moderation action"
                 + " currently exposed by run_command"));
+  }
+
+  @Test
+  void policyUsesQuoteOnlyModeForAllNonCommandProse() {
+    AgentPromptCatalog catalog = new AgentPromptCatalog();
+
+    String policy = catalog.text("system-policy.txt");
+
+    assertTrue(policy.contains("OUTPUT STYLE: Executable requests follow their tool contracts"));
+    assertTrue(policy.contains("All non-command prose requests"));
+    assertTrue(
+        policy.contains("including technical, factual, advice, identity, and general requests"));
+    assertTrue(policy.contains("the `l`/agent invocation wrapper"));
+    assertFalse(
+        policy.contains("Keep command results brief and answer conceptual questions directly"));
+    assertFalse(policy.contains("For definition requests, answer the exact term asked about"));
   }
 
   @Test

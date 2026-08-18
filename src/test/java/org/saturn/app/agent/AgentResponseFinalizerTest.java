@@ -122,7 +122,7 @@ class AgentResponseFinalizerTest {
   }
 
   private static AgentResponseFinalizer finalizer() {
-    LlmClient client = request -> new LlmResponse("unused", List.of(), "stop");
+    LlmClient client = request -> new LlmResponse("{\"line\":\"unused\"}", List.of(), "stop");
     AgentConfig config = AgentConfig.from(null, Map.of());
     AgentParticipationConfig participation = AgentParticipationConfig.from(null);
     return new AgentResponseFinalizer(

@@ -112,6 +112,37 @@ class OpenAiCompatibleClientTest {
   }
 
   @Test
+  void serializesStructuredResponseFormat() throws Exception {
+    AtomicReference<String> body = new AtomicReference<>();
+    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server.createContext(
+        "/v1/chat/completions",
+        exchange -> {
+          body.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+          respond(exchange, 200, "{\"choices\":[{\"message\":{\"content\":\"{}\"}}]}");
+        });
+    server.start();
+
+    JsonObject format = new JsonObject();
+    format.addProperty("type", "json_schema");
+    JsonObject schema = new JsonObject();
+    schema.addProperty("name", "quote_only_response");
+    schema.addProperty("strict", true);
+    format.add("json_schema", schema);
+    new OpenAiCompatibleClient(config("", 0))
+        .complete(
+            new LlmRequest(List.of(LlmMessage.user("quote")), List.<JsonObject>of(), true, format));
+
+    JsonObject responseFormat =
+        JsonParser.parseString(body.get()).getAsJsonObject().getAsJsonObject("response_format");
+    assertEquals("json_schema", responseFormat.get("type").getAsString());
+    assertEquals(
+        "quote_only_response",
+        responseFormat.getAsJsonObject("json_schema").get("name").getAsString());
+    assertTrue(responseFormat.getAsJsonObject("json_schema").get("strict").getAsBoolean());
+  }
+
+  @Test
   void retriesTransientFailureButDoesNotRetryClientError() throws Exception {
     AtomicInteger transientCalls = new AtomicInteger();
     server = HttpServer.create(new InetSocketAddress(0), 0);

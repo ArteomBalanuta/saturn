@@ -4,9 +4,16 @@ import com.google.gson.JsonObject;
 import java.util.List;
 
 public record LlmRequest(
-    List<LlmMessage> messages, List<JsonObject> tools, boolean bypassPromptCache) {
+    List<LlmMessage> messages,
+    List<JsonObject> tools,
+    boolean bypassPromptCache,
+    JsonObject responseFormat) {
   public LlmRequest(List<LlmMessage> messages, List<JsonObject> tools) {
-    this(messages, tools, false);
+    this(messages, tools, false, null);
+  }
+
+  public LlmRequest(List<LlmMessage> messages, List<JsonObject> tools, boolean bypassPromptCache) {
+    this(messages, tools, bypassPromptCache, null);
   }
 
   public LlmRequest {

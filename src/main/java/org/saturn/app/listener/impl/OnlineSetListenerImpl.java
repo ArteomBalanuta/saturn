@@ -47,7 +47,6 @@ public class OnlineSetListenerImpl implements Listener {
     User[] users = gson.fromJson(listingElement, User[].class);
     engine.setActiveUsers(Arrays.asList(users));
     if (engine.engineType.equals(EngineType.HOST)) {
-      engine.outService.enqueueMessageForSending("/color FFDF00");
       executeStartupCommands();
     }
   }
@@ -59,8 +58,12 @@ public class OnlineSetListenerImpl implements Listener {
       List<String> autorunCommands = List.of(engine.autorunCmds.split(","));
       for (String command : autorunCommands) {
         log.warn("Executing autorun command: {}", command);
-        engine.outService.enqueueMessageForSending(
-            "/whisper " + engine.nick + " " + engine.getPrefix() + command);
+        if (command.startsWith("/")) {
+          engine.outService.enqueueMessageForSending(command);
+        } else {
+          engine.outService.enqueueMessageForSending(
+              "/whisper " + engine.nick + " " + engine.getPrefix() + command);
+        }
       }
     }
   }

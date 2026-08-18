@@ -41,6 +41,11 @@ public final class OpenAiCompatibleClient implements LlmClient {
         if (response.statusCode() / 100 == 2) {
           return parse(response.body());
         }
+        if (request.responseFormat() != null
+            && isUnsupportedResponseFormat(response.statusCode(), response.body())) {
+          throw new UnsupportedResponseFormatException(
+              "LLM endpoint rejected structured response format");
+        }
         if (!isTransient(response.statusCode()) || attempt >= config.maxRetries()) {
           throw new LlmException("LLM endpoint returned HTTP " + response.statusCode());
         }
@@ -91,6 +96,9 @@ public final class OpenAiCompatibleClient implements LlmClient {
       request.tools().forEach(tools::add);
       payload.add("tools", tools);
       payload.addProperty("tool_choice", "auto");
+    }
+    if (request.responseFormat() != null) {
+      payload.add("response_format", request.responseFormat());
     }
     return payload;
   }
@@ -159,6 +167,17 @@ public final class OpenAiCompatibleClient implements LlmClient {
 
   private URI completionUri() {
     return URI.create(config.endpoint() + "/v1/chat/completions");
+  }
+
+  private static boolean isUnsupportedResponseFormat(int statusCode, String body) {
+    if (statusCode != 400 && statusCode != 422) {
+      return false;
+    }
+    String normalized = body == null ? "" : body.toLowerCase(java.util.Locale.ROOT);
+    return normalized.contains("response_format")
+        || normalized.contains("json_schema")
+        || normalized.contains("structured output")
+        || normalized.contains("structured_output");
   }
 
   private static boolean isTransient(int statusCode) {

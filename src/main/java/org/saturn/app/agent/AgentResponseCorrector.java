@@ -1,5 +1,10 @@
 package org.saturn.app.agent;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -9,6 +14,7 @@ import org.saturn.app.agent.llm.LlmException;
 import org.saturn.app.agent.llm.LlmMessage;
 import org.saturn.app.agent.llm.LlmRequest;
 import org.saturn.app.agent.llm.LlmResponse;
+import org.saturn.app.agent.llm.UnsupportedResponseFormatException;
 
 /**
  * Applies bounded recovery policies to invalid model responses.
@@ -25,6 +31,7 @@ final class AgentResponseCorrector {
       PROMPTS.text("router-internal-evidence-correction.txt").strip();
   private static final String QUOTE_ONLY_CORRECTION =
       PROMPTS.text("router-quote-only-correction.txt").strip();
+  private static final JsonObject QUOTE_ONLY_RESPONSE_FORMAT = quoteOnlyResponseFormat();
   private static final String UNVERIFIED_ACTION_CORRECTION =
       PROMPTS.text("router-unverified-action-correction.txt");
   private static final String UNVERIFIED_ACTION_FINAL_CORRECTION =
@@ -77,13 +84,100 @@ final class AgentResponseCorrector {
         correlationId);
     List<LlmMessage> correctionMessages =
         isolatedCorrectionMessages(messages, QUOTE_ONLY_CORRECTION);
-    LlmResponse corrected =
-        requireResponse(
-            client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of())));
+    LlmResponse corrected;
+    try {
+      corrected =
+          requireResponse(
+              client.complete(
+                  new LlmRequest(correctionMessages, List.of(), true, QUOTE_ONLY_RESPONSE_FORMAT)));
+      corrected = parseStructuredQuote(corrected);
+    } catch (UnsupportedResponseFormatException exception) {
+      log.warn(
+          "Structured quote correction unsupported; falling back to textual correction, correlationId={}",
+          correlationId);
+      corrected =
+          requireResponse(
+              client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of())));
+    } catch (AgentRoutingException exception) {
+      logInvalidQuoteCorrection(correlationId, response.content());
+      throw exception;
+    }
     if (!isQuoteOnly(corrected.content())) {
+      logInvalidQuoteCorrection(correlationId, corrected.content());
       throw new AgentRoutingException("Agent returned a non-quote prose response after correction");
     }
     return corrected;
+  }
+
+  private static LlmResponse parseStructuredQuote(LlmResponse response)
+      throws AgentRoutingException {
+    if (isQuoteOnly(response.content())) {
+      return response;
+    }
+    try {
+      JsonElement parsed = JsonParser.parseString(response.content());
+      if (!parsed.isJsonObject()) {
+        throw new IllegalStateException("not an object");
+      }
+      JsonObject object = parsed.getAsJsonObject();
+      if (object.size() != 1 || !object.has("line")) {
+        throw new IllegalStateException("unexpected fields");
+      }
+      JsonElement line = object.get("line");
+      if (!line.isJsonPrimitive()
+          || !line.getAsJsonPrimitive().isString()
+          || line.getAsString().isBlank()) {
+        throw new IllegalStateException("invalid line");
+      }
+      return new LlmResponse(line.getAsString(), response.toolCalls(), response.finishReason());
+    } catch (RuntimeException exception) {
+      throw new AgentRoutingException("Agent returned malformed structured quote correction");
+    }
+  }
+
+  private static JsonObject quoteOnlyResponseFormat() {
+    JsonObject line = new JsonObject();
+    line.addProperty("type", "string");
+    line.addProperty("minLength", 1);
+    JsonObject schema = new JsonObject();
+    schema.addProperty("type", "object");
+    JsonObject properties = new JsonObject();
+    properties.add("line", line);
+    schema.add("properties", properties);
+    schema.add("required", new com.google.gson.JsonArray());
+    schema.getAsJsonArray("required").add("line");
+    schema.addProperty("additionalProperties", false);
+    JsonObject jsonSchema = new JsonObject();
+    jsonSchema.addProperty("name", "quote_only_response");
+    jsonSchema.addProperty("strict", true);
+    jsonSchema.add("schema", schema);
+    JsonObject format = new JsonObject();
+    format.addProperty("type", "json_schema");
+    format.add("json_schema", jsonSchema);
+    return format;
+  }
+
+  private static void logInvalidQuoteCorrection(String correlationId, String content) {
+    log.warn(
+        "Quote correction failed validation, correlationId={}, responseMode=quote-only, contentLength={}, contentHash={}",
+        correlationId,
+        content == null ? 0 : content.length(),
+        shortHash(content));
+  }
+
+  private static String shortHash(String content) {
+    try {
+      byte[] digest =
+          MessageDigest.getInstance("SHA-256")
+              .digest(String.valueOf(content).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      StringBuilder result = new StringBuilder();
+      for (int index = 0; index < 8; index++) {
+        result.append(String.format("%02x", digest[index]));
+      }
+      return result.toString();
+    } catch (NoSuchAlgorithmException exception) {
+      return "unavailable";
+    }
   }
 
   static boolean isQuoteOnly(String content) {

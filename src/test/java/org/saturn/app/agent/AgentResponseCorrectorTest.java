@@ -128,6 +128,65 @@ class AgentResponseCorrectorTest {
   }
 
   @Test
+  void acceptsOnlyAValidStructuredQuoteLine() throws Exception {
+    AgentResponseCorrector corrector =
+        new AgentResponseCorrector(
+            request ->
+                new LlmResponse(
+                    "{\"line\":\"\\\"A quotation\\\" — Book Title, Author\"}", List.of(), "stop"));
+
+    LlmResponse corrected =
+        corrector.correctQuoteOnly(
+            new LlmResponse("Ordinary prose", List.of(), "stop"),
+            List.of(LlmMessage.user("new request")),
+            "request-structured");
+
+    assertEquals("\"A quotation\" — Book Title, Author", corrected.content());
+  }
+
+  @Test
+  void rejectsMalformedStructuredQuoteAndExtraFields() {
+    for (String content :
+        List.of("not json", "{\"line\":\"quote\",\"extra\":true}", "{\"line\":7}")) {
+      AgentResponseCorrector corrector =
+          new AgentResponseCorrector(request -> new LlmResponse(content, List.of(), "stop"));
+      assertThrows(
+          AgentRoutingException.class,
+          () ->
+              corrector.correctQuoteOnly(
+                  new LlmResponse("Ordinary prose", List.of(), "stop"),
+                  List.of(LlmMessage.user("new request")),
+                  "request-invalid-structured"));
+    }
+  }
+
+  @Test
+  void fallsBackToTextualCorrectionWhenStructuredOutputIsUnsupported() throws Exception {
+    List<LlmRequest> requests = new ArrayList<>();
+    AgentResponseCorrector corrector =
+        new AgentResponseCorrector(
+            request -> {
+              requests.add(request);
+              if (request.responseFormat() != null) {
+                throw new org.saturn.app.agent.llm.UnsupportedResponseFormatException(
+                    "unsupported");
+              }
+              return new LlmResponse("\"A quotation\" — Book Title, Author", List.of(), "stop");
+            });
+
+    LlmResponse corrected =
+        corrector.correctQuoteOnly(
+            new LlmResponse("Ordinary prose", List.of(), "stop"),
+            List.of(LlmMessage.user("new request")),
+            "request-fallback");
+
+    assertEquals("\"A quotation\" — Book Title, Author", corrected.content());
+    assertEquals(2, requests.size());
+    assertTrue(requests.getFirst().responseFormat() != null);
+    assertTrue(requests.getLast().responseFormat() == null);
+  }
+
+  @Test
   void retriesGenericAcknowledgementEvenWhenPromptBodyMatches() throws Exception {
     List<LlmRequest> requests = new ArrayList<>();
     ArrayDeque<LlmResponse> responses =
