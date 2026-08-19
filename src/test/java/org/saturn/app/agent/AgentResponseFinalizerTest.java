@@ -20,14 +20,19 @@ class AgentResponseFinalizerTest {
     AgentResponseFinalizer.Result result =
         finalizer.prepare(
             invocation(AgentInvocationMode.DIRECT),
-            new LlmResponse(" \"answer\" — Book Title, Author ", List.of(), "stop"),
+            new LlmResponse(
+                " \"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen ",
+                List.of(),
+                "stop"),
             List.of(),
             Optional.empty(),
             List.of(),
             "correlation-1");
 
     assertTrue(result.shouldReply());
-    assertEquals("\"answer\" — Book Title, Author", result.content());
+    assertEquals(
+        "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen",
+        result.content());
   }
 
   @Test

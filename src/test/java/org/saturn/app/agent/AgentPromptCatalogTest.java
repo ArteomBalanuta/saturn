@@ -30,7 +30,7 @@ class AgentPromptCatalogTest {
 
     String prompt = catalog.text("vaelen-system-prompt.txt");
 
-    assertTrue(prompt.startsWith("You are **Vaelen**"));
+    assertTrue(prompt.startsWith("Role & Objective:"));
     assertTrue(prompt.endsWith("\n"));
   }
 
@@ -40,10 +40,8 @@ class AgentPromptCatalogTest {
 
     String prompt = catalog.text("router-quote-only-correction.txt");
 
-    assertTrue(
-        prompt.contains(
-            "For fragmentary or nonsense input, select a known quotation that is contextually related"));
-    assertTrue(prompt.contains("Do not write an original aphorism"));
+    assertTrue(prompt.contains("Catalog Only: Return one catalog line exactly as shown"));
+    assertTrue(prompt.contains("Do not invent, alter, paraphrase, or reattribute"));
   }
 
   @Test

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 class AgentSystemPromptTest {
   @Test
-  void rendersVaelenCreatorAndDatabaseToolPlaybook() {
+  void rendersCreatorAndDatabaseToolPlaybook() {
     AgentParticipationConfig config = AgentParticipationConfig.from(new Toml());
     AgentSystemPrompt prompt = new AgentSystemPrompt(config);
     AgentContext context =
@@ -27,7 +27,8 @@ class AgentSystemPromptTest {
 
     String rendered = prompt.render(invocation, "correlation-1", "{\"rows\":[{\"name\":\"sun\"}]}");
 
-    assertTrue(rendered.contains("Vaelen"));
+    assertTrue(rendered.contains("Role & Objective:"));
+    assertTrue(rendered.contains("Output exactly one single line formatted strictly as follows:"));
     assertTrue(rendered.contains("595754"));
     assertTrue(rendered.contains("creator\":true"));
     assertTrue(rendered.contains("user_message_history"));
@@ -86,11 +87,11 @@ class AgentSystemPromptTest {
     assertFalse(rendered.contains("long, original, hard-edged roast"));
     assertFalse(rendered.contains("Mock choices, claims"));
     assertFalse(rendered.contains("fighter's soul"));
-    assertTrue(rendered.contains("entire reply exactly one brief"));
-    assertTrue(rendered.contains("not execution of a Saturn bot command"));
-    assertTrue(rendered.contains("\"quotation\" — Book Title, Author"));
-    assertTrue(rendered.contains("Do not invent a quotation"));
-    assertTrue(rendered.contains("quotation-only format"));
+    assertTrue(rendered.contains("Output exactly one single line formatted strictly as follows:"));
+    assertTrue(rendered.contains("\"Quotation text\" — Book Title, Author Name"));
+    assertTrue(
+        rendered.contains(
+            "Never invent, alter, paraphrase, or generate original aphorisms or quotes."));
     assertTrue(rendered.indexOf("PRIORITY ORDER") < rendered.indexOf("PERSONA"));
     assertFalse(rendered.contains("Do not mock, lecture,"));
   }

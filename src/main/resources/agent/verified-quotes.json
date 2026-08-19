@@ -1,0 +1,23 @@
+[
+  {
+    "id": "austen-pride-and-prejudice-truth",
+    "quote": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+    "book": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "reference": "https://www.gutenberg.org/files/1342/1342-h/1342-h.htm"
+  },
+  {
+    "id": "melville-moby-dick-ishmael",
+    "quote": "Call me Ishmael.",
+    "book": "Moby-Dick; or, The Whale",
+    "author": "Herman Melville",
+    "reference": "https://www.gutenberg.org/files/2701/2701-h/2701-h.htm"
+  },
+  {
+    "id": "carroll-alice-imagination",
+    "quote": "Curiouser and curiouser!",
+    "book": "Alice's Adventures in Wonderland",
+    "author": "Lewis Carroll",
+    "reference": "https://www.gutenberg.org/files/11/11-h/11-h.htm"
+  }
+]

@@ -52,6 +52,49 @@ class AgentRequestAssemblerTest {
   }
 
   @Test
+  void filtersReflectedCommandsByExplicitIntentWithoutRemovingOtherTools() {
+    AgentToolRegistry registry =
+        new AgentToolRegistry()
+            .register(tool("run_command"))
+            .register(tool("room_data"))
+            .register(tool("saturn_dbzstr"))
+            .register(tool("saturn_ape"))
+            .freeze();
+    AgentRequestAssembler assembler =
+        new AgentRequestAssembler(
+            config(), registry, new AgentSystemPrompt(AgentParticipationConfig.from(null)));
+    AgentContext context = new AgentContext("room", "alice", null, null, false, List.of("alice"));
+
+    assertFalse(definitionNames(assembler, context, "icecream").contains("saturn_dbzstr"));
+    assertFalse(definitionNames(assembler, context, "asscream").contains("saturn_ape"));
+    assertTrue(definitionNames(assembler, context, "dbzstr hello").contains("saturn_dbzstr"));
+    assertTrue(definitionNames(assembler, context, "run dbzstr").contains("saturn_dbzstr"));
+    assertTrue(definitionNames(assembler, context, "execute dbzstr").contains("saturn_dbzstr"));
+
+    List<String> ordinaryNames = definitionNames(assembler, context, "icecream");
+    assertTrue(ordinaryNames.contains("run_command"));
+    assertTrue(ordinaryNames.contains("room_data"));
+    assertFalse(
+        assembler
+            .assemble(
+                new AgentInvocation(context, "icecream", AgentInvocationMode.MODERATION),
+                List.of(),
+                "")
+            .definitions()
+            .isEmpty());
+  }
+
+  private List<String> definitionNames(
+      AgentRequestAssembler assembler, AgentContext context, String prompt) {
+    return assembler
+        .assemble(new AgentInvocation(context, prompt, AgentInvocationMode.DIRECT), List.of(), "")
+        .definitions()
+        .stream()
+        .map(definition -> definition.getAsJsonObject("function").get("name").getAsString())
+        .toList();
+  }
+
+  @Test
   void doesNotOverflowContextBudgetForLargePromptLimits() {
     AgentRequestAssembler assembler =
         new AgentRequestAssembler(

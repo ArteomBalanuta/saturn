@@ -63,7 +63,7 @@ class DefaultAgentRouterTest {
     AgentInvocation invocation = new AgentInvocation(context(), "who is here?");
     AgentResult result = router.route(invocation);
 
-    assertEquals(quote("There are users in the room."), result.content());
+    assertEquals(visibleQuote(100), result.content());
     assertEquals(invocation.requestId(), result.correlationId());
     assertEquals(2, client.requests.size());
     assertTrue(
@@ -71,7 +71,7 @@ class DefaultAgentRouterTest {
     assertEquals("tool", client.requests.get(1).messages().getLast().role());
     assertTrue(memory.appended.getFirst().contains("@alice"));
     assertTrue(memory.appended.getFirst().contains("who is here?"));
-    assertEquals(quote("There are users in the room."), memory.appended.getLast());
+    assertEquals(visibleQuote(100), memory.appended.getLast());
     assertEquals(List.of("echo:room"), memory.toolEvidence);
   }
 
@@ -212,10 +212,14 @@ class DefaultAgentRouterTest {
               Thread.currentThread().interrupt();
               throw new LlmException("test interrupted", exception);
             }
-            return new LlmResponse(quote("first answer"), List.of(), "stop");
+            return new LlmResponse(
+                "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen",
+                List.of(),
+                "stop");
           }
           secondEntered.countDown();
-          return new LlmResponse(quote("second answer"), List.of(), "stop");
+          return new LlmResponse(
+              "\"Call me Ishmael.\" — Moby-Dick, Herman Melville", List.of(), "stop");
         };
     SharedRecordingMemory memory = new SharedRecordingMemory();
     DefaultAgentRouter router =
@@ -269,7 +273,7 @@ class DefaultAgentRouterTest {
 
     AgentResult result = router.route(new AgentInvocation(context(), "do work"));
 
-    assertEquals(quote("Partial work summarized."), result.content());
+    assertEquals(visibleQuote(100), result.content());
     assertEquals(3, client.requests.size());
     assertTrue(client.requests.getLast().tools().isEmpty());
   }
@@ -359,7 +363,7 @@ class DefaultAgentRouterTest {
                 new AgentInvocation(context(), "12345678901234567890123456789012345678901")));
     AgentResult result = router.route(new AgentInvocation(context(), "12345"));
 
-    assertEquals(quote("123456789"), result.content());
+    assertEquals(visibleQuote(40), result.content());
     assertFalse(result.correlationId().isBlank());
   }
 
@@ -567,7 +571,7 @@ class DefaultAgentRouterTest {
 
     AgentResult result = router.route(new AgentInvocation(context(), content));
 
-    assertEquals(quote(content), result.content());
+    assertEquals(visibleQuote(40), result.content());
   }
 
   @Test
@@ -2102,7 +2106,12 @@ class DefaultAgentRouterTest {
   }
 
   private static String quote(String text) {
-    return "\"" + text.replace("\"", "'").replaceAll("\\s+", " ").strip() + "\" — Saturn, Hermes";
+    // Router tests exercise orchestration; quote-only delivery must use a catalog entry.
+    return "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen";
+  }
+
+  private static String visibleQuote(int maxChars) {
+    return quote("").substring(0, maxChars);
   }
 
   private AgentConfig config(int maxToolCalls, int maxChars) {

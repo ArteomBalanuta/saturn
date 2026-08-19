@@ -25,12 +25,12 @@ import org.saturn.app.agent.llm.UnsupportedResponseFormatException;
 @Slf4j
 final class AgentResponseCorrector {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
+  private static final VerifiedQuoteCatalog VERIFIED_QUOTES = new VerifiedQuoteCatalog();
   private static final String FAILURE_PLACEHOLDER_CORRECTION =
       PROMPTS.text("router-failure-placeholder-correction.txt").strip();
   private static final String INTERNAL_EVIDENCE_CORRECTION =
       PROMPTS.text("router-internal-evidence-correction.txt").strip();
-  private static final String QUOTE_ONLY_CORRECTION =
-      PROMPTS.text("router-quote-only-correction.txt").strip();
+  private static final String QUOTE_ONLY_CORRECTION = quoteOnlyCorrectionPrompt();
   private static final JsonObject QUOTE_ONLY_RESPONSE_FORMAT = quoteOnlyResponseFormat();
   private static final String UNVERIFIED_ACTION_CORRECTION =
       PROMPTS.text("router-unverified-action-correction.txt");
@@ -76,11 +76,14 @@ final class AgentResponseCorrector {
   LlmResponse correctQuoteOnly(
       LlmResponse response, List<LlmMessage> messages, String correlationId)
       throws LlmException, AgentRoutingException {
-    if (isQuoteOnly(response.content())) {
-      return response;
+    boolean structurallyQuote = isQuoteOnly(response.content());
+    java.util.Optional<VerifiedQuoteCatalog.Entry> verified =
+        VERIFIED_QUOTES.find(response.content());
+    if (verified.isPresent()) {
+      return verifiedResponse(response, verified.get());
     }
     log.warn(
-        "Agent returned non-quote prose; requesting quote-only response, correlationId={}",
+        "Agent returned an unverified quote; requesting an exact catalog entry, correlationId={}",
         correlationId);
     List<LlmMessage> correctionMessages =
         isolatedCorrectionMessages(messages, QUOTE_ONLY_CORRECTION);
@@ -100,13 +103,35 @@ final class AgentResponseCorrector {
               client.complete(LlmRequest.withoutPromptCache(correctionMessages, List.of())));
     } catch (AgentRoutingException exception) {
       logInvalidQuoteCorrection(correlationId, response.content());
+      if (structurallyQuote) {
+        return fallbackQuote();
+      }
       throw exception;
     }
+    verified = VERIFIED_QUOTES.find(corrected.content());
+    if (verified.isPresent()) {
+      return verifiedResponse(corrected, verified.get());
+    }
+    logInvalidQuoteCorrection(correlationId, corrected.content());
     if (!isQuoteOnly(corrected.content())) {
-      logInvalidQuoteCorrection(correlationId, corrected.content());
       throw new AgentRoutingException("Agent returned a non-quote prose response after correction");
     }
-    return corrected;
+    return fallbackQuote();
+  }
+
+  private static String quoteOnlyCorrectionPrompt() {
+    return PROMPTS.text("router-quote-only-correction.txt").strip()
+        + "\\n\\nVerified catalog entries (return one exact line; do not edit it):\\n"
+        + VERIFIED_QUOTES.promptEntries();
+  }
+
+  private static LlmResponse verifiedResponse(
+      LlmResponse response, VerifiedQuoteCatalog.Entry entry) {
+    return new LlmResponse(entry.line(), response.toolCalls(), response.finishReason());
+  }
+
+  private static LlmResponse fallbackQuote() {
+    return new LlmResponse(VERIFIED_QUOTES.fallback().line(), List.of(), "stop");
   }
 
   private static LlmResponse parseStructuredQuote(LlmResponse response)

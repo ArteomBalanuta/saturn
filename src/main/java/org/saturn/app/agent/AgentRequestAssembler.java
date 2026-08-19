@@ -46,13 +46,14 @@ final class AgentRequestAssembler {
     trimToBudget(messages);
     return new AgentPreparedRequest(
         messages,
-        definitions(context, invocation.mode()),
+        definitions(context, invocation.mode(), invocation.prompt()),
         contextualizedPrompt,
         requiredFreshTool,
         requiredFreshNick);
   }
 
-  private List<JsonObject> definitions(AgentContext context, AgentInvocationMode mode) {
+  private List<JsonObject> definitions(
+      AgentContext context, AgentInvocationMode mode, String newestPrompt) {
     List<JsonObject> definitions = new ArrayList<>();
     for (var definition : registry.definitions(context)) {
       JsonObject object = definition.getAsJsonObject();
@@ -63,7 +64,7 @@ final class AgentRequestAssembler {
         definitions.add(object);
       }
     }
-    return List.copyOf(definitions);
+    return AgentCommandIntentPolicy.filter(definitions, mode, newestPrompt);
   }
 
   private boolean retainHistory(AgentContext context, LlmMessage message) {

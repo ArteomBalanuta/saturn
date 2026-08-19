@@ -19,8 +19,58 @@ import org.saturn.app.agent.llm.LlmToolCall;
 class AgentResponseCorrectorTest {
   @Test
   void acceptsQuoteOnlyWithoutLeadingDashAndRejectsLegacyLeadingDash() {
-    assertTrue(AgentResponseCorrector.isQuoteOnly("\"A quotation\" — Book Title, Author"));
-    assertFalse(AgentResponseCorrector.isQuoteOnly("— \"A quotation\" — Book Title, Author"));
+    assertTrue(
+        AgentResponseCorrector.isQuoteOnly(
+            "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen"));
+    assertFalse(
+        AgentResponseCorrector.isQuoteOnly(
+            "— \"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen"));
+  }
+
+  @Test
+  void rejectsSyntacticallyValidFabricatedQuoteWithVerifiedFallback() throws Exception {
+    AgentResponseCorrector corrector =
+        new AgentResponseCorrector(
+            request ->
+                new LlmResponse(
+                    "\"A fabricated quotation\" — Imaginary Book, Imaginary Author",
+                    List.of(),
+                    "stop"));
+
+    LlmResponse corrected =
+        corrector.correctQuoteOnly(
+            new LlmResponse(
+                "\"A fabricated quotation\" — Imaginary Book, Imaginary Author", List.of(), "stop"),
+            List.of(LlmMessage.user("give me a quote")),
+            "request-fabricated-quote");
+
+    assertEquals(
+        "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen",
+        corrected.content());
+  }
+
+  @Test
+  void rejectsCorrectQuoteWithWrongAttributionWithVerifiedFallback() throws Exception {
+    AgentResponseCorrector corrector =
+        new AgentResponseCorrector(
+            request ->
+                new LlmResponse(
+                    "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, William Shakespeare",
+                    List.of(),
+                    "stop"));
+
+    LlmResponse corrected =
+        corrector.correctQuoteOnly(
+            new LlmResponse(
+                "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, William Shakespeare",
+                List.of(),
+                "stop"),
+            List.of(LlmMessage.user("give me a quote")),
+            "request-wrong-attribution");
+
+    assertEquals(
+        "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen",
+        corrected.content());
   }
 
   @Test
@@ -115,10 +165,9 @@ class AgentResponseCorrectorTest {
                 new LlmResponse("Ordinary prose", List.of(), "stop"),
                 List.of(LlmMessage.system("persona"), LlmMessage.user("new request")),
                 "request-quote-isolation"));
-
     List<LlmMessage> correctionMessages = requests.getFirst().messages();
     assertEquals("system", correctionMessages.getFirst().role());
-    assertTrue(correctionMessages.getFirst().content().contains("exactly one line"));
+    assertTrue(correctionMessages.getFirst().content().contains("exactly one single line"));
     assertFalse(
         correctionMessages.stream()
             .anyMatch(
@@ -133,7 +182,9 @@ class AgentResponseCorrectorTest {
         new AgentResponseCorrector(
             request ->
                 new LlmResponse(
-                    "{\"line\":\"\\\"A quotation\\\" — Book Title, Author\"}", List.of(), "stop"));
+                    "{\"line\":\"\\\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\\\" — Pride and Prejudice, Jane Austen\"}",
+                    List.of(),
+                    "stop"));
 
     LlmResponse corrected =
         corrector.correctQuoteOnly(
@@ -141,11 +192,13 @@ class AgentResponseCorrectorTest {
             List.of(LlmMessage.user("new request")),
             "request-structured");
 
-    assertEquals("\"A quotation\" — Book Title, Author", corrected.content());
+    assertEquals(
+        "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen",
+        corrected.content());
   }
 
   @Test
-  void rejectsMalformedStructuredQuoteAndExtraFields() {
+  void rejectsMalformedStructuredQuoteAndExtraFields() throws Exception {
     for (String content :
         List.of("not json", "{\"line\":\"quote\",\"extra\":true}", "{\"line\":7}")) {
       AgentResponseCorrector corrector =
@@ -171,7 +224,10 @@ class AgentResponseCorrectorTest {
                 throw new org.saturn.app.agent.llm.UnsupportedResponseFormatException(
                     "unsupported");
               }
-              return new LlmResponse("\"A quotation\" — Book Title, Author", List.of(), "stop");
+              return new LlmResponse(
+                  "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen",
+                  List.of(),
+                  "stop");
             });
 
     LlmResponse corrected =
@@ -180,7 +236,9 @@ class AgentResponseCorrectorTest {
             List.of(LlmMessage.user("new request")),
             "request-fallback");
 
-    assertEquals("\"A quotation\" — Book Title, Author", corrected.content());
+    assertEquals(
+        "\"It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\" — Pride and Prejudice, Jane Austen",
+        corrected.content());
     assertEquals(2, requests.size());
     assertTrue(requests.getFirst().responseFormat() != null);
     assertTrue(requests.getLast().responseFormat() == null);
