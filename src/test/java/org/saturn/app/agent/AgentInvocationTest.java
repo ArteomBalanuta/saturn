@@ -1,5 +1,6 @@
 package org.saturn.app.agent;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
@@ -8,6 +9,13 @@ import org.saturn.app.agent.api.AgentContext;
 import org.saturn.app.agent.api.AgentInvocation;
 
 class AgentInvocationTest {
+  @Test
+  void compatibilityConstructorDefaultsCommandOriginToFalse() {
+    AgentInvocation invocation = new AgentInvocation("request", context(), "prompt");
+
+    assertFalse(invocation.commandOriginated());
+  }
+
   @Test
   void rejectsNullAndBlankRequestIds() {
     AgentContext context = context();

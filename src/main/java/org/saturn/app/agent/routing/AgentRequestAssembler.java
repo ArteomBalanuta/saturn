@@ -32,6 +32,25 @@ final class AgentRequestAssembler {
 
   AgentPreparedRequest assemble(
       AgentInvocation invocation, List<LlmMessage> history, String recentRoomContext) {
+    return assemble(
+        invocation,
+        history,
+        recentRoomContext,
+        new AgentRequestClassifier()
+            .classifyCandidate(
+                new AgentRequestInput(
+                    invocation.currentMessageText() == null
+                        ? invocation.prompt()
+                        : invocation.currentMessageText(),
+                    invocation.mode(),
+                    invocation.commandOriginated())));
+  }
+
+  AgentPreparedRequest assemble(
+      AgentInvocation invocation,
+      List<LlmMessage> history,
+      String recentRoomContext,
+      AgentRequestKind requestKind) {
     AgentContext context = invocation.context();
     boolean moderation = invocation.mode() == AgentInvocationMode.MODERATION;
     Optional<String> requiredFreshTool =
@@ -49,7 +68,10 @@ final class AgentRequestAssembler {
             systemPrompt.render(
                 invocation,
                 invocation.requestId(),
-                AgentTextBounds.truncate(recentRoomContext, contextBudget()))));
+                AgentTextBounds.truncate(recentRoomContext, contextBudget()),
+                requestKind,
+                org.saturn.app.agent.turn.AgentToolEvidence.none(),
+                "CANDIDATE")));
     messages.addAll(history.stream().filter(message -> retainHistory(context, message)).toList());
     messages.add(LlmMessage.user(contextualizedPrompt));
     trimToBudget(messages);
@@ -58,7 +80,8 @@ final class AgentRequestAssembler {
         definitions(context, invocation.mode(), invocation.prompt()),
         contextualizedPrompt,
         requiredFreshTool,
-        requiredFreshNick);
+        requiredFreshNick,
+        requestKind);
   }
 
   private List<JsonObject> definitions(
@@ -93,7 +116,7 @@ final class AgentRequestAssembler {
         "router-contextualized-prompt.txt", visibility, context.nick(), context.room(), prompt);
   }
 
-  private int contextBudget() {
+  int contextBudget() {
     long scaledBudget = (long) config.maxPromptChars() * 8L;
     return (int) Math.min(Integer.MAX_VALUE, Math.max(32_000L, scaledBudget));
   }

@@ -70,6 +70,7 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentTurnMemory turnMemory;
   private final AgentResponseFinalizer responseFinalizer;
   private final AgentRequestAssembler requestAssembler;
+  private final AgentRequestClassifier requestClassifier = new AgentRequestClassifier();
   private final AgentSessionLockManager sessionLockManager = new AgentSessionLockManager();
 
   public DefaultAgentRouter(
@@ -183,6 +184,19 @@ public final class DefaultAgentRouter implements AgentRouter {
         response = freshDataResult.response();
         response = AgentResponseCorrector.requireResponse(response);
         if (freshDataResult.restartLoop()) {
+          if (turnState.attemptedToolCount() > 0) {
+            messages.set(
+                0,
+                LlmMessage.system(
+                    systemPrompt.render(
+                        invocation,
+                        correlationId,
+                        AgentTextBounds.truncate(
+                            recentRoomContext, requestAssembler.contextBudget()),
+                        AgentRequestKind.TOOL_CALL,
+                        turnState.toolEvidence(),
+                        "FINAL")));
+          }
           continue;
         }
         AgentTurnPolicyResult guarded =
@@ -215,6 +229,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         }
 
         messages.add(LlmMessage.assistant(response.content(), response.toolCalls()));
+        turnState.markToolAttempted(response.toolCalls().size());
         List<AgentToolResult> toolResults = toolExecutor.executeAll(context, response.toolCalls());
         toolResultCoordinator.record(
             context,
@@ -227,6 +242,16 @@ public final class DefaultAgentRouter implements AgentRouter {
             modelVisibleToolResultRenderer::render,
             correlationId);
         turnState.resetUnverifiedActionCheck();
+        messages.set(
+            0,
+            LlmMessage.system(
+                systemPrompt.render(
+                    invocation,
+                    correlationId,
+                    AgentTextBounds.truncate(recentRoomContext, requestAssembler.contextBudget()),
+                    AgentRequestKind.TOOL_CALL,
+                    turnState.toolEvidence(),
+                    "FINAL")));
         response =
             AgentResponseCorrector.requireResponse(
                 client.complete(new LlmRequest(messages, definitions)));
@@ -240,7 +265,8 @@ public final class DefaultAgentRouter implements AgentRouter {
               requiredFreshTool,
               turnState.successfulToolResults(),
               correlationId,
-              turnState.successfulToolResults().isEmpty());
+              requestClassifier.finalizeKind(prepared.requestKind(), turnState.toolEvidence()),
+              turnState.toolEvidence());
       if (!finalResponse.shouldReply()) {
         return AgentResult.silent(correlationId);
       }

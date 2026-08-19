@@ -21,6 +21,7 @@ import org.saturn.app.agent.llm.LlmClient;
 import org.saturn.app.agent.llm.LlmResponse;
 import org.saturn.app.agent.turn.AgentFreshDataFinalValidator;
 import org.saturn.app.agent.turn.AgentFreshDataPolicy;
+import org.saturn.app.agent.turn.AgentToolEvidence;
 
 class AgentResponseFinalizerTest {
   @Test
@@ -63,6 +64,24 @@ class AgentResponseFinalizerTest {
 
     assertEquals(
         "Agent returned a non-quote prose response after correction", exception.getMessage());
+  }
+
+  @Test
+  void allowsOrdinaryProseAfterFailedToolWithoutQuoteCorrection() throws Exception {
+    AgentResponseFinalizer.Result result =
+        finalizer()
+            .prepare(
+                invocation(AgentInvocationMode.DIRECT),
+                new LlmResponse("Action failed, but here is the result.", List.of(), "stop"),
+                List.of(),
+                Optional.empty(),
+                List.of(),
+                "correlation-failed-tool",
+                AgentRequestKind.TOOL_CALL,
+                new AgentToolEvidence(true, 1, 0, 1));
+
+    assertTrue(result.shouldReply());
+    assertEquals("Action failed, but here is the result.", result.content());
   }
 
   @Test

@@ -9,7 +9,8 @@ public record AgentInvocation(
     AgentContext context,
     String prompt,
     AgentInvocationMode mode,
-    String currentMessageText) {
+    String currentMessageText,
+    boolean commandOriginated) {
   public AgentInvocation {
     if (requestId == null || requestId.isBlank()) {
       throw new IllegalArgumentException("requestId must not be blank");
@@ -22,19 +23,28 @@ public record AgentInvocation(
   }
 
   public AgentInvocation(String requestId, AgentContext context, String prompt) {
-    this(requestId, context, prompt, AgentInvocationMode.DIRECT, null);
+    this(requestId, context, prompt, AgentInvocationMode.DIRECT, null, false);
   }
 
   public AgentInvocation(
       String requestId, AgentContext context, String prompt, AgentInvocationMode mode) {
-    this(requestId, context, prompt, mode, null);
+    this(requestId, context, prompt, mode, null, false);
+  }
+
+  public AgentInvocation(
+      String requestId,
+      AgentContext context,
+      String prompt,
+      AgentInvocationMode mode,
+      String currentMessageText) {
+    this(requestId, context, prompt, mode, currentMessageText, false);
   }
 
   public AgentInvocation(AgentContext context, String prompt) {
-    this(UUID.randomUUID().toString(), context, prompt, AgentInvocationMode.DIRECT, null);
+    this(UUID.randomUUID().toString(), context, prompt, AgentInvocationMode.DIRECT, null, false);
   }
 
   public AgentInvocation(AgentContext context, String prompt, AgentInvocationMode mode) {
-    this(UUID.randomUUID().toString(), context, prompt, mode, null);
+    this(UUID.randomUUID().toString(), context, prompt, mode, null, false);
   }
 }

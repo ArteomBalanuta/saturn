@@ -7,6 +7,7 @@ import org.saturn.app.agent.api.AgentCapability;
 import org.saturn.app.agent.api.AgentContext;
 import org.saturn.app.agent.api.AgentInvocation;
 import org.saturn.app.agent.api.AgentParticipationConfig;
+import org.saturn.app.agent.turn.AgentToolEvidence;
 
 /** Represents the system prompt assembled for an agent runtime. */
 public final class AgentSystemPrompt {
@@ -20,6 +21,29 @@ public final class AgentSystemPrompt {
   }
 
   public String render(AgentInvocation invocation, String correlationId, String recentRoomContext) {
+    return render(
+        invocation,
+        correlationId,
+        recentRoomContext,
+        new AgentRequestClassifier()
+            .classifyCandidate(
+                new AgentRequestInput(
+                    invocation.currentMessageText() == null
+                        ? invocation.prompt()
+                        : invocation.currentMessageText(),
+                    invocation.mode(),
+                    invocation.commandOriginated())),
+        AgentToolEvidence.none(),
+        "CANDIDATE");
+  }
+
+  public String render(
+      AgentInvocation invocation,
+      String correlationId,
+      String recentRoomContext,
+      AgentRequestKind requestKind,
+      AgentToolEvidence toolEvidence,
+      String requestKindPhase) {
     Objects.requireNonNull(invocation, "invocation");
     Objects.requireNonNull(correlationId, "correlationId");
     AgentContext context = invocation.context();
@@ -32,6 +56,14 @@ public final class AgentSystemPrompt {
     JsonObject runtime = new JsonObject();
     runtime.addProperty("correlationId", correlationId);
     runtime.addProperty("invocationMode", invocation.mode().name());
+    runtime.addProperty("requestKind", requestKind.name());
+    runtime.addProperty("requestKindPhase", requestKindPhase);
+    JsonObject toolEvidenceJson = new JsonObject();
+    toolEvidenceJson.addProperty("attempted", toolEvidence.attempted());
+    toolEvidenceJson.addProperty("attemptedCount", toolEvidence.attemptedCount());
+    toolEvidenceJson.addProperty("successfulCount", toolEvidence.successfulCount());
+    toolEvidenceJson.addProperty("failedCount", toolEvidence.failedCount());
+    runtime.add("toolEvidence", toolEvidenceJson);
     runtime.addProperty("room", context.room());
     runtime.addProperty("whisper", context.whisper());
     runtime.add("caller", caller);

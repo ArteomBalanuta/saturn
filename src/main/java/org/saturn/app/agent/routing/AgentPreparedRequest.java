@@ -11,7 +11,23 @@ record AgentPreparedRequest(
     List<JsonObject> definitions,
     String contextualizedPrompt,
     Optional<String> requiredFreshTool,
-    Optional<String> requiredFreshNick) {
+    Optional<String> requiredFreshNick,
+    AgentRequestKind requestKind) {
+  AgentPreparedRequest(
+      List<LlmMessage> messages,
+      List<JsonObject> definitions,
+      String contextualizedPrompt,
+      Optional<String> requiredFreshTool,
+      Optional<String> requiredFreshNick) {
+    this(
+        messages,
+        definitions,
+        contextualizedPrompt,
+        requiredFreshTool,
+        requiredFreshNick,
+        AgentRequestKind.UNCLASSIFIED);
+  }
+
   AgentPreparedRequest {
     messages = List.copyOf(messages);
     definitions = definitions.stream().map(JsonObject::deepCopy).toList();

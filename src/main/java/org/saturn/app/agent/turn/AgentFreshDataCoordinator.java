@@ -145,10 +145,13 @@ public final class AgentFreshDataCoordinator {
     arguments.addProperty("nick", nick);
     LlmToolCall freshCall =
         new LlmToolCall("router-fresh-" + correlationId, tool, arguments.toString());
+    turnState.markToolAttempted(1);
     AgentToolResult freshResult = toolExecutor.execute(context, freshCall);
     if (freshResult.isError()) {
+      turnState.recordToolFailure();
       throw new AgentRoutingException("Required fresh-data tool failed: " + tool);
     }
+    turnState.recordToolSuccess();
     messages.add(LlmMessage.assistant(response.content(), List.of(freshCall)));
     messages.add(
         LlmMessage.tool(freshCall.id(), resultRenderer.render(context, freshCall, freshResult)));

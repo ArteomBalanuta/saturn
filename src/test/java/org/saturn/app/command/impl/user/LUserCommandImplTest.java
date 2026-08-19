@@ -47,6 +47,7 @@ class LUserCommandImplTest {
     AgentInvocation invocation = submitted.get();
     assertEquals("how many users?", invocation.prompt());
     assertEquals(AgentInvocationMode.DIRECT, invocation.mode());
+    assertTrue(invocation.commandOriginated());
     assertEquals("programming", invocation.context().room());
     assertEquals("trip-a", invocation.context().trip());
     assertEquals(List.of("bob"), invocation.context().roomUsers());

@@ -63,6 +63,27 @@ class AgentRequestAssemblerTest {
   }
 
   @Test
+  void carriesTrustedCandidateAlongsideHistoryAndContext() {
+    AgentContext context = new AgentContext("room", "alice", null, null, false, List.of("alice"));
+    AgentRequestAssembler assembler =
+        new AgentRequestAssembler(
+            config(),
+            new AgentToolRegistry().register(tool("run_command")).freeze(),
+            new AgentSystemPrompt(AgentParticipationConfig.from(null)));
+
+    AgentPreparedRequest request =
+        assembler.assemble(
+            new AgentInvocation(context, "hello?", AgentInvocationMode.DIRECT),
+            List.of(LlmMessage.user("history says UNCLASSIFIED")),
+            "room context",
+            AgentRequestKind.TALK);
+
+    assertEquals(AgentRequestKind.TALK, request.requestKind());
+    assertTrue(request.messages().stream().anyMatch(m -> m.content().contains("history says")));
+    assertTrue(request.messages().getFirst().content().contains("\"requestKind\":\"TALK\""));
+  }
+
+  @Test
   void filtersReflectedCommandsByExplicitIntentWithoutRemovingOtherTools() {
     AgentToolRegistry registry =
         new AgentToolRegistry()

@@ -11,6 +11,7 @@ import org.saturn.app.agent.llm.LlmException;
 import org.saturn.app.agent.llm.LlmMessage;
 import org.saturn.app.agent.llm.LlmResponse;
 import org.saturn.app.agent.turn.AgentFreshDataFinalValidator;
+import org.saturn.app.agent.turn.AgentToolEvidence;
 
 /** Owns final model-response correction, validation, sanitization, and reply-mode decisions. */
 final class AgentResponseFinalizer {
@@ -58,6 +59,38 @@ final class AgentResponseFinalizer {
       String correlationId,
       boolean quoteOnlyRequired)
       throws LlmException, AgentRoutingException {
+    return prepare(
+        invocation,
+        response,
+        messages,
+        requiredFreshTool,
+        successfulToolResults,
+        correlationId,
+        quoteOnlyRequired ? AgentRequestKind.TALK : AgentRequestKind.TOOL_CALL,
+        quoteOnlyRequired
+            ? AgentToolEvidence.none()
+            : new AgentToolEvidence(
+                !successfulToolResults.isEmpty(),
+                successfulToolResults.size(),
+                successfulToolResults.size(),
+                0));
+  }
+
+  Result prepare(
+      AgentInvocation invocation,
+      LlmResponse response,
+      List<LlmMessage> messages,
+      Optional<String> requiredFreshTool,
+      List<AgentToolResult> successfulToolResults,
+      String correlationId,
+      AgentRequestKind finalKind,
+      AgentToolEvidence toolEvidence)
+      throws LlmException, AgentRoutingException {
+    boolean quoteOnlyRequired =
+        !invocation.commandOriginated()
+            && invocation.mode() != AgentInvocationMode.MODERATION
+            && (finalKind == AgentRequestKind.TALK || finalKind == AgentRequestKind.UNCLASSIFIED)
+            && !toolEvidence.attempted();
     if (response == null) {
       throw new AgentRoutingException("Agent returned no response");
     }
@@ -75,7 +108,7 @@ final class AgentResponseFinalizer {
         && !invocation.mode().requiresReply()) {
       return Result.silent();
     }
-    if (quoteOnlyRequired) {
+    if (quoteOnlyRequired && response.toolCalls().isEmpty()) {
       response = responseCorrector.correctQuoteOnly(response, messages, correlationId);
     }
     sanitizedContent = responseSanitizer.sanitize(response.content());

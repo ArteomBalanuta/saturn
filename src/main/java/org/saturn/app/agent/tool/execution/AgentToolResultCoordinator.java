@@ -35,6 +35,10 @@ public final class AgentToolResultCoordinator {
       ToolResultRenderer resultRenderer,
       String correlationId)
       throws AgentRoutingException {
+    int alreadyAttempted = turnState.attemptedToolCount();
+    if (alreadyAttempted < calls.size()) {
+      turnState.markToolAttempted(calls.size() - alreadyAttempted);
+    }
     if (calls.size() != results.size()) {
       throw new AgentRoutingException("Agent tool result count did not match tool call count");
     }
@@ -46,6 +50,11 @@ public final class AgentToolResultCoordinator {
     for (int index = 0; index < calls.size(); index++) {
       LlmToolCall call = calls.get(index);
       AgentToolResult result = results.get(index);
+      if (result.isError()) {
+        turnState.recordToolFailure();
+      } else {
+        turnState.recordToolSuccess();
+      }
       log.info(
           "Agent tool completed, correlationId={}, tool={}, outcome={}",
           correlationId,

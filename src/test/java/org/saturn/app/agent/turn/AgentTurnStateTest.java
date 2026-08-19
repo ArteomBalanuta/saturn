@@ -72,6 +72,18 @@ class AgentTurnStateTest {
   }
 
   @Test
+  void recordsAttemptedSuccessfulAndFailedToolEvidence() {
+    AgentTurnState state =
+        new AgentTurnState(new AgentExecutionLimits(5, 2, Duration.ofSeconds(1)));
+
+    state.markToolAttempted(2);
+    state.recordToolSuccess();
+    state.recordToolFailure();
+
+    assertEquals(new AgentToolEvidence(true, 2, 1, 1), state.toolEvidence());
+  }
+
+  @Test
   void tracksAllCorrectionFlagsIndependently() {
     AgentTurnState state =
         new AgentTurnState(new AgentExecutionLimits(5, 2, Duration.ofSeconds(1)));

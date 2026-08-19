@@ -25,6 +25,9 @@ public final class AgentTurnState {
   private boolean freshSynthesisCorrectionUsed;
   private boolean unverifiedActionChecked;
   private boolean toolsEnabled = true;
+  private int attemptedToolCount;
+  private int successfulToolCount;
+  private int failedToolCount;
 
   public AgentTurnState(AgentExecutionLimits limits) {
     this.executionState = new AgentExecutionState(limits);
@@ -84,6 +87,36 @@ public final class AgentTurnState {
 
   public void disableTools() {
     toolsEnabled = false;
+  }
+
+  public void markToolAttempted(int count) {
+    if (count < 0) {
+      throw new IllegalArgumentException("tool attempt count must not be negative");
+    }
+    attemptedToolCount += count;
+  }
+
+  public void recordToolSuccess() {
+    if (successfulToolCount + failedToolCount >= attemptedToolCount) {
+      throw new IllegalStateException("tool result exceeds attempted tool count");
+    }
+    successfulToolCount++;
+  }
+
+  public void recordToolFailure() {
+    if (successfulToolCount + failedToolCount >= attemptedToolCount) {
+      throw new IllegalStateException("tool result exceeds attempted tool count");
+    }
+    failedToolCount++;
+  }
+
+  public int attemptedToolCount() {
+    return attemptedToolCount;
+  }
+
+  public AgentToolEvidence toolEvidence() {
+    return new AgentToolEvidence(
+        attemptedToolCount > 0, attemptedToolCount, successfulToolCount, failedToolCount);
   }
 
   public boolean recordSuccessfulCommand(String command) {

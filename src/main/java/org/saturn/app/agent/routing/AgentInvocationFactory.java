@@ -23,6 +23,15 @@ public final class AgentInvocationFactory {
 
   public AgentInvocation create(
       EngineImpl engine, ChatMessage message, String prompt, AgentInvocationMode mode) {
+    return create(engine, message, prompt, mode, false);
+  }
+
+  public AgentInvocation create(
+      EngineImpl engine,
+      ChatMessage message,
+      String prompt,
+      AgentInvocationMode mode,
+      boolean commandOriginated) {
     Objects.requireNonNull(engine, "engine");
     Objects.requireNonNull(message, "message");
     EnumSet<AgentCapability> capabilities = EnumSet.noneOf(AgentCapability.class);
@@ -59,7 +68,7 @@ public final class AgentInvocationFactory {
             engine.currentChannelUsers.stream().map(user -> user.getNick()).toList(),
             capabilities);
     return new AgentInvocation(
-        UUID.randomUUID().toString(), context, prompt, mode, message.getText());
+        UUID.randomUUID().toString(), context, prompt, mode, message.getText(), commandOriginated);
   }
 
   private static boolean isDynamicSqlAdmin(EngineImpl engine, String trip) {

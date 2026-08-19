@@ -53,6 +53,29 @@ import org.saturn.app.agent.tool.execution.AgentToolRegistry;
 
 class DefaultAgentRouterTest {
   @Test
+  void commandOriginatedNoToolResponseBypassesQuoteOnlyPolicy() throws Exception {
+    ScriptedClient client =
+        new ScriptedClient(new LlmResponse("Ordinary command response.", List.of(), "stop"));
+    DefaultAgentRouter router =
+        new DefaultAgentRouter(
+            config(2, 100), client, new AgentToolRegistry().freeze(), AgentMemoryStore.none());
+
+    AgentInvocation invocation =
+        new AgentInvocation(
+            "command-request",
+            context(),
+            "answer this command",
+            AgentInvocationMode.DIRECT,
+            "*l answer this command",
+            true);
+
+    AgentResult result = router.route(invocation);
+
+    assertEquals("Ordinary command response.", result.content());
+    assertEquals(1, client.requests.size());
+  }
+
+  @Test
   void routesToolResultsBackToModelAndPersistsCompletedTurn() throws Exception {
     ScriptedClient client =
         new ScriptedClient(
@@ -1432,7 +1455,7 @@ class DefaultAgentRouterTest {
   }
 
   @Test
-  void failedOnlyToolExecutionStillRequiresQuoteOnlyFinalization() throws Exception {
+  void failedOnlyToolExecutionSkipsQuoteOnlyFinalization() throws Exception {
     AgentTool failingTool =
         new AgentTool() {
           @Override
@@ -1460,8 +1483,47 @@ class DefaultAgentRouterTest {
                 AgentMemoryStore.none())
             .route(new AgentInvocation(context(), "who is here?"));
 
-    assertEquals(quote("There are users in the room."), result.content());
-    assertEquals(3, client.requests.size());
+    assertEquals("There are users in the room.", result.content());
+    assertEquals(2, client.requests.size());
+  }
+
+  @Test
+  void commandOriginatedAllFailedToolsBypassQuoteOnlyFinalization() throws Exception {
+    AgentTool failingTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "room_users";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.error(null, name(), "unavailable");
+          }
+        };
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "", List.of(new LlmToolCall("failed-command", "room_users", "{}")), "tool_calls"),
+            new LlmResponse("Command result despite tool failure.", List.of(), "stop"));
+
+    AgentResult result =
+        new DefaultAgentRouter(
+                config(4, 2_000),
+                client,
+                new AgentToolRegistry().register(failingTool).freeze(),
+                AgentMemoryStore.none())
+            .route(
+                new AgentInvocation(
+                    "command-failed",
+                    context(),
+                    "who is here?",
+                    AgentInvocationMode.DIRECT,
+                    "*l who is here?",
+                    true));
+
+    assertEquals("Command result despite tool failure.", result.content());
+    assertEquals(2, client.requests.size());
   }
 
   @Test

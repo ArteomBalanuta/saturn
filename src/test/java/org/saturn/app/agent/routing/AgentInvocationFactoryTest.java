@@ -40,6 +40,7 @@ class AgentInvocationFactoryTest {
     assertEquals(java.util.List.of("bob"), invocation.context().roomUsers());
     assertTrue(invocation.context().whisper());
     assertEquals("hello", invocation.currentMessageText());
+    assertFalse(invocation.commandOriginated());
     assertTrue(invocation.context().capabilities().isEmpty());
     engine.stop();
   }
@@ -59,6 +60,27 @@ class AgentInvocationFactoryTest {
             AgentInvocationMode.DIRECT);
 
     assertEquals("*l first line\\nsecond line", invocation.currentMessageText());
+    engine.stop();
+  }
+
+  @Test
+  void propagatesExplicitCommandOriginWithoutChangingContext() {
+    var engine = TestSupport.engine();
+    installRoleResolver(engine, Role.REGULAR);
+    AgentInvocationFactory factory =
+        new AgentInvocationFactory(AgentParticipationConfig.from(new Toml()));
+
+    AgentInvocation invocation =
+        factory.create(
+            engine,
+            TestSupport.chatMessage("*l answer", "alice", "trip-a"),
+            "answer",
+            AgentInvocationMode.DIRECT,
+            true);
+
+    assertTrue(invocation.commandOriginated());
+    assertEquals("*l answer", invocation.currentMessageText());
+    assertEquals(AgentInvocationMode.DIRECT, invocation.mode());
     engine.stop();
   }
 

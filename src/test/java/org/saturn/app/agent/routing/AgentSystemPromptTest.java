@@ -12,6 +12,7 @@ import org.saturn.app.agent.api.AgentContext;
 import org.saturn.app.agent.api.AgentInvocation;
 import org.saturn.app.agent.api.AgentInvocationMode;
 import org.saturn.app.agent.api.AgentParticipationConfig;
+import org.saturn.app.agent.turn.AgentToolEvidence;
 
 class AgentSystemPromptTest {
   @Test
@@ -41,6 +42,30 @@ class AgentSystemPromptTest {
     assertTrue(rendered.contains("database_sql"));
     assertTrue(rendered.contains("MENTION"));
     assertTrue(rendered.contains("\"name\":\"sun\""));
+  }
+
+  @Test
+  void rendersTrustedRequestKindAndToolEvidenceMetadata() {
+    AgentSystemPrompt prompt = new AgentSystemPrompt(AgentParticipationConfig.from(new Toml()));
+    AgentContext context =
+        new AgentContext("lounge", "merc", "trip", "hash", false, List.of("merc", "alice"));
+    AgentInvocation invocation =
+        new AgentInvocation("request-kind", context, "hello?", AgentInvocationMode.DIRECT);
+
+    String rendered =
+        prompt.render(
+            invocation,
+            "correlation-kind",
+            "recent",
+            AgentRequestKind.TALK,
+            AgentToolEvidence.none(),
+            "CANDIDATE");
+
+    assertTrue(rendered.contains("\"requestKind\":\"TALK\""));
+    assertTrue(rendered.contains("\"requestKindPhase\":\"CANDIDATE\""));
+    assertTrue(rendered.contains("\"attemptedCount\":0"));
+    assertTrue(rendered.contains("\"room\":\"lounge\""));
+    assertTrue(rendered.contains("\"roomUsersSnapshot\":[\"merc\",\"alice\"]"));
   }
 
   @Test

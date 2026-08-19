@@ -37,7 +37,12 @@ public class LUserCommandImpl extends UserCommandBaseImpl {
     }
     AgentInvocation invocation =
         new AgentInvocationFactory(AgentParticipationConfig.from(engine.getConfig()))
-            .create(engine, chatMessage, renderArguments(true).trim(), AgentInvocationMode.DIRECT);
+            .create(
+                engine,
+                chatMessage,
+                renderArguments(true).trim(),
+                AgentInvocationMode.DIRECT,
+                true);
     engine.getAgentService().submit(invocation);
     log.info("Queued [l] command by user: {}, requestId={}", author(), invocation.requestId());
     return successful();
