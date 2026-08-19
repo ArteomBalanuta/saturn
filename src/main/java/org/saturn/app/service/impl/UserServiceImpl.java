@@ -74,8 +74,7 @@ public class UserServiceImpl extends OutService implements UserService {
               .replace("[", "")
               .replace("]", "");
       return Optional.of(
-          "\\n @%s, has been seen as: _%s_ in the last 15 minutes. \\n"
-              .formatted(user.getNick(), aliases));
+          "\\n @%s, has been seen as: _%s_ recently. \\n".formatted(user.getNick(), aliases));
     }
   }
 
