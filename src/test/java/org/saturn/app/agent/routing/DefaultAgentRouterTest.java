@@ -58,15 +58,15 @@ class DefaultAgentRouterTest {
         new ScriptedClient(
             new LlmResponse(
                 "",
-                List.of(new LlmToolCall("call-1", "echo", "{\"value\":\"room\"}")),
+                List.of(new LlmToolCall("call-1", "room_users", "{\"value\":\"room\"}")),
                 "tool_calls"),
-            new LlmResponse(quote("There are users in the room."), List.of(), "stop"));
+            new LlmResponse("There are users in the room.", List.of(), "stop"));
     RecordingMemory memory = new RecordingMemory();
     AgentTool tool =
         new AgentTool() {
           @Override
           public String name() {
-            return "echo";
+            return "room_users";
           }
 
           @Override
@@ -81,7 +81,7 @@ class DefaultAgentRouterTest {
     AgentInvocation invocation = new AgentInvocation(context(), "who is here?");
     AgentResult result = router.route(invocation);
 
-    assertEquals(visibleQuote(100), result.content());
+    assertEquals("There are users in the room.", result.content());
     assertEquals(invocation.requestId(), result.correlationId());
     assertEquals(2, client.requests.size());
     assertTrue(
@@ -89,8 +89,8 @@ class DefaultAgentRouterTest {
     assertEquals("tool", client.requests.get(1).messages().getLast().role());
     assertTrue(memory.appended.getFirst().contains("@alice"));
     assertTrue(memory.appended.getFirst().contains("who is here?"));
-    assertEquals(visibleQuote(100), memory.appended.getLast());
-    assertEquals(List.of("echo:room"), memory.toolEvidence);
+    assertEquals("There are users in the room.", memory.appended.getLast());
+    assertEquals(List.of("room_users:room"), memory.toolEvidence);
   }
 
   @Test
@@ -1432,6 +1432,39 @@ class DefaultAgentRouterTest {
   }
 
   @Test
+  void failedOnlyToolExecutionStillRequiresQuoteOnlyFinalization() throws Exception {
+    AgentTool failingTool =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "room_users";
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.error(null, name(), "unavailable");
+          }
+        };
+    ScriptedClient client =
+        new ScriptedClient(
+            new LlmResponse(
+                "", List.of(new LlmToolCall("failed-1", "room_users", "{}")), "tool_calls"),
+            new LlmResponse("There are users in the room.", List.of(), "stop"),
+            new LlmResponse(quote("There are users in the room."), List.of(), "stop"));
+
+    AgentResult result =
+        new DefaultAgentRouter(
+                config(4, 2_000),
+                client,
+                new AgentToolRegistry().register(failingTool).freeze(),
+                AgentMemoryStore.none())
+            .route(new AgentInvocation(context(), "who is here?"));
+
+    assertEquals(quote("There are users in the room."), result.content());
+    assertEquals(3, client.requests.size());
+  }
+
+  @Test
   void retriesAToolAfterAnAllErrorBatch() throws Exception {
     AtomicInteger attempts = new AtomicInteger();
     AgentTool retryingTool =
@@ -1496,8 +1529,7 @@ class DefaultAgentRouterTest {
                         "history-current", "user_message_history", "{\"nick\":\"jill\"}")),
                 "tool_calls"),
             new LlmResponse("The agent could not answer that request.", List.of(), "stop"),
-            new LlmResponse(groundedAnswer, List.of(), "stop"),
-            new LlmResponse(quote(groundedAnswer), List.of(), "stop"));
+            new LlmResponse(groundedAnswer, List.of(), "stop"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
             config(4, 2_000),
@@ -1507,18 +1539,13 @@ class DefaultAgentRouterTest {
 
     AgentResult result = router.route(new AgentInvocation(context(), "tell me about jill user"));
 
-    assertEquals(quote(groundedAnswer), result.content());
-    assertEquals(4, client.requests.size());
+    assertEquals(groundedAnswer, result.content());
+    assertEquals(3, client.requests.size());
     assertTrue(client.requests.getLast().tools().isEmpty());
     assertTrue(
-        client
-            .requests
-            .get(client.requests.size() - 2)
-            .messages()
-            .getLast()
-            .content()
-            .contains("failure placeholder"));
-    assertEquals(quote(groundedAnswer), memory.appended.getLast());
+        client.requests.get(2).messages().stream()
+            .anyMatch(message -> message.content().contains("failure placeholder")));
+    assertEquals(groundedAnswer, memory.appended.getLast());
     assertFalse(memory.appended.contains("The agent could not answer that request."));
   }
 
@@ -1576,8 +1603,7 @@ class DefaultAgentRouterTest {
         new ScriptedClient(
             new LlmResponse(oldAnswer, List.of(), "stop"),
             new LlmResponse(oldAnswer, List.of(), "stop"),
-            new LlmResponse(freshAnswer, List.of(), "stop"),
-            new LlmResponse(quote(freshAnswer), List.of(), "stop"));
+            new LlmResponse(freshAnswer, List.of(), "stop"));
     DefaultAgentRouter router =
         new DefaultAgentRouter(
             config(4, 2_000),
@@ -1587,13 +1613,13 @@ class DefaultAgentRouterTest {
 
     AgentResult result = router.route(new AgentInvocation(context(), "tell me about jill user"));
 
-    assertEquals(quote(freshAnswer), result.content());
-    assertEquals(4, client.requests.size());
+    assertEquals(freshAnswer, result.content());
+    assertEquals(3, client.requests.size());
     assertEquals("tool", client.requests.get(1).messages().getLast().role());
     assertTrue(client.requests.get(1).messages().getLast().content().contains("weather in Wuhan"));
     assertTrue(client.requests.get(2).tools().isEmpty());
     assertTrue(client.requests.get(2).messages().getLast().content().contains("fresh history"));
-    assertEquals(quote(freshAnswer), memory.appended.getLast());
+    assertEquals(freshAnswer, memory.appended.getLast());
   }
 
   @org.junit.jupiter.api.Disabled("Superseded by router-owned mandatory history lookup")

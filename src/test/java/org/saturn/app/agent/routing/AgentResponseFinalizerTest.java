@@ -14,6 +14,7 @@ import org.saturn.app.agent.api.AgentInvocation;
 import org.saturn.app.agent.api.AgentInvocationMode;
 import org.saturn.app.agent.api.AgentParticipationConfig;
 import org.saturn.app.agent.api.AgentRoutingException;
+import org.saturn.app.agent.api.AgentToolResult;
 import org.saturn.app.agent.config.AgentConfig;
 import org.saturn.app.agent.config.AgentConfigLoader;
 import org.saturn.app.agent.llm.LlmClient;
@@ -65,6 +66,24 @@ class AgentResponseFinalizerTest {
   }
 
   @Test
+  void allowsOrdinaryProseWhenTheTurnHasSuccessfulToolEvidence() throws Exception {
+    AgentResponseFinalizer finalizer = finalizer();
+
+    AgentResponseFinalizer.Result result =
+        finalizer.prepare(
+            invocation(AgentInvocationMode.DIRECT),
+            new LlmResponse("There are users in the room.", List.of(), "stop"),
+            List.of(),
+            Optional.empty(),
+            List.of(AgentToolResult.success("room_users", "room")),
+            "correlation-tool",
+            false);
+
+    assertTrue(result.shouldReply());
+    assertEquals("There are users in the room.", result.content());
+  }
+
+  @Test
   void suppressesModerationResponses() throws Exception {
     AgentResponseFinalizer finalizer = finalizer();
 
@@ -74,8 +93,9 @@ class AgentResponseFinalizerTest {
             new LlmResponse("internal", List.of(), "stop"),
             List.of(),
             Optional.empty(),
-            List.of(),
-            "correlation-2");
+            List.of(AgentToolResult.success("run_command", "help output")),
+            "correlation-2",
+            false);
 
     assertFalse(result.shouldReply());
     assertEquals("", result.content());

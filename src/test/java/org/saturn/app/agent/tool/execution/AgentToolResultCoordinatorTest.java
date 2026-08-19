@@ -74,6 +74,31 @@ class AgentToolResultCoordinatorTest {
   }
 
   @Test
+  void failedOnlyToolResultsDoNotPopulateTheSuccessfulEvidenceLedger() throws Exception {
+    AgentToolResultCoordinator coordinator =
+        new AgentToolResultCoordinator(
+            new AgentFreshDataPolicy(), AgentCommandProseGuard.from(List.of()));
+    AgentTurnState state =
+        new AgentTurnState(AgentExecutionLimits.from(AgentConfigLoader.load(null, Map.of())));
+    LlmToolCall call = new LlmToolCall("call-failed", "room_users", "{}");
+    List<LlmMessage> messages = new java.util.ArrayList<>();
+
+    coordinator.record(
+        new AgentContext("programming", "alice", "trip", "hash", false, List.of("alice")),
+        List.of(call),
+        List.of(AgentToolResult.error("call-failed", "room_users", "unavailable")),
+        Optional.empty(),
+        Optional.empty(),
+        state,
+        messages,
+        (ignoredContext, ignoredCall, result) -> result.envelopeJson(),
+        "correlation-failed");
+
+    assertTrue(state.successfulToolResults().isEmpty());
+    assertTrue(messages.getFirst().content().contains("\"status\":\"error\""));
+  }
+
+  @Test
   void rejectsNullToolResultsWithStableRoutingError() {
     AgentToolResultCoordinator coordinator =
         new AgentToolResultCoordinator(
