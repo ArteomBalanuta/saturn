@@ -29,19 +29,19 @@ public final class AgentResponseCorrector {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private static final VerifiedQuoteCatalog VERIFIED_QUOTES = new VerifiedQuoteCatalog();
   private static final String FAILURE_PLACEHOLDER_CORRECTION =
-      PROMPTS.text("router-failure-placeholder-correction.txt").strip();
+      PROMPTS.text("correction/router-failure-placeholder-correction.txt").strip();
   private static final String INTERNAL_EVIDENCE_CORRECTION =
-      PROMPTS.text("router-internal-evidence-correction.txt").strip();
+      PROMPTS.text("correction/router-internal-evidence-correction.txt").strip();
   private static final String QUOTE_ONLY_CORRECTION = quoteOnlyCorrectionPrompt();
   private static final JsonObject QUOTE_ONLY_RESPONSE_FORMAT = quoteOnlyResponseFormat();
   private static final String UNVERIFIED_ACTION_CORRECTION =
-      PROMPTS.text("router-unverified-action-correction.txt");
+      PROMPTS.text("correction/router-unverified-action-correction.txt");
   private static final String UNVERIFIED_ACTION_FINAL_CORRECTION =
-      PROMPTS.text("router-unverified-action-final-correction.txt");
+      PROMPTS.text("correction/router-unverified-action-final-correction.txt");
   private static final String UNAVAILABLE_ACTION_RESPONSE =
-      PROMPTS.text("router-unavailable-action-response.txt").strip();
+      PROMPTS.text("correction/router-unavailable-action-response.txt").strip();
   private static final String STALE_RESPONSE_CORRECTION =
-      PROMPTS.text("router-stale-response-correction.txt");
+      PROMPTS.text("correction/router-stale-response-correction.txt");
 
   private final LlmClient client;
 
@@ -122,7 +122,7 @@ public final class AgentResponseCorrector {
   }
 
   private static String quoteOnlyCorrectionPrompt() {
-    return PROMPTS.text("router-quote-only-correction.txt").strip()
+    return PROMPTS.text("correction/router-quote-only-correction.txt").strip()
         + "\\n\\nVerified catalog entries (return one exact line; do not edit it):\\n"
         + VERIFIED_QUOTES.promptEntries();
   }

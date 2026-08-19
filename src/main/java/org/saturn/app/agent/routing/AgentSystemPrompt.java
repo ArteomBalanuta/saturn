@@ -71,18 +71,22 @@ public final class AgentSystemPrompt {
 
     String databasePolicy =
         context.hasCapability(AgentCapability.DYNAMIC_SQL)
-            ? prompts.text("database-policy-enabled.txt").strip()
-            : prompts.text("database-policy-disabled.txt").strip();
+            ? prompts.text("system/database-policy-enabled.txt").strip()
+            : prompts.text("system/database-policy-disabled.txt").strip();
     String participationPolicy =
         switch (invocation.mode()) {
-          case DIRECT -> prompts.text("participation-direct.txt").strip();
-          case MENTION -> prompts.text("participation-mention.txt").strip();
+          case DIRECT -> prompts.text("system/participation-direct.txt").strip();
+          case MENTION -> prompts.text("system/participation-mention.txt").strip();
           case AMBIENT ->
               prompts.formatted(
-                  "participation-ambient.txt", config.noReplyMarker(), config.noReplyMarker());
+                  "system/participation-ambient.txt",
+                  config.noReplyMarker(),
+                  config.noReplyMarker());
           case MODERATION ->
               prompts.formatted(
-                  "participation-moderation.txt", config.noReplyMarker(), config.noReplyMarker());
+                  "system/participation-moderation.txt",
+                  config.noReplyMarker(),
+                  config.noReplyMarker());
         };
     String roomHistory =
         recentRoomContext == null || recentRoomContext.isBlank()
@@ -91,12 +95,12 @@ public final class AgentSystemPrompt {
 
     return prompts
         .formatted(
-            "system-policy.txt",
+            "system/system-policy.txt",
             config.creatorTrip(),
             context.whisper() ? "private whisper" : "shared room",
             databasePolicy,
             participationPolicy,
-            prompts.text("vaelen-system-prompt.txt").strip(),
+            prompts.text("persona/vaelen-system-prompt.txt").strip(),
             gson.toJson(runtime),
             roomHistory)
         .strip();

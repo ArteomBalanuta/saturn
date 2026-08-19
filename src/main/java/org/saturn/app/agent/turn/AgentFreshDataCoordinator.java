@@ -22,9 +22,9 @@ import org.saturn.app.agent.tool.execution.AgentToolExecutor;
 public final class AgentFreshDataCoordinator {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private static final String FRESH_TOOL_CORRECTION =
-      PROMPTS.text("router-fresh-tool-correction.txt");
+      PROMPTS.text("correction/router-fresh-tool-correction.txt");
   private static final String FRESH_SYNTHESIS_CORRECTION =
-      PROMPTS.text("router-fresh-synthesis-correction.txt").strip();
+      PROMPTS.text("correction/router-fresh-synthesis-correction.txt").strip();
 
   private final LlmClient client;
   private final AgentFreshDataPolicy policy;

@@ -28,7 +28,7 @@ class AgentPromptCatalogTest {
   void loadsRawResourcesWithoutDiscardingWhitespace() {
     AgentPromptCatalog catalog = new AgentPromptCatalog();
 
-    String prompt = catalog.text("vaelen-system-prompt.txt");
+    String prompt = catalog.text("persona/vaelen-system-prompt.txt");
 
     assertTrue(prompt.startsWith("Role & Objective:"));
     assertTrue(prompt.endsWith("\n"));
@@ -38,7 +38,7 @@ class AgentPromptCatalogTest {
   void quoteOnlyCorrectionRequiresKnownRelatedQuoteAndRejectsOriginalAphorisms() {
     AgentPromptCatalog catalog = new AgentPromptCatalog();
 
-    String prompt = catalog.text("router-quote-only-correction.txt");
+    String prompt = catalog.text("correction/router-quote-only-correction.txt");
 
     assertTrue(prompt.contains("Catalog Only: Return one catalog line exactly as shown"));
     assertTrue(prompt.contains("Do not invent, alter, paraphrase, or reattribute"));
@@ -48,7 +48,7 @@ class AgentPromptCatalogTest {
   void moderationPolicyDescribesExposedCommandsAsExecutableCapabilities() {
     AgentPromptCatalog catalog = new AgentPromptCatalog();
 
-    String policy = catalog.text("system-policy.txt");
+    String policy = catalog.text("system/system-policy.txt");
 
     assertTrue(
         policy.contains(
@@ -60,7 +60,7 @@ class AgentPromptCatalogTest {
   void policyUsesQuoteOnlyModeForAllNonCommandProse() {
     AgentPromptCatalog catalog = new AgentPromptCatalog();
 
-    String policy = catalog.text("system-policy.txt");
+    String policy = catalog.text("system/system-policy.txt");
 
     assertTrue(policy.contains("OUTPUT STYLE: Executable requests follow their tool contracts"));
     assertTrue(policy.contains("All non-command prose requests"));
@@ -88,7 +88,7 @@ class AgentPromptCatalogTest {
 
     assertEquals(
         "Saturn command 'weather' executed; its output was sent to the room. No other Saturn command was executed.",
-        catalog.formatted("command-executed-result.txt", "weather"));
+        catalog.formatted("input/command-executed-result.txt", "weather"));
 
     IllegalStateException exception =
         assertThrows(IllegalStateException.class, () -> catalog.text("missing-prompt.txt"));

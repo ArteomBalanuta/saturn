@@ -52,7 +52,7 @@ import org.saturn.app.agent.turn.AgentUnverifiedActionPolicy;
  */
 public final class DefaultAgentRouter implements AgentRouter {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
-  private static final String FINALIZE_PROMPT = PROMPTS.text("router-finalize.txt").strip();
+  private static final String FINALIZE_PROMPT = PROMPTS.text("system/router-finalize.txt").strip();
 
   private final AgentConfig config;
   private final LlmClient client;

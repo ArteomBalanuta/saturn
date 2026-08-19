@@ -26,11 +26,12 @@ import org.saturn.app.agent.turn.AgentTurnState;
 final class AgentCommandChannelPolicy implements AgentTurnPolicy {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private static final String RESPOND_WITHOUT_COMMAND = "respond_without_command";
-  private static final String TOOL_CORRECTION = PROMPTS.text("router-command-tool-correction.txt");
+  private static final String TOOL_CORRECTION =
+      PROMPTS.text("correction/router-command-tool-correction.txt");
   private static final String OUTPUT_CORRECTION =
-      PROMPTS.text("router-command-output-correction.txt");
+      PROMPTS.text("correction/router-command-output-correction.txt");
   private static final String NOT_EXECUTED_CORRECTION =
-      PROMPTS.text("router-command-not-executed-correction.txt");
+      PROMPTS.text("correction/router-command-not-executed-correction.txt");
   private final LlmClient client;
 
   AgentCommandChannelPolicy(LlmClient client) {
@@ -139,7 +140,8 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
     parameters.addProperty("additionalProperties", false);
     JsonObject function = new JsonObject();
     function.addProperty("name", RESPOND_WITHOUT_COMMAND);
-    function.addProperty("description", PROMPTS.text("router-non-command-correction.txt").strip());
+    function.addProperty(
+        "description", PROMPTS.text("correction/router-non-command-correction.txt").strip());
     function.add("parameters", parameters);
     JsonObject definition = new JsonObject();
     definition.addProperty("type", "function");

@@ -14,7 +14,7 @@ public final class AgentModelVisibleToolResultRenderer
     implements AgentFreshDataCoordinator.ToolResultRenderer {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private static final String ROOM_DELIVERY_RESPONSE =
-      PROMPTS.text("router-room-delivery.txt").strip();
+      PROMPTS.text("input/router-room-delivery.txt").strip();
 
   private final AgentToolRegistry registry;
 

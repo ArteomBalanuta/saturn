@@ -113,7 +113,11 @@ final class AgentRequestAssembler {
   private String contextualize(AgentContext context, String prompt) {
     String visibility = context.whisper() ? "Private Saturn whisper" : "Public Saturn message";
     return prompts.formatted(
-        "router-contextualized-prompt.txt", visibility, context.nick(), context.room(), prompt);
+        "input/router-contextualized-prompt.txt",
+        visibility,
+        context.nick(),
+        context.room(),
+        prompt);
   }
 
   int contextBudget() {
