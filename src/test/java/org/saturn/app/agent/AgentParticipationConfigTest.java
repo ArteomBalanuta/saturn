@@ -8,6 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.moandjiezana.toml.Toml;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentInvocation;
+import org.saturn.app.agent.api.AgentInvocationMode;
+import org.saturn.app.agent.api.AgentParticipationConfig;
+import org.saturn.app.agent.api.AgentResult;
 
 class AgentParticipationConfigTest {
   @Test

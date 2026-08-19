@@ -12,6 +12,7 @@ import org.saturn.app.agent.persistence.AgentDatabaseSchema.ForeignKey;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema.Index;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema.Table;
 
+/** Loads and exposes database schema metadata from H2. */
 public final class H2AgentSchemaRepository implements AgentSchemaRepository {
   private final H2ReadOnlyConnectionFactory connectionFactory;
 
@@ -135,5 +136,7 @@ public final class H2AgentSchemaRepository implements AgentSchemaRepository {
     }
   }
 
+  /** Carries the index header value used by the enclosing agent component. */
+  /** Carries the index header value used by the enclosing agent component. */
   private record IndexHeader(String name, boolean unique) {}
 }

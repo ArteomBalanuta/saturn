@@ -15,11 +15,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.agent.AgentSqlConfig;
+import org.saturn.app.agent.config.AgentSqlConfig;
 import org.saturn.app.agent.sql.AgentSqlErrorCode;
 import org.saturn.app.agent.sql.ValidatedAgentSql;
 
 @Slf4j
+/** Implements agent SQL operations against H2. */
 public final class H2AgentSqlRepository implements AgentSqlRepository {
   private final H2ReadOnlyConnectionFactory connectionFactory;
   private final Gson gson = new Gson();
@@ -208,5 +209,7 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     return fingerprint != null && fingerprint.matches("[0-9a-f]{64}") ? fingerprint : "invalid";
   }
 
+  /** Carries the bounded value value used by the enclosing agent component. */
+  /** Carries the bounded value value used by the enclosing agent component. */
   private record BoundedValue(Object value, boolean truncated) {}
 }

@@ -8,6 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.api.ToolAccess;
+import org.saturn.app.agent.api.ToolEffect;
+import org.saturn.app.agent.api.ToolExample;
+import org.saturn.app.agent.api.ToolResultMode;
+import org.saturn.app.agent.tool.contract.AgentToolSchemas;
 
 class AgentToolDescriptorTest {
   @Test
@@ -215,14 +221,12 @@ class AgentToolDescriptorTest {
     parameterSchema.getAsJsonObject("properties").add("value", property);
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> AgentToolSchemaValidator.validateSchema(parameterSchema));
+        IllegalArgumentException.class, () -> AgentToolSchemas.validateSchema(parameterSchema));
 
     JsonObject resultSchema = new JsonObject();
     resultSchema.addProperty("type", "unknown");
     assertThrows(
-        IllegalArgumentException.class,
-        () -> AgentToolSchemaValidator.validateResultSchema(resultSchema));
+        IllegalArgumentException.class, () -> AgentToolSchemas.validateResultSchema(resultSchema));
   }
 
   private AgentToolDescriptor descriptor(

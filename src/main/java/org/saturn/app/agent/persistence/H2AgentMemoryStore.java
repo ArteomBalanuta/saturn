@@ -8,12 +8,13 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.saturn.app.agent.AgentConfig;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentMemoryStore;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentMemoryStore;
+import org.saturn.app.agent.config.AgentConfig;
 import org.saturn.app.agent.llm.LlmMessage;
 import org.saturn.app.persistence.H2Database;
 
+/** Stores agent conversation memory in the H2-backed persistence layer. */
 public final class H2AgentMemoryStore implements AgentMemoryStore {
   private final String databasePath;
   private final Clock clock;

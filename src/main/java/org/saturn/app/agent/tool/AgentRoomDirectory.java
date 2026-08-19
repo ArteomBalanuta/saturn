@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface AgentRoomDirectory {
   Optional<RoomSnapshot> find(String room);
 
+  /** Carries the room snapshot value used by the enclosing agent component. */
   record RoomSnapshot(String room, List<String> users) {
     public RoomSnapshot {
       Objects.requireNonNull(room, "room");

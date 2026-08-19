@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentToolResult;
 import org.saturn.app.agent.persistence.AgentQueryRepository;
 
 class UserMessageHistoryToolTest {

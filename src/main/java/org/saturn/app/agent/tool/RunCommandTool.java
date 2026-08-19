@@ -6,17 +6,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import org.saturn.app.agent.AgentCapability;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentPromptCatalog;
-import org.saturn.app.agent.AgentTool;
-import org.saturn.app.agent.AgentToolDescriptor;
-import org.saturn.app.agent.AgentToolResult;
-import org.saturn.app.agent.AgentToolSchemas;
-import org.saturn.app.agent.ToolAccess;
-import org.saturn.app.agent.ToolEffect;
-import org.saturn.app.agent.ToolExample;
-import org.saturn.app.agent.ToolResultMode;
+import org.saturn.app.agent.api.AgentCapability;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentTool;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.api.AgentToolResult;
+import org.saturn.app.agent.api.ToolAccess;
+import org.saturn.app.agent.api.ToolEffect;
+import org.saturn.app.agent.api.ToolExample;
+import org.saturn.app.agent.api.ToolResultMode;
+import org.saturn.app.agent.routing.AgentPromptCatalog;
+import org.saturn.app.agent.tool.contract.AgentToolSchemas;
 
 /**
  * Bridges selected Saturn commands into the agent SDK.

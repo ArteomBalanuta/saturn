@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.agent.AgentRoomAutomation;
+import org.saturn.app.agent.api.AgentRoomAutomation;
 import org.saturn.app.listener.message.ChatMessageContext;
 import org.saturn.app.support.TestSupport;
 

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.api.ToolResponseEnvelope;
 
 class ToolResponseEnvelopeTest {
   @Test

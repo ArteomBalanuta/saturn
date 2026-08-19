@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonParser;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.api.AgentToolResult;
 
 class AgentToolResultTest {
   @Test

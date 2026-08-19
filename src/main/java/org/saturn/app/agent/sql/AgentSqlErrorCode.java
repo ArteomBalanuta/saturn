@@ -1,5 +1,6 @@
 package org.saturn.app.agent.sql;
 
+/** Defines error codes reported by agent SQL validation and execution. */
 public enum AgentSqlErrorCode {
   EMPTY_SQL,
   SQL_TOO_LONG,

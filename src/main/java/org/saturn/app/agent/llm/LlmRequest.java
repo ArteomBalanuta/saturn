@@ -3,6 +3,7 @@ package org.saturn.app.agent.llm;
 import com.google.gson.JsonObject;
 import java.util.List;
 
+/** Represents a request submitted to a language-model client. */
 public record LlmRequest(
     List<LlmMessage> messages,
     List<JsonObject> tools,

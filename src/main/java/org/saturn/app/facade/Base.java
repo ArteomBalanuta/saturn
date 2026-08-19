@@ -8,7 +8,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.ThreadContext;
-import org.saturn.app.agent.AgentRoomAutomation;
+import org.saturn.app.agent.api.AgentRoomAutomation;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.service.AgentService;
 import org.saturn.app.service.AuthorizationService;

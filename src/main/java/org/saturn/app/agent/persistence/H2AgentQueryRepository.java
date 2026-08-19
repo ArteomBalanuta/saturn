@@ -7,8 +7,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Objects;
-import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.api.AgentContext;
 
+/** Implements agent query operations against H2. */
 public final class H2AgentQueryRepository implements AgentQueryRepository {
   private static final int DEFAULT_ROW_LIMIT = 10;
   private static final int MAX_ROW_LIMIT = 60;

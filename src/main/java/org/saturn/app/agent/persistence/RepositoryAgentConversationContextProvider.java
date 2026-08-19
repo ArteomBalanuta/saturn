@@ -2,9 +2,10 @@ package org.saturn.app.agent.persistence;
 
 import com.google.gson.JsonObject;
 import java.util.Objects;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentConversationContextProvider;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentConversationContextProvider;
 
+/** Builds agent conversation context from persisted repository data. */
 public final class RepositoryAgentConversationContextProvider
     implements AgentConversationContextProvider {
   private final AgentQueryRepository repository;

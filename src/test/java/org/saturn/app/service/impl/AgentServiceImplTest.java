@@ -15,12 +15,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.agent.AgentConfig;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentInvocation;
-import org.saturn.app.agent.AgentInvocationMode;
-import org.saturn.app.agent.AgentResult;
-import org.saturn.app.agent.AgentRouter;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentInvocation;
+import org.saturn.app.agent.api.AgentInvocationMode;
+import org.saturn.app.agent.api.AgentResult;
+import org.saturn.app.agent.api.AgentRouter;
+import org.saturn.app.agent.config.AgentConfig;
 
 class AgentServiceImplTest {
   @Test

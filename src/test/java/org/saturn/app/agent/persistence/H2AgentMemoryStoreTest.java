@@ -15,8 +15,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.saturn.app.agent.AgentConfig;
-import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.config.AgentConfig;
 import org.saturn.app.persistence.H2Database;
 
 class H2AgentMemoryStoreTest {

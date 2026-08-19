@@ -3,8 +3,9 @@ package org.saturn.app.agent.moderation;
 import com.moandjiezana.toml.Toml;
 import java.time.Duration;
 import java.util.Objects;
-import org.saturn.app.agent.AgentConfigValueReader;
+import org.saturn.app.agent.config.AgentConfigValueReader;
 
+/** Configures moderation thresholds and actions for agent-managed rooms. */
 public record AgentModerationConfig(
     boolean enabled,
     int messageBurstCount,

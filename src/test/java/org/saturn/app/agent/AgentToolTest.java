@@ -4,6 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentTool;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.api.AgentToolResult;
+import org.saturn.app.agent.api.ToolAccess;
+import org.saturn.app.agent.api.ToolEffect;
+import org.saturn.app.agent.api.ToolResultMode;
 
 class AgentToolTest {
   @Test

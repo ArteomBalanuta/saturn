@@ -2,7 +2,7 @@ package org.saturn.app.agent.tool;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.api.AgentContext;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Status;

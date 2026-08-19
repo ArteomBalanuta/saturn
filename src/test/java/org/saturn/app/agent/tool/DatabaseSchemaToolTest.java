@@ -9,10 +9,10 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.agent.AgentCapability;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentSqlConfig;
-import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.api.AgentCapability;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentToolResult;
+import org.saturn.app.agent.config.AgentSqlConfig;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema;
 import org.saturn.app.agent.persistence.AgentSchemaRepository;
 

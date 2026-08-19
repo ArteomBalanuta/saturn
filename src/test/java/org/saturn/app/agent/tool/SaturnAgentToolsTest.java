@@ -15,11 +15,11 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.agent.AgentCapability;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentSqlConfig;
-import org.saturn.app.agent.AgentToolDescriptor;
-import org.saturn.app.agent.AgentToolResult;
+import org.saturn.app.agent.api.AgentCapability;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.api.AgentToolResult;
+import org.saturn.app.agent.config.AgentSqlConfig;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema;
 import org.saturn.app.agent.persistence.AgentPersistenceException;
 import org.saturn.app.agent.persistence.AgentQueryRepository;
@@ -455,15 +455,18 @@ class SaturnAgentToolsTest {
 
     assertEquals("commands", tool.descriptor(context()).category());
     assertEquals(
-        org.saturn.app.agent.ToolAccess.AUTHORIZED_CALLER, tool.descriptor(context()).access());
-    assertEquals(org.saturn.app.agent.ToolEffect.ROOM_MESSAGE, tool.descriptor(context()).effect());
+        org.saturn.app.agent.api.ToolAccess.AUTHORIZED_CALLER, tool.descriptor(context()).access());
     assertEquals(
-        org.saturn.app.agent.ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA,
+        org.saturn.app.agent.api.ToolEffect.ROOM_MESSAGE, tool.descriptor(context()).effect());
+    assertEquals(
+        org.saturn.app.agent.api.ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA,
         tool.descriptor(context()).resultMode());
     assertEquals(
-        org.saturn.app.agent.ToolEffect.MODERATION, tool.descriptor(moderatorContext()).effect());
+        org.saturn.app.agent.api.ToolEffect.MODERATION,
+        tool.descriptor(moderatorContext()).effect());
     assertEquals(
-        org.saturn.app.agent.ToolAccess.CREATOR_ONLY, tool.descriptor(creatorContext()).access());
+        org.saturn.app.agent.api.ToolAccess.CREATOR_ONLY,
+        tool.descriptor(creatorContext()).access());
   }
 
   @Test

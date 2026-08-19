@@ -1,6 +1,6 @@
 package org.saturn.app.agent.tool;
 
-import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.api.AgentContext;
 
 /**
  * Command boundary used by agent tools to invoke Saturn without depending on command internals.
@@ -23,5 +23,6 @@ public interface SaturnCommandGateway {
             : "");
   }
 
+  /** Carries the command execution value used by the enclosing agent component. */
   record CommandExecution(boolean executed, String modelData) {}
 }

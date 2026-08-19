@@ -1,0 +1,79 @@
+package org.saturn.app.agent.tool.execution;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentTool;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.tool.contract.AgentToolDefinitionFactory;
+
+/**
+ * Builds the immutable set of tools available to the agent runtime.
+ *
+ * <p>Registration occurs during startup. After {@link #freeze()}, concurrent lookups and provider
+ * definition generation are read-only.
+ */
+public final class AgentToolRegistry {
+  private final Map<String, AgentTool> tools = new LinkedHashMap<>();
+  private final AgentToolDefinitionFactory definitionFactory = new AgentToolDefinitionFactory();
+  private boolean frozen;
+
+  /** Registers a uniquely named tool before the registry is frozen. */
+  public AgentToolRegistry register(AgentTool tool) {
+    if (frozen) {
+      throw new IllegalStateException("Agent tool registry is frozen");
+    }
+    AgentTool candidate = Objects.requireNonNull(tool, "tool");
+    String name = candidate.name();
+    if (name == null || !name.matches("[a-z][a-z0-9_]{0,63}")) {
+      throw new IllegalArgumentException(
+          "Agent tool name must be a lowercase alphanumeric identifier");
+    }
+    if (tools.putIfAbsent(name, candidate) != null) {
+      throw new IllegalArgumentException("Duplicate agent tool: " + name);
+    }
+    return this;
+  }
+
+  /** Prevents further registration and returns this registry for startup wiring. */
+  public AgentToolRegistry freeze() {
+    frozen = true;
+    return this;
+  }
+
+  /** Resolves a tool only when it is available to the supplied caller context. */
+  public Optional<AgentTool> find(AgentContext context, String name) {
+    return Optional.ofNullable(tools.get(name)).filter(tool -> isAvailable(tool, context));
+  }
+
+  /** Returns provider definitions for every tool visible to the supplied caller context. */
+  public JsonArray definitions(AgentContext context) {
+    JsonArray definitions = new JsonArray();
+    tools.values().stream()
+        .filter(tool -> isAvailable(tool, context))
+        .forEach(tool -> definitions.add(definition(tool, context)));
+    return definitions;
+  }
+
+  private boolean isAvailable(AgentTool tool, AgentContext context) {
+    try {
+      return tool.isAvailableTo(context);
+    } catch (RuntimeException exception) {
+      return false;
+    }
+  }
+
+  private JsonObject definition(AgentTool tool, AgentContext context) {
+    // Descriptors are contextual, so their full contract can only be validated for a caller.
+    AgentToolDescriptor descriptor = tool.descriptor(context);
+    if (!tool.name().equals(descriptor.name())) {
+      throw new IllegalStateException(
+          "Tool descriptor name does not match registered tool: " + tool.name());
+    }
+    return definitionFactory.create(descriptor);
+  }
+}

@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.agent.AgentCapability;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentToolDescriptor;
-import org.saturn.app.agent.AgentToolResult;
-import org.saturn.app.agent.ToolEffect;
+import org.saturn.app.agent.api.AgentCapability;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.api.AgentToolResult;
+import org.saturn.app.agent.api.ToolEffect;
 
 class SaturnCommandToolTest {
   @Test
@@ -99,7 +99,7 @@ class SaturnCommandToolTest {
             List.of(),
             Set.of(AgentCapability.MODERATION_COMMANDS));
 
-    assertEquals(org.saturn.app.agent.ToolAccess.AUTHORIZED_CALLER, descriptor.access());
+    assertEquals(org.saturn.app.agent.api.ToolAccess.AUTHORIZED_CALLER, descriptor.access());
     assertTrue(tool.isAvailableTo(moderator));
   }
 

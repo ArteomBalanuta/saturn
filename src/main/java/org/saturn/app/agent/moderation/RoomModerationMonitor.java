@@ -12,10 +12,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
-import org.saturn.app.agent.AgentUserIdentity;
+import org.saturn.app.agent.api.AgentUserIdentity;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
+/** Monitors room events and applies configured moderation decisions. */
 public final class RoomModerationMonitor {
   private final AgentModerationConfig config;
   private final Clock clock;
@@ -237,18 +238,30 @@ public final class RoomModerationMonitor {
     return first.compareTo(second) >= 0 ? first : second;
   }
 
+  /** Defines the operation used to timed event. */
+  /** Defines the operation used to timed event. */
   private interface TimedEvent {
     Instant at();
   }
 
+  /** Carries the timed message value used by the enclosing agent component. */
+  /** Carries the timed message value used by the enclosing agent component. */
   private record TimedMessage(Instant at, String normalized) implements TimedEvent {}
 
+  /** Carries the timed join value used by the enclosing agent component. */
+  /** Carries the timed join value used by the enclosing agent component. */
   private record TimedJoin(Instant at, String nick) implements TimedEvent {}
 
+  /** Carries the action key value used by the enclosing agent component. */
+  /** Carries the action key value used by the enclosing agent component. */
   private record ActionKey(ModerationAction action, String target) {}
 
+  /** Carries the offence state value used by the enclosing agent component. */
+  /** Carries the offence state value used by the enclosing agent component. */
   private record OffenceState(OffenceStage stage, Instant at) {}
 
+  /** Enumerates the possible offence stage states used by the enclosing agent component. */
+  /** Enumerates the possible offence stage states used by the enclosing agent component. */
   private enum OffenceStage {
     WARNED,
     MUTED,

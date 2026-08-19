@@ -30,7 +30,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.saturn.app.agent.AgentRuntimeFactory;
+import org.saturn.app.agent.routing.AgentRuntimeFactory;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.command.factory.CommandFactory;
 import org.saturn.app.command.impl.admin.WhiskeyReplicaCommandImpl.ProxyTestResult;

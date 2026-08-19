@@ -2,6 +2,7 @@ package org.saturn.app.agent.llm;
 
 import java.util.List;
 
+/** Represents one message in a language-model conversation. */
 public record LlmMessage(
     String role, String content, List<LlmToolCall> toolCalls, String toolCallId) {
   public static LlmMessage system(String content) {

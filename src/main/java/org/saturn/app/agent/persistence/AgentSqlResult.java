@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+/** Represents the tabular result of an agent SQL operation. */
 public record AgentSqlResult(
     List<String> columns, List<List<Object>> rows, boolean truncated, long elapsedMillis) {
   public AgentSqlResult {

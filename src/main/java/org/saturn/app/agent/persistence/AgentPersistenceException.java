@@ -3,6 +3,7 @@ package org.saturn.app.agent.persistence;
 import java.util.Objects;
 import org.saturn.app.agent.sql.AgentSqlErrorCode;
 
+/** Signals a failure while reading or writing agent persistence data. */
 public class AgentPersistenceException extends RuntimeException {
   private final AgentSqlErrorCode code;
 

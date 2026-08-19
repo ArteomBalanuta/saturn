@@ -10,7 +10,7 @@ import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.agent.AgentSqlConfig;
+import org.saturn.app.agent.config.AgentSqlConfig;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema;
 
 class JSqlParserAgentSqlPolicyTest {

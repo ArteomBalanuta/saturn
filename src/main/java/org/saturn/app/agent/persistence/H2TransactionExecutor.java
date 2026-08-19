@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Objects;
 
+/** Executes agent persistence work within H2 transactions. */
 final class H2TransactionExecutor {
   private H2TransactionExecutor() {}
 
@@ -30,6 +31,8 @@ final class H2TransactionExecutor {
   }
 
   @FunctionalInterface
+  /** Defines the operation used to sql work. */
+  /** Defines the operation used to sql work. */
   interface SqlWork {
     void execute(Connection connection) throws SQLException;
   }

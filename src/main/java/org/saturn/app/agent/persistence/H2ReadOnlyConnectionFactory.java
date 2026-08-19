@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.util.Objects;
 import org.saturn.app.persistence.H2Database;
 
+/** Creates read-only H2 connections for agent database access. */
 public final class H2ReadOnlyConnectionFactory {
   private final String databasePath;
 

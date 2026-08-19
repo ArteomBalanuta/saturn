@@ -14,7 +14,7 @@ import java.util.Base64;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.saturn.app.agent.AgentSqlConfig;
+import org.saturn.app.agent.config.AgentSqlConfig;
 import org.saturn.app.agent.sql.AgentSqlErrorCode;
 import org.saturn.app.agent.sql.ValidatedAgentSql;
 import org.saturn.app.persistence.H2Database;

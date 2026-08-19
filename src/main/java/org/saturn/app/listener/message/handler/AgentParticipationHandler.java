@@ -1,6 +1,6 @@
 package org.saturn.app.listener.message.handler;
 
-import org.saturn.app.agent.AgentRoomAutomation;
+import org.saturn.app.agent.api.AgentRoomAutomation;
 import org.saturn.app.listener.message.ChatMessageContext;
 import org.saturn.app.listener.message.ChatMessageHandler;
 

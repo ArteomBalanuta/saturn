@@ -3,13 +3,13 @@ package org.saturn.app.agent.tool;
 import com.google.gson.JsonObject;
 import java.util.Objects;
 import java.util.Set;
-import org.saturn.app.agent.AgentCapability;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentTool;
-import org.saturn.app.agent.AgentToolDescriptor;
-import org.saturn.app.agent.AgentToolResult;
-import org.saturn.app.agent.ToolAccess;
-import org.saturn.app.agent.ToolResultMode;
+import org.saturn.app.agent.api.AgentCapability;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentTool;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.api.AgentToolResult;
+import org.saturn.app.agent.api.ToolAccess;
+import org.saturn.app.agent.api.ToolResultMode;
 
 /**
  * Validated contextual adapter for one {@link SaturnCommandToolCatalog.CommandToolDefinition}.

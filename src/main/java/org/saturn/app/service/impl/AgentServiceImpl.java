@@ -7,11 +7,11 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.agent.AgentConfig;
-import org.saturn.app.agent.AgentInvocation;
-import org.saturn.app.agent.AgentInvocationMode;
-import org.saturn.app.agent.AgentRouter;
-import org.saturn.app.agent.AgentRoutingException;
+import org.saturn.app.agent.api.AgentInvocation;
+import org.saturn.app.agent.api.AgentInvocationMode;
+import org.saturn.app.agent.api.AgentRouter;
+import org.saturn.app.agent.api.AgentRoutingException;
+import org.saturn.app.agent.config.AgentConfig;
 import org.saturn.app.service.AgentService;
 
 @Slf4j

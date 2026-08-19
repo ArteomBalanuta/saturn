@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentInvocation;
 
 class AgentInvocationTest {
   @Test

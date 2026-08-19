@@ -2,11 +2,12 @@ package org.saturn.app.agent.moderation;
 
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.api.AgentContext;
 import org.saturn.app.agent.tool.SaturnCommandGateway;
 import org.saturn.app.service.impl.OutService;
 
 @Slf4j
+/** Executes moderation actions through the application engine. */
 public final class EngineModerationActionExecutor implements ModerationActionExecutor {
   private final SaturnCommandGateway gateway;
   private final OutService outService;

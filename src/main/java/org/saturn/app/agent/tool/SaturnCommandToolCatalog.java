@@ -11,11 +11,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
-import org.saturn.app.agent.AgentCapability;
-import org.saturn.app.agent.AgentToolRegistry;
-import org.saturn.app.agent.AgentToolSchemas;
-import org.saturn.app.agent.ToolEffect;
-import org.saturn.app.agent.ToolExample;
+import org.saturn.app.agent.api.AgentCapability;
+import org.saturn.app.agent.api.ToolEffect;
+import org.saturn.app.agent.api.ToolExample;
+import org.saturn.app.agent.tool.contract.AgentToolSchemas;
+import org.saturn.app.agent.tool.execution.AgentToolRegistry;
 import org.saturn.app.command.UserCommand;
 import org.saturn.app.command.annotation.CommandAliases;
 
@@ -185,5 +185,6 @@ public final class SaturnCommandToolCatalog {
     }
   }
 
+  /** Carries the command profile value used by the enclosing agent component. */
   private record CommandProfile(Set<AgentCapability> requiredCapabilities, ToolEffect effect) {}
 }

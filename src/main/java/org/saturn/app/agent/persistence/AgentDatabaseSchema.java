@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** Represents the discovered database schema used by agent database tools. */
 public record AgentDatabaseSchema(List<Table> tables) {
   public AgentDatabaseSchema {
     Objects.requireNonNull(tables, "tables");
@@ -27,6 +28,8 @@ public record AgentDatabaseSchema(List<Table> tables) {
         .findFirst();
   }
 
+  /** Carries the table value used by the enclosing agent component. */
+  /** Carries the table value used by the enclosing agent component. */
   public record Table(
       String name, List<Column> columns, List<Index> indexes, List<ForeignKey> foreignKeys) {
     public Table {
@@ -37,6 +40,8 @@ public record AgentDatabaseSchema(List<Table> tables) {
     }
   }
 
+  /** Carries the column value used by the enclosing agent component. */
+  /** Carries the column value used by the enclosing agent component. */
   public record Column(
       int ordinal, String name, String declaredType, boolean nullable, boolean primaryKey) {
     public Column {
@@ -45,6 +50,8 @@ public record AgentDatabaseSchema(List<Table> tables) {
     }
   }
 
+  /** Carries the index value used by the enclosing agent component. */
+  /** Carries the index value used by the enclosing agent component. */
   public record Index(String name, boolean unique, List<String> columns) {
     public Index {
       Objects.requireNonNull(name, "name");
@@ -52,6 +59,8 @@ public record AgentDatabaseSchema(List<Table> tables) {
     }
   }
 
+  /** Carries the foreign key value used by the enclosing agent component. */
+  /** Carries the foreign key value used by the enclosing agent component. */
   public record ForeignKey(
       int id,
       int sequence,

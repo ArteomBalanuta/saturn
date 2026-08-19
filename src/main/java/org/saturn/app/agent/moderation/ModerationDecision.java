@@ -3,6 +3,7 @@ package org.saturn.app.agent.moderation;
 import java.util.Objects;
 import java.util.Optional;
 
+/** Represents the moderation decision produced for a room event. */
 public record ModerationDecision(ModerationAction action, Optional<String> target, String reason) {
   public ModerationDecision {
     Objects.requireNonNull(action, "action");

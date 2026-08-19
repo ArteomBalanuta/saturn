@@ -20,9 +20,10 @@ import net.sf.jsqlparser.statement.select.TableStatement;
 import net.sf.jsqlparser.statement.select.Values;
 import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.util.TablesNamesFinder;
-import org.saturn.app.agent.AgentSqlConfig;
+import org.saturn.app.agent.config.AgentSqlConfig;
 import org.saturn.app.agent.persistence.AgentDatabaseSchema;
 
+/** Validates agent SQL statements using JSqlParser. */
 public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
   private static final Set<String> PARSER_UNSUPPORTED_STATEMENTS =
       Set.of("attach", "detach", "pragma", "vacuum");
@@ -138,6 +139,9 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
     return new AgentSqlPolicyException(code, message);
   }
 
+  /**
+   * Provides the policy tables names finder implementation used by the enclosing agent component.
+   */
   private static final class PolicyTablesNamesFinder extends TablesNamesFinder<Void> {
     @Override
     public <S> Void visit(Function function, S context) {

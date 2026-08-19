@@ -9,18 +9,18 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import org.saturn.app.agent.AgentContext;
-import org.saturn.app.agent.AgentNickNormalizer;
-import org.saturn.app.agent.AgentPromptCatalog;
-import org.saturn.app.agent.AgentTool;
-import org.saturn.app.agent.AgentToolDescriptor;
-import org.saturn.app.agent.AgentToolResult;
-import org.saturn.app.agent.AgentToolSchemas;
-import org.saturn.app.agent.ToolAccess;
-import org.saturn.app.agent.ToolEffect;
-import org.saturn.app.agent.ToolExample;
-import org.saturn.app.agent.ToolResultMode;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentTool;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.api.AgentToolResult;
+import org.saturn.app.agent.api.ToolAccess;
+import org.saturn.app.agent.api.ToolEffect;
+import org.saturn.app.agent.api.ToolExample;
+import org.saturn.app.agent.api.ToolResultMode;
 import org.saturn.app.agent.persistence.AgentQueryRepository;
+import org.saturn.app.agent.routing.AgentPromptCatalog;
+import org.saturn.app.agent.tool.contract.AgentToolSchemas;
+import org.saturn.app.agent.turn.AgentNickNormalizer;
 
 /**
  * Retrieves bounded public message evidence for a named user.

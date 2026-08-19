@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.saturn.app.agent.api.AgentExecutionLimits;
+import org.saturn.app.agent.config.AgentConfig;
+import org.saturn.app.agent.config.AgentConfigLoader;
 
 class AgentExecutionLimitsTest {
   @Test
@@ -44,7 +47,7 @@ class AgentExecutionLimitsTest {
 
   @Test
   void derivesAllValuesFromAgentConfiguration() {
-    AgentConfig config = AgentConfig.from(null, Map.of());
+    AgentConfig config = AgentConfigLoader.load(null, Map.of());
 
     AgentExecutionLimits limits = AgentExecutionLimits.from(config);
 

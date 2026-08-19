@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import org.junit.jupiter.api.Test;
-import org.saturn.app.agent.AgentCapability;
-import org.saturn.app.agent.AgentContext;
+import org.saturn.app.agent.api.AgentCapability;
+import org.saturn.app.agent.api.AgentContext;
 import org.saturn.app.agent.tool.SaturnCommandGateway;
 import org.saturn.app.service.impl.OutService;
 

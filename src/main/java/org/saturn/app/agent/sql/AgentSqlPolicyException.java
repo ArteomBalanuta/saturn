@@ -2,6 +2,7 @@ package org.saturn.app.agent.sql;
 
 import java.util.Objects;
 
+/** Signals that an SQL statement violates the agent SQL policy. */
 public final class AgentSqlPolicyException extends RuntimeException {
   private final AgentSqlErrorCode code;
 
