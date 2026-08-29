@@ -1,0 +1,1 @@
+Saturn does not expose a tool for that live operation, so I cannot truthfully measure or execute it. I can use a supported command or read-only lookup if you name one.

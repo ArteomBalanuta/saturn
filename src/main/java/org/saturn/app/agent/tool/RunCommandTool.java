@@ -1,0 +1,222 @@
+package org.saturn.app.agent.tool;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import org.saturn.app.agent.api.AgentCapability;
+import org.saturn.app.agent.api.AgentContext;
+import org.saturn.app.agent.api.AgentTool;
+import org.saturn.app.agent.api.AgentToolDescriptor;
+import org.saturn.app.agent.api.AgentToolResult;
+import org.saturn.app.agent.api.ToolAccess;
+import org.saturn.app.agent.api.ToolEffect;
+import org.saturn.app.agent.api.ToolExample;
+import org.saturn.app.agent.api.ToolResultMode;
+import org.saturn.app.agent.routing.AgentPromptCatalog;
+import org.saturn.app.agent.tool.contract.AgentToolSchemas;
+
+/**
+ * Bridges selected Saturn commands into the agent SDK.
+ *
+ * <p>This is always an ordered action tool, including weather and time commands, because command
+ * execution may send a room message. Available commands are derived from the caller capabilities.
+ */
+public final class RunCommandTool implements AgentTool {
+  private static final Set<String> INFORMATIONAL_COMMANDS =
+      Set.of(
+          "help",
+          "h",
+          "list",
+          "users",
+          "info",
+          "whois",
+          "lastseen",
+          "ping",
+          "p",
+          "weather",
+          "w",
+          "time",
+          "t",
+          "version",
+          "v");
+  private static final Set<String> MODERATION_COMMANDS =
+      Set.of("captcha", "mute", "unmute", "kick", "shadowban", "unshadowban");
+  private static final Set<String> PERMANENT_BAN_COMMANDS = Set.of("ban", "unban");
+  private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
+  private final SaturnCommandGateway gateway;
+
+  /**
+   * Implements the {@code RunCommandTool} operation for this agent component.
+   *
+   * @param gateway input argument used by this operation
+   */
+  public RunCommandTool(SaturnCommandGateway gateway) {
+    this.gateway = gateway;
+  }
+
+  /**
+   * Implements the {@code name} operation for this agent component.
+   *
+   * @return the operation result
+   */
+  @Override
+  public String name() {
+    return "run_command";
+  }
+
+  /**
+   * Implements the {@code description} operation for this agent component.
+   *
+   * @return the operation result
+   */
+  @Override
+  public String description() {
+    return PROMPTS.toolDescription(name());
+  }
+
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @return the operation result
+   */
+  @Override
+  public JsonObject parameters() {
+    return parametersFor(INFORMATIONAL_COMMANDS);
+  }
+
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
+  @Override
+  public JsonObject parameters(AgentContext context) {
+    return parametersFor(allowedCommands(context));
+  }
+
+  /**
+   * Implements the {@code descriptor} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
+  @Override
+  public AgentToolDescriptor descriptor(AgentContext context) {
+    boolean creator = context != null && context.hasCapability(AgentCapability.PERMANENT_BAN);
+    boolean moderator =
+        context != null && context.hasCapability(AgentCapability.MODERATION_COMMANDS);
+    return new AgentToolDescriptor(
+        name(),
+        "Run Saturn command",
+        description(),
+        "commands",
+        creator ? ToolAccess.CREATOR_ONLY : ToolAccess.AUTHORIZED_CALLER,
+        moderator || creator ? ToolEffect.MODERATION : ToolEffect.ROOM_MESSAGE,
+        ToolResultMode.ROOM_DELIVERY_AND_MODEL_DATA,
+        parameters(context),
+        PROMPTS.toolGuidance(name(), "whenToUse"),
+        PROMPTS.toolGuidance(name(), "whenNotToUse"),
+        List.of(
+            new ToolExample(
+                name(),
+                "{\"command\":\"weather\",\"arguments\":\"Tokyo\"}",
+                PROMPTS
+                    .toolExample(name())
+                    .substring(PROMPTS.toolExample(name()).indexOf(" - ") + 3))),
+        Set.of(),
+        Set.of());
+  }
+
+  /**
+   * Implements the {@code parametersFor} operation for this agent component.
+   *
+   * @param commands input argument used by this operation
+   * @return the operation result
+   */
+  private JsonObject parametersFor(Set<String> commands) {
+    JsonObject command = new JsonObject();
+    command.addProperty("type", "string");
+    JsonArray allowed = new JsonArray();
+    commands.stream().sorted().forEach(allowed::add);
+    command.add("enum", allowed);
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("type", "string");
+    JsonObject properties = new JsonObject();
+    properties.add("command", command);
+    properties.add("arguments", arguments);
+    JsonArray required = new JsonArray();
+    required.add("command");
+    JsonObject schema = AgentToolSchemas.closedObject();
+    schema.add("properties", properties);
+    schema.add("required", required);
+    return schema;
+  }
+
+  /** Executes one capability-approved command and reports whether Saturn accepted it. */
+  @Override
+  public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+    if (!arguments.has("command")) {
+      return AgentToolResult.error(null, name(), "Missing command");
+    }
+    String command = arguments.get("command").getAsString().toLowerCase(Locale.ROOT);
+    if (!allowedCommands(context).contains(command)) {
+      return AgentToolResult.error(null, name(), "Command is not approved for agent execution");
+    }
+    String commandArguments =
+        arguments.has("arguments") ? arguments.get("arguments").getAsString().trim() : "";
+    if (isTargetedModerationCommand(command)
+        && context.moderationTarget() != null
+        && !firstArgument(commandArguments).equalsIgnoreCase(context.moderationTarget())) {
+      return AgentToolResult.error(
+          null, name(), "Moderation action must target the reviewed author");
+    }
+    SaturnCommandGateway.CommandExecution execution =
+        gateway.executeWithResult(context, command, commandArguments);
+    return execution.executed()
+        ? AgentToolResult.success(name(), execution.modelData())
+        : AgentToolResult.error(null, name(), "Command was not authorized or could not run");
+  }
+
+  /**
+   * Implements the {@code allowedCommands} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
+  private static Set<String> allowedCommands(AgentContext context) {
+    Set<String> commands = new HashSet<>(INFORMATIONAL_COMMANDS);
+    if (context.hasCapability(AgentCapability.MODERATION_COMMANDS)) {
+      commands.addAll(MODERATION_COMMANDS);
+    }
+    if (context.hasCapability(AgentCapability.PERMANENT_BAN)) {
+      commands.addAll(PERMANENT_BAN_COMMANDS);
+    }
+    return Set.copyOf(commands);
+  }
+
+  /**
+   * Implements the {@code isTargetedModerationCommand} operation for this agent component.
+   *
+   * @param command input argument used by this operation
+   * @return the operation result
+   */
+  private static boolean isTargetedModerationCommand(String command) {
+    return Set.of("mute", "unmute", "kick", "shadowban", "unshadowban", "ban", "unban")
+        .contains(command);
+  }
+
+  /**
+   * Implements the {@code firstArgument} operation for this agent component.
+   *
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
+  private static String firstArgument(String arguments) {
+    int separator = arguments.indexOf(' ');
+    return separator < 0 ? arguments : arguments.substring(0, separator);
+  }
+}

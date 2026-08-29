@@ -41,7 +41,7 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
 
   @Override
   public void grant(String trip, Role role) {
-    if (getRoleByTrip(trip).isPresent()) {
+    if (findRoleByTrip(trip).isPresent()) {
       int updatedRows = update(trip, role);
       if (updatedRows == 1) {
         log.warn("Granted new Role: {}, to trip: {}", role.name(), trip);
@@ -50,6 +50,14 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
       insert(trip, role);
       log.warn("Granted Role: {}, to trip: {}", role.name(), trip);
     }
+  }
+
+  @Override
+  public Role resolveRole(String trip) {
+    if (trip == null || trip.isBlank()) {
+      return Role.REGULAR;
+    }
+    return findRoleByTrip(trip).orElse(Role.REGULAR);
   }
 
   private boolean isAllowedByApplicationConfig(UserCommand userCommand, ChatMessage chatMessage) {
@@ -72,20 +80,19 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
 
   private boolean isAllowedByDb(UserCommand userCommand, ChatMessage chatMessage) {
     Role minRequiredRole = userCommand.getAuthorizedRole();
-    Optional<Role> userRole = getRoleByTrip(chatMessage.getTrip());
-
-    if (userRole.isEmpty()) {
-      userRole = Optional.of(Role.REGULAR);
+    Role userRole = resolveRole(chatMessage.getTrip());
+    if (userRole == Role.REGULAR) {
       log.warn(
-          "User: {}, trip: {}, has no role set. Granted REGULAR role permissions.",
+          "User: {}, trip: {}, has REGULAR role permissions.",
           chatMessage.getNick(),
           chatMessage.getTrip());
     }
 
-    boolean isAllowed = userRole.get().getValue() >= minRequiredRole.getValue();
+    boolean isAllowed = userRole.getValue() >= minRequiredRole.getValue();
     if (!isAllowed) {
       log.warn(
-          "user: {}, trip: {}, [is not] allowed to execute: [{}] command. Required role: {}, provided: {}",
+          "user: {}, trip: {}, [is not] allowed to execute: [{}] command. Required role: {},"
+              + " provided: {}",
           chatMessage.getNick(),
           chatMessage.getTrip(),
           userCommand.getAliases().get(0),
@@ -102,28 +109,22 @@ public class AuthorizationServiceImpl extends OutService implements Authorizatio
     return true;
   }
 
-  private Optional<Role> getRoleByTrip(String trip) {
-    Optional<Role> role = Optional.empty();
+  private Optional<Role> findRoleByTrip(String trip) {
     log.debug("Querying the db for user role, trip: {}", trip);
-    try {
-      PreparedStatement statement = connection.prepareStatement(SELECT_ROLE_BY_TRIP);
+    try (PreparedStatement statement = connection.prepareStatement(SELECT_ROLE_BY_TRIP)) {
       statement.setString(1, trip);
-      statement.execute();
-
-      ResultSet resultSet = statement.getResultSet();
-      while (resultSet.next()) {
-        role = Optional.of(Role.valueOf(resultSet.getString("type")));
-        log.warn("Retrieved Role: {}, for user trip: {}", role.get().name(), trip);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        if (resultSet.next()) {
+          Role role = Role.valueOf(resultSet.getString("type"));
+          log.warn("Retrieved Role: {}, for user trip: {}", role.name(), trip);
+          return Optional.of(role);
+        }
       }
-      statement.close();
-      resultSet.close();
-
-      return role;
     } catch (SQLException e) {
       log.info("Error: {}", e.getMessage());
       log.error("Stack trace", e);
     }
-    return role;
+    return Optional.empty();
   }
 
   private void insert(String trip, Role role) {

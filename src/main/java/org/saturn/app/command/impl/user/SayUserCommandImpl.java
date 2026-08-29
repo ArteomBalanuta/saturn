@@ -29,7 +29,8 @@ public class SayUserCommandImpl extends UserCommandBaseImpl {
   public Optional<Status> execute() {
     String author = author();
     Optional<String> trip = Optional.ofNullable(chatMessage.getTrip());
-    boolean isAdmin = trip.isPresent() && List.of(engine.adminTrips.split(",")).contains(trip.get());
+    boolean isAdmin =
+        trip.isPresent() && List.of(engine.adminTrips.split(",")).contains(trip.get());
     String message = renderArguments(isAdmin);
 
     engine.outService.enqueueMessageForSending(message);

@@ -1,0 +1,3 @@
+The Saturn command did not execute, and tools are unavailable for this turn. State that
+outcome briefly without printing, quoting, or fencing any Saturn command. Do not claim the
+action happened and do not call another tool.

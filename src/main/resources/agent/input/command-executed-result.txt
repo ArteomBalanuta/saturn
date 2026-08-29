@@ -1,0 +1,1 @@
+Saturn command '%s' executed; its output was sent to the room. No other Saturn command was executed.

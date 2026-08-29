@@ -1,0 +1,44 @@
+{
+  "run_command": {
+    "description": "Execute exactly one approved Saturn command using the caller's trusted capabilities. The selected command's output is delivered to the room.",
+    "whenToUse": [
+      "Use this for an existing Saturn command instead of imitating its output.",
+      "Use the command enum as the complete list of commands authorized for this caller; aliases are separate enum values when listed."
+    ],
+    "whenNotToUse": [
+      "Do not invent command names or claim a command ran without invoking this tool.",
+      "Do not use this tool for general conversation, unsupported operations, or conditional/future actions."
+    ],
+    "example": "{\"command\":\"weather\",\"arguments\":\"Tokyo\"} - Send weather output to the room"
+  },
+  "database_query": {
+    "description": "Execute one approved read-only Saturn database query, including bounded recent messages for a requested room. This tool accepts query names, not SQL.",
+    "whenToUse": ["Use for supported counts, room messages, known user identities, and bounded message lookups."],
+    "whenNotToUse": ["Do not pass SQL, invent query names, or use this when a live room_users result is required."],
+    "example": "{\"query\":\"recent_messages_for_room\"} - Inspect recent room messages"
+  },
+  "database_schema": {
+    "description": "Inspect the Saturn database schema: tables, columns, indexes, and foreign keys.",
+    "whenToUse": ["Use before database_sql when no approved database_query can answer the request."],
+    "whenNotToUse": ["Do not treat schema metadata as query results or use it when an approved query already fits."],
+    "example": " - Inspect the available Saturn schema"
+  },
+  "database_sql": {
+    "description": "Run one bounded, read-only SELECT against the schema inspected by database_schema.",
+    "whenToUse": ["Use database_schema first, then use one bounded SELECT only when no approved database_query fits."],
+    "whenNotToUse": ["Never use for INSERT, UPDATE, DELETE, DDL, multiple statements, or tables outside the inspected schema."],
+    "example": "{\"sql\":\"SELECT COUNT(*) FROM messages\"} - Count rows after schema inspection"
+  },
+  "room_users": {
+    "description": "Return the live user roster for a Saturn-managed room. Pass room whenever the user names a channel; omit it only for the caller's current room.",
+    "whenToUse": ["Use for current presence, room membership, or questions about who is in a channel now."],
+    "whenNotToUse": ["Do not infer current presence from conversation history or message history."],
+    "example": "{\"room\":\"lounge\"} - Inspect the lounge roster"
+  },
+  "user_message_history": {
+    "description": "Fetch up to 500 of a named user's latest public messages across all rooms. Pass room only to restrict the search to one channel; omit it to search all rooms. Results include returnedCount, oldestCreatedOn, and newestCreatedOn evidence metadata.",
+    "whenToUse": ["Use freshly for every request about what a named user said or their activity, including 'check it' or 'check elsewhere'. Resolve the nick from shared context when possible."],
+    "whenNotToUse": ["Do not claim a user's history, current presence, or identity without querying the appropriate tool."],
+    "example": "{\"nick\":\"sun\"} - Find recent public messages by sun"
+  }
+}

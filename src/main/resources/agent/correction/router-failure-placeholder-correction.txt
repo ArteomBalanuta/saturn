@@ -1,0 +1,1 @@
+Your previous response was a failure placeholder, not an answer. Use the tool results and conversation evidence already present above to answer the user's current request now. Do not call another tool, repeat the placeholder, apologize, or claim that evidence is unavailable. Give a direct, grounded answer.

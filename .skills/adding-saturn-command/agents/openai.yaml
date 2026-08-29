@@ -1,0 +1,4 @@
+interface:
+  display_name: "Adding a Saturn Command"
+  short_description: "Add Saturn bot commands without missed wiring"
+  default_prompt: "Use $adding-saturn-command to add a new Saturn bot command end-to-end."

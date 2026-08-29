@@ -32,7 +32,11 @@ public class PrefixCommandImpl extends UserCommandBaseImpl {
     engine.replicasMappedByChannel.values().forEach(replica -> applyPrefix(replica, newPrefix));
 
     replyToAuthor("prefix changed from %s to %s".formatted(previousPrefix, newPrefix));
-    log.info("Executed [prefix] command by user: {}, prefix: {} -> {}", author(), previousPrefix, newPrefix);
+    log.info(
+        "Executed [prefix] command by user: {}, prefix: {} -> {}",
+        author(),
+        previousPrefix,
+        newPrefix);
     return successful();
   }
 

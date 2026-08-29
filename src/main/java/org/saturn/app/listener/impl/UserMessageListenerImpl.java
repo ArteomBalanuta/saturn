@@ -8,6 +8,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.message.ChatMessageContext;
 import org.saturn.app.listener.message.ChatMessageHandlerChain;
+import org.saturn.app.listener.message.handler.AgentParticipationHandler;
 import org.saturn.app.listener.message.handler.AuditChatMessageHandler;
 import org.saturn.app.listener.message.handler.CernEasterEggHandler;
 import org.saturn.app.listener.message.handler.DeliverPendingMailHandler;
@@ -40,6 +41,7 @@ public class UserMessageListenerImpl implements Listener {
                 new UpdateAfkStateHandler(),
                 new YoutubePreviewHandler(),
                 new CernEasterEggHandler(),
+                new AgentParticipationHandler(),
                 new DispatchUserCommandHandler()));
   }
 

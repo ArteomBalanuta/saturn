@@ -70,7 +70,8 @@ public class RegisterUserCommandImpl extends UserCommandBaseImpl {
       return fail("Something went wrong");
     }
 
-    replyToAuthor("User has been registered successfully, now you can msg him by name: %s".formatted(name));
+    replyToAuthor(
+        "User has been registered successfully, now you can msg him by name: %s".formatted(name));
     return successful();
   }
 }

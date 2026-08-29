@@ -115,7 +115,8 @@ public class ApplicationRunner {
   private void scheduleHealthChecks() {
     log.info("Scheduling health check every: {} minutes", healthCheckInterval);
     ensureScheduler();
-    healthCheckScheduler.scheduleAtFixedRate(this::healthCheck, 0, healthCheckInterval, TimeUnit.MINUTES);
+    healthCheckScheduler.scheduleAtFixedRate(
+        this::healthCheck, 0, healthCheckInterval, TimeUnit.MINUTES);
   }
 
   private void ensureScheduler() {

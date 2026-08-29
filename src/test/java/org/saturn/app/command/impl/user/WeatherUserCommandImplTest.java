@@ -27,7 +27,6 @@ class WeatherUserCommandImplTest {
 
     assertEquals(Status.SUCCESSFUL, cmd.execute().orElseThrow());
     assertEquals(
-        "@testAuthor Temperature: 21 C\n Wind speed: 7 km/h\n",
-        engine.outgoingMessageQueue.poll());
+        "@testAuthor Temperature: 21 C\n Wind speed: 7 km/h\n", engine.outgoingMessageQueue.poll());
   }
 }

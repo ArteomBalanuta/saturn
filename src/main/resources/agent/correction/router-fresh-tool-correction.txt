@@ -1,0 +1,3 @@
+The newest request requires fresh data from the `%s` tool in this invocation. Prior conversation
+memory and prior summaries do not satisfy this requirement. Call that tool now with arguments
+resolved from the newest request and shared context. Do not answer the user before the tool result.

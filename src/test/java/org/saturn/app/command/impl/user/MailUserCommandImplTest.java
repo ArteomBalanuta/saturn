@@ -24,7 +24,8 @@ class MailUserCommandImplTest {
   void getArgumentsSplitsEscapedReceiverLines() {
     var engine = CommandTestSupport.engine();
     var message =
-        CommandTestSupport.chatMessage("*mail merc\\ny\\no there message from merc", "tester", "trip");
+        CommandTestSupport.chatMessage(
+            "*mail merc\\ny\\no there message from merc", "tester", "trip");
 
     var command = new MailUserCommandImpl(engine, message, List.of("mail", "msg", "send"));
 

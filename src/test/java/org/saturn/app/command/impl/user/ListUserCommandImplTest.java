@@ -16,7 +16,8 @@ class ListUserCommandImplTest {
     engine.channel = "programming";
     engine.currentChannelUsers.add(user("alice", "trip-a", "hash-a"));
     engine.currentChannelUsers.add(user("bob", null, "hash-b"));
-    ChatMessage message = CommandTestSupport.chatMessage("*list programming", "testAuthor", "testTrip");
+    ChatMessage message =
+        CommandTestSupport.chatMessage("*list programming", "testAuthor", "testTrip");
 
     ListUserCommandImpl cmd = new ListUserCommandImpl(engine, message, List.of());
 

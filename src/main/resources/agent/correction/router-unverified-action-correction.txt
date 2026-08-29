@@ -1,0 +1,4 @@
+You narrated an action but did not call a tool. Re-evaluate the newest user request now. If it
+requires live Saturn data or a Saturn command, return the matching tool call immediately. If
+no exposed tool applies, answer honestly without claiming that you fetched, checked, queried,
+searched, or executed anything.

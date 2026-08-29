@@ -15,14 +15,16 @@ public class ResolveUserMetadataHandler implements ChatMessageHandler {
             .filter(u -> u.getNick().equals(context.getMessage().getNick()))
             .findFirst());
 
-    context.getAuthor().ifPresentOrElse(
-        user -> context.getMessage().setHash(user.getHash()),
-        () -> {
-          log.warn("Hash for user: {}, not present ", context.getMessage().getNick());
-          log.warn(
-              "Active users: {}",
-              context.getEngine().currentChannelUsers.stream().map(User::getNick).toList());
-        });
+    context
+        .getAuthor()
+        .ifPresentOrElse(
+            user -> context.getMessage().setHash(user.getHash()),
+            () -> {
+              log.warn("Hash for user: {}, not present ", context.getMessage().getNick());
+              log.warn(
+                  "Active users: {}",
+                  context.getEngine().currentChannelUsers.stream().map(User::getNick).toList());
+            });
 
     return true;
   }

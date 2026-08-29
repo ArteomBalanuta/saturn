@@ -74,8 +74,7 @@ public class UserServiceImpl extends OutService implements UserService {
               .replace("[", "")
               .replace("]", "");
       return Optional.of(
-          "\\n @%s, has been seen as: _%s_ in the last 15 minutes. \\n"
-              .formatted(user.getNick(), aliases));
+          "\\n @%s, has been seen as: _%s_ recently. \\n".formatted(user.getNick(), aliases));
     }
   }
 
@@ -185,7 +184,9 @@ public class UserServiceImpl extends OutService implements UserService {
             int nameId;
             try (PreparedStatement pstmtNames =
                     connection.prepareStatement(INSERT_NAMES, Statement.RETURN_GENERATED_KEYS);
-                ResultSet rsNames = executeInsertReturningKeys(pstmtNames, statement -> statement.setString(1, name))) {
+                ResultSet rsNames =
+                    executeInsertReturningKeys(
+                        pstmtNames, statement -> statement.setString(1, name))) {
               rsNames.next();
               nameId = rsNames.getInt(1);
             }
@@ -222,7 +223,7 @@ public class UserServiceImpl extends OutService implements UserService {
   public boolean isNameRegistered(String name) {
     boolean exists = false;
     try (PreparedStatement statement =
-        connection.prepareStatement("SELECT id from names where LOWER(name)==?")) {
+        connection.prepareStatement("SELECT id FROM names WHERE LOWER(name) = ?")) {
       statement.setString(1, name.toLowerCase());
       statement.execute();
 
@@ -243,7 +244,7 @@ public class UserServiceImpl extends OutService implements UserService {
   public boolean isTripRegistered(String trip) {
     boolean exists = false;
     try (PreparedStatement statement =
-        connection.prepareStatement("SELECT id from trips where LOWER(trip)==?")) {
+        connection.prepareStatement("SELECT id FROM trips WHERE LOWER(trip) = ?")) {
       statement.setString(1, trip.toLowerCase());
       statement.execute();
 
@@ -263,8 +264,7 @@ public class UserServiceImpl extends OutService implements UserService {
 
   @Override
   public void registerTripByName(String name, String trip) {
-    String insertTripSql =
-        "INSERT INTO trips (type, trip, created_on) VALUES ('REGULAR', ?, ?)";
+    String insertTripSql = "INSERT INTO trips (type, trip, created_on) VALUES ('REGULAR', ?, ?)";
     String insertTripNamesSql =
         "INSERT INTO trip_names (trip_id, name_id) SELECT ?, id FROM names WHERE name = ?";
     try {
@@ -317,7 +317,7 @@ public class UserServiceImpl extends OutService implements UserService {
         statement.setString(1, name);
       }
       statement.setString(2, trip);
-      statement.setString(3, String.valueOf(count));
+      statement.setInt(3, count);
       statement.execute();
 
       ResultSet resultSet = statement.getResultSet();

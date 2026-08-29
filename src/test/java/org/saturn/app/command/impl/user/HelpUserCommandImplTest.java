@@ -19,8 +19,11 @@ class HelpUserCommandImplTest {
     assertEquals(Status.SUCCESSFUL, command.execute().orElseThrow());
 
     String payload = engine.outgoingMessageQueue.poll();
-    assertTrue(payload.startsWith("@testAuthor All commands can be used through '/whisper'\nPrefix: * \nCommands:\n"));
-    assertTrue(payload.contains("\u2009\u2009\u2009\u2009\u2009\u2009\u2009\u2009 \n Admin commands:\n"));
+    assertTrue(
+        payload.startsWith(
+            "/whisper @testAuthor All commands can be used through '/whisper'\nPrefix: * \nCommands:\n"));
+    assertTrue(
+        payload.contains("\u2009\u2009\u2009\u2009\u2009\u2009\u2009\u2009 \n Admin commands:\n"));
     assertTrue(payload.contains("\u2009prefix <char>"));
     assertTrue(payload.contains("\u2009msgroom <room> <text>\u2009"));
     assertTrue(payload.contains("\u2009 %scaptcha on ".formatted("*")));

@@ -130,6 +130,7 @@ public class Connection {
   }
 
   public void write(String message) {
+    log.info("Outgoing WS payload: {}", message);
     client.send(message);
   }
 
@@ -151,7 +152,9 @@ public class Connection {
 
   private static Listener getRequiredListener(List<Listener> listeners, String name) {
     Optional<Listener> listener =
-        listeners.stream().filter(candidate -> name.equals(candidate.getListenerName())).findFirst();
+        listeners.stream()
+            .filter(candidate -> name.equals(candidate.getListenerName()))
+            .findFirst();
     if (listener.isEmpty()) {
       throw new IllegalArgumentException("Missing listener: " + name);
     }

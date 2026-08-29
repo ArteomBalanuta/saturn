@@ -163,9 +163,7 @@ public class UserCommandBaseImpl implements UserCommand {
     return getArguments().stream()
         .map(
             argument ->
-                preserveSpecialCharacters
-                    ? argument
-                    : argument.replaceAll("[^A-Za-z0-9 ]", ""))
+                preserveSpecialCharacters ? argument : argument.replaceAll("[^A-Za-z0-9 ]", ""))
         .collect(Collectors.joining(" ", "", " "));
   }
 

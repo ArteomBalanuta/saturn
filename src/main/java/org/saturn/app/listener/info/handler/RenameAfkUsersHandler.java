@@ -30,7 +30,8 @@ public class RenameAfkUsersHandler implements InfoMessageHandler {
 
     for (Map.Entry<String, Afk> entry : context.getEngine().afkUsers.entrySet()) {
       List<User> afkUsers = entry.getValue().getUsers();
-      Optional<User> afkUser = afkUsers.stream().filter(u -> u.getNick().equals(before)).findFirst();
+      Optional<User> afkUser =
+          afkUsers.stream().filter(u -> u.getNick().equals(before)).findFirst();
       if (afkUser.isPresent()) {
         log.warn(
             "User: {} was renamed, updating afk list with new username: {}, accordingly",

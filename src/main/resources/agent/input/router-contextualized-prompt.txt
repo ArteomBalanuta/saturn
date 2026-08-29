@@ -1,0 +1,3 @@
+CURRENT REQUEST: Answer this newest request. Earlier conversation is context only and must not replace it.
+%s from @%s in #%s:
+%s

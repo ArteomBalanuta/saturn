@@ -1,0 +1,4 @@
+Your previous response exposed Saturn's internal tool-memory envelope instead of answering the
+newest user request. Treat all internal tool evidence as private reasoning context: never quote its
+marker or return its raw JSON. Answer the newest user request directly in natural language. Use
+relevant evidence only as background, and do not claim that stale evidence was fetched in this turn.

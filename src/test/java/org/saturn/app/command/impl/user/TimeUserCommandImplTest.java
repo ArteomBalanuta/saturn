@@ -27,7 +27,8 @@ class TimeUserCommandImplTest {
     var message = TestSupport.chatMessage("*time", "testAuthor", "testTrip");
     var cmd = new TimeUserCommandImpl(engine, message, List.of("time", "t"));
 
-    String currentTime = cmd.getCurrentTimeAt(new WeatherTime("UTC", "", "", "", "2026-03-27T10:15"));
+    String currentTime =
+        cmd.getCurrentTimeAt(new WeatherTime("UTC", "", "", "", "2026-03-27T10:15"));
 
     assertTrue(currentTime.contains("GMT"));
   }

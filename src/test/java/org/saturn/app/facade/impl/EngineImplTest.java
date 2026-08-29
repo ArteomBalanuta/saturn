@@ -1,8 +1,8 @@
 package org.saturn.app.facade.impl;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.moandjiezana.toml.Toml;
@@ -14,7 +14,8 @@ import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 
 class EngineImplTest {
-  private final EngineImpl engine = new EngineImpl(noopConnection(), buildConfig(), EngineType.HOST);
+  private final EngineImpl engine =
+      new EngineImpl(noopConnection(), buildConfig(), EngineType.HOST);
 
   private static Toml buildConfig() {
     return new Toml()
@@ -26,7 +27,7 @@ class EngineImplTest {
             trip = "secret13"
             userTrips = ""
             adminTrips = ""
-            dbPath = "database/database.db"
+            dbPath = "database/database"
             wsUrl = "wss://hack.chat/chat-ws"
             proxies = ""
             autorunCommands = ""

@@ -18,8 +18,7 @@ public class ConvertWhisperToChatMessageHandler implements InfoMessageHandler {
       return false;
     }
 
-    String[] split =
-        context.getInfoMessage().getText().split(author.get() + " whispered: ");
+    String[] split = context.getInfoMessage().getText().split(author.get() + " whispered: ");
     if (split.length <= 1) {
       return false;
     }

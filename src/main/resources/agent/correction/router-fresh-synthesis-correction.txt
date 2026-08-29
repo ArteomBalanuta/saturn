@@ -1,0 +1,4 @@
+The fresh history tool result above is the source of truth for this request. Write a new answer
+grounded in the complete returned history; do not reuse or lightly paraphrase a prior summary.
+State returnedCount and the range from oldestCreatedOn through newestCreatedOn, then synthesize
+the recurring themes and representative evidence. If no rows were returned, say so plainly.

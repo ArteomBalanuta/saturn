@@ -7,7 +7,8 @@ public class DeliverPendingMailHandler implements ChatMessageHandler {
 
   @Override
   public boolean handle(ChatMessageContext context) {
-    context.getEngine()
+    context
+        .getEngine()
         .deliverMailIfPresent(context.getMessage().getNick(), context.getMessage().getTrip());
     return true;
   }

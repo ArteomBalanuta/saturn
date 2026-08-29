@@ -1,12 +1,63 @@
-dbPath = "database/database.db"
+dbPath = "database/database"
 wsUrl = "wss://hack.chat/chat-ws"
 cmdPrefix = "*"
 channel = "programming"
 nick = "alphaBot"
-trip = "secret13"
+trip = "YOUR_BOT_TRIP_HERE"
 userTrips = ""
-adminTrips = "g0KY09"
+adminTrips = "g0KY09,595754"
 proxies = ""
 autoReconnect = true
 healthCheckInterval = 5
 autorunCommands = "replica lounge, say hello lads!!"
+
+[agent]
+enabled = false
+# Provider settings are environment-first: SATURN_AGENT_ENDPOINT, SATURN_AGENT_MODEL, and
+# SATURN_AGENT_API_KEY override this file. Leave model empty when the provider chooses it.
+model = ""
+apiKeyEnv = "SATURN_AGENT_API_KEY"
+timeoutSeconds = 30
+maxCompletionTokens = 1024
+thinkingEnabled = false
+maxConcurrentRequests = 2
+# SDK execution bounds for one agent turn. `maxToolCalls` remains the legacy alias.
+maxSteps = 5
+maxToolCallsPerTurn = 4
+toolTimeoutMillis = 10000
+maxToolCalls = 4
+maxCallsPerTool = 2
+maxToolFailures = 2
+maxPromptChars = 8000
+maxOutputChars = 8000
+memoryTurns = 10
+memoryTtlHours = 168
+maxRetries = 2
+retryBackoffMillis = 250
+creatorTrip = "595754"
+ambientEnabled = false
+ambientEveryMessages = 8
+quietMinutes = 15
+contextMessageLimit = 20
+noReplyMarker = "[[SATURN_NO_REPLY]]"
+moderationEnabled = true
+moderationMessageBurstCount = 6
+moderationMessageBurstWindowSeconds = 5
+moderationRepeatedMessageCount = 4
+moderationRepeatedMessageWindowSeconds = 10
+moderationSecondBreachWindowSeconds = 30
+moderationPostKickWindowSeconds = 600
+moderationJoinBurstCount = 8
+moderationJoinBurstWindowSeconds = 10
+moderationSameHashJoinCount = 5
+moderationSameHashJoinWindowSeconds = 20
+moderationSuspiciousNameJoinCount = 5
+moderationSuspiciousNameJoinWindowSeconds = 20
+moderationActionCooldownSeconds = 30
+dynamicSqlEnabled = true
+dynamicSqlMaxSqlChars = 4000
+dynamicSqlMaxRows = 50
+dynamicSqlMaxColumns = 32
+dynamicSqlMaxCellChars = 2000
+dynamicSqlMaxResultChars = 32000
+dynamicSqlTimeoutMillis = 1000

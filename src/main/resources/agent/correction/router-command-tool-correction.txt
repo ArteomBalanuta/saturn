@@ -1,0 +1,9 @@
+Your previous response placed the Saturn %s command in Markdown. Return exactly one tool call.
+Use run_command with command %s only when the user requested that command to execute now. Use
+respond_without_command when it was a reference, report, example, conditional, or future
+action; provide a clean response that does not print a command or claim an action occurred. Do
+not call another tool, ask for confirmation, or answer outside the tool call.
+The newest user request is: %s
+If that request does not ask for the detected command, treat the command as an unrelated command
+hallucination. Use respond_without_command to answer the newest request from the conversation and
+existing tool results. Do not discuss, refuse, explain, or ask for arguments for that command.

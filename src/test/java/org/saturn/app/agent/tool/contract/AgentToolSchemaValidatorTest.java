@@ -1,0 +1,446 @@
+package org.saturn.app.agent.tool.contract;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonNull;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import org.junit.jupiter.api.Test;
+
+class AgentToolSchemaValidatorTest {
+  @Test
+  void rejectsMalformedParameterSchemaDeclarations() {
+    JsonObject missingType = new JsonObject();
+    assertThrows(
+        IllegalArgumentException.class, () -> AgentToolSchemaValidator.validateSchema(missingType));
+
+    JsonObject nonPrimitiveType = new JsonObject();
+    nonPrimitiveType.add("type", new JsonArray());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonPrimitiveType));
+
+    JsonObject propertyWithoutType = objectSchema();
+    propertyWithoutType.add("properties", propertyMap(new JsonObject()));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(propertyWithoutType));
+
+    JsonObject nonObjectProperties = objectSchema();
+    nonObjectProperties.addProperty("properties", "invalid");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonObjectProperties));
+
+    JsonObject nonBooleanAdditionalProperties = objectSchema();
+    nonBooleanAdditionalProperties.addProperty("additionalProperties", "false");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonBooleanAdditionalProperties));
+
+    JsonObject nonPrimitiveAdditionalProperties = objectSchema();
+    nonPrimitiveAdditionalProperties.add("additionalProperties", new JsonObject());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonPrimitiveAdditionalProperties));
+  }
+
+  @Test
+  void rejectsNonObjectRootsAndInvalidPrimitiveArgumentTypes() {
+    JsonObject nonObjectRoot = new JsonObject();
+    nonObjectRoot.addProperty("type", "string");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonObjectRoot));
+
+    JsonObject nonPrimitiveResultType = new JsonObject();
+    nonPrimitiveResultType.add("type", new JsonArray());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(nonPrimitiveResultType));
+
+    JsonObject schema = objectSchema();
+    JsonObject properties = new JsonObject();
+    properties.add("text", typedProperty("string"));
+    properties.add("flag", typedProperty("boolean"));
+    properties.add("count", typedProperty("number"));
+    schema.add("properties", properties);
+
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("text", 1);
+    assertEquals(
+        "Invalid type for parameter: text",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("text", "ok");
+    arguments.addProperty("flag", "yes");
+    assertEquals(
+        "Invalid type for parameter: flag",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("flag", true);
+    arguments.addProperty("count", false);
+    assertEquals(
+        "Invalid type for parameter: count",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+  }
+
+  @Test
+  void rejectsMalformedRequiredDeclarations() {
+    JsonObject nonArray = objectSchema();
+    nonArray.addProperty("required", "value");
+    assertThrows(
+        IllegalArgumentException.class, () -> AgentToolSchemaValidator.validateSchema(nonArray));
+
+    JsonObject nonStringName = objectSchema();
+    JsonArray required = new JsonArray();
+    required.add(1);
+    nonStringName.add("required", required);
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonStringName));
+  }
+
+  @Test
+  void validatesRequiredArgumentsAndClosedObjectArguments() {
+    JsonObject schema = objectSchema();
+    schema.add("properties", propertyMap(stringProperty("name")));
+    JsonArray required = new JsonArray();
+    required.add("name");
+    schema.add("required", required);
+
+    JsonObject missing = new JsonObject();
+    assertEquals(
+        "Missing required parameter: name",
+        AgentToolSchemaValidator.validateArguments(schema, missing));
+
+    JsonObject unknown = new JsonObject();
+    unknown.addProperty("name", "present");
+    unknown.addProperty("extra", true);
+    assertEquals(
+        "Unknown parameter: extra", AgentToolSchemaValidator.validateArguments(schema, unknown));
+  }
+
+  @Test
+  void validatesPrimitiveTypesAndStructuredTypes() {
+    JsonObject schema = objectSchema();
+    JsonObject properties = new JsonObject();
+    properties.add("text", stringProperty("text"));
+    properties.add("flag", typedProperty("boolean"));
+    properties.add("number", typedProperty("number"));
+    properties.add("integer", typedProperty("integer"));
+    properties.add("object", typedProperty("object"));
+    properties.add("array", typedProperty("array"));
+    properties.add("nothing", typedProperty("null"));
+    schema.add("properties", properties);
+
+    JsonObject valid = new JsonObject();
+    valid.addProperty("text", "ok");
+    valid.addProperty("flag", true);
+    valid.addProperty("number", 1.5);
+    valid.addProperty("integer", 2);
+    valid.add("object", new JsonObject());
+    valid.add("array", new JsonArray());
+    valid.add("nothing", JsonNull.INSTANCE);
+    assertEquals(null, AgentToolSchemaValidator.validateArguments(schema, valid));
+
+    valid.addProperty("flag", "not boolean");
+    assertEquals(
+        "Invalid type for parameter: flag",
+        AgentToolSchemaValidator.validateArguments(schema, valid));
+  }
+
+  @Test
+  void validatesEnumStringLengthAndNumericBounds() {
+    JsonObject schema = objectSchema();
+    JsonObject properties = new JsonObject();
+    JsonObject text = stringProperty("text");
+    text.addProperty("minLength", 2);
+    text.addProperty("maxLength", 4);
+    JsonArray values = new JsonArray();
+    values.add("no");
+    values.add("x");
+    values.add("longer");
+    text.add("enum", values);
+    properties.add("text", text);
+    JsonObject integer = typedProperty("integer");
+    integer.addProperty("minimum", 1);
+    integer.addProperty("maximum", 3);
+    properties.add("integer", integer);
+    schema.add("properties", properties);
+
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("text", "no");
+    arguments.addProperty("integer", 2);
+    assertEquals(null, AgentToolSchemaValidator.validateArguments(schema, arguments));
+
+    arguments.addProperty("text", "bad");
+    assertEquals(
+        "Invalid value for parameter: text",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("text", "x");
+    assertEquals(
+        "Parameter is shorter than allowed: text",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("text", "longer");
+    assertEquals(
+        "Parameter is longer than allowed: text",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("text", "no");
+    arguments.addProperty("integer", 1.5);
+    assertEquals(
+        "Invalid type for parameter: integer",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("integer", 0);
+    assertEquals(
+        "Parameter is below minimum: integer",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.addProperty("integer", 4);
+    assertEquals(
+        "Parameter is above maximum: integer",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+  }
+
+  @Test
+  void validatesResultTypeAndRequiredFields() {
+    JsonObject schema = new JsonObject();
+    schema.addProperty("type", "object");
+    schema.add("properties", propertyMapWithName("answer", stringProperty("answer")));
+    JsonArray required = new JsonArray();
+    required.add("answer");
+    schema.add("required", required);
+
+    JsonObject missing = new JsonObject();
+    assertEquals(
+        "Tool result is missing required field: answer",
+        AgentToolSchemaValidator.validateResult(schema, missing));
+
+    JsonObject valid = new JsonObject();
+    valid.addProperty("answer", "done");
+    assertEquals(null, AgentToolSchemaValidator.validateResult(schema, valid));
+    assertEquals(
+        "Tool result does not match declared object schema",
+        AgentToolSchemaValidator.validateResult(schema, new JsonArray()));
+  }
+
+  @Test
+  void validatesPrimitiveArrayNullAndAnyResultTypes() {
+    JsonObject stringSchema = resultSchema("string");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(stringSchema, new JsonPrimitive("ok")));
+    assertEquals(
+        "Tool result does not match declared string schema",
+        AgentToolSchemaValidator.validateResult(stringSchema, new JsonPrimitive(true)));
+
+    JsonObject booleanSchema = resultSchema("boolean");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(booleanSchema, new JsonPrimitive(true)));
+
+    JsonObject numberSchema = resultSchema("number");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(numberSchema, new JsonPrimitive(1.5)));
+
+    JsonObject integerSchema = resultSchema("integer");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(integerSchema, new JsonPrimitive(2)));
+
+    JsonObject arraySchema = resultSchema("array");
+    assertEquals(null, AgentToolSchemaValidator.validateResult(arraySchema, new JsonArray()));
+
+    JsonObject nullSchema = resultSchema("null");
+    assertEquals(null, AgentToolSchemaValidator.validateResult(nullSchema, JsonNull.INSTANCE));
+
+    JsonObject anySchema = resultSchema("any");
+    assertEquals(
+        null, AgentToolSchemaValidator.validateResult(anySchema, new JsonPrimitive("anything")));
+
+    JsonObject objectSchema = resultSchema("object");
+    assertEquals(null, AgentToolSchemaValidator.validateResult(objectSchema, new JsonObject()));
+  }
+
+  @Test
+  void rejectsPrimitiveResultsWithTheWrongPrimitiveKind() {
+    assertEquals(
+        "Tool result does not match declared boolean schema",
+        AgentToolSchemaValidator.validateResult(
+            resultSchema("boolean"), new JsonPrimitive("true")));
+    assertEquals(
+        "Tool result does not match declared number schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("number"), new JsonPrimitive(false)));
+    assertEquals(
+        "Tool result does not match declared integer schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("integer"), new JsonPrimitive("1")));
+    assertEquals(
+        "Tool result does not match declared integer schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("integer"), new JsonPrimitive(1.5)));
+  }
+
+  @Test
+  void acceptsArgumentsWhenTheObjectSchemaHasNoProperties() {
+    JsonObject arguments = new JsonObject();
+
+    assertEquals(null, AgentToolSchemaValidator.validateArguments(objectSchema(), arguments));
+  }
+
+  @Test
+  void rejectsNonObjectResultPropertiesAndAcceptsAnyArgumentType() {
+    JsonObject malformed = resultSchema("object");
+    malformed.addProperty("properties", "invalid");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(malformed));
+
+    JsonObject schema = objectSchema();
+    schema.add("properties", propertyMapWithName("value", typedProperty("any")));
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("value", "anything");
+    assertEquals(null, AgentToolSchemaValidator.validateArguments(schema, arguments));
+  }
+
+  @Test
+  void acceptsSupportedResultTypesAndRejectsMalformedResultSchemas() {
+    for (String type :
+        new String[] {"any", "string", "boolean", "number", "integer", "object", "array", "null"}) {
+      JsonObject schema = new JsonObject();
+      schema.addProperty("type", type);
+      assertDoesNotThrow(() -> AgentToolSchemaValidator.validateResultSchema(schema));
+    }
+
+    JsonObject missingType = new JsonObject();
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(missingType));
+    JsonObject nonStringType = new JsonObject();
+    nonStringType.addProperty("type", 1);
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(nonStringType));
+  }
+
+  @Test
+  void rejectsMalformedResultRequiredDeclarations() {
+    JsonObject nonArray = new JsonObject();
+    nonArray.addProperty("type", "object");
+    nonArray.addProperty("required", "answer");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(nonArray));
+
+    JsonObject undeclared = new JsonObject();
+    undeclared.addProperty("type", "object");
+    JsonArray required = new JsonArray();
+    required.add("answer");
+    undeclared.add("required", required);
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateResultSchema(undeclared));
+  }
+
+  @Test
+  void coversPermissiveArgumentsAndNonPrimitiveTypeMismatches() {
+    JsonObject schema = new JsonObject();
+    schema.addProperty("type", "object");
+    schema.addProperty("additionalProperties", true);
+    JsonObject properties = new JsonObject();
+    properties.add("text", typedProperty("string"));
+    properties.add("flag", typedProperty("boolean"));
+    properties.add("number", typedProperty("number"));
+    schema.add("properties", properties);
+
+    JsonObject arguments = new JsonObject();
+    arguments.add("extra", new JsonObject());
+    assertEquals(null, AgentToolSchemaValidator.validateArguments(schema, arguments));
+
+    arguments.add("text", new JsonArray());
+    assertEquals(
+        "Invalid type for parameter: text",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.remove("text");
+    arguments.add("flag", new JsonObject());
+    assertEquals(
+        "Invalid type for parameter: flag",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+    arguments.remove("flag");
+    arguments.add("number", new JsonArray());
+    assertEquals(
+        "Invalid type for parameter: number",
+        AgentToolSchemaValidator.validateArguments(schema, arguments));
+  }
+
+  @Test
+  void coversResultPrimitiveMismatchesAndNumericEnumEquality() {
+    assertEquals(
+        "Tool result does not match declared string schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("string"), new JsonObject()));
+    assertEquals(
+        "Tool result does not match declared boolean schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("boolean"), new JsonArray()));
+    assertEquals(
+        "Tool result does not match declared number schema",
+        AgentToolSchemaValidator.validateResult(resultSchema("number"), new JsonPrimitive("1")));
+
+    JsonObject schema = objectSchema();
+    JsonObject property = typedProperty("number");
+    JsonArray values = new JsonArray();
+    values.add(1);
+    property.add("enum", values);
+    schema.add("properties", propertyMapWithName("value", property));
+    JsonObject arguments = new JsonObject();
+    arguments.addProperty("value", 1.0);
+
+    assertEquals(null, AgentToolSchemaValidator.validateArguments(schema, arguments));
+  }
+
+  @Test
+  void rejectsNonObjectPropertiesAndNonPrimitiveRequiredNames() {
+    JsonObject nonObjectProperty = objectSchema();
+    JsonObject properties = new JsonObject();
+    properties.add("value", new JsonArray());
+    nonObjectProperty.add("properties", properties);
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonObjectProperty));
+
+    JsonObject nonPrimitiveName = objectSchema();
+    JsonArray required = new JsonArray();
+    required.add(new JsonObject());
+    nonPrimitiveName.add("required", required);
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> AgentToolSchemaValidator.validateSchema(nonPrimitiveName));
+  }
+
+  private static JsonObject objectSchema() {
+    JsonObject schema = new JsonObject();
+    schema.addProperty("type", "object");
+    schema.addProperty("additionalProperties", false);
+    return schema;
+  }
+
+  private static JsonObject resultSchema(String type) {
+    JsonObject schema = new JsonObject();
+    schema.addProperty("type", type);
+    return schema;
+  }
+
+  private static JsonObject propertyMap(JsonObject property) {
+    return propertyMapWithName("name", property);
+  }
+
+  private static JsonObject propertyMapWithName(String name, JsonObject property) {
+    JsonObject properties = new JsonObject();
+    properties.add(name, property);
+    return properties;
+  }
+
+  private static JsonObject stringProperty(String description) {
+    return typedProperty("string");
+  }
+
+  private static JsonObject typedProperty(String type) {
+    JsonObject property = new JsonObject();
+    property.addProperty("type", type);
+    return property;
+  }
+}

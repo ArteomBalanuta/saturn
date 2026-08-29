@@ -1,0 +1,3 @@
+Final correction: do not describe or promise the action. Return the matching Saturn tool call now.
+If Saturn has no exposed tool for the requested live operation, say that capability is unavailable
+without claiming that any lookup or command was performed.

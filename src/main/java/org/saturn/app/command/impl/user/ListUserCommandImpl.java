@@ -22,7 +22,7 @@ import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"list", "l"})
+@CommandAliases(aliases = {"list"})
 public class ListUserCommandImpl extends UserCommandBaseImpl {
   public ListUserCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminAndUserTrips(engine));
@@ -40,7 +40,8 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
     if (arguments.isEmpty()) {
       printUsers(author(), engine.currentChannelUsers, isWhisper());
       replyToAuthor("Example: %slist programming".formatted(engine.prefix));
-      log.info("Executed [list] command by user: {} - missing channel, listed current room", author());
+      log.info(
+          "Executed [list] command by user: {} - missing channel, listed current room", author());
       return Optional.of(Status.FAILED);
     }
 
@@ -88,6 +89,7 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
                     .append(user.getNick())
                     .append("\\n"));
 
-    engine.outService.enqueueMessageForSending(author, "\\nUsers online: \\n%s\\n".formatted(output), isWhisper);
+    engine.outService.enqueueMessageForSending(
+        author, "\\nUsers online: \\n%s\\n".formatted(output), isWhisper);
   }
 }

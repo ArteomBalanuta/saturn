@@ -122,47 +122,60 @@ public class WeatherServiceImpl extends OutService implements WeatherService {
     List<String> lines = new ArrayList<>();
     lines.add("Weather forecast for today: **%s**".formatted(area));
     lines.add(
-        "Temperature: %s %s".formatted(
-            currentWeather.temperature, currentWeatherUnits.temperature));
+        "Temperature: %s %s"
+            .formatted(currentWeather.temperature, currentWeatherUnits.temperature));
     lines.add(
-        "Feels temp: %s %s".formatted(
-            hourly.apparent_temperature.get(zonedDateTime.getHour()), hourlyUnits.apparent_temperature));
+        "Feels temp: %s %s"
+            .formatted(
+                hourly.apparent_temperature.get(zonedDateTime.getHour()),
+                hourlyUnits.apparent_temperature));
     lines.add(
-        "Air Humidity: %s %s".formatted(
-            hourly.relative_humidity_2m.get(zonedDateTime.getHour()), hourlyUnits.relative_humidity_2m));
+        "Air Humidity: %s %s"
+            .formatted(
+                hourly.relative_humidity_2m.get(zonedDateTime.getHour()),
+                hourlyUnits.relative_humidity_2m));
     lines.add("Precipitation: %s".formatted(weatherEmoji));
     lines.add(
         "Wind speed: %s %s".formatted(currentWeather.windspeed, currentWeatherUnits.windspeed));
     lines.add(
-        "Pressure surface: %s %s".formatted(
-            hourly.surface_pressure.get(zonedDateTime.getHour()), hourlyUnits.surface_pressure));
+        "Pressure surface: %s %s"
+            .formatted(
+                hourly.surface_pressure.get(zonedDateTime.getHour()),
+                hourlyUnits.surface_pressure));
     lines.add(
-        "Pressure sea level: %s %s".formatted(
-            hourly.pressure_msl.get(zonedDateTime.getHour()), hourlyUnits.pressure_msl));
+        "Pressure sea level: %s %s"
+            .formatted(hourly.pressure_msl.get(zonedDateTime.getHour()), hourlyUnits.pressure_msl));
     lines.add("\u2009\u2009\u2009 ");
     lines.add(
         "UV day max index: %s %s".formatted(daily.uv_index_max.get(0), dailyUnits.uv_index_max));
     lines.add(
-        "Short wave radiation day sum: %s %s".formatted(
-            daily.shortwave_radiation_sum.get(0), dailyUnits.shortwave_radiation_sum));
+        "Short wave radiation day sum: %s %s"
+            .formatted(daily.shortwave_radiation_sum.get(0), dailyUnits.shortwave_radiation_sum));
     lines.add(
-        "ShortWave rad: %s %s".formatted(
-            hourly.shortwave_radiation.get(zonedDateTime.getHour()), hourlyUnits.shortwave_radiation));
+        "ShortWave rad: %s %s"
+            .formatted(
+                hourly.shortwave_radiation.get(zonedDateTime.getHour()),
+                hourlyUnits.shortwave_radiation));
     lines.add(
-        "Diffuse rad: %s %s".formatted(
-            hourly.diffuse_radiation.get(zonedDateTime.getHour()), hourlyUnits.diffuse_radiation));
+        "Diffuse rad: %s %s"
+            .formatted(
+                hourly.diffuse_radiation.get(zonedDateTime.getHour()),
+                hourlyUnits.diffuse_radiation));
     lines.add("\u2009\u2009\u2009 ");
     lines.add("Time: %s".formatted(currentTime.replace(":", "-")));
     lines.add("Sun rise: %s".formatted(sunriseTime.replace(":", "-")));
     lines.add("Sun set: %s".formatted(sunsetTime.replace(":", "-")));
     lines.add("\u2009\u2009\u2009 ");
     lines.add(
-        "Soil temp 18cm: %s %s".formatted(
-            hourly.soil_temperature_18cm.get(zonedDateTime.getHour()), hourlyUnits.soil_temperature_18cm));
+        "Soil temp 18cm: %s %s"
+            .formatted(
+                hourly.soil_temperature_18cm.get(zonedDateTime.getHour()),
+                hourlyUnits.soil_temperature_18cm));
     lines.add(
-        "Soil moist 3-9cm: %s %s".formatted(
-            hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour()),
-            hourlyUnits.soil_moisture_3_to_9cm));
+        "Soil moist 3-9cm: %s %s"
+            .formatted(
+                hourly.soil_moisture_3_to_9cm.get(zonedDateTime.getHour()),
+                hourlyUnits.soil_moisture_3_to_9cm));
     return String.join("\\n", lines) + "\\n";
   }
 }

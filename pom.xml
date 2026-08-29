@@ -20,7 +20,9 @@
         <commons-beanutils.version>1.9.4</commons-beanutils.version>
         <gson.version>2.10.1</gson.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
-        <sqlite-jdbc.version>3.41.2.2</sqlite-jdbc.version>
+        <!-- Retained only to import a pre-H2 database.db during one-time startup migration. -->
+        <sqlite-jdbc.version>3.53.2.1</sqlite-jdbc.version>
+        <h2.version>2.3.232</h2.version>
         <log4j-api.version>2.23.1</log4j-api.version>
         <lombok.version>1.18.38</lombok.version>
         <Java-WebSocket.version>1.5.3</Java-WebSocket.version>
@@ -31,8 +33,10 @@
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <httpclient.version>4.5.14</httpclient.version>
+        <jsqlparser.version>5.3</jsqlparser.version>
         <toml.version>0.7.3</toml.version>
         <spotless.version>2.44.2</spotless.version>
+        <jacoco.version>0.8.13</jacoco.version>
     </properties>
 
     <dependencies>
@@ -65,6 +69,16 @@
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
             <version>${sqlite-jdbc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${h2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>${jsqlparser.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -162,6 +176,7 @@
                                 <!-- Relocate packages if needed to avoid conflicts -->
                             </relocations>
                             <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
                                     <resource>VERSION</resource>  <!-- The file you want to include -->
                                     <file>${project.basedir}/VERSION</file> <!-- Path in your project -->
@@ -199,6 +214,31 @@
                         <googleJavaFormat/>
                     </java>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>agent-coverage-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>org/saturn/app/agent/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -46,6 +46,7 @@ public class UserJoinedListenerImpl implements Listener {
         user.getChannel());
 
     engine.addActiveUser(user);
+    engine.getAgentRoomAutomation().onJoin(user);
     engine.shareUserInfo(user);
     engine.kickIfShadowBanned(user);
 

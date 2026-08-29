@@ -1,0 +1,1 @@
+Prefer purpose-built tools. If none can answer, call database_schema before database_sql; generated SQL must remain read-only.
