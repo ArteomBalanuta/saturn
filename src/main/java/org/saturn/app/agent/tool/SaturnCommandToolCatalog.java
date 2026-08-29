@@ -27,6 +27,8 @@ import org.saturn.app.command.annotation.CommandAliases;
  */
 public final class SaturnCommandToolCatalog {
   private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(10);
+  private static final String USER_COMMAND_PACKAGE = "org.saturn.app.command.impl.user";
+  private static final String MODERATOR_COMMAND_PACKAGE = "org.saturn.app.command.impl.moderator";
   private static final List<CommandToolDefinition> ENTRIES = loadEntries();
 
   /** Implements the {@code SaturnCommandToolCatalog} operation for this agent component. */
@@ -52,7 +54,7 @@ public final class SaturnCommandToolCatalog {
         new ClassGraph()
             .enableClassInfo()
             .enableAnnotationInfo()
-            .acceptPackages("org.saturn.app.command.impl")
+            .acceptPackages(USER_COMMAND_PACKAGE, MODERATOR_COMMAND_PACKAGE)
             .scan()) {
       List<CommandToolDefinition> entries =
           scan.getClassesWithAnnotation(CommandAliases.class).stream()
@@ -162,18 +164,18 @@ public final class SaturnCommandToolCatalog {
    */
   private static CommandProfile profileFor(Class<? extends UserCommand> handlerType) {
     String packageName = handlerType.getPackageName();
-    if (packageName.contains(".impl.admin")) {
-      return new CommandProfile(
-          EnumSet.of(AgentCapability.ADMIN_COMMANDS), ToolEffect.ROOM_MESSAGE);
+    if (packageName.equals(USER_COMMAND_PACKAGE)) {
+      return new CommandProfile(EnumSet.noneOf(AgentCapability.class), ToolEffect.ROOM_MESSAGE);
     }
-    if (packageName.contains(".impl.moderator")) {
+    if (packageName.equals(MODERATOR_COMMAND_PACKAGE)) {
       if (handlerType.getSimpleName().matches("(BanUser|UnBanUser|UnBanAllUser)CommandImpl")) {
         return new CommandProfile(EnumSet.of(AgentCapability.PERMANENT_BAN), ToolEffect.MODERATION);
       }
       return new CommandProfile(
           EnumSet.of(AgentCapability.MODERATION_COMMANDS), ToolEffect.MODERATION);
     }
-    return new CommandProfile(EnumSet.noneOf(AgentCapability.class), ToolEffect.ROOM_MESSAGE);
+    throw new IllegalStateException(
+        "Unsupported Saturn command package for agent exposure: " + packageName);
   }
 
   /** Immutable contextual contract for one reflected Saturn command handler. */
