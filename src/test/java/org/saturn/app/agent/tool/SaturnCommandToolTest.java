@@ -43,11 +43,11 @@ class SaturnCommandToolTest {
   }
 
   @Test
-  void rejectsCreatorOnlyCommandsOutsideTheCreatorCapability() {
+  void rejectsPermanentBanCommandsOutsideThePermanentBanCapability() {
     AtomicReference<String> command = new AtomicReference<>();
     SaturnCommandTool tool =
         new SaturnCommandTool(
-            definition("restart"),
+            definition("ban"),
             (context, requestedCommand, arguments) -> {
               command.set(requestedCommand);
               return true;
