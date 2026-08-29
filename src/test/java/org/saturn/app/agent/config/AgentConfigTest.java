@@ -34,7 +34,7 @@ class AgentConfigTest {
     assertEquals(4, actual.maxToolCallsPerTurn());
     assertEquals(Duration.ofSeconds(10), actual.toolTimeout());
     assertEquals(2, actual.maxConcurrentRequests());
-    assertEquals(768, actual.maxCompletionTokens());
+    assertEquals(1024, actual.maxCompletionTokens());
     assertFalse(actual.thinkingEnabled());
     assertFalse(actual.model().isPresent());
   }

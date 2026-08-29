@@ -62,7 +62,7 @@ enabled = false
 # Set SATURN_AGENT_ENDPOINT in the environment before enabling the agent.
 apiKeyEnv = "SATURN_AGENT_API_KEY"
 timeoutSeconds = 30
-maxCompletionTokens = 768
+maxCompletionTokens = 1024
 thinkingEnabled = false
 maxConcurrentRequests = 2
 maxSteps = 5

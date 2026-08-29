@@ -18,7 +18,7 @@ enabled = false
 model = ""
 apiKeyEnv = "SATURN_AGENT_API_KEY"
 timeoutSeconds = 30
-maxCompletionTokens = 768
+maxCompletionTokens = 1024
 thinkingEnabled = false
 maxConcurrentRequests = 2
 # SDK execution bounds for one agent turn. `maxToolCalls` remains the legacy alias.

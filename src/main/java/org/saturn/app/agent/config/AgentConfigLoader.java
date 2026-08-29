@@ -9,7 +9,7 @@ import java.util.Optional;
 /** Loads validated agent settings from TOML with explicit environment precedence. */
 public final class AgentConfigLoader {
   private static final String DEFAULT_ENDPOINT = "http://localhost:16261";
-  private static final int DEFAULT_MAX_COMPLETION_TOKENS = 768;
+  private static final int DEFAULT_MAX_COMPLETION_TOKENS = 1024;
   private static final int DEFAULT_MAX_STEPS = 5;
   private static final Duration DEFAULT_TOOL_TIMEOUT = Duration.ofSeconds(10);
 
