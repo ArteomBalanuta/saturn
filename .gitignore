@@ -2,3 +2,27 @@
 .superpowers/
 logs/
 target/
+
+# Local IDE, Hermes, and tool artifacts
+/.hermes/
+/.idea/
+/.aider.tags.cache.v4/
+
+# Local secrets and runtime data
+/config.toml
+/database/
+/nicetrips.txt
+
+# Generated dependency and IDE files
+/saturn.iml
+/dependency-reduced-pom.xml
+
+# Root-level generated reports
+/.agent_*.md
+/.documentation_cleanup_*.md
+/.max_tokens_*.md
+/.saturn_agent_*.md
+/.saturn_gap_*.md
+/SATURN_GAP_ANALYSIS.md
+/HERMES_DESIGN.md
+/.hermes_hermes_design_qa.md
