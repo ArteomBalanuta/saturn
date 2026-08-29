@@ -8,6 +8,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.agent.api.AgentContext;
 import org.saturn.app.agent.api.AgentTool;
@@ -19,6 +22,128 @@ import org.saturn.app.agent.api.ToolResultMode;
 import org.saturn.app.agent.tool.contract.AgentToolSchemas;
 
 class AgentToolRegistryTest {
+  @Test
+  void tracksGenerationOnlyForSuccessfulMutations() {
+    AgentToolRegistry registry = new AgentToolRegistry();
+    assertEquals(0, registry.generation());
+    registry.register(tool("echo"));
+    assertEquals(1, registry.generation());
+    assertThrows(IllegalArgumentException.class, () -> registry.register(tool("echo")));
+    assertEquals(1, registry.generation());
+    registry.freeze();
+    assertEquals(1, registry.generation());
+  }
+
+  @Test
+  void snapshotsAreImmutableAndIsolatedFromLaterMutation() {
+    AgentToolRegistry registry = new AgentToolRegistry().register(tool("echo"));
+    AgentToolRegistry.Snapshot before = registry.snapshot();
+
+    assertEquals(1, before.generation());
+    assertThrows(
+        UnsupportedOperationException.class, () -> before.tools().put("other", tool("other")));
+    registry.enableDynamicMode().replace(tool("other"));
+
+    assertEquals(List.of("echo"), List.copyOf(before.tools().keySet()));
+    assertEquals(List.of("echo", "other"), List.copyOf(registry.snapshot().tools().keySet()));
+  }
+
+  @Test
+  void dynamicMutationIsAtomicAndFrozenByDefault() {
+    AgentToolRegistry registry = new AgentToolRegistry().register(tool("echo")).freeze();
+    assertThrows(IllegalStateException.class, () -> registry.replace(tool("other")));
+    assertThrows(IllegalStateException.class, () -> registry.deregister("echo"));
+    assertEquals(1, registry.generation());
+
+    registry.enableDynamicMode().replace(tool("other"));
+    assertEquals(2, registry.generation());
+    assertTrue(registry.find(context("room"), "other").isPresent());
+    assertTrue(registry.find(context("room"), "echo").isPresent());
+    registry.deregister("echo");
+    assertEquals(3, registry.generation());
+    assertTrue(registry.find(context("room"), "echo").isEmpty());
+    registry.deregister("missing");
+    assertEquals(3, registry.generation());
+    assertThrows(NullPointerException.class, () -> registry.deregister(null));
+    assertThrows(IllegalArgumentException.class, () -> registry.deregister("Invalid"));
+    assertEquals(3, registry.generation());
+  }
+
+  @Test
+  void contextualDefinitionCacheDoesNotCrossContextsOrGenerations() {
+    AgentTool contextual =
+        new AgentTool() {
+          @Override
+          public String name() {
+            return "contextual";
+          }
+
+          @Override
+          public boolean isAvailableTo(AgentContext context) {
+            return true;
+          }
+
+          @Override
+          public AgentToolDescriptor descriptor(AgentContext context) {
+            return new AgentToolDescriptor(
+                name(),
+                name(),
+                "room=" + context.room(),
+                "test",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.MODEL_DATA,
+                AgentToolSchemas.object(),
+                List.of(),
+                List.of("Do not use outside the caller room."),
+                List.of(),
+                Set.of(),
+                Set.of());
+          }
+
+          @Override
+          public AgentToolResult execute(AgentContext context, JsonObject arguments) {
+            return AgentToolResult.success(name(), arguments);
+          }
+        };
+    AgentToolRegistry registry = new AgentToolRegistry().register(contextual).freeze();
+    assertEquals(
+        "room=one",
+        registry
+            .definitions(context("one"))
+            .get(0)
+            .getAsJsonObject()
+            .getAsJsonObject("function")
+            .get("description")
+            .getAsString()
+            .split("\\n")[0]);
+    assertEquals(
+        "room=two",
+        registry
+            .definitions(context("two"))
+            .get(0)
+            .getAsJsonObject()
+            .getAsJsonObject("function")
+            .get("description")
+            .getAsString()
+            .split("\\n")[0]);
+  }
+
+  @Test
+  void concurrentReadersSeeCompleteSnapshotsDuringMutation() throws Exception {
+    AgentToolRegistry registry =
+        new AgentToolRegistry().register(tool("echo")).freeze().enableDynamicMode();
+    try (ExecutorService pool = Executors.newFixedThreadPool(4)) {
+      Future<?> writer =
+          pool.submit(
+              () -> {
+                for (int i = 0; i < 20; i++) registry.replace(tool("tool" + i));
+              });
+      for (int i = 0; i < 100; i++) assertTrue(registry.snapshot().tools().containsKey("echo"));
+      writer.get();
+    }
+  }
+
   @Test
   void rejectsNullInvalidAndDuplicateRegistrations() {
     AgentToolRegistry registry = new AgentToolRegistry();
@@ -147,6 +272,10 @@ class AgentToolRegistryTest {
 
   private static String functionName(JsonObject definition) {
     return definition.getAsJsonObject("function").get("name").getAsString();
+  }
+
+  private static AgentContext context(String room) {
+    return new AgentContext(room, "nick", null, null, false, List.of());
   }
 
   private static AgentTool tool(String name) {
