@@ -29,6 +29,18 @@ public final class AgentFreshDataPolicy {
     return hasHistory && response.content() != null && !response.content().isBlank();
   }
 
+  /**
+   * Determines whether a response needs correction because the required fresh tool result is
+   * missing or unusable.
+   *
+   * @param requiredTool the requiredTool input; null handling follows the validation performed by
+   *     this declaration
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param results the results input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   boolean requiresSynthesisCorrection(
       Optional<String> requiredTool, LlmResponse response, List<AgentToolResult> results) {
     return requiresHistorySynthesis(requiredTool)
@@ -37,6 +49,17 @@ public final class AgentFreshDataPolicy {
         && !satisfiesProfileContract(response, results);
   }
 
+  /**
+   * Determines whether final response synthesis must be checked against fresh tool evidence.
+   *
+   * @param requiredTool the requiredTool input; null handling follows the validation performed by
+   *     this declaration
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param results the results input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   boolean requiresFinalSynthesisValidation(
       Optional<String> requiredTool, LlmResponse response, List<AgentToolResult> results) {
     return requiresHistorySynthesis(requiredTool)
@@ -44,6 +67,17 @@ public final class AgentFreshDataPolicy {
         && !satisfiesProfileContract(response, results);
   }
 
+  /**
+   * Creates a correction response that requires an exact structured call to a named tool.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param toolName the toolName input; null handling follows the validation performed by this
+   *     declaration
+   * @param expectedNick the expectedNick input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   LlmResponse requireExactToolCall(
       LlmResponse response, String toolName, Optional<String> expectedNick)
       throws AgentRoutingException {
@@ -57,6 +91,17 @@ public final class AgentFreshDataPolicy {
     return response;
   }
 
+  /**
+   * Checks the tool name and requester identity of an exact structured tool call.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param toolName the toolName input; null handling follows the validation performed by this
+   *     declaration
+   * @param expectedNick the expectedNick input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   boolean isExactToolCall(LlmResponse response, String toolName, Optional<String> expectedNick) {
     try {
       requireExactToolCall(response, toolName, expectedNick);
@@ -66,6 +111,14 @@ public final class AgentFreshDataPolicy {
     }
   }
 
+  /**
+   * Documents the matchesTarget operation and its boundary behavior.
+   *
+   * @param call the call input; null handling follows the validation performed by this declaration
+   * @param expectedNick the expectedNick input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   public boolean matchesTarget(LlmToolCall call, Optional<String> expectedNick) {
     if (expectedNick.isEmpty() || !AgentFreshnessPolicy.USER_MESSAGE_HISTORY.equals(call.name()))
       return true;
@@ -79,6 +132,15 @@ public final class AgentFreshDataPolicy {
     }
   }
 
+  /**
+   * Checks whether the response repeats the previous assistant message.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param history the history input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   boolean repeatsPreviousAssistant(LlmResponse response, List<LlmMessage> history) {
     if (response == null
         || !response.toolCalls().isEmpty()
@@ -91,6 +153,15 @@ public final class AgentFreshDataPolicy {
         .orElse(false);
   }
 
+  /**
+   * Creates a correction response requiring synthesis from fresh history and tool evidence.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param history the history input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   LlmResponse requireFreshSynthesis(LlmResponse response, List<LlmMessage> history)
       throws AgentRoutingException {
     if (response == null) {

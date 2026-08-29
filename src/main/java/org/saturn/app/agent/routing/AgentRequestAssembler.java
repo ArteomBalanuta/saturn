@@ -24,6 +24,16 @@ final class AgentRequestAssembler {
   private final AgentPromptCatalog prompts = new AgentPromptCatalog();
   private final AgentMessageProjector projector = new AgentMessageProjector();
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param config the config input; null handling follows the validation performed by this
+   *     declaration
+   * @param registry the registry input; null handling follows the validation performed by this
+   *     declaration
+   * @param systemPrompt the systemPrompt input; null handling follows the validation performed by
+   *     this declaration
+   */
   AgentRequestAssembler(
       AgentConfig config, AgentToolRegistry registry, AgentSystemPrompt systemPrompt) {
     this.config = config;
@@ -31,6 +41,17 @@ final class AgentRequestAssembler {
     this.systemPrompt = systemPrompt;
   }
 
+  /**
+   * Builds a provider request from invocation context, memory, and recent room context.
+   *
+   * @param invocation the invocation input; null handling follows the validation performed by this
+   *     declaration
+   * @param history the history input; null handling follows the validation performed by this
+   *     declaration
+   * @param recentRoomContext the recentRoomContext input; null handling follows the validation
+   *     performed by this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   AgentPreparedRequest assemble(
       AgentInvocation invocation, List<LlmMessage> history, String recentRoomContext) {
     return assemble(
@@ -47,6 +68,19 @@ final class AgentRequestAssembler {
                     invocation.commandOriginated())));
   }
 
+  /**
+   * Builds a provider request from invocation context, memory, and recent room context.
+   *
+   * @param invocation the invocation input; null handling follows the validation performed by this
+   *     declaration
+   * @param history the history input; null handling follows the validation performed by this
+   *     declaration
+   * @param recentRoomContext the recentRoomContext input; null handling follows the validation
+   *     performed by this declaration
+   * @param requestKind the requestKind input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   AgentPreparedRequest assemble(
       AgentInvocation invocation,
       List<LlmMessage> history,
@@ -122,6 +156,11 @@ final class AgentRequestAssembler {
         prompt);
   }
 
+  /**
+   * Computes the remaining character budget for contextual request material.
+   *
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   int contextBudget() {
     long scaledBudget = (long) config.maxPromptChars() * 8L;
     return (int) Math.min(Integer.MAX_VALUE, Math.max(32_000L, scaledBudget));

@@ -33,20 +33,41 @@ public final class UserMessageHistoryTool implements AgentTool {
   private final AgentQueryRepository repository;
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
+  /**
+   * Implements the {@code UserMessageHistoryTool} operation for this agent component.
+   *
+   * @param repository input argument used by this operation
+   */
   public UserMessageHistoryTool(AgentQueryRepository repository) {
     this.repository = Objects.requireNonNull(repository, "repository");
   }
 
+  /**
+   * Implements the {@code name} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String name() {
     return "user_message_history";
   }
 
+  /**
+   * Implements the {@code description} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String description() {
     return PROMPTS.toolDescription(name());
   }
 
+  /**
+   * Implements the {@code descriptor} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentToolDescriptor descriptor(AgentContext context) {
     return new AgentToolDescriptor(
@@ -71,6 +92,11 @@ public final class UserMessageHistoryTool implements AgentTool {
         Set.of());
   }
 
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public JsonObject parameters() {
     JsonObject nick = new JsonObject();
@@ -98,8 +124,8 @@ public final class UserMessageHistoryTool implements AgentTool {
     return schema;
   }
 
-  @Override
   /** Queries public history for the supplied nick and adds evidence metadata to the result. */
+  @Override
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     Optional<String> nick = AgentToolArgumentReader.nonBlankString(arguments, "nick");
     if (nick.isEmpty()) {
@@ -124,6 +150,12 @@ public final class UserMessageHistoryTool implements AgentTool {
     }
   }
 
+  /**
+   * Implements the {@code withEvidenceMetadata} operation for this agent component.
+   *
+   * @param result input argument used by this operation
+   * @return the operation result
+   */
   private static JsonObject withEvidenceMetadata(JsonObject result) {
     JsonObject enriched = result.deepCopy();
     JsonArray rows =

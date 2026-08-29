@@ -15,11 +15,24 @@ public final class AgentSystemPrompt {
   private final AgentPromptCatalog prompts;
   private final Gson gson = new Gson();
 
+  /**
+   * Implements the {@code AgentSystemPrompt} operation for this agent component.
+   *
+   * @param config input argument used by this operation
+   */
   public AgentSystemPrompt(AgentParticipationConfig config) {
     this.config = Objects.requireNonNull(config, "config");
     this.prompts = new AgentPromptCatalog();
   }
 
+  /**
+   * Implements the {@code render} operation for this agent component.
+   *
+   * @param invocation input argument used by this operation
+   * @param correlationId input argument used by this operation
+   * @param recentRoomContext input argument used by this operation
+   * @return the operation result
+   */
   public String render(AgentInvocation invocation, String correlationId, String recentRoomContext) {
     return render(
         invocation,
@@ -37,6 +50,17 @@ public final class AgentSystemPrompt {
         "CANDIDATE");
   }
 
+  /**
+   * Implements the {@code render} operation for this agent component.
+   *
+   * @param invocation input argument used by this operation
+   * @param correlationId input argument used by this operation
+   * @param recentRoomContext input argument used by this operation
+   * @param requestKind input argument used by this operation
+   * @param toolEvidence input argument used by this operation
+   * @param requestKindPhase input argument used by this operation
+   * @return the operation result
+   */
   public String render(
       AgentInvocation invocation,
       String correlationId,

@@ -12,10 +12,21 @@ import org.saturn.app.model.dto.User;
 public final class EngineAgentRoomDirectory implements AgentRoomDirectory {
   private final EngineImpl engine;
 
+  /**
+   * Implements the {@code EngineAgentRoomDirectory} operation for this agent component.
+   *
+   * @param engine input argument used by this operation
+   */
   public EngineAgentRoomDirectory(EngineImpl engine) {
     this.engine = Objects.requireNonNull(engine, "engine");
   }
 
+  /**
+   * Implements the {@code find} operation for this agent component.
+   *
+   * @param room input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public Optional<RoomSnapshot> find(String room) {
     if (room == null || room.isBlank()) {
@@ -28,6 +39,11 @@ public final class EngineAgentRoomDirectory implements AgentRoomDirectory {
         .map(this::snapshot);
   }
 
+  /**
+   * Implements the {@code managedEngines} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private List<EngineImpl> managedEngines() {
     EngineImpl root =
         engine.engineType == EngineType.HOST || engine.getHostRef() == null
@@ -42,6 +58,12 @@ public final class EngineAgentRoomDirectory implements AgentRoomDirectory {
     return List.copyOf(engines);
   }
 
+  /**
+   * Implements the {@code snapshot} operation for this agent component.
+   *
+   * @param source input argument used by this operation
+   * @return the operation result
+   */
   private RoomSnapshot snapshot(EngineImpl source) {
     List<String> users =
         source.currentChannelUsers.stream().map(User::getNick).filter(Objects::nonNull).toList();

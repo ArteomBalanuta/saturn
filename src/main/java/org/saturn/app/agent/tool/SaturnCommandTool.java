@@ -21,32 +21,66 @@ public final class SaturnCommandTool implements AgentTool {
   private final SaturnCommandToolCatalog.CommandToolDefinition definition;
   private final SaturnCommandGateway gateway;
 
+  /**
+   * Implements the {@code SaturnCommandTool} operation for this agent component.
+   *
+   * @param definition input argument used by this operation
+   * @param gateway input argument used by this operation
+   */
   public SaturnCommandTool(
       SaturnCommandToolCatalog.CommandToolDefinition definition, SaturnCommandGateway gateway) {
     this.definition = Objects.requireNonNull(definition, "definition");
     this.gateway = Objects.requireNonNull(gateway, "gateway");
   }
 
+  /**
+   * Implements the {@code name} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String name() {
     return definition.toolName();
   }
 
+  /**
+   * Implements the {@code description} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String description() {
     return definition.description();
   }
 
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public JsonObject parameters(AgentContext context) {
     return definition.parameters().deepCopy();
   }
 
+  /**
+   * Implements the {@code isAvailableTo} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public boolean isAvailableTo(AgentContext context) {
     return context != null && context.capabilities().containsAll(definition.requiredCapabilities());
   }
 
+  /**
+   * Implements the {@code descriptor} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentToolDescriptor descriptor(AgentContext context) {
     return new AgentToolDescriptor(
@@ -70,6 +104,13 @@ public final class SaturnCommandTool implements AgentTool {
         anyResultSchema());
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     if (!isAvailableTo(context)) {
@@ -88,6 +129,11 @@ public final class SaturnCommandTool implements AgentTool {
             null, name(), "COMMAND_REJECTED", "Saturn rejected the command invocation");
   }
 
+  /**
+   * Implements the {@code access} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private ToolAccess access() {
     if (definition.requiredCapabilities().contains(AgentCapability.ADMIN_COMMANDS)) {
       return ToolAccess.CREATOR_ONLY;
@@ -97,6 +143,11 @@ public final class SaturnCommandTool implements AgentTool {
         : ToolAccess.AUTHORIZED_CALLER;
   }
 
+  /**
+   * Implements the {@code anyResultSchema} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private JsonObject anyResultSchema() {
     JsonObject schema = new JsonObject();
     schema.addProperty("type", "any");

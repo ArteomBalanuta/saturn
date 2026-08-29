@@ -27,10 +27,21 @@ public final class AgentCommandProseGuard {
   private final Gson gson = new Gson();
   private final Set<String> allowedCommands;
 
+  /**
+   * Implements the {@code AgentCommandProseGuard} operation for this agent component.
+   *
+   * @param allowedCommands input argument used by this operation
+   */
   private AgentCommandProseGuard(Set<String> allowedCommands) {
     this.allowedCommands = Set.copyOf(allowedCommands);
   }
 
+  /**
+   * Implements the {@code from} operation for this agent component.
+   *
+   * @param definitions input argument used by this operation
+   * @return the operation result
+   */
   public static AgentCommandProseGuard from(List<JsonObject> definitions) {
     Set<String> commands = new HashSet<>();
     for (JsonObject definition : definitions) {
@@ -57,6 +68,12 @@ public final class AgentCommandProseGuard {
     return new AgentCommandProseGuard(commands);
   }
 
+  /**
+   * Implements the {@code findCommand} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   public Optional<String> findCommand(String content) {
     if (content == null || content.isBlank()) {
       return Optional.empty();
@@ -75,6 +92,14 @@ public final class AgentCommandProseGuard {
     return Optional.empty();
   }
 
+  /**
+   * Checks whether a candidate command call matches the expected command channel.
+   *
+   * @param call the call input; null handling follows the validation performed by this declaration
+   * @param expectedCommand the expectedCommand input; null handling follows the validation
+   *     performed by this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   boolean matches(LlmToolCall call, String expectedCommand) {
     if (!RUN_COMMAND.equals(call.name()) || !allowedCommands.contains(expectedCommand)) {
       return false;
@@ -98,6 +123,12 @@ public final class AgentCommandProseGuard {
     }
   }
 
+  /**
+   * Implements the {@code executedCommand} operation for this agent component.
+   *
+   * @param call input argument used by this operation
+   * @return the operation result
+   */
   public Optional<String> executedCommand(LlmToolCall call) {
     if (!RUN_COMMAND.equals(call.name())) {
       return Optional.empty();
@@ -117,6 +148,14 @@ public final class AgentCommandProseGuard {
     }
   }
 
+  /**
+   * Implements the {@code findIn} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @param pattern input argument used by this operation
+   * @param contentGroup input argument used by this operation
+   * @return the operation result
+   */
   private Optional<String> findIn(String content, Pattern pattern, int contentGroup) {
     var matcher = pattern.matcher(content);
     while (matcher.find()) {
@@ -128,6 +167,12 @@ public final class AgentCommandProseGuard {
     return Optional.empty();
   }
 
+  /**
+   * Implements the {@code commandAtStart} operation for this agent component.
+   *
+   * @param snippet input argument used by this operation
+   * @return the operation result
+   */
   private Optional<String> commandAtStart(String snippet) {
     String normalized = snippet.stripLeading();
     if (normalized.isEmpty()) {
@@ -149,6 +194,13 @@ public final class AgentCommandProseGuard {
     return allowedCommands.contains(command) ? Optional.of(command) : Optional.empty();
   }
 
+  /**
+   * Implements the {@code object} operation for this agent component.
+   *
+   * @param parent input argument used by this operation
+   * @param name input argument used by this operation
+   * @return the operation result
+   */
   private static JsonObject object(JsonObject parent, String name) {
     if (parent == null) {
       return null;
@@ -157,6 +209,13 @@ public final class AgentCommandProseGuard {
     return value != null && value.isJsonObject() ? value.getAsJsonObject() : null;
   }
 
+  /**
+   * Implements the {@code array} operation for this agent component.
+   *
+   * @param parent input argument used by this operation
+   * @param name input argument used by this operation
+   * @return the operation result
+   */
   private static JsonArray array(JsonObject parent, String name) {
     if (parent == null) {
       return null;

@@ -21,6 +21,18 @@ final class AgentResponseFinalizer {
   private final int maxOutputChars;
   private final AgentResponseSanitizer responseSanitizer = new AgentResponseSanitizer();
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param responseCorrector the responseCorrector input; null handling follows the validation
+   *     performed by this declaration
+   * @param freshDataFinalValidator the freshDataFinalValidator input; null handling follows the
+   *     validation performed by this declaration
+   * @param participationConfig the participationConfig input; null handling follows the validation
+   *     performed by this declaration
+   * @param maxOutputChars the maxOutputChars input; null handling follows the validation performed
+   *     by this declaration
+   */
   AgentResponseFinalizer(
       AgentResponseCorrector responseCorrector,
       AgentFreshDataFinalValidator freshDataFinalValidator,
@@ -32,6 +44,24 @@ final class AgentResponseFinalizer {
     this.maxOutputChars = maxOutputChars;
   }
 
+  /**
+   * Prepares a final response after correction, freshness validation, evidence handling, and output
+   * bounding.
+   *
+   * @param invocation the invocation input; null handling follows the validation performed by this
+   *     declaration
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param requiredFreshTool the requiredFreshTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param successfulToolResults the successfulToolResults input; null handling follows the
+   *     validation performed by this declaration
+   * @param correlationId the correlationId input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   Result prepare(
       AgentInvocation invocation,
       LlmResponse response,
@@ -50,6 +80,26 @@ final class AgentResponseFinalizer {
         invocation.mode() != AgentInvocationMode.MODERATION);
   }
 
+  /**
+   * Prepares a final response after correction, freshness validation, evidence handling, and output
+   * bounding.
+   *
+   * @param invocation the invocation input; null handling follows the validation performed by this
+   *     declaration
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param requiredFreshTool the requiredFreshTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param successfulToolResults the successfulToolResults input; null handling follows the
+   *     validation performed by this declaration
+   * @param correlationId the correlationId input; null handling follows the validation performed by
+   *     this declaration
+   * @param quoteOnlyRequired the quoteOnlyRequired input; null handling follows the validation
+   *     performed by this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   Result prepare(
       AgentInvocation invocation,
       LlmResponse response,
@@ -76,6 +126,28 @@ final class AgentResponseFinalizer {
                 0));
   }
 
+  /**
+   * Prepares a final response after correction, freshness validation, evidence handling, and output
+   * bounding.
+   *
+   * @param invocation the invocation input; null handling follows the validation performed by this
+   *     declaration
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param requiredFreshTool the requiredFreshTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param successfulToolResults the successfulToolResults input; null handling follows the
+   *     validation performed by this declaration
+   * @param correlationId the correlationId input; null handling follows the validation performed by
+   *     this declaration
+   * @param finalKind the finalKind input; null handling follows the validation performed by this
+   *     declaration
+   * @param toolEvidence the toolEvidence input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   Result prepare(
       AgentInvocation invocation,
       LlmResponse response,
@@ -126,6 +198,12 @@ final class AgentResponseFinalizer {
     return new Result(content, true);
   }
 
+  /**
+   * Implements the {@code removeNoReplyMarker} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   private String removeNoReplyMarker(String content) {
     String marker = participationConfig.noReplyMarker();
     if (!content.contains(marker)) {
@@ -134,6 +212,12 @@ final class AgentResponseFinalizer {
     return trimControlWhitespace(content.replace(marker, ""));
   }
 
+  /**
+   * Implements the {@code trimControlWhitespace} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   private String trimControlWhitespace(String content) {
     int first = 0;
     int last = content.length();
@@ -146,12 +230,23 @@ final class AgentResponseFinalizer {
     return content.substring(first, last);
   }
 
+  /**
+   * Implements the {@code isControlWhitespace} operation for this agent component.
+   *
+   * @param character input argument used by this operation
+   * @return the operation result
+   */
   private boolean isControlWhitespace(char character) {
     return character == ' ' || character == '\t' || character == '\n' || character == '\r';
   }
 
   /** Carries the result value used by the enclosing agent component. */
   record Result(String content, boolean shouldReply) {
+    /**
+     * Implements the {@code silent} operation for this agent component.
+     *
+     * @return the operation result
+     */
     static Result silent() {
       return new Result("", false);
     }

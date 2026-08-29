@@ -9,10 +9,21 @@ public enum AgentInvocationMode {
 
   private final boolean requiresReply;
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param requiresReply the requiresReply input; null handling follows the validation performed by
+   *     this declaration
+   */
   AgentInvocationMode(boolean requiresReply) {
     this.requiresReply = requiresReply;
   }
 
+  /**
+   * Implements the {@code requiresReply} operation for this agent component.
+   *
+   * @return the operation result
+   */
   public boolean requiresReply() {
     return requiresReply;
   }

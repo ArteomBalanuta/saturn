@@ -9,10 +9,20 @@ import org.saturn.app.persistence.H2Database;
 public final class H2ReadOnlyConnectionFactory {
   private final String databasePath;
 
+  /**
+   * Implements the {@code H2ReadOnlyConnectionFactory} operation for this agent component.
+   *
+   * @param databasePath input argument used by this operation
+   */
   public H2ReadOnlyConnectionFactory(String databasePath) {
     this.databasePath = Objects.requireNonNull(databasePath, "databasePath");
   }
 
+  /**
+   * Implements the {@code open} operation for this agent component.
+   *
+   * @return the operation result
+   */
   public Connection open() throws SQLException {
     return H2Database.openReadOnly(databasePath);
   }

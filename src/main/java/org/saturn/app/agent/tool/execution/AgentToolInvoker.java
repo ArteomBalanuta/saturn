@@ -19,6 +19,18 @@ final class AgentToolInvoker implements AutoCloseable {
     this.executor = executor;
   }
 
+  /**
+   * Invokes a tool with its arguments, deadline, and cancellation behavior.
+   *
+   * @param tool the tool input; null handling follows the validation performed by this declaration
+   * @param context the context input; null handling follows the validation performed by this
+   *     declaration
+   * @param arguments the arguments input; null handling follows the validation performed by this
+   *     declaration
+   * @param timeout the timeout input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   AgentToolResult invoke(
       AgentTool tool, AgentContext context, JsonObject arguments, Duration timeout)
       throws InterruptedException, ExecutionException, TimeoutException {
@@ -35,6 +47,7 @@ final class AgentToolInvoker implements AutoCloseable {
     }
   }
 
+  /** Implements the {@code close} operation for this agent component. */
   @Override
   public void close() {
     executor.shutdownNow();

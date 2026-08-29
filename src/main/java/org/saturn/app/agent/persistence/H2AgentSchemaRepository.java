@@ -16,10 +16,20 @@ import org.saturn.app.agent.persistence.AgentDatabaseSchema.Table;
 public final class H2AgentSchemaRepository implements AgentSchemaRepository {
   private final H2ReadOnlyConnectionFactory connectionFactory;
 
+  /**
+   * Implements the {@code H2AgentSchemaRepository} operation for this agent component.
+   *
+   * @param connectionFactory input argument used by this operation
+   */
   public H2AgentSchemaRepository(H2ReadOnlyConnectionFactory connectionFactory) {
     this.connectionFactory = Objects.requireNonNull(connectionFactory, "connectionFactory");
   }
 
+  /**
+   * Implements the {@code describe} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public AgentDatabaseSchema describe() {
     try (Connection connection = connectionFactory.open()) {
@@ -38,6 +48,12 @@ public final class H2AgentSchemaRepository implements AgentSchemaRepository {
     }
   }
 
+  /**
+   * Implements the {@code readTableNames} operation for this agent component.
+   *
+   * @param connection input argument used by this operation
+   * @return the operation result
+   */
   private List<String> readTableNames(Connection connection) throws SQLException {
     List<String> names = new ArrayList<>();
     try (ResultSet resultSet =
@@ -52,6 +68,13 @@ public final class H2AgentSchemaRepository implements AgentSchemaRepository {
     return names;
   }
 
+  /**
+   * Implements the {@code readColumns} operation for this agent component.
+   *
+   * @param connection input argument used by this operation
+   * @param tableName input argument used by this operation
+   * @return the operation result
+   */
   private List<Column> readColumns(Connection connection, String tableName) throws SQLException {
     List<Column> columns = new ArrayList<>();
     try (ResultSet resultSet =
@@ -73,6 +96,13 @@ public final class H2AgentSchemaRepository implements AgentSchemaRepository {
     return columns;
   }
 
+  /**
+   * Implements the {@code readIndexes} operation for this agent component.
+   *
+   * @param connection input argument used by this operation
+   * @param tableName input argument used by this operation
+   * @return the operation result
+   */
   private List<Index> readIndexes(Connection connection, String tableName) throws SQLException {
     List<IndexHeader> headers = new ArrayList<>();
     try (ResultSet resultSet =
@@ -103,6 +133,13 @@ public final class H2AgentSchemaRepository implements AgentSchemaRepository {
     return indexes;
   }
 
+  /**
+   * Implements the {@code readForeignKeys} operation for this agent component.
+   *
+   * @param connection input argument used by this operation
+   * @param tableName input argument used by this operation
+   * @return the operation result
+   */
   private List<ForeignKey> readForeignKeys(Connection connection, String tableName)
       throws SQLException {
     List<ForeignKey> foreignKeys = new ArrayList<>();
@@ -124,6 +161,14 @@ public final class H2AgentSchemaRepository implements AgentSchemaRepository {
     return foreignKeys;
   }
 
+  /**
+   * Implements the {@code isPrimaryKey} operation for this agent component.
+   *
+   * @param connection input argument used by this operation
+   * @param tableName input argument used by this operation
+   * @param columnName input argument used by this operation
+   * @return the operation result
+   */
   private boolean isPrimaryKey(Connection connection, String tableName, String columnName)
       throws SQLException {
     try (ResultSet resultSet = connection.getMetaData().getPrimaryKeys(null, "public", tableName)) {

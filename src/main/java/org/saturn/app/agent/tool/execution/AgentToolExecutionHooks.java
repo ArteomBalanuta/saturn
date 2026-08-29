@@ -10,6 +10,11 @@ public record AgentToolExecutionHooks(
     observers = List.copyOf(observers == null ? List.of() : observers);
   }
 
+  /**
+   * Implements the {@code empty} operation for this agent component.
+   *
+   * @return the operation result
+   */
   public static AgentToolExecutionHooks empty() {
     return new AgentToolExecutionHooks(List.of(), List.of());
   }

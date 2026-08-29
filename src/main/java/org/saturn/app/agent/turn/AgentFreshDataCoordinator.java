@@ -29,11 +29,45 @@ public final class AgentFreshDataCoordinator {
   private final LlmClient client;
   private final AgentFreshDataPolicy policy;
 
+  /**
+   * Implements the {@code AgentFreshDataCoordinator} operation for this agent component.
+   *
+   * @param client input argument used by this operation
+   * @param policy input argument used by this operation
+   */
   public AgentFreshDataCoordinator(LlmClient client, AgentFreshDataPolicy policy) {
     this.client = client;
     this.policy = policy;
   }
 
+  /**
+   * Evaluates fresh-data requirements and coordinates the required tool call and rendered result.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param definitions the definitions input; null handling follows the validation performed by
+   *     this declaration
+   * @param history the history input; null handling follows the validation performed by this
+   *     declaration
+   * @param requiredFreshTool the requiredFreshTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param requiredFreshNick the requiredFreshNick input; null handling follows the validation
+   *     performed by this declaration
+   * @param context the context input; null handling follows the validation performed by this
+   *     declaration
+   * @param toolExecutor the toolExecutor input; null handling follows the validation performed by
+   *     this declaration
+   * @param turnState the turnState input; null handling follows the validation performed by this
+   *     declaration
+   * @param correlationId the correlationId input; null handling follows the validation performed by
+   *     this declaration
+   * @param resultRenderer the resultRenderer input; null handling follows the validation performed
+   *     by this declaration
+   * @param definitionProvider the definitionProvider input; null handling follows the validation
+   *     performed by this declaration
+   */
   public Result process(
       LlmResponse response,
       List<LlmMessage> messages,
@@ -126,6 +160,21 @@ public final class AgentFreshDataCoordinator {
     return new Result(response, false);
   }
 
+  /**
+   * Implements the {@code loadRequiredHistory} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @param messages input argument used by this operation
+   * @param definitions input argument used by this operation
+   * @param tool input argument used by this operation
+   * @param nick input argument used by this operation
+   * @param context input argument used by this operation
+   * @param toolExecutor input argument used by this operation
+   * @param turnState input argument used by this operation
+   * @param correlationId input argument used by this operation
+   * @param resultRenderer input argument used by this operation
+   * @return the operation result
+   */
   private Result loadRequiredHistory(
       LlmResponse response,
       List<LlmMessage> messages,

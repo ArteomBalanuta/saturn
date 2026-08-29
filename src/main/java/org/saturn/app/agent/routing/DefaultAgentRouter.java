@@ -44,7 +44,6 @@ import org.saturn.app.agent.turn.AgentTurnPolicyResult;
 import org.saturn.app.agent.turn.AgentTurnState;
 import org.saturn.app.agent.turn.AgentUnverifiedActionPolicy;
 
-@Slf4j
 /**
  * Coordinates one bounded LLM tool-calling session for a Saturn invocation.
  *
@@ -52,6 +51,7 @@ import org.saturn.app.agent.turn.AgentUnverifiedActionPolicy;
  * and room replies retain session order. Tool execution state is request-local in {@link
  * AgentToolExecutor}; this router is safe to call concurrently for distinct sessions.
  */
+@Slf4j
 public final class DefaultAgentRouter implements AgentRouter {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private static final String FINALIZE_PROMPT = PROMPTS.text("system/router-finalize.txt").strip();
@@ -76,6 +76,7 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentSessionLockManager sessionLockManager = new AgentSessionLockManager();
   private final AgentToolExecutionHooks executionHooks;
 
+  /** Creates a router with default participation, context, and execution-hook policies. */
   public DefaultAgentRouter(
       AgentConfig config, LlmClient client, AgentToolRegistry registry, AgentMemoryStore memory) {
     this(
@@ -88,6 +89,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         AgentToolExecutionHooks.empty());
   }
 
+  /** Creates a router with explicit participation and conversation-context policies. */
   public DefaultAgentRouter(
       AgentConfig config,
       LlmClient client,
@@ -105,6 +107,7 @@ public final class DefaultAgentRouter implements AgentRouter {
         AgentToolExecutionHooks.empty());
   }
 
+  /** Creates a router with all collaborators explicitly supplied. */
   public DefaultAgentRouter(
       AgentConfig config,
       LlmClient client,
@@ -342,6 +345,17 @@ public final class DefaultAgentRouter implements AgentRouter {
     return matches;
   }
 
+  /**
+   * Replaces the provider system message without exceeding the supplied message budget.
+   *
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param replacement the replacement input; null handling follows the validation performed by
+   *     this declaration
+   * @param budget the budget input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   static List<LlmMessage> replaceSystemMessageForProvider(
       List<LlmMessage> messages, LlmMessage replacement, int budget) {
     List<LlmMessage> providerCopy = new ArrayList<>(messages);

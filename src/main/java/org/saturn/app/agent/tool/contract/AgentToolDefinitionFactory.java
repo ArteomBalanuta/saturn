@@ -21,6 +21,12 @@ public final class AgentToolDefinitionFactory {
     return definition;
   }
 
+  /**
+   * Implements the {@code renderDescription} operation for this agent component.
+   *
+   * @param descriptor input argument used by this operation
+   * @return the operation result
+   */
   private String renderDescription(AgentToolDescriptor descriptor) {
     StringBuilder description = new StringBuilder(descriptor.description());
     description.append("\n\nSATURN SDK CONTRACT\n");
@@ -51,14 +57,34 @@ public final class AgentToolDefinitionFactory {
     return description.toString().stripTrailing();
   }
 
+  /**
+   * Implements the {@code timeoutMillis} operation for this agent component.
+   *
+   * @param timeout input argument used by this operation
+   * @return the operation result
+   */
   private long timeoutMillis(Duration timeout) {
     return timeout.isZero() ? 0 : timeout.toMillis();
   }
 
+  /**
+   * Implements the {@code appendLine} operation for this agent component.
+   *
+   * @param description input argument used by this operation
+   * @param label input argument used by this operation
+   * @param value input argument used by this operation
+   */
   private void appendLine(StringBuilder description, String label, Object value) {
     description.append(label).append(": ").append(value).append('\n');
   }
 
+  /**
+   * Implements the {@code appendList} operation for this agent component.
+   *
+   * @param description input argument used by this operation
+   * @param label input argument used by this operation
+   * @param values input argument used by this operation
+   */
   private void appendList(StringBuilder description, String label, Iterable<?> values) {
     StringJoiner joined = new StringJoiner(", ");
     values.forEach(value -> joined.add(String.valueOf(value)));
@@ -67,6 +93,13 @@ public final class AgentToolDefinitionFactory {
     }
   }
 
+  /**
+   * Implements the {@code appendSortedList} operation for this agent component.
+   *
+   * @param description input argument used by this operation
+   * @param label input argument used by this operation
+   * @param values input argument used by this operation
+   */
   private void appendSortedList(StringBuilder description, String label, Iterable<?> values) {
     appendList(
         description,

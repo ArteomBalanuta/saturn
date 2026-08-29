@@ -110,6 +110,13 @@ public final class AgentToolRegistry {
     return built.deepCopy();
   }
 
+  /**
+   * Implements the {@code buildDefinitions} operation for this agent component.
+   *
+   * @param current input argument used by this operation
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   private JsonArray buildDefinitions(Map<String, AgentTool> current, AgentContext context) {
     JsonArray definitions = new JsonArray();
     current.values().stream()
@@ -118,24 +125,38 @@ public final class AgentToolRegistry {
     return definitions;
   }
 
+  /** Implements the {@code ensureMutable} operation for this agent component. */
   private synchronized void ensureMutable() {
     if (frozen) {
       throw new IllegalStateException("Agent tool registry is frozen");
     }
   }
 
+  /** Implements the {@code ensureDynamic} operation for this agent component. */
   private synchronized void ensureDynamic() {
     if (!dynamicMode) {
       throw new IllegalStateException("Agent tool registry dynamic mode is disabled");
     }
   }
 
+  /**
+   * Implements the {@code validated} operation for this agent component.
+   *
+   * @param tool input argument used by this operation
+   * @return the operation result
+   */
   private AgentTool validated(AgentTool tool) {
     AgentTool candidate = Objects.requireNonNull(tool, "tool");
     validatedName(candidate.name());
     return candidate;
   }
 
+  /**
+   * Implements the {@code validatedName} operation for this agent component.
+   *
+   * @param name input argument used by this operation
+   * @return the operation result
+   */
   private String validatedName(String name) {
     Objects.requireNonNull(name, "name");
     if (!name.matches("[a-z][a-z0-9_]{0,63}")) {
@@ -145,6 +166,13 @@ public final class AgentToolRegistry {
     return name;
   }
 
+  /**
+   * Implements the {@code isAvailable} operation for this agent component.
+   *
+   * @param tool input argument used by this operation
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   private boolean isAvailable(AgentTool tool, AgentContext context) {
     try {
       return tool.isAvailableTo(context);
@@ -153,6 +181,13 @@ public final class AgentToolRegistry {
     }
   }
 
+  /**
+   * Implements the {@code definition} operation for this agent component.
+   *
+   * @param tool input argument used by this operation
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject definition(AgentTool tool, AgentContext context) {
     AgentToolDescriptor descriptor = tool.descriptor(context);
     if (!tool.name().equals(descriptor.name())) {
@@ -162,6 +197,12 @@ public final class AgentToolRegistry {
     return definitionFactory.create(descriptor);
   }
 
+  /**
+   * Implements the {@code contextFingerprint} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   private String contextFingerprint(AgentContext context) {
     // trip/hash may be secrets and may affect arbitrary tools; avoid unsafe reuse for them.
     if (context.trip() != null || context.hash() != null) {
@@ -180,6 +221,18 @@ public final class AgentToolRegistry {
         .toString();
   }
 
+  /**
+   * Defines the record {@code DefinitionCacheKey} in the Saturn agent runtime.
+   *
+   * <p>This type is part of the source-compatible agent boundary; validation and failure behavior
+   * are retained by its implementation.
+   */
+  /**
+   * Implements the {@code DefinitionCacheKey} operation for this agent component.
+   *
+   * @param generation input argument used by this operation
+   * @param contextFingerprint input argument used by this operation
+   */
   private record DefinitionCacheKey(long generation, String contextFingerprint) {}
 
   /** Immutable ordered registry snapshot. */

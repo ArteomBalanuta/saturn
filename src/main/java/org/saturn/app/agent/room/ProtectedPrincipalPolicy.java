@@ -22,10 +22,25 @@ final class ProtectedPrincipalPolicy {
     this.protectedTrips = Set.copyOf(trips);
   }
 
+  /**
+   * Returns whether a principal is protected by configured creator, administrator, bot, or replica
+   * identity.
+   *
+   * @param trip the trip input; null handling follows the validation performed by this declaration
+   * @param nick the nick input; null handling follows the validation performed by this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   boolean isProtected(String trip, String nick) {
     return (trip != null && protectedTrips.contains(trip)) || isProtectedNick(nick);
   }
 
+  /**
+   * Returns whether a principal is protected by configured creator, administrator, bot, or replica
+   * identity.
+   *
+   * @param user the user input; null handling follows the validation performed by this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   boolean isProtected(User user) {
     return user.isIsMe() || user.isBot() || isProtected(user.getTrip(), user.getNick());
   }

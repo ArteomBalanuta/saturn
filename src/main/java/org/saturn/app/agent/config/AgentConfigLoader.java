@@ -13,8 +13,16 @@ public final class AgentConfigLoader {
   private static final int DEFAULT_MAX_STEPS = 5;
   private static final Duration DEFAULT_TOOL_TIMEOUT = Duration.ofSeconds(10);
 
+  /** Implements the {@code AgentConfigLoader} operation for this agent component. */
   private AgentConfigLoader() {}
 
+  /**
+   * Implements the {@code load} operation for this agent component.
+   *
+   * @param root input argument used by this operation
+   * @param environment input argument used by this operation
+   * @return the operation result
+   */
   public static AgentConfig load(Toml root, Map<String, String> environment) {
     Toml table = root == null ? null : root.getTable("agent");
     boolean enabled =
@@ -119,6 +127,12 @@ public final class AgentConfigLoader {
                 DEFAULT_TOOL_TIMEOUT.toMillis())));
   }
 
+  /**
+   * Implements the {@code normalizeEndpoint} operation for this agent component.
+   *
+   * @param endpoint input argument used by this operation
+   * @return the operation result
+   */
   private static URI normalizeEndpoint(URI endpoint) {
     String value = endpoint.toString();
     while (value.endsWith("/")) {

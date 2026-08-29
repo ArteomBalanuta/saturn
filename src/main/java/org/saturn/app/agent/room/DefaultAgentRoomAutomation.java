@@ -16,6 +16,7 @@ import org.saturn.app.service.AgentService;
 public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
   private final AgentRoomMessagePipeline pipeline;
 
+  /** Creates room automation with moderation disabled. */
   public DefaultAgentRoomAutomation(
       EngineImpl engine,
       AgentParticipationConfig config,
@@ -36,6 +37,7 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
         message -> false);
   }
 
+  /** Creates room automation with explicit moderation components. */
   public DefaultAgentRoomAutomation(
       EngineImpl engine,
       AgentParticipationConfig config,
@@ -58,6 +60,7 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
         message -> false);
   }
 
+  /** Creates room automation with explicit moderation and candidate-selection policies. */
   public DefaultAgentRoomAutomation(
       EngineImpl engine,
       AgentParticipationConfig config,
@@ -83,11 +86,13 @@ public final class DefaultAgentRoomAutomation implements AgentRoomAutomation {
             semanticModerationCandidate);
   }
 
+  /** Delegates an incoming room message to the pipeline. */
   @Override
   public Outcome onMessage(ChatMessage message) {
     return pipeline.onMessage(message);
   }
 
+  /** Delegates a room-join event to the pipeline. */
   @Override
   public void onJoin(User user) {
     pipeline.onJoin(user);

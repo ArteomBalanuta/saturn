@@ -16,6 +16,15 @@ import org.saturn.app.facade.impl.EngineImpl;
 
 /** Registers and freezes Saturn's built-in agent tool inventory. */
 public final class AgentToolRegistryFactory {
+  /**
+   * Implements the {@code create} operation for this agent component.
+   *
+   * @param engine input argument used by this operation
+   * @param infrastructure input argument used by this operation
+   * @param sqlConfig input argument used by this operation
+   * @param commandGateway input argument used by this operation
+   * @return the operation result
+   */
   public AgentToolRegistry create(
       EngineImpl engine,
       AgentInfrastructure infrastructure,

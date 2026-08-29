@@ -25,20 +25,41 @@ public final class RoomUsersTool implements AgentTool {
   private final AgentRoomDirectory roomDirectory;
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
+  /**
+   * Implements the {@code RoomUsersTool} operation for this agent component.
+   *
+   * @param roomDirectory input argument used by this operation
+   */
   public RoomUsersTool(AgentRoomDirectory roomDirectory) {
     this.roomDirectory = Objects.requireNonNull(roomDirectory, "roomDirectory");
   }
 
+  /**
+   * Implements the {@code name} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String name() {
     return "room_users";
   }
 
+  /**
+   * Implements the {@code description} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String description() {
     return PROMPTS.toolDescription(name());
   }
 
+  /**
+   * Implements the {@code descriptor} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentToolDescriptor descriptor(AgentContext context) {
     return new AgentToolDescriptor(
@@ -63,6 +84,11 @@ public final class RoomUsersTool implements AgentTool {
         Set.of());
   }
 
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public JsonObject parameters() {
     JsonObject room = new JsonObject();
@@ -77,8 +103,8 @@ public final class RoomUsersTool implements AgentTool {
     return schema;
   }
 
-  @Override
   /** Returns the selected room's name, user list, and count, or a coded lookup error. */
+  @Override
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     String requestedRoom = context.room();
     if (arguments.has("room")) {

@@ -33,6 +33,45 @@ public record AgentToolDescriptor(
     JsonObject resultSchema,
     Set<String> resourceReads,
     Set<String> resourceWrites) {
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param name the name input; null handling follows the validation performed by this declaration
+   * @param label the label input; null handling follows the validation performed by this
+   *     declaration
+   * @param description the description input; null handling follows the validation performed by
+   *     this declaration
+   * @param category the category input; null handling follows the validation performed by this
+   *     declaration
+   * @param access the access input; null handling follows the validation performed by this
+   *     declaration
+   * @param effect the effect input; null handling follows the validation performed by this
+   *     declaration
+   * @param resultMode the resultMode input; null handling follows the validation performed by this
+   *     declaration
+   * @param parameters the parameters input; null handling follows the validation performed by this
+   *     declaration
+   * @param whenToUse the whenToUse input; null handling follows the validation performed by this
+   *     declaration
+   * @param whenNotToUse the whenNotToUse input; null handling follows the validation performed by
+   *     this declaration
+   * @param examples the examples input; null handling follows the validation performed by this
+   *     declaration
+   * @param requiredCapabilities the requiredCapabilities input; null handling follows the
+   *     validation performed by this declaration
+   * @param requiredSuccessfulTools the requiredSuccessfulTools input; null handling follows the
+   *     validation performed by this declaration
+   * @param isIdempotent the isIdempotent input; null handling follows the validation performed by
+   *     this declaration
+   * @param timeout the timeout input; null handling follows the validation performed by this
+   *     declaration
+   * @param resultSchema the resultSchema input; null handling follows the validation performed by
+   *     this declaration
+   * @param resourceReads the resourceReads input; null handling follows the validation performed by
+   *     this declaration
+   * @param resourceWrites the resourceWrites input; null handling follows the validation performed
+   *     by this declaration
+   */
   public AgentToolDescriptor {
     name = required(name, "name");
     if (!name.matches("[a-z][a-z0-9_]{0,63}")) {
@@ -68,6 +107,41 @@ public record AgentToolDescriptor(
     resourceWrites = immutableResources(resourceWrites, "resourceWrites");
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param name the name input; null handling follows the validation performed by this declaration
+   * @param label the label input; null handling follows the validation performed by this
+   *     declaration
+   * @param description the description input; null handling follows the validation performed by
+   *     this declaration
+   * @param category the category input; null handling follows the validation performed by this
+   *     declaration
+   * @param access the access input; null handling follows the validation performed by this
+   *     declaration
+   * @param effect the effect input; null handling follows the validation performed by this
+   *     declaration
+   * @param resultMode the resultMode input; null handling follows the validation performed by this
+   *     declaration
+   * @param parameters the parameters input; null handling follows the validation performed by this
+   *     declaration
+   * @param whenToUse the whenToUse input; null handling follows the validation performed by this
+   *     declaration
+   * @param whenNotToUse the whenNotToUse input; null handling follows the validation performed by
+   *     this declaration
+   * @param examples the examples input; null handling follows the validation performed by this
+   *     declaration
+   * @param requiredCapabilities the requiredCapabilities input; null handling follows the
+   *     validation performed by this declaration
+   * @param requiredSuccessfulTools the requiredSuccessfulTools input; null handling follows the
+   *     validation performed by this declaration
+   * @param isIdempotent the isIdempotent input; null handling follows the validation performed by
+   *     this declaration
+   * @param timeout the timeout input; null handling follows the validation performed by this
+   *     declaration
+   * @param resultSchema the resultSchema input; null handling follows the validation performed by
+   *     this declaration
+   */
   public AgentToolDescriptor(
       String name,
       String label,
@@ -106,6 +180,35 @@ public record AgentToolDescriptor(
         Set.of());
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param name the name input; null handling follows the validation performed by this declaration
+   * @param label the label input; null handling follows the validation performed by this
+   *     declaration
+   * @param description the description input; null handling follows the validation performed by
+   *     this declaration
+   * @param category the category input; null handling follows the validation performed by this
+   *     declaration
+   * @param access the access input; null handling follows the validation performed by this
+   *     declaration
+   * @param effect the effect input; null handling follows the validation performed by this
+   *     declaration
+   * @param resultMode the resultMode input; null handling follows the validation performed by this
+   *     declaration
+   * @param parameters the parameters input; null handling follows the validation performed by this
+   *     declaration
+   * @param whenToUse the whenToUse input; null handling follows the validation performed by this
+   *     declaration
+   * @param whenNotToUse the whenNotToUse input; null handling follows the validation performed by
+   *     this declaration
+   * @param examples the examples input; null handling follows the validation performed by this
+   *     declaration
+   * @param requiredCapabilities the requiredCapabilities input; null handling follows the
+   *     validation performed by this declaration
+   * @param requiredSuccessfulTools the requiredSuccessfulTools input; null handling follows the
+   *     validation performed by this declaration
+   */
   public AgentToolDescriptor(
       String name,
       String label,
@@ -151,6 +254,11 @@ public record AgentToolDescriptor(
     return parameters.deepCopy();
   }
 
+  /**
+   * Documents the resultSchema operation and its boundary behavior.
+   *
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   @Override
   public JsonObject resultSchema() {
     return resultSchema.deepCopy();

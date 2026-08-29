@@ -6,8 +6,15 @@ import java.util.Optional;
 
 /** Reads the function name from an OpenAI-compatible tool definition. */
 public final class AgentToolDefinitionJson {
+  /** Implements the {@code AgentToolDefinitionJson} operation for this agent component. */
   private AgentToolDefinitionJson() {}
 
+  /**
+   * Implements the {@code functionName} operation for this agent component.
+   *
+   * @param definition input argument used by this operation
+   * @return the operation result
+   */
   public static Optional<String> functionName(JsonObject definition) {
     if (definition == null) {
       return Optional.empty();

@@ -14,10 +14,23 @@ import org.saturn.app.service.impl.CommandOutputCapture;
 public final class EngineSaturnCommandGateway implements SaturnCommandGateway {
   private final EngineImpl engine;
 
+  /**
+   * Implements the {@code EngineSaturnCommandGateway} operation for this agent component.
+   *
+   * @param engine input argument used by this operation
+   */
   public EngineSaturnCommandGateway(EngineImpl engine) {
     this.engine = engine;
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param command input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public boolean execute(AgentContext context, String command, String arguments) {
     String text = engine.getPrefix() + command + (arguments.isBlank() ? "" : " " + arguments);
@@ -36,6 +49,14 @@ public final class EngineSaturnCommandGateway implements SaturnCommandGateway {
     }
   }
 
+  /**
+   * Implements the {@code executeWithResult} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param command input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public CommandExecution executeWithResult(
       AgentContext context, String command, String arguments) {

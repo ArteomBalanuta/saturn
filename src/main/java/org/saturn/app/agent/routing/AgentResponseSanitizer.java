@@ -17,6 +17,13 @@ public final class AgentResponseSanitizer {
   private static final Pattern MARKDOWN_LIST_ITEM =
       Pattern.compile("^\\h*(?:[*•]|\\d+[.)])\\h+(.+)$");
 
+  /**
+   * Sanitizes provider content before it becomes user-visible.
+   *
+   * @param content the content input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   String sanitize(String content) {
     if (content == null || content.isBlank()) {
       return "";
@@ -36,6 +43,12 @@ public final class AgentResponseSanitizer {
         .stripTrailing();
   }
 
+  /**
+   * Implements the {@code excludeLegacyPersonaTurns} operation for this agent component.
+   *
+   * @param loaded input argument used by this operation
+   * @return the operation result
+   */
   public List<LlmMessage> excludeLegacyPersonaTurns(List<LlmMessage> loaded) {
     List<LlmMessage> clean = new ArrayList<>(loaded.size());
     for (LlmMessage message : loaded) {
@@ -53,6 +66,13 @@ public final class AgentResponseSanitizer {
     return List.copyOf(clean);
   }
 
+  /**
+   * Checks whether content contains a legacy persona marker.
+   *
+   * @param content the content input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   boolean containsLegacyPersona(String content) {
     if (content == null || content.isBlank()) {
       return false;
@@ -69,6 +89,12 @@ public final class AgentResponseSanitizer {
         || LEGACY_OPENING.matcher(content.strip()).find();
   }
 
+  /**
+   * Implements the {@code isLegacyPersonaBoilerplate} operation for this agent component.
+   *
+   * @param line input argument used by this operation
+   * @return the operation result
+   */
   private boolean isLegacyPersonaBoilerplate(String line) {
     String normalized = line.strip().toLowerCase(Locale.ROOT);
     return normalized.startsWith("the archives reveal")
@@ -76,6 +102,12 @@ public final class AgentResponseSanitizer {
         || normalized.matches("^[*_]*carpe diem[*_]*[,.].*");
   }
 
+  /**
+   * Implements the {@code formatListItem} operation for this agent component.
+   *
+   * @param line input argument used by this operation
+   * @return the operation result
+   */
   private String formatListItem(String line) {
     Matcher matcher = MARKDOWN_LIST_ITEM.matcher(line);
     return matcher.matches() ? "\u2009-\u2009" + matcher.group(1) : line.stripTrailing();

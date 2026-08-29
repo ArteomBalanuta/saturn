@@ -10,8 +10,17 @@ import org.saturn.app.agent.tool.contract.AgentToolDefinitionJson;
 final class AgentCommandIntentPolicy {
   private static final String COMMAND_TOOL_PREFIX = "saturn_";
 
+  /** Implements the {@code AgentCommandIntentPolicy} operation for this agent component. */
   private AgentCommandIntentPolicy() {}
 
+  /**
+   * Implements the {@code filter} operation for this agent component.
+   *
+   * @param definitions input argument used by this operation
+   * @param mode input argument used by this operation
+   * @param newestPrompt input argument used by this operation
+   * @return the operation result
+   */
   static List<JsonObject> filter(
       List<JsonObject> definitions, AgentInvocationMode mode, String newestPrompt) {
     if (mode == AgentInvocationMode.MODERATION) {
@@ -27,6 +36,13 @@ final class AgentCommandIntentPolicy {
     return List.copyOf(filtered);
   }
 
+  /**
+   * Implements the {@code explicitlyRequests} operation for this agent component.
+   *
+   * @param toolName input argument used by this operation
+   * @param newestPrompt input argument used by this operation
+   * @return the operation result
+   */
   private static boolean explicitlyRequests(String toolName, String newestPrompt) {
     String alias = toolName.substring(COMMAND_TOOL_PREFIX.length());
     String[] tokens = newestPrompt == null ? new String[0] : newestPrompt.strip().split("\\s+");

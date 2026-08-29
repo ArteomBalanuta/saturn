@@ -17,6 +17,17 @@ import org.saturn.app.service.impl.OutService;
 
 /** Composes autonomous moderation and room participation around an active engine. */
 public final class AgentRoomAutomationFactory {
+  /**
+   * Implements the {@code create} operation for this agent component.
+   *
+   * @param engine input argument used by this operation
+   * @param participationConfig input argument used by this operation
+   * @param moderationConfig input argument used by this operation
+   * @param service input argument used by this operation
+   * @param commandGateway input argument used by this operation
+   * @param outService input argument used by this operation
+   * @return the operation result
+   */
   public AgentRoomAutomation create(
       EngineImpl engine,
       AgentParticipationConfig participationConfig,

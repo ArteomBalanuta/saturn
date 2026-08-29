@@ -88,10 +88,25 @@ public final class AgentFreshnessPolicy {
               + NICK_BODY
               + ")?[?.!\\s]*$");
 
+  /**
+   * Implements the {@code requiredTool} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @param history input argument used by this operation
+   * @return the operation result
+   */
   public Optional<String> requiredTool(String prompt, List<LlmMessage> history) {
     return requiredTool(prompt, history, List.of());
   }
 
+  /**
+   * Implements the {@code requiredTool} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @param history input argument used by this operation
+   * @param roomUsers input argument used by this operation
+   * @return the operation result
+   */
   public Optional<String> requiredTool(
       String prompt, List<LlmMessage> history, List<String> roomUsers) {
     if (requiresNamedUserHistory(prompt, roomUsers)) {
@@ -106,6 +121,14 @@ public final class AgentFreshnessPolicy {
     return Optional.empty();
   }
 
+  /**
+   * Implements the {@code requiredNick} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @param history input argument used by this operation
+   * @param roomUsers input argument used by this operation
+   * @return the operation result
+   */
   public Optional<String> requiredNick(
       String prompt, List<LlmMessage> history, List<String> roomUsers) {
     Optional<String> current = extractNick(prompt, roomUsers);
@@ -118,6 +141,13 @@ public final class AgentFreshnessPolicy {
     return Optional.empty();
   }
 
+  /**
+   * Implements the {@code extractNick} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @param roomUsers input argument used by this operation
+   * @return the operation result
+   */
   private static Optional<String> extractNick(String prompt, List<String> roomUsers) {
     String normalizedPrompt = normalizePrompt(prompt);
     for (Pattern pattern :
@@ -138,6 +168,13 @@ public final class AgentFreshnessPolicy {
     return Optional.empty();
   }
 
+  /**
+   * Implements the {@code requiresNamedUserHistory} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @param roomUsers input argument used by this operation
+   * @return the operation result
+   */
   private static boolean requiresNamedUserHistory(String prompt, List<String> roomUsers) {
     String normalizedPrompt = normalizePrompt(prompt);
     return prompt != null
@@ -153,6 +190,12 @@ public final class AgentFreshnessPolicy {
             || matchesTrustedRoomUser(USER_HISTORY, normalizedPrompt, roomUsers));
   }
 
+  /**
+   * Implements the {@code matchesExplicitPrefixUser} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @return the operation result
+   */
   private static boolean matchesExplicitPrefixUser(String prompt) {
     var matcher = PREFIX_USER_PROFILE.matcher(prompt);
     if (!matcher.matches()) {
@@ -161,6 +204,14 @@ public final class AgentFreshnessPolicy {
     return !NON_NICK_PROFILE_TERMS.contains(withoutMention(matcher.group("target")).toLowerCase());
   }
 
+  /**
+   * Implements the {@code matchesTrustedRoomUser} operation for this agent component.
+   *
+   * @param pattern input argument used by this operation
+   * @param prompt input argument used by this operation
+   * @param roomUsers input argument used by this operation
+   * @return the operation result
+   */
   private static boolean matchesTrustedRoomUser(
       Pattern pattern, String prompt, List<String> roomUsers) {
     var matcher = pattern.matcher(prompt);
@@ -179,18 +230,42 @@ public final class AgentFreshnessPolicy {
     return true;
   }
 
+  /**
+   * Implements the {@code withoutMention} operation for this agent component.
+   *
+   * @param nick input argument used by this operation
+   * @return the operation result
+   */
   private static String withoutMention(String nick) {
     return AgentNickNormalizer.normalize(nick);
   }
 
+  /**
+   * Implements the {@code normalizePrompt} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @return the operation result
+   */
   private static String normalizePrompt(String prompt) {
     return prompt == null ? "" : prompt.replace("\\_", "_");
   }
 
+  /**
+   * Implements the {@code isHistoryFollowUp} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isHistoryFollowUp(String prompt) {
     return prompt != null && HISTORY_FOLLOW_UP.matcher(prompt).matches();
   }
 
+  /**
+   * Implements the {@code latestUser} operation for this agent component.
+   *
+   * @param history input argument used by this operation
+   * @return the operation result
+   */
   private static Optional<String> latestUser(List<LlmMessage> history) {
     for (int index = history.size() - 1; index >= 0; index--) {
       LlmMessage message = history.get(index);

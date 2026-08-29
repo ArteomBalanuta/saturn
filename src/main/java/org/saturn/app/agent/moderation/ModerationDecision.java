@@ -18,10 +18,25 @@ public record ModerationDecision(ModerationAction action, Optional<String> targe
     }
   }
 
+  /**
+   * Implements the {@code targeted} operation for this agent component.
+   *
+   * @param action input argument used by this operation
+   * @param target input argument used by this operation
+   * @param reason input argument used by this operation
+   * @return the operation result
+   */
   public static ModerationDecision targeted(ModerationAction action, String target, String reason) {
     return new ModerationDecision(action, Optional.ofNullable(target), reason);
   }
 
+  /**
+   * Implements the {@code room} operation for this agent component.
+   *
+   * @param action input argument used by this operation
+   * @param reason input argument used by this operation
+   * @return the operation result
+   */
   public static ModerationDecision room(ModerationAction action, String reason) {
     return new ModerationDecision(action, Optional.empty(), reason);
   }

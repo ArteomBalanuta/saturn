@@ -17,6 +17,12 @@ public final class AgentRequestClassifier {
           "^(how are you|what do you think|can you explain|why|how)\\b.*\\?|.*\\b(hello|hi|hey|thanks|thank you|goodbye|bye|okay|ok)\\b.*",
           Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL);
 
+  /**
+   * Implements the {@code classifyCandidate} operation for this agent component.
+   *
+   * @param input input argument used by this operation
+   * @return the operation result
+   */
   public AgentRequestKind classifyCandidate(AgentRequestInput input) {
     String text = input == null || input.text() == null ? "" : input.text().strip();
     if (text.isBlank()
@@ -32,6 +38,13 @@ public final class AgentRequestClassifier {
     return AgentRequestKind.UNCLASSIFIED;
   }
 
+  /**
+   * Implements the {@code finalizeKind} operation for this agent component.
+   *
+   * @param candidate input argument used by this operation
+   * @param evidence input argument used by this operation
+   * @return the operation result
+   */
   public AgentRequestKind finalizeKind(AgentRequestKind candidate, AgentToolEvidence evidence) {
     if (evidence != null && evidence.attempted()) {
       return AgentRequestKind.TOOL_CALL;
@@ -41,6 +54,12 @@ public final class AgentRequestClassifier {
         : AgentRequestKind.UNCLASSIFIED;
   }
 
+  /**
+   * Implements the {@code startsProtocol} operation for this agent component.
+   *
+   * @param text input argument used by this operation
+   * @return the operation result
+   */
   private boolean startsProtocol(String text) {
     String lower = text.toLowerCase(Locale.ROOT);
     return lower.startsWith("{")

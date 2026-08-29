@@ -11,6 +11,13 @@ public final class RepositoryAgentConversationContextProvider
   private final AgentQueryRepository repository;
   private final int messageLimit;
 
+  /**
+   * Implements the {@code RepositoryAgentConversationContextProvider} operation for this agent
+   * component.
+   *
+   * @param repository input argument used by this operation
+   * @param messageLimit input argument used by this operation
+   */
   public RepositoryAgentConversationContextProvider(
       AgentQueryRepository repository, int messageLimit) {
     this.repository = Objects.requireNonNull(repository, "repository");
@@ -20,6 +27,12 @@ public final class RepositoryAgentConversationContextProvider
     this.messageLimit = messageLimit;
   }
 
+  /**
+   * Implements the {@code load} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public String load(AgentContext context) {
     JsonObject arguments = new JsonObject();
@@ -28,6 +41,14 @@ public final class RepositoryAgentConversationContextProvider
     return repository.execute("recent_messages_for_room", arguments, context).toString();
   }
 
+  /**
+   * Implements the {@code load} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param author input argument used by this operation
+   * @param text input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public String load(AgentContext context, String author, String text) {
     JsonObject arguments = new JsonObject();
@@ -55,6 +76,13 @@ public final class RepositoryAgentConversationContextProvider
     return result.toString();
   }
 
+  /**
+   * Implements the {@code stringValue} operation for this agent component.
+   *
+   * @param value input argument used by this operation
+   * @param member input argument used by this operation
+   * @return the operation result
+   */
   private static String stringValue(JsonObject value, String member) {
     if (!value.has(member) || value.get(member).isJsonNull()) {
       return null;

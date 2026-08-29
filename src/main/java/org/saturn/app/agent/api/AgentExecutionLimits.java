@@ -19,6 +19,12 @@ public record AgentExecutionLimits(int maxSteps, int maxToolCallsPerTurn, Durati
     }
   }
 
+  /**
+   * Implements the {@code from} operation for this agent component.
+   *
+   * @param config input argument used by this operation
+   * @return the operation result
+   */
   public static AgentExecutionLimits from(AgentConfig config) {
     return new AgentExecutionLimits(
         config.maxSteps(), config.maxToolCallsPerTurn(), config.toolTimeout());

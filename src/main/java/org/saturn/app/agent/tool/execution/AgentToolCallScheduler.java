@@ -29,21 +29,53 @@ final class AgentToolCallScheduler implements AutoCloseable {
         true);
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param executor the executor input; null handling follows the validation performed by this
+   *     declaration
+   */
   AgentToolCallScheduler(ExecutorService executor) {
     this(executor, false);
   }
 
+  /**
+   * Implements the {@code AgentToolCallScheduler} operation for this agent component.
+   *
+   * @param executor input argument used by this operation
+   * @param ownsExecutor input argument used by this operation
+   */
   private AgentToolCallScheduler(ExecutorService executor, boolean ownsExecutor) {
     this.executor = executor;
     this.ownsExecutor = ownsExecutor;
     this.policy = new AgentToolExecutionPolicy();
   }
 
+  /**
+   * Executes scheduled calls while respecting resource barriers, timeout, and cancellation.
+   *
+   * @param calls the calls input; null handling follows the validation performed by this
+   *     declaration
+   * @param execution the execution input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   List<AgentToolResult> executeAll(
       List<AgentScheduledToolCall> calls, ToolCallExecution execution) {
     return executeAll(calls, AgentToolBatchContext.unlimited(), execution);
   }
 
+  /**
+   * Executes scheduled calls while respecting resource barriers, timeout, and cancellation.
+   *
+   * @param calls the calls input; null handling follows the validation performed by this
+   *     declaration
+   * @param batch the batch input; null handling follows the validation performed by this
+   *     declaration
+   * @param execution the execution input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   List<AgentToolResult> executeAll(
       List<AgentScheduledToolCall> calls,
       AgentToolBatchContext batch,
@@ -62,6 +94,7 @@ final class AgentToolCallScheduler implements AutoCloseable {
     return List.copyOf(results);
   }
 
+  /** Implements the {@code close} operation for this agent component. */
   @Override
   public void close() {
     if (ownsExecutor) {
@@ -69,6 +102,13 @@ final class AgentToolCallScheduler implements AutoCloseable {
     }
   }
 
+  /**
+   * Implements the {@code parallelBatchEnd} operation for this agent component.
+   *
+   * @param calls input argument used by this operation
+   * @param start input argument used by this operation
+   * @return the operation result
+   */
   private int parallelBatchEnd(List<AgentScheduledToolCall> calls, int start) {
     if (!calls.get(start).isParallelRead()) {
       return start + 1;
@@ -82,6 +122,14 @@ final class AgentToolCallScheduler implements AutoCloseable {
     return end;
   }
 
+  /**
+   * Implements the {@code compatibleWithBatch} operation for this agent component.
+   *
+   * @param calls input argument used by this operation
+   * @param start input argument used by this operation
+   * @param candidate input argument used by this operation
+   * @return the operation result
+   */
   private boolean compatibleWithBatch(
       List<AgentScheduledToolCall> calls, int start, int candidate) {
     for (int index = start; index < candidate; index++) {
@@ -92,6 +140,14 @@ final class AgentToolCallScheduler implements AutoCloseable {
     return true;
   }
 
+  /**
+   * Implements the {@code executeParallel} operation for this agent component.
+   *
+   * @param calls input argument used by this operation
+   * @param batch input argument used by this operation
+   * @param execution input argument used by this operation
+   * @return the operation result
+   */
   private List<AgentToolResult> executeParallel(
       List<AgentScheduledToolCall> calls,
       AgentToolBatchContext batch,
@@ -113,10 +169,25 @@ final class AgentToolCallScheduler implements AutoCloseable {
     return results;
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param call input argument used by this operation
+   * @param execution input argument used by this operation
+   * @return the operation result
+   */
   private static AgentToolResult execute(LlmToolCall call, ToolCallExecution execution) {
     return execute(call, AgentToolBatchContext.unlimited(), execution);
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param call input argument used by this operation
+   * @param batch input argument used by this operation
+   * @param execution input argument used by this operation
+   * @return the operation result
+   */
   private static AgentToolResult execute(
       LlmToolCall call, AgentToolBatchContext batch, ToolCallExecution execution) {
     if (batch.cancellation().isCancelled() || batch.expired()) {
@@ -140,6 +211,14 @@ final class AgentToolCallScheduler implements AutoCloseable {
     }
   }
 
+  /**
+   * Implements the {@code await} operation for this agent component.
+   *
+   * @param call input argument used by this operation
+   * @param future input argument used by this operation
+   * @param batch input argument used by this operation
+   * @return the operation result
+   */
   private static AgentToolResult await(
       LlmToolCall call, Future<AgentToolResult> future, AgentToolBatchContext batch) {
     try {
@@ -169,6 +248,12 @@ final class AgentToolCallScheduler implements AutoCloseable {
     }
   }
 
+  /**
+   * Implements the {@code batchCode} operation for this agent component.
+   *
+   * @param batch input argument used by this operation
+   * @return the operation result
+   */
   private static String batchCode(AgentToolBatchContext batch) {
     return batch.expired()
             || batch.cancellationReason() == AgentToolBatchContext.CancellationReason.DEADLINE
@@ -176,17 +261,37 @@ final class AgentToolCallScheduler implements AutoCloseable {
         : "TOOL_BATCH_CANCELLED";
   }
 
+  /**
+   * Implements the {@code batchMessage} operation for this agent component.
+   *
+   * @param batch input argument used by this operation
+   * @return the operation result
+   */
   private static String batchMessage(AgentToolBatchContext batch) {
     return "TOOL_BATCH_DEADLINE".equals(batchCode(batch))
         ? "Tool batch deadline exceeded"
         : "Tool batch execution was cancelled";
   }
 
+  /**
+   * Implements the {@code error} operation for this agent component.
+   *
+   * @param call input argument used by this operation
+   * @param code input argument used by this operation
+   * @param message input argument used by this operation
+   * @return the operation result
+   */
   private static AgentToolResult error(LlmToolCall call, String code, String message) {
     return AgentToolResult.error(call.id(), call.name(), code, message);
   }
 
   @FunctionalInterface
+  /**
+   * Defines the interface {@code ToolCallExecution} in the Saturn agent runtime.
+   *
+   * <p>This type is part of the source-compatible agent boundary; validation and failure behavior
+   * are retained by its implementation.
+   */
   interface ToolCallExecution {
     AgentToolResult execute(LlmToolCall call) throws Exception;
   }

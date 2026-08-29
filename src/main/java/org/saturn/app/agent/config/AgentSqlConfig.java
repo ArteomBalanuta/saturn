@@ -5,7 +5,17 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 
-/** Immutable, bounded configuration for the optional dynamic read-only SQL capability. */
+/**
+ * Immutable, bounded configuration for the optional dynamic read-only SQL capability.
+ *
+ * @param enabled whether dynamic SQL is available
+ * @param maxSqlChars maximum accepted SQL length
+ * @param maxRows maximum returned rows
+ * @param maxColumns maximum returned columns
+ * @param maxCellChars maximum serialized cell length
+ * @param maxResultChars maximum serialized result length
+ * @param timeout query execution timeout
+ */
 public record AgentSqlConfig(
     boolean enabled,
     int maxSqlChars,
@@ -14,6 +24,24 @@ public record AgentSqlConfig(
     int maxCellChars,
     int maxResultChars,
     Duration timeout) {
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param enabled the enabled input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxSqlChars the maxSqlChars input; null handling follows the validation performed by
+   *     this declaration
+   * @param maxRows the maxRows input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxColumns the maxColumns input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxCellChars the maxCellChars input; null handling follows the validation performed by
+   *     this declaration
+   * @param maxResultChars the maxResultChars input; null handling follows the validation performed
+   *     by this declaration
+   * @param timeout the timeout input; null handling follows the validation performed by this
+   *     declaration
+   */
   public AgentSqlConfig {
     Objects.requireNonNull(timeout, "timeout");
     requirePositive(maxSqlChars, "dynamicSqlMaxSqlChars");
@@ -26,6 +54,12 @@ public record AgentSqlConfig(
     }
   }
 
+  /**
+   * Implements the {@code from} operation for this agent component.
+   *
+   * @param root input argument used by this operation
+   * @return the operation result
+   */
   public static AgentSqlConfig from(Toml root) {
     return from(root, Map.of());
   }
@@ -84,6 +118,12 @@ public record AgentSqlConfig(
                 1_000)));
   }
 
+  /**
+   * Implements the {@code requirePositive} operation for this agent component.
+   *
+   * @param value input argument used by this operation
+   * @param key input argument used by this operation
+   */
   private static void requirePositive(int value, String key) {
     if (value <= 0) {
       throw new IllegalArgumentException("agent." + key + " must be positive");

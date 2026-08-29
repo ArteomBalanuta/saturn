@@ -13,6 +13,13 @@ import org.saturn.app.agent.llm.LlmToolCall;
 
 /** Pairing-aware, copy-only provider context projection. */
 public final class AgentMessageProjector {
+  /**
+   * Implements the {@code project} operation for this agent component.
+   *
+   * @param source input argument used by this operation
+   * @param budget input argument used by this operation
+   * @return the operation result
+   */
   public AgentContextProjection project(List<LlmMessage> source, int budget) {
     if (source.isEmpty()) {
       return new AgentContextProjection(
@@ -21,10 +28,27 @@ public final class AgentMessageProjector {
     return project(source, budget, true);
   }
 
+  /**
+   * Projects messages after a tool result while applying the context budget.
+   *
+   * @param source the source input; null handling follows the validation performed by this
+   *     declaration
+   * @param budget the budget input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   AgentContextProjection projectAfterTool(List<LlmMessage> source, int budget) {
     return project(source, budget, false);
   }
 
+  /**
+   * Implements the {@code project} operation for this agent component.
+   *
+   * @param source input argument used by this operation
+   * @param budget input argument used by this operation
+   * @param liveTail input argument used by this operation
+   * @return the operation result
+   */
   private AgentContextProjection project(List<LlmMessage> source, int budget, boolean liveTail) {
     if (!"system".equals(source.getFirst().role())) {
       List<LlmMessage> copied = source.stream().map(AgentMessageProjector::copyMessage).toList();
@@ -88,6 +112,12 @@ public final class AgentMessageProjector {
         fingerprint(projected));
   }
 
+  /**
+   * Implements the {@code serializedLength} operation for this agent component.
+   *
+   * @param messages input argument used by this operation
+   * @return the operation result
+   */
   private static int serializedLength(List<LlmMessage> messages) {
     return messages.stream()
         .mapToInt(
@@ -103,15 +133,33 @@ public final class AgentMessageProjector {
         .sum();
   }
 
+  /**
+   * Implements the {@code fingerprintOf} operation for this agent component.
+   *
+   * @param messages input argument used by this operation
+   * @return the operation result
+   */
   public static String fingerprintOf(List<LlmMessage> messages) {
     return fingerprint(messages);
   }
 
+  /**
+   * Implements the {@code copyMessage} operation for this agent component.
+   *
+   * @param message input argument used by this operation
+   * @return the operation result
+   */
   private static LlmMessage copyMessage(LlmMessage message) {
     return new LlmMessage(
         message.role(), message.content(), List.copyOf(message.toolCalls()), message.toolCallId());
   }
 
+  /**
+   * Implements the {@code fingerprint} operation for this agent component.
+   *
+   * @param messages input argument used by this operation
+   * @return the operation result
+   */
   private static String fingerprint(List<LlmMessage> messages) {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");

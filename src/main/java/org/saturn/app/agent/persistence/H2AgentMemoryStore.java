@@ -19,15 +19,33 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
   private final String databasePath;
   private final Clock clock;
 
+  /**
+   * Implements the {@code H2AgentMemoryStore} operation for this agent component.
+   *
+   * @param databasePath input argument used by this operation
+   */
   public H2AgentMemoryStore(String databasePath) {
     this(databasePath, Clock.systemUTC());
   }
 
+  /**
+   * Implements the {@code H2AgentMemoryStore} operation for this agent component.
+   *
+   * @param databasePath input argument used by this operation
+   * @param clock input argument used by this operation
+   */
   public H2AgentMemoryStore(String databasePath, Clock clock) {
     this.databasePath = databasePath;
     this.clock = clock;
   }
 
+  /**
+   * Implements the {@code load} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param config input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public List<LlmMessage> load(AgentContext context, AgentConfig config) {
     long now = clock.instant().getEpochSecond();
@@ -63,6 +81,15 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
     }
   }
 
+  /**
+   * Implements the {@code loadToolEvidence} operation for this agent component.
+   *
+   * @param connection input argument used by this operation
+   * @param context input argument used by this operation
+   * @param config input argument used by this operation
+   * @param now input argument used by this operation
+   * @return the operation result
+   */
   private List<LlmMessage> loadToolEvidence(
       Connection connection, AgentContext context, AgentConfig config, long now)
       throws SQLException {
@@ -93,6 +120,14 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
     }
   }
 
+  /**
+   * Implements the {@code append} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param userContent input argument used by this operation
+   * @param assistantContent input argument used by this operation
+   * @param config input argument used by this operation
+   */
   @Override
   public void append(
       AgentContext context, String userContent, String assistantContent, AgentConfig config) {
@@ -127,6 +162,14 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
     }
   }
 
+  /**
+   * Implements the {@code appendToolEvidence} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param toolName input argument used by this operation
+   * @param content input argument used by this operation
+   * @param config input argument used by this operation
+   */
   @Override
   public void appendToolEvidence(
       AgentContext context, String toolName, String content, AgentConfig config) {
@@ -160,10 +203,25 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
     }
   }
 
+  /**
+   * Implements the {@code open} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private Connection open() throws SQLException {
     return H2Database.open(databasePath);
   }
 
+  /**
+   * Implements the {@code insert} operation for this agent component.
+   *
+   * @param statement input argument used by this operation
+   * @param identity input argument used by this operation
+   * @param role input argument used by this operation
+   * @param content input argument used by this operation
+   * @param createdOn input argument used by this operation
+   * @param expiresOn input argument used by this operation
+   */
   private static void insert(
       PreparedStatement statement,
       String identity,
@@ -180,6 +238,13 @@ public final class H2AgentMemoryStore implements AgentMemoryStore {
     statement.executeUpdate();
   }
 
+  /**
+   * Implements the {@code persistenceFailure} operation for this agent component.
+   *
+   * @param operation input argument used by this operation
+   * @param exception input argument used by this operation
+   * @return the operation result
+   */
   private static AgentPersistenceException persistenceFailure(
       String operation, SQLException exception) {
     String detail = exception.getMessage() == null ? "unknown H2 error" : exception.getMessage();

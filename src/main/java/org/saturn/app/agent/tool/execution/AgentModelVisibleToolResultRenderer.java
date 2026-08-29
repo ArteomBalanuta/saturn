@@ -18,10 +18,23 @@ public final class AgentModelVisibleToolResultRenderer
 
   private final AgentToolRegistry registry;
 
+  /**
+   * Implements the {@code AgentModelVisibleToolResultRenderer} operation for this agent component.
+   *
+   * @param registry input argument used by this operation
+   */
   public AgentModelVisibleToolResultRenderer(AgentToolRegistry registry) {
     this.registry = Objects.requireNonNull(registry, "registry");
   }
 
+  /**
+   * Implements the {@code render} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param call input argument used by this operation
+   * @param result input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public String render(AgentContext context, LlmToolCall call, AgentToolResult result) {
     if (result.isError()) {

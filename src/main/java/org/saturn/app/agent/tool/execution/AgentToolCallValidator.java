@@ -24,10 +24,32 @@ final class AgentToolCallValidator {
     this.registry = registry;
   }
 
+  /**
+   * Validates a tool call against authorization, schema, context, and descriptor policy.
+   *
+   * @param context the context input; null handling follows the validation performed by this
+   *     declaration
+   * @param call the call input; null handling follows the validation performed by this declaration
+   * @param allowedTools the allowedTools input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   Result validate(AgentContext context, LlmToolCall call, Set<String> allowedTools) {
     return validate(context, call, allowedTools, null);
   }
 
+  /**
+   * Validates a tool call against authorization, schema, context, and descriptor policy.
+   *
+   * @param context the context input; null handling follows the validation performed by this
+   *     declaration
+   * @param call the call input; null handling follows the validation performed by this declaration
+   * @param allowedTools the allowedTools input; null handling follows the validation performed by
+   *     this declaration
+   * @param classifiedDescriptor the classifiedDescriptor input; null handling follows the
+   *     validation performed by this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   Result validate(
       AgentContext context,
       LlmToolCall call,
@@ -112,6 +134,11 @@ final class AgentToolCallValidator {
       return new Result(null, error);
     }
 
+    /**
+     * Reports whether this validation outcome permits execution.
+     *
+     * @return the computed result; empty or false indicates that no applicable value was available
+     */
     boolean isValid() {
       return call != null;
     }

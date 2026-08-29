@@ -29,6 +29,7 @@ public final class SaturnCommandToolCatalog {
   private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(10);
   private static final List<CommandToolDefinition> ENTRIES = loadEntries();
 
+  /** Implements the {@code SaturnCommandToolCatalog} operation for this agent component. */
   private SaturnCommandToolCatalog() {}
 
   /** Returns one immutable command tool contract for every annotated Saturn command handler. */
@@ -41,6 +42,11 @@ public final class SaturnCommandToolCatalog {
     entries().forEach(definition -> registry.register(new SaturnCommandTool(definition, gateway)));
   }
 
+  /**
+   * Implements the {@code loadEntries} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private static List<CommandToolDefinition> loadEntries() {
     try (var scan =
         new ClassGraph()
@@ -62,6 +68,12 @@ public final class SaturnCommandToolCatalog {
   }
 
   @SuppressWarnings("unchecked")
+  /**
+   * Implements the {@code definitionFor} operation for this agent component.
+   *
+   * @param classInfo input argument used by this operation
+   * @return the operation result
+   */
   private static CommandToolDefinition definitionFor(io.github.classgraph.ClassInfo classInfo) {
     try {
       Class<?> rawType = classInfo.loadClass();
@@ -107,6 +119,12 @@ public final class SaturnCommandToolCatalog {
     }
   }
 
+  /**
+   * Implements the {@code aliasesFor} operation for this agent component.
+   *
+   * @param classInfo input argument used by this operation
+   * @return the operation result
+   */
   private static List<String> aliasesFor(io.github.classgraph.ClassInfo classInfo) {
     return classInfo.getAnnotationInfo(CommandAliases.class).getParameterValues().stream()
         .filter(parameter -> "aliases".equals(parameter.getName()))
@@ -117,6 +135,11 @@ public final class SaturnCommandToolCatalog {
                 new IllegalStateException("Saturn command has no aliases: " + classInfo.getName()));
   }
 
+  /**
+   * Implements the {@code argumentSchema} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private static JsonObject argumentSchema() {
     JsonObject argument = new JsonObject();
     argument.addProperty("type", "string");
@@ -131,6 +154,12 @@ public final class SaturnCommandToolCatalog {
     return schema;
   }
 
+  /**
+   * Implements the {@code profileFor} operation for this agent component.
+   *
+   * @param handlerType input argument used by this operation
+   * @return the operation result
+   */
   private static CommandProfile profileFor(Class<? extends UserCommand> handlerType) {
     String packageName = handlerType.getPackageName();
     if (packageName.contains(".impl.admin")) {
@@ -162,6 +191,36 @@ public final class SaturnCommandToolCatalog {
       List<String> whenToUse,
       List<String> whenNotToUse,
       List<ToolExample> examples) {
+    /**
+     * Constructs this value after validating and defensively retaining its supplied inputs.
+     *
+     * @param handlerType the handlerType input; null handling follows the validation performed by
+     *     this declaration
+     * @param toolName the toolName input; null handling follows the validation performed by this
+     *     declaration
+     * @param commandAlias the commandAlias input; null handling follows the validation performed by
+     *     this declaration
+     * @param aliases the aliases input; null handling follows the validation performed by this
+     *     declaration
+     * @param parameters the parameters input; null handling follows the validation performed by
+     *     this declaration
+     * @param requiredCapabilities the requiredCapabilities input; null handling follows the
+     *     validation performed by this declaration
+     * @param effect the effect input; null handling follows the validation performed by this
+     *     declaration
+     * @param isIdempotent the isIdempotent input; null handling follows the validation performed by
+     *     this declaration
+     * @param timeout the timeout input; null handling follows the validation performed by this
+     *     declaration
+     * @param description the description input; null handling follows the validation performed by
+     *     this declaration
+     * @param whenToUse the whenToUse input; null handling follows the validation performed by this
+     *     declaration
+     * @param whenNotToUse the whenNotToUse input; null handling follows the validation performed by
+     *     this declaration
+     * @param examples the examples input; null handling follows the validation performed by this
+     *     declaration
+     */
     public CommandToolDefinition {
       handlerType = Objects.requireNonNull(handlerType, "handlerType");
       toolName = Objects.requireNonNull(toolName, "toolName");

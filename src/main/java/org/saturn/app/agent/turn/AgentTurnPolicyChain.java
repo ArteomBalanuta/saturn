@@ -8,10 +8,21 @@ import org.saturn.app.agent.api.AgentRoutingException;
 public final class AgentTurnPolicyChain implements AgentTurnPolicy {
   private final List<AgentTurnPolicy> policies;
 
+  /**
+   * Implements the {@code AgentTurnPolicyChain} operation for this agent component.
+   *
+   * @param policies input argument used by this operation
+   */
   public AgentTurnPolicyChain(List<AgentTurnPolicy> policies) {
     this.policies = policies.stream().map(Objects::requireNonNull).toList();
   }
 
+  /**
+   * Implements the {@code apply} operation for this agent component.
+   *
+   * @param input input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentTurnPolicyResult apply(AgentTurnPolicyInput input)
       throws AgentRoutingException, org.saturn.app.agent.llm.LlmException {

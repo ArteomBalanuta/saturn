@@ -20,6 +20,20 @@ record AgentPreparedRequest(
     boolean overflow,
     int removedUnits,
     String contextFingerprint) {
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param definitions the definitions input; null handling follows the validation performed by
+   *     this declaration
+   * @param contextualizedPrompt the contextualizedPrompt input; null handling follows the
+   *     validation performed by this declaration
+   * @param requiredFreshTool the requiredFreshTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param requiredFreshNick the requiredFreshNick input; null handling follows the validation
+   *     performed by this declaration
+   */
   AgentPreparedRequest(
       List<LlmMessage> messages,
       List<JsonObject> definitions,
@@ -35,6 +49,22 @@ record AgentPreparedRequest(
         AgentRequestKind.UNCLASSIFIED);
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param definitions the definitions input; null handling follows the validation performed by
+   *     this declaration
+   * @param contextualizedPrompt the contextualizedPrompt input; null handling follows the
+   *     validation performed by this declaration
+   * @param requiredFreshTool the requiredFreshTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param requiredFreshNick the requiredFreshNick input; null handling follows the validation
+   *     performed by this declaration
+   * @param requestKind the requestKind input; null handling follows the validation performed by
+   *     this declaration
+   */
   AgentPreparedRequest(
       List<LlmMessage> messages,
       List<JsonObject> definitions,
@@ -58,6 +88,24 @@ record AgentPreparedRequest(
         "");
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param definitions the definitions input; null handling follows the validation performed by
+   *     this declaration
+   * @param contextualizedPrompt the contextualizedPrompt input; null handling follows the
+   *     validation performed by this declaration
+   * @param requiredFreshTool the requiredFreshTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param requiredFreshNick the requiredFreshNick input; null handling follows the validation
+   *     performed by this declaration
+   * @param requestKind the requestKind input; null handling follows the validation performed by
+   *     this declaration
+   * @param projection the projection input; null handling follows the validation performed by this
+   *     declaration
+   */
   AgentPreparedRequest(
       List<LlmMessage> messages,
       List<JsonObject> definitions,
@@ -82,6 +130,11 @@ record AgentPreparedRequest(
         projection.fingerprint());
   }
 
+  /**
+   * Implements the {@code projection} operation for this agent component.
+   *
+   * @return the operation result
+   */
   public AgentContextProjection projection() {
     return new AgentContextProjection(
         messages,
@@ -94,6 +147,36 @@ record AgentPreparedRequest(
         contextFingerprint);
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param definitions the definitions input; null handling follows the validation performed by
+   *     this declaration
+   * @param contextualizedPrompt the contextualizedPrompt input; null handling follows the
+   *     validation performed by this declaration
+   * @param requiredFreshTool the requiredFreshTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param requiredFreshNick the requiredFreshNick input; null handling follows the validation
+   *     performed by this declaration
+   * @param requestKind the requestKind input; null handling follows the validation performed by
+   *     this declaration
+   * @param serializedChars the serializedChars input; null handling follows the validation
+   *     performed by this declaration
+   * @param estimatedTokens the estimatedTokens input; null handling follows the validation
+   *     performed by this declaration
+   * @param budgetChars the budgetChars input; null handling follows the validation performed by
+   *     this declaration
+   * @param pruned the pruned input; null handling follows the validation performed by this
+   *     declaration
+   * @param overflow the overflow input; null handling follows the validation performed by this
+   *     declaration
+   * @param removedUnits the removedUnits input; null handling follows the validation performed by
+   *     this declaration
+   * @param contextFingerprint the contextFingerprint input; null handling follows the validation
+   *     performed by this declaration
+   */
   AgentPreparedRequest {
     messages = List.copyOf(messages);
     definitions = definitions.stream().map(JsonObject::deepCopy).toList();

@@ -48,30 +48,62 @@ public final class RunCommandTool implements AgentTool {
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
   private final SaturnCommandGateway gateway;
 
+  /**
+   * Implements the {@code RunCommandTool} operation for this agent component.
+   *
+   * @param gateway input argument used by this operation
+   */
   public RunCommandTool(SaturnCommandGateway gateway) {
     this.gateway = gateway;
   }
 
+  /**
+   * Implements the {@code name} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String name() {
     return "run_command";
   }
 
+  /**
+   * Implements the {@code description} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String description() {
     return PROMPTS.toolDescription(name());
   }
 
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public JsonObject parameters() {
     return parametersFor(INFORMATIONAL_COMMANDS);
   }
 
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public JsonObject parameters(AgentContext context) {
     return parametersFor(allowedCommands(context));
   }
 
+  /**
+   * Implements the {@code descriptor} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentToolDescriptor descriptor(AgentContext context) {
     boolean creator = context != null && context.hasCapability(AgentCapability.PERMANENT_BAN);
@@ -99,6 +131,12 @@ public final class RunCommandTool implements AgentTool {
         Set.of());
   }
 
+  /**
+   * Implements the {@code parametersFor} operation for this agent component.
+   *
+   * @param commands input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject parametersFor(Set<String> commands) {
     JsonObject command = new JsonObject();
     command.addProperty("type", "string");
@@ -118,8 +156,8 @@ public final class RunCommandTool implements AgentTool {
     return schema;
   }
 
-  @Override
   /** Executes one capability-approved command and reports whether Saturn accepted it. */
+  @Override
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     if (!arguments.has("command")) {
       return AgentToolResult.error(null, name(), "Missing command");
@@ -143,6 +181,12 @@ public final class RunCommandTool implements AgentTool {
         : AgentToolResult.error(null, name(), "Command was not authorized or could not run");
   }
 
+  /**
+   * Implements the {@code allowedCommands} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   private static Set<String> allowedCommands(AgentContext context) {
     Set<String> commands = new HashSet<>(INFORMATIONAL_COMMANDS);
     if (context.hasCapability(AgentCapability.MODERATION_COMMANDS)) {
@@ -154,11 +198,23 @@ public final class RunCommandTool implements AgentTool {
     return Set.copyOf(commands);
   }
 
+  /**
+   * Implements the {@code isTargetedModerationCommand} operation for this agent component.
+   *
+   * @param command input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isTargetedModerationCommand(String command) {
     return Set.of("mute", "unmute", "kick", "shadowban", "unshadowban", "ban", "unban")
         .contains(command);
   }
 
+  /**
+   * Implements the {@code firstArgument} operation for this agent component.
+   *
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   private static String firstArgument(String arguments) {
     int separator = arguments.indexOf(' ');
     return separator < 0 ? arguments : arguments.substring(0, separator);

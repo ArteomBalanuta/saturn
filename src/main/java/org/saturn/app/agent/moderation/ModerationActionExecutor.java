@@ -5,6 +5,11 @@ package org.saturn.app.agent.moderation;
 public interface ModerationActionExecutor {
   boolean execute(ModerationDecision decision);
 
+  /**
+   * Implements the {@code none} operation for this agent component.
+   *
+   * @return the operation result
+   */
   static ModerationActionExecutor none() {
     return ignored -> true;
   }

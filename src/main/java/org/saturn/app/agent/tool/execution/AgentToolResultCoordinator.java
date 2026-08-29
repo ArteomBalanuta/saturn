@@ -18,12 +18,31 @@ public final class AgentToolResultCoordinator {
   private final AgentFreshDataPolicy freshDataPolicy;
   private final AgentCommandProseGuard commandProseGuard;
 
+  /**
+   * Implements the {@code AgentToolResultCoordinator} operation for this agent component.
+   *
+   * @param freshDataPolicy input argument used by this operation
+   * @param commandProseGuard input argument used by this operation
+   */
   public AgentToolResultCoordinator(
       AgentFreshDataPolicy freshDataPolicy, AgentCommandProseGuard commandProseGuard) {
     this.freshDataPolicy = freshDataPolicy;
     this.commandProseGuard = commandProseGuard;
   }
 
+  /**
+   * Implements the {@code record} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param calls input argument used by this operation
+   * @param results input argument used by this operation
+   * @param requiredFreshTool input argument used by this operation
+   * @param requiredFreshNick input argument used by this operation
+   * @param turnState input argument used by this operation
+   * @param messages input argument used by this operation
+   * @param resultRenderer input argument used by this operation
+   * @param correlationId input argument used by this operation
+   */
   public void record(
       AgentContext context,
       List<LlmToolCall> calls,

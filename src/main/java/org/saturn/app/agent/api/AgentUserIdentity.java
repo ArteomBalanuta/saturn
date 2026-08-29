@@ -13,21 +13,47 @@ public record AgentUserIdentity(String value) {
     }
   }
 
+  /**
+   * Implements the {@code from} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   public static AgentUserIdentity from(AgentContext context) {
     Objects.requireNonNull(context, "context");
     return from(context.trip(), context.hash(), context.nick());
   }
 
+  /**
+   * Implements the {@code from} operation for this agent component.
+   *
+   * @param message input argument used by this operation
+   * @return the operation result
+   */
   public static AgentUserIdentity from(ChatMessage message) {
     Objects.requireNonNull(message, "message");
     return from(message.getTrip(), message.getHash(), message.getNick());
   }
 
+  /**
+   * Implements the {@code from} operation for this agent component.
+   *
+   * @param user input argument used by this operation
+   * @return the operation result
+   */
   public static AgentUserIdentity from(User user) {
     Objects.requireNonNull(user, "user");
     return from(user.getTrip(), user.getHash(), user.getNick());
   }
 
+  /**
+   * Implements the {@code from} operation for this agent component.
+   *
+   * @param trip input argument used by this operation
+   * @param hash input argument used by this operation
+   * @param nick input argument used by this operation
+   * @return the operation result
+   */
   private static AgentUserIdentity from(String trip, String hash, String nick) {
     if (trip != null && !trip.isBlank()) {
       return new AgentUserIdentity("trip:" + normalize(trip));
@@ -38,6 +64,12 @@ public record AgentUserIdentity(String value) {
     return new AgentUserIdentity("nick:" + normalize(Objects.requireNonNull(nick, "nick")));
   }
 
+  /**
+   * Implements the {@code normalize} operation for this agent component.
+   *
+   * @param value input argument used by this operation
+   * @return the operation result
+   */
   private static String normalize(String value) {
     return value.strip().toLowerCase(Locale.ROOT);
   }

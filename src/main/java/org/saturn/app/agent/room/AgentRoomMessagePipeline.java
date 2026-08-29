@@ -45,6 +45,30 @@ final class AgentRoomMessagePipeline {
   private final AtomicLong eligibleAmbientMessages = new AtomicLong();
   private final List<Handler> handlers;
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param engine the engine input; null handling follows the validation performed by this
+   *     declaration
+   * @param config the config input; null handling follows the validation performed by this
+   *     declaration
+   * @param agentService the agentService input; null handling follows the validation performed by
+   *     this declaration
+   * @param invocationFactory the invocationFactory input; null handling follows the validation
+   *     performed by this declaration
+   * @param mentionParser the mentionParser input; null handling follows the validation performed by
+   *     this declaration
+   * @param quietRegistry the quietRegistry input; null handling follows the validation performed by
+   *     this declaration
+   * @param moderationMonitor the moderationMonitor input; null handling follows the validation
+   *     performed by this declaration
+   * @param moderationExecutor the moderationExecutor input; null handling follows the validation
+   *     performed by this declaration
+   * @param botModerationContext the botModerationContext input; null handling follows the
+   *     validation performed by this declaration
+   * @param semanticModerationCandidate the semanticModerationCandidate input; null handling follows
+   *     the validation performed by this declaration
+   */
   AgentRoomMessagePipeline(
       EngineImpl engine,
       AgentParticipationConfig config,
@@ -78,6 +102,14 @@ final class AgentRoomMessagePipeline {
             this::handleAmbientParticipation);
   }
 
+  /**
+   * Runs the ordered room-message pipeline; moderation, routing, and silence decisions determine
+   * whether the event is claimed.
+   *
+   * @param message the message input; null handling follows the validation performed by this
+   *     declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   AgentRoomAutomation.Outcome onMessage(ChatMessage message) {
     Turn turn = new Turn(message);
     for (Handler handler : handlers) {
@@ -88,15 +120,32 @@ final class AgentRoomMessagePipeline {
     return AgentRoomAutomation.Outcome.PASS;
   }
 
+  /**
+   * Passes a joining user to the moderation monitor.
+   *
+   * @param user the user input; null handling follows the validation performed by this declaration
+   */
   void onJoin(User user) {
     execute(moderationMonitor.onJoin(user));
   }
 
+  /**
+   * Implements the {@code monitorModeration} operation for this agent component.
+   *
+   * @param turn input argument used by this operation
+   * @return the operation result
+   */
   private Decision monitorModeration(Turn turn) {
     execute(moderationMonitor.onMessage(turn.message));
     return Decision.CONTINUE;
   }
 
+  /**
+   * Implements the {@code filterIneligible} operation for this agent component.
+   *
+   * @param turn input argument used by this operation
+   * @return the operation result
+   */
   private Decision filterIneligible(Turn turn) {
     turn.text = turn.message.getText().strip();
     return turn.text.isEmpty()
@@ -108,6 +157,12 @@ final class AgentRoomMessagePipeline {
         : Decision.CONTINUE;
   }
 
+  /**
+   * Implements the {@code prepareInvocation} operation for this agent component.
+   *
+   * @param turn input argument used by this operation
+   * @return the operation result
+   */
   private Decision prepareInvocation(Turn turn) {
     turn.mentionPrompt = mentionParser.parse(turn.text, engine.nick);
     AgentInvocationMode mode =
@@ -117,18 +172,36 @@ final class AgentRoomMessagePipeline {
     return Decision.CONTINUE;
   }
 
+  /**
+   * Implements the {@code handleQuietRequest} operation for this agent component.
+   *
+   * @param turn input argument used by this operation
+   * @return the operation result
+   */
   private Decision handleQuietRequest(Turn turn) {
     if (!quietRegistry.isPoliteQuietRequest(turn.text, engine.nick)) return Decision.CONTINUE;
     quietRegistry.silence(turn.invocation.context());
     return Decision.PASS;
   }
 
+  /**
+   * Implements the {@code handleMention} operation for this agent component.
+   *
+   * @param turn input argument used by this operation
+   * @return the operation result
+   */
   private Decision handleMention(Turn turn) {
     if (turn.mentionPrompt.isEmpty()) return Decision.CONTINUE;
     agentService.submit(turn.invocation);
     return Decision.CLAIMED;
   }
 
+  /**
+   * Implements the {@code handleSemanticModeration} operation for this agent component.
+   *
+   * @param turn input argument used by this operation
+   * @return the operation result
+   */
   private Decision handleSemanticModeration(Turn turn) {
     if (botModerationContext == null
         || !semanticModerationCandidate.test(turn.message)
@@ -151,6 +224,12 @@ final class AgentRoomMessagePipeline {
     return Decision.CONTINUE;
   }
 
+  /**
+   * Implements the {@code handleAmbientParticipation} operation for this agent component.
+   *
+   * @param turn input argument used by this operation
+   * @return the operation result
+   */
   private Decision handleAmbientParticipation(Turn turn) {
     if (!config.ambientEnabled() || quietRegistry.isQuiet(turn.invocation.context())) {
       return Decision.PASS;
@@ -161,6 +240,11 @@ final class AgentRoomMessagePipeline {
     return Decision.PASS;
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param decisions input argument used by this operation
+   */
   private void execute(List<ModerationDecision> decisions) {
     for (ModerationDecision decision : decisions) {
       if (!moderationExecutor.execute(decision)) {
@@ -172,6 +256,12 @@ final class AgentRoomMessagePipeline {
     }
   }
 
+  /**
+   * Implements the {@code isBotAuthor} operation for this agent component.
+   *
+   * @param nick input argument used by this operation
+   * @return the operation result
+   */
   private boolean isBotAuthor(String nick) {
     return CONVENTIONAL_BOT_NICK.matcher(nick).matches()
         || engine.currentChannelUsers.stream()
@@ -201,6 +291,11 @@ final class AgentRoomMessagePipeline {
     private Optional<String> mentionPrompt = Optional.empty();
     private AgentInvocation invocation;
 
+    /**
+     * Implements the {@code Turn} operation for this agent component.
+     *
+     * @param message input argument used by this operation
+     */
     private Turn(ChatMessage message) {
       this.message = Objects.requireNonNull(message, "message");
     }

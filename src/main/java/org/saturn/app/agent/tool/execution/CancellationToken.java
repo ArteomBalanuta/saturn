@@ -7,6 +7,7 @@ public final class CancellationToken {
   private final AtomicReference<AgentToolBatchContext.CancellationReason> reason =
       new AtomicReference<>(AgentToolBatchContext.CancellationReason.NONE);
 
+  /** Implements the {@code cancel} operation for this agent component. */
   public void cancel() {
     reason.compareAndSet(
         AgentToolBatchContext.CancellationReason.NONE,
@@ -17,10 +18,20 @@ public final class CancellationToken {
     reason.set(AgentToolBatchContext.CancellationReason.DEADLINE);
   }
 
+  /**
+   * Implements the {@code isCancelled} operation for this agent component.
+   *
+   * @return the operation result
+   */
   public boolean isCancelled() {
     return reason.get() != AgentToolBatchContext.CancellationReason.NONE;
   }
 
+  /**
+   * Implements the {@code reason} operation for this agent component.
+   *
+   * @return the operation result
+   */
   public AgentToolBatchContext.CancellationReason reason() {
     return reason.get();
   }

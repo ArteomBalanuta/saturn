@@ -14,10 +14,21 @@ public record AgentDatabaseSchema(List<Table> tables) {
     tables = List.copyOf(tables);
   }
 
+  /**
+   * Implements the {@code tableNames} operation for this agent component.
+   *
+   * @return the operation result
+   */
   public Set<String> tableNames() {
     return tables.stream().map(Table::name).collect(Collectors.toUnmodifiableSet());
   }
 
+  /**
+   * Implements the {@code findTable} operation for this agent component.
+   *
+   * @param name input argument used by this operation
+   * @return the operation result
+   */
   public Optional<Table> findTable(String name) {
     if (name == null) {
       return Optional.empty();
@@ -70,6 +81,25 @@ public record AgentDatabaseSchema(List<Table> tables) {
       String onUpdate,
       String onDelete,
       String match) {
+    /**
+     * Constructs this value after validating and defensively retaining its supplied inputs.
+     *
+     * @param id the id input; null handling follows the validation performed by this declaration
+     * @param sequence the sequence input; null handling follows the validation performed by this
+     *     declaration
+     * @param referencedTable the referencedTable input; null handling follows the validation
+     *     performed by this declaration
+     * @param fromColumn the fromColumn input; null handling follows the validation performed by
+     *     this declaration
+     * @param toColumn the toColumn input; null handling follows the validation performed by this
+     *     declaration
+     * @param onUpdate the onUpdate input; null handling follows the validation performed by this
+     *     declaration
+     * @param onDelete the onDelete input; null handling follows the validation performed by this
+     *     declaration
+     * @param match the match input; null handling follows the validation performed by this
+     *     declaration
+     */
     public ForeignKey {
       Objects.requireNonNull(referencedTable, "referencedTable");
       Objects.requireNonNull(fromColumn, "fromColumn");

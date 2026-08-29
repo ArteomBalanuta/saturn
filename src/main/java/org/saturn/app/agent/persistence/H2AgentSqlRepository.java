@@ -25,10 +25,22 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
   private final H2ReadOnlyConnectionFactory connectionFactory;
   private final Gson gson = new Gson();
 
+  /**
+   * Implements the {@code H2AgentSqlRepository} operation for this agent component.
+   *
+   * @param connectionFactory input argument used by this operation
+   */
   public H2AgentSqlRepository(H2ReadOnlyConnectionFactory connectionFactory) {
     this.connectionFactory = Objects.requireNonNull(connectionFactory, "connectionFactory");
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param sql input argument used by this operation
+   * @param config input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentSqlResult execute(ValidatedAgentSql sql, AgentSqlConfig config) {
     Objects.requireNonNull(sql, "sql");
@@ -50,6 +62,15 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     }
   }
 
+  /**
+   * Implements the {@code executeQuery} operation for this agent component.
+   *
+   * @param connection input argument used by this operation
+   * @param sql input argument used by this operation
+   * @param config input argument used by this operation
+   * @param startedAt input argument used by this operation
+   * @return the operation result
+   */
   private AgentSqlResult executeQuery(
       Connection connection, String sql, AgentSqlConfig config, long startedAt)
       throws SQLException {
@@ -98,6 +119,16 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     }
   }
 
+  /**
+   * Implements the {@code boundResultSize} operation for this agent component.
+   *
+   * @param columns input argument used by this operation
+   * @param rows input argument used by this operation
+   * @param truncated input argument used by this operation
+   * @param elapsedMillis input argument used by this operation
+   * @param maxResultChars input argument used by this operation
+   * @return the operation result
+   */
   private AgentSqlResult boundResultSize(
       List<String> columns,
       List<List<Object>> rows,
@@ -121,6 +152,13 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     }
   }
 
+  /**
+   * Implements the {@code boundedValue} operation for this agent component.
+   *
+   * @param value input argument used by this operation
+   * @param maxChars input argument used by this operation
+   * @return the operation result
+   */
   private BoundedValue boundedValue(Object value, int maxChars) throws SQLException {
     if (value == null) {
       return new BoundedValue(null, false);
@@ -145,6 +183,13 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     return boundedText(value.toString(), maxChars);
   }
 
+  /**
+   * Implements the {@code boundedBlob} operation for this agent component.
+   *
+   * @param bytes input argument used by this operation
+   * @param maxChars input argument used by this operation
+   * @return the operation result
+   */
   private BoundedValue boundedBlob(byte[] bytes, int maxChars) {
     String encoded = Base64.getEncoder().encodeToString(bytes);
     if (encoded.length() <= maxChars) {
@@ -158,6 +203,13 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     return new BoundedValue(bounded, true);
   }
 
+  /**
+   * Implements the {@code boundedText} operation for this agent component.
+   *
+   * @param value input argument used by this operation
+   * @param maxChars input argument used by this operation
+   * @return the operation result
+   */
   private BoundedValue boundedText(String value, int maxChars) {
     int length = value.codePointCount(0, value.length());
     if (length <= maxChars) {
@@ -166,6 +218,12 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     return new BoundedValue(value.substring(0, value.offsetByCodePoints(0, maxChars)), true);
   }
 
+  /**
+   * Implements the {@code classify} operation for this agent component.
+   *
+   * @param exception input argument used by this operation
+   * @return the operation result
+   */
   private AgentSqlErrorCode classify(SQLException exception) {
     String message = exception.getMessage();
     String normalized = message == null ? "" : message.toLowerCase(Locale.ROOT);
@@ -178,6 +236,12 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     return AgentSqlErrorCode.EXECUTION_FAILED;
   }
 
+  /**
+   * Implements the {@code safeMessage} operation for this agent component.
+   *
+   * @param code input argument used by this operation
+   * @return the operation result
+   */
   private String safeMessage(AgentSqlErrorCode code) {
     return switch (code) {
       case TIMEOUT -> "Agent SQL query timed out";
@@ -186,6 +250,12 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     };
   }
 
+  /**
+   * Implements the {@code queryTimeoutSeconds} operation for this agent component.
+   *
+   * @param timeout input argument used by this operation
+   * @return the operation result
+   */
   private int queryTimeoutSeconds(Duration timeout) {
     long millis;
     try {
@@ -197,14 +267,32 @@ public final class H2AgentSqlRepository implements AgentSqlRepository {
     return (int) Math.clamp(seconds, 1, Integer.MAX_VALUE / 1_000);
   }
 
+  /**
+   * Implements the {@code elapsedMillis} operation for this agent component.
+   *
+   * @param startedAt input argument used by this operation
+   * @return the operation result
+   */
   private long elapsedMillis(long startedAt) {
     return Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
   }
 
+  /**
+   * Implements the {@code maxRowsWithSentinel} operation for this agent component.
+   *
+   * @param maxRows input argument used by this operation
+   * @return the operation result
+   */
   private int maxRowsWithSentinel(int maxRows) {
     return maxRows == Integer.MAX_VALUE ? Integer.MAX_VALUE : maxRows + 1;
   }
 
+  /**
+   * Implements the {@code safeFingerprint} operation for this agent component.
+   *
+   * @param fingerprint input argument used by this operation
+   * @return the operation result
+   */
   private String safeFingerprint(String fingerprint) {
     return fingerprint != null && fingerprint.matches("[0-9a-f]{64}") ? fingerprint : "invalid";
   }

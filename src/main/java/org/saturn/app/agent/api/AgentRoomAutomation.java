@@ -15,8 +15,18 @@ public interface AgentRoomAutomation {
 
   Outcome onMessage(ChatMessage message);
 
+  /**
+   * Implements the {@code onJoin} operation for this agent component.
+   *
+   * @param user input argument used by this operation
+   */
   default void onJoin(User user) {}
 
+  /**
+   * Implements the {@code none} operation for this agent component.
+   *
+   * @return the operation result
+   */
   static AgentRoomAutomation none() {
     return ignored -> Outcome.PASS;
   }

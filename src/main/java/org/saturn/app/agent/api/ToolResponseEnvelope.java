@@ -30,23 +30,52 @@ public record ToolResponseEnvelope(String status, JsonElement data, Error error)
     }
   }
 
+  /**
+   * Implements the {@code success} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   public static ToolResponseEnvelope success(String content) {
     return new ToolResponseEnvelope("success", parse(content), null);
   }
 
+  /**
+   * Implements the {@code error} operation for this agent component.
+   *
+   * @param code input argument used by this operation
+   * @param message input argument used by this operation
+   * @return the operation result
+   */
   public static ToolResponseEnvelope error(String code, String message) {
     return new ToolResponseEnvelope("error", JsonNull.INSTANCE, new Error(code, message));
   }
 
+  /**
+   * Implements the {@code toJson} operation for this agent component.
+   *
+   * @return the operation result
+   */
   public String toJson() {
     return GSON.toJson(this);
   }
 
+  /**
+   * Implements the {@code data} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public JsonElement data() {
     return data.deepCopy();
   }
 
+  /**
+   * Implements the {@code parse} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   private static JsonElement parse(String content) {
     if (content == null) {
       return JsonNull.INSTANCE;

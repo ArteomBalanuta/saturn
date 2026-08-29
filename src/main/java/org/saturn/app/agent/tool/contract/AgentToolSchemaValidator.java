@@ -6,8 +6,14 @@ import com.google.gson.JsonPrimitive;
 
 /** Validates the schema of agent tool definitions and calls. */
 public final class AgentToolSchemaValidator {
+  /** Implements the {@code AgentToolSchemaValidator} operation for this agent component. */
   private AgentToolSchemaValidator() {}
 
+  /**
+   * Implements the {@code validateSchema} operation for this agent component.
+   *
+   * @param schema input argument used by this operation
+   */
   public static void validateSchema(JsonObject schema) {
     if (!schema.has("type")
         || !schema.get("type").isJsonPrimitive()
@@ -26,6 +32,11 @@ public final class AgentToolSchemaValidator {
     validateRequiredDeclarations(schema, "tool");
   }
 
+  /**
+   * Implements the {@code validateResultSchema} operation for this agent component.
+   *
+   * @param schema input argument used by this operation
+   */
   public static void validateResultSchema(JsonObject schema) {
     if (!schema.has("type")
         || !schema.get("type").isJsonPrimitive()
@@ -42,6 +53,13 @@ public final class AgentToolSchemaValidator {
     validateRequiredDeclarations(schema, "tool result");
   }
 
+  /**
+   * Implements the {@code validateArguments} operation for this agent component.
+   *
+   * @param schema input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   public static String validateArguments(JsonObject schema, JsonObject arguments) {
     validateSchema(schema);
     JsonObject properties =
@@ -90,6 +108,13 @@ public final class AgentToolSchemaValidator {
     return null;
   }
 
+  /**
+   * Implements the {@code validateResult} operation for this agent component.
+   *
+   * @param schema input argument used by this operation
+   * @param result input argument used by this operation
+   * @return the operation result
+   */
   public static String validateResult(JsonObject schema, JsonElement result) {
     validateResultSchema(schema);
     String type = schema.get("type").getAsString();
@@ -107,6 +132,15 @@ public final class AgentToolSchemaValidator {
     return null;
   }
 
+  /**
+   * Implements the {@code validateConstraints} operation for this agent component.
+   *
+   * @param parameter input argument used by this operation
+   * @param schema input argument used by this operation
+   * @param value input argument used by this operation
+   * @param type input argument used by this operation
+   * @return the operation result
+   */
   private static String validateConstraints(
       String parameter, JsonObject schema, JsonElement value, String type) {
     if (schema.has("enum") && !contains(schema.getAsJsonArray("enum"), value)) {
@@ -136,6 +170,13 @@ public final class AgentToolSchemaValidator {
     return null;
   }
 
+  /**
+   * Implements the {@code matchesType} operation for this agent component.
+   *
+   * @param expected input argument used by this operation
+   * @param value input argument used by this operation
+   * @return the operation result
+   */
   private static boolean matchesType(String expected, JsonElement value) {
     return switch (expected) {
       case "any" -> true;
@@ -153,6 +194,12 @@ public final class AgentToolSchemaValidator {
     };
   }
 
+  /**
+   * Implements the {@code validatePropertyTypes} operation for this agent component.
+   *
+   * @param schema input argument used by this operation
+   * @param subject input argument used by this operation
+   */
   private static void validatePropertyTypes(JsonObject schema, String subject) {
     if (!schema.has("properties")) {
       return;
@@ -173,6 +220,12 @@ public final class AgentToolSchemaValidator {
     }
   }
 
+  /**
+   * Implements the {@code validateRequiredDeclarations} operation for this agent component.
+   *
+   * @param schema input argument used by this operation
+   * @param subject input argument used by this operation
+   */
   private static void validateRequiredDeclarations(JsonObject schema, String subject) {
     if (!schema.has("required")) {
       return;
@@ -193,6 +246,12 @@ public final class AgentToolSchemaValidator {
     }
   }
 
+  /**
+   * Implements the {@code isSupportedType} operation for this agent component.
+   *
+   * @param type input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isSupportedType(String type) {
     return switch (type) {
       case "any", "string", "boolean", "number", "integer", "object", "array", "null" -> true;
@@ -200,6 +259,13 @@ public final class AgentToolSchemaValidator {
     };
   }
 
+  /**
+   * Implements the {@code contains} operation for this agent component.
+   *
+   * @param values input argument used by this operation
+   * @param candidate input argument used by this operation
+   * @return the operation result
+   */
   private static boolean contains(com.google.gson.JsonArray values, JsonElement candidate) {
     for (JsonElement value : values) {
       if (value.equals(candidate)) {

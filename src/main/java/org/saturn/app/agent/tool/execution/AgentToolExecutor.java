@@ -23,6 +23,7 @@ import org.saturn.app.agent.config.AgentConfig;
 import org.saturn.app.agent.llm.LlmToolCall;
 import org.saturn.app.agent.tool.contract.AgentToolSchemaValidator;
 
+/** Documents the AgentToolExecutor operation and its boundary behavior. */
 @Slf4j
 /**
  * Executes provider tool calls with request-local validation, safety budgets, and observations.
@@ -46,15 +47,36 @@ public final class AgentToolExecutor implements AutoCloseable {
   private final List<AgentToolExecutionMiddleware> middleware;
   private final List<AgentToolExecutionObserver> observers;
 
+  /**
+   * Implements the {@code AgentToolExecutor} operation for this agent component.
+   *
+   * @param registry input argument used by this operation
+   * @param config input argument used by this operation
+   */
   public AgentToolExecutor(AgentToolRegistry registry, AgentConfig config) {
     this(registry, config, Set.of(), AgentToolExecutionHooks.empty());
   }
 
+  /**
+   * Implements the {@code AgentToolExecutor} operation for this agent component.
+   *
+   * @param registry input argument used by this operation
+   * @param config input argument used by this operation
+   * @param allowedTools input argument used by this operation
+   */
   public AgentToolExecutor(
       AgentToolRegistry registry, AgentConfig config, Set<String> allowedTools) {
     this(registry, config, allowedTools, AgentToolExecutionHooks.empty());
   }
 
+  /**
+   * Implements the {@code AgentToolExecutor} operation for this agent component.
+   *
+   * @param registry input argument used by this operation
+   * @param config input argument used by this operation
+   * @param allowedTools input argument used by this operation
+   * @param hooks input argument used by this operation
+   */
   public AgentToolExecutor(
       AgentToolRegistry registry,
       AgentConfig config,
@@ -63,6 +85,20 @@ public final class AgentToolExecutor implements AutoCloseable {
     this(registry, config, allowedTools, hooks.middleware(), hooks.observers());
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param registry the registry input; null handling follows the validation performed by this
+   *     declaration
+   * @param config the config input; null handling follows the validation performed by this
+   *     declaration
+   * @param allowedTools the allowedTools input; null handling follows the validation performed by
+   *     this declaration
+   * @param middleware the middleware input; null handling follows the validation performed by this
+   *     declaration
+   * @param observers the observers input; null handling follows the validation performed by this
+   *     declaration
+   */
   AgentToolExecutor(
       AgentToolRegistry registry,
       AgentConfig config,
@@ -85,11 +121,28 @@ public final class AgentToolExecutor implements AutoCloseable {
     return execute(context, call, null);
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param call input argument used by this operation
+   * @param classifiedDescriptor input argument used by this operation
+   * @return the operation result
+   */
   private AgentToolResult execute(
       AgentContext context, LlmToolCall call, AgentToolDescriptor classifiedDescriptor) {
     return execute(context, call, classifiedDescriptor, AgentToolBatchContext.unlimited());
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param call input argument used by this operation
+   * @param classifiedDescriptor input argument used by this operation
+   * @param batch input argument used by this operation
+   * @return the operation result
+   */
   private AgentToolResult execute(
       AgentContext context,
       LlmToolCall call,
@@ -190,6 +243,14 @@ public final class AgentToolExecutor implements AutoCloseable {
     return executeAll(context, calls, AgentToolBatchContext.unlimited());
   }
 
+  /**
+   * Implements the {@code executeAll} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param calls input argument used by this operation
+   * @param batch input argument used by this operation
+   * @return the operation result
+   */
   public List<AgentToolResult> executeAll(
       AgentContext context, List<LlmToolCall> calls, AgentToolBatchContext batch) {
     List<AgentScheduledToolCall> scheduledCalls = new ArrayList<>();
@@ -217,6 +278,15 @@ public final class AgentToolExecutor implements AutoCloseable {
     toolInvoker.close();
   }
 
+  /**
+   * Implements the {@code oneShotContinuation} operation for this agent component.
+   *
+   * @param tool input argument used by this operation
+   * @param context input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @param timeout input argument used by this operation
+   * @return the operation result
+   */
   private AgentToolExecutionMiddleware.Continuation oneShotContinuation(
       AgentTool tool, AgentContext context, JsonObject arguments, Duration timeout) {
     AtomicBoolean invoked = new AtomicBoolean();
@@ -228,6 +298,16 @@ public final class AgentToolExecutor implements AutoCloseable {
     };
   }
 
+  /**
+   * Implements the {@code executeMiddleware} operation for this agent component.
+   *
+   * @param index input argument used by this operation
+   * @param context input argument used by this operation
+   * @param tool input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @param continuation input argument used by this operation
+   * @return the operation result
+   */
   private AgentToolResult executeMiddleware(
       int index,
       AgentToolExecutionContext context,
@@ -247,6 +327,12 @@ public final class AgentToolExecutor implements AutoCloseable {
             () -> executeMiddleware(index + 1, context, tool, arguments, continuation));
   }
 
+  /**
+   * Implements the {@code notifyObservers} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param result input argument used by this operation
+   */
   private void notifyObservers(AgentToolExecutionContext context, AgentToolResult result) {
     for (AgentToolExecutionObserver observer : observers) {
       try {
@@ -260,6 +346,15 @@ public final class AgentToolExecutor implements AutoCloseable {
     }
   }
 
+  /**
+   * Implements the {@code executeWithTimeout} operation for this agent component.
+   *
+   * @param tool input argument used by this operation
+   * @param context input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @param descriptorTimeout input argument used by this operation
+   * @return the operation result
+   */
   private AgentToolResult executeWithTimeout(
       AgentTool tool, AgentContext context, JsonObject arguments, Duration descriptorTimeout)
       throws InterruptedException, ExecutionException, TimeoutException {
@@ -267,10 +362,25 @@ public final class AgentToolExecutor implements AutoCloseable {
     return toolInvoker.invoke(tool, context, arguments, timeout);
   }
 
+  /**
+   * Implements the {@code error} operation for this agent component.
+   *
+   * @param call input argument used by this operation
+   * @param code input argument used by this operation
+   * @param message input argument used by this operation
+   * @return the operation result
+   */
   private AgentToolResult error(LlmToolCall call, String code, String message) {
     return AgentToolResult.error(call.id(), call.name(), code, message);
   }
 
+  /**
+   * Implements the {@code classify} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param call input argument used by this operation
+   * @return the operation result
+   */
   private Classification classify(AgentContext context, LlmToolCall call) {
     AgentTool tool = registry.find(context, call.name()).orElse(null);
     if (tool == null) {
@@ -302,6 +412,12 @@ public final class AgentToolExecutor implements AutoCloseable {
       AgentToolDescriptor descriptor,
       AgentToolResult error) {}
 
+  /**
+   * Implements the {@code parseResult} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   private JsonElement parseResult(String content) {
     if (content == null) {
       return com.google.gson.JsonNull.INSTANCE;

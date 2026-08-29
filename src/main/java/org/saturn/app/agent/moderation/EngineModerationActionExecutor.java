@@ -13,6 +13,13 @@ public final class EngineModerationActionExecutor implements ModerationActionExe
   private final OutService outService;
   private final AgentContext botContext;
 
+  /**
+   * Implements the {@code EngineModerationActionExecutor} operation for this agent component.
+   *
+   * @param gateway input argument used by this operation
+   * @param outService input argument used by this operation
+   * @param botContext input argument used by this operation
+   */
   public EngineModerationActionExecutor(
       SaturnCommandGateway gateway, OutService outService, AgentContext botContext) {
     this.gateway = Objects.requireNonNull(gateway, "gateway");
@@ -20,6 +27,12 @@ public final class EngineModerationActionExecutor implements ModerationActionExe
     this.botContext = Objects.requireNonNull(botContext, "botContext");
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param decision input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public boolean execute(ModerationDecision decision) {
     if (decision == null) {
@@ -45,6 +58,12 @@ public final class EngineModerationActionExecutor implements ModerationActionExe
     }
   }
 
+  /**
+   * Implements the {@code warn} operation for this agent component.
+   *
+   * @param target input argument used by this operation
+   * @return the operation result
+   */
   private boolean warn(String target) {
     outService.enqueueMessageForSending(target, "Please stop flooding.", false);
     return true;

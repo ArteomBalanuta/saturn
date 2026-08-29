@@ -31,6 +31,50 @@ public record AgentConfig(
   private static final int DEFAULT_MAX_STEPS = 5;
   private static final Duration DEFAULT_TOOL_TIMEOUT = Duration.ofSeconds(10);
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param enabled the enabled input; null handling follows the validation performed by this
+   *     declaration
+   * @param endpoint the endpoint input; null handling follows the validation performed by this
+   *     declaration
+   * @param model the model input; null handling follows the validation performed by this
+   *     declaration
+   * @param apiKey the apiKey input; null handling follows the validation performed by this
+   *     declaration
+   * @param timeout the timeout input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxConcurrentRequests the maxConcurrentRequests input; null handling follows the
+   *     validation performed by this declaration
+   * @param maxToolCalls the maxToolCalls input; null handling follows the validation performed by
+   *     this declaration
+   * @param maxCallsPerTool the maxCallsPerTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param maxToolFailures the maxToolFailures input; null handling follows the validation
+   *     performed by this declaration
+   * @param maxPromptChars the maxPromptChars input; null handling follows the validation performed
+   *     by this declaration
+   * @param maxOutputChars the maxOutputChars input; null handling follows the validation performed
+   *     by this declaration
+   * @param memoryTurns the memoryTurns input; null handling follows the validation performed by
+   *     this declaration
+   * @param memoryTtl the memoryTtl input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxRetries the maxRetries input; null handling follows the validation performed by this
+   *     declaration
+   * @param retryBackoff the retryBackoff input; null handling follows the validation performed by
+   *     this declaration
+   * @param maxCompletionTokens the maxCompletionTokens input; null handling follows the validation
+   *     performed by this declaration
+   * @param thinkingEnabled the thinkingEnabled input; null handling follows the validation
+   *     performed by this declaration
+   * @param maxSteps the maxSteps input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxToolCallsPerTurn the maxToolCallsPerTurn input; null handling follows the validation
+   *     performed by this declaration
+   * @param toolTimeout the toolTimeout input; null handling follows the validation performed by
+   *     this declaration
+   */
   public AgentConfig {
     Objects.requireNonNull(endpoint, "endpoint");
     Objects.requireNonNull(model, "model");
@@ -61,6 +105,44 @@ public record AgentConfig(
     }
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param enabled the enabled input; null handling follows the validation performed by this
+   *     declaration
+   * @param endpoint the endpoint input; null handling follows the validation performed by this
+   *     declaration
+   * @param model the model input; null handling follows the validation performed by this
+   *     declaration
+   * @param apiKey the apiKey input; null handling follows the validation performed by this
+   *     declaration
+   * @param timeout the timeout input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxConcurrentRequests the maxConcurrentRequests input; null handling follows the
+   *     validation performed by this declaration
+   * @param maxToolCalls the maxToolCalls input; null handling follows the validation performed by
+   *     this declaration
+   * @param maxCallsPerTool the maxCallsPerTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param maxToolFailures the maxToolFailures input; null handling follows the validation
+   *     performed by this declaration
+   * @param maxPromptChars the maxPromptChars input; null handling follows the validation performed
+   *     by this declaration
+   * @param maxOutputChars the maxOutputChars input; null handling follows the validation performed
+   *     by this declaration
+   * @param memoryTurns the memoryTurns input; null handling follows the validation performed by
+   *     this declaration
+   * @param memoryTtl the memoryTtl input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxRetries the maxRetries input; null handling follows the validation performed by this
+   *     declaration
+   * @param retryBackoff the retryBackoff input; null handling follows the validation performed by
+   *     this declaration
+   * @param maxCompletionTokens the maxCompletionTokens input; null handling follows the validation
+   *     performed by this declaration
+   * @param thinkingEnabled the thinkingEnabled input; null handling follows the validation
+   *     performed by this declaration
+   */
   public AgentConfig(
       boolean enabled,
       URI endpoint,
@@ -102,6 +184,40 @@ public record AgentConfig(
         DEFAULT_TOOL_TIMEOUT);
   }
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param enabled the enabled input; null handling follows the validation performed by this
+   *     declaration
+   * @param endpoint the endpoint input; null handling follows the validation performed by this
+   *     declaration
+   * @param model the model input; null handling follows the validation performed by this
+   *     declaration
+   * @param apiKey the apiKey input; null handling follows the validation performed by this
+   *     declaration
+   * @param timeout the timeout input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxConcurrentRequests the maxConcurrentRequests input; null handling follows the
+   *     validation performed by this declaration
+   * @param maxToolCalls the maxToolCalls input; null handling follows the validation performed by
+   *     this declaration
+   * @param maxCallsPerTool the maxCallsPerTool input; null handling follows the validation
+   *     performed by this declaration
+   * @param maxToolFailures the maxToolFailures input; null handling follows the validation
+   *     performed by this declaration
+   * @param maxPromptChars the maxPromptChars input; null handling follows the validation performed
+   *     by this declaration
+   * @param maxOutputChars the maxOutputChars input; null handling follows the validation performed
+   *     by this declaration
+   * @param memoryTurns the memoryTurns input; null handling follows the validation performed by
+   *     this declaration
+   * @param memoryTtl the memoryTtl input; null handling follows the validation performed by this
+   *     declaration
+   * @param maxRetries the maxRetries input; null handling follows the validation performed by this
+   *     declaration
+   * @param retryBackoff the retryBackoff input; null handling follows the validation performed by
+   *     this declaration
+   */
   public AgentConfig(
       boolean enabled,
       URI endpoint,

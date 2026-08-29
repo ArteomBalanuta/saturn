@@ -29,16 +29,34 @@ public final class OpenAiCompatibleClient implements LlmClient {
   private final Gson gson;
   private final HttpClient httpClient;
 
+  /**
+   * Implements the {@code OpenAiCompatibleClient} operation for this agent component.
+   *
+   * @param config input argument used by this operation
+   */
   public OpenAiCompatibleClient(AgentConfig config) {
     this(config, new Gson(), HttpClient.newBuilder().connectTimeout(config.timeout()).build());
   }
 
+  /**
+   * Implements the {@code OpenAiCompatibleClient} operation for this agent component.
+   *
+   * @param config input argument used by this operation
+   * @param gson input argument used by this operation
+   * @param httpClient input argument used by this operation
+   */
   public OpenAiCompatibleClient(AgentConfig config, Gson gson, HttpClient httpClient) {
     this.config = Objects.requireNonNull(config, "config");
     this.gson = Objects.requireNonNull(gson, "gson");
     this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
   }
 
+  /**
+   * Implements the {@code complete} operation for this agent component.
+   *
+   * @param request input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public LlmResponse complete(LlmRequest request) throws LlmException {
     if (request.projection() != null) {
@@ -80,6 +98,12 @@ public final class OpenAiCompatibleClient implements LlmClient {
     }
   }
 
+  /**
+   * Implements the {@code buildRequest} operation for this agent component.
+   *
+   * @param payload input argument used by this operation
+   * @return the operation result
+   */
   private HttpRequest buildRequest(JsonObject payload) {
     HttpRequest.Builder builder =
         HttpRequest.newBuilder()
@@ -93,6 +117,12 @@ public final class OpenAiCompatibleClient implements LlmClient {
     return builder.build();
   }
 
+  /**
+   * Implements the {@code toJson} operation for this agent component.
+   *
+   * @param request input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject toJson(LlmRequest request) {
     JsonObject payload = new JsonObject();
     config.model().ifPresent(model -> payload.addProperty("model", model));
@@ -119,6 +149,12 @@ public final class OpenAiCompatibleClient implements LlmClient {
     return payload;
   }
 
+  /**
+   * Implements the {@code toJson} operation for this agent component.
+   *
+   * @param message input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject toJson(LlmMessage message) {
     JsonObject json = new JsonObject();
     json.addProperty("role", message.role());
@@ -138,6 +174,12 @@ public final class OpenAiCompatibleClient implements LlmClient {
     return json;
   }
 
+  /**
+   * Implements the {@code toJson} operation for this agent component.
+   *
+   * @param call input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject toJson(LlmToolCall call) {
     JsonObject function = new JsonObject();
     function.addProperty("name", call.name());
@@ -149,6 +191,12 @@ public final class OpenAiCompatibleClient implements LlmClient {
     return json;
   }
 
+  /**
+   * Implements the {@code parse} operation for this agent component.
+   *
+   * @param body input argument used by this operation
+   * @return the operation result
+   */
   private LlmResponse parse(String body) throws LlmException {
     try {
       JsonObject root = gson.fromJson(body, JsonObject.class);
@@ -181,10 +229,22 @@ public final class OpenAiCompatibleClient implements LlmClient {
     }
   }
 
+  /**
+   * Implements the {@code completionUri} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private URI completionUri() {
     return URI.create(config.endpoint() + "/v1/chat/completions");
   }
 
+  /**
+   * Implements the {@code isUnsupportedResponseFormat} operation for this agent component.
+   *
+   * @param statusCode input argument used by this operation
+   * @param body input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isUnsupportedResponseFormat(int statusCode, String body) {
     if (statusCode != 400 && statusCode != 422) {
       return false;
@@ -196,10 +256,21 @@ public final class OpenAiCompatibleClient implements LlmClient {
         || normalized.contains("structured_output");
   }
 
+  /**
+   * Implements the {@code isTransient} operation for this agent component.
+   *
+   * @param statusCode input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isTransient(int statusCode) {
     return statusCode == 429 || statusCode >= 500;
   }
 
+  /**
+   * Implements the {@code backoff} operation for this agent component.
+   *
+   * @param attempt input argument used by this operation
+   */
   private void backoff(int attempt) throws LlmException {
     long multiplier = 1L << Math.min(attempt, 20);
     long millis;

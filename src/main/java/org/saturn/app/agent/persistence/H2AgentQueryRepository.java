@@ -16,14 +16,32 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
   private static final int MAX_USER_HISTORY_ROW_LIMIT = 500;
   private final H2ReadOnlyConnectionFactory connectionFactory;
 
+  /**
+   * Implements the {@code H2AgentQueryRepository} operation for this agent component.
+   *
+   * @param databasePath input argument used by this operation
+   */
   public H2AgentQueryRepository(String databasePath) {
     this(new H2ReadOnlyConnectionFactory(databasePath));
   }
 
+  /**
+   * Implements the {@code H2AgentQueryRepository} operation for this agent component.
+   *
+   * @param connectionFactory input argument used by this operation
+   */
   public H2AgentQueryRepository(H2ReadOnlyConnectionFactory connectionFactory) {
     this.connectionFactory = Objects.requireNonNull(connectionFactory, "connectionFactory");
   }
 
+  /**
+   * Implements the {@code execute} operation for this agent component.
+   *
+   * @param queryName input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public JsonObject execute(String queryName, JsonObject arguments, AgentContext context) {
     return switch (queryName) {
@@ -38,6 +56,13 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
     };
   }
 
+  /**
+   * Implements the {@code count} operation for this agent component.
+   *
+   * @param sql input argument used by this operation
+   * @param field input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject count(String sql, String field) {
     try (Connection connection = openReadOnly();
         PreparedStatement statement = connection.prepareStatement(sql);
@@ -50,6 +75,13 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
     }
   }
 
+  /**
+   * Implements the {@code recentMessages} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject recentMessages(AgentContext context, JsonObject arguments) {
     if (context.trip() == null || context.trip().isBlank()) {
       return rows(new JsonArray());
@@ -84,6 +116,13 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
     }
   }
 
+  /**
+   * Implements the {@code knownNicks} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject knownNicks(AgentContext context, JsonObject arguments) {
     String trip = arguments.has("trip") ? arguments.get("trip").getAsString() : context.trip();
     if (trip == null || trip.isBlank()) {
@@ -117,6 +156,13 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
     }
   }
 
+  /**
+   * Implements the {@code recentMessagesForUser} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject recentMessagesForUser(AgentContext context, JsonObject arguments) {
     if (!arguments.has("nick")
         || !arguments.get("nick").isJsonPrimitive()
@@ -164,6 +210,13 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
     }
   }
 
+  /**
+   * Implements the {@code recentMessagesForRoom} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   private JsonObject recentMessagesForRoom(AgentContext context, JsonObject arguments) {
     String sql =
         """
@@ -193,6 +246,13 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
     }
   }
 
+  /**
+   * Implements the {@code room} operation for this agent component.
+   *
+   * @param arguments input argument used by this operation
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   private static String room(JsonObject arguments, AgentContext context) {
     if (!arguments.has("room")) {
       return context.room();
@@ -205,6 +265,12 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
     return arguments.get("room").getAsString().trim();
   }
 
+  /**
+   * Implements the {@code messageRow} operation for this agent component.
+   *
+   * @param resultSet input argument used by this operation
+   * @return the operation result
+   */
   private static JsonObject messageRow(ResultSet resultSet) throws SQLException {
     JsonObject row = new JsonObject();
     row.addProperty("name", resultSet.getString("name"));
@@ -216,25 +282,55 @@ public final class H2AgentQueryRepository implements AgentQueryRepository {
     return row;
   }
 
+  /**
+   * Implements the {@code openReadOnly} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private Connection openReadOnly() throws SQLException {
     return connectionFactory.open();
   }
 
+  /**
+   * Implements the {@code rowLimit} operation for this agent component.
+   *
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   private static int rowLimit(JsonObject arguments) {
     return rowLimit(arguments, MAX_ROW_LIMIT);
   }
 
+  /**
+   * Implements the {@code rowLimit} operation for this agent component.
+   *
+   * @param arguments input argument used by this operation
+   * @param maximum input argument used by this operation
+   * @return the operation result
+   */
   private static int rowLimit(JsonObject arguments, int maximum) {
     int requested = arguments.has("limit") ? arguments.get("limit").getAsInt() : DEFAULT_ROW_LIMIT;
     return Math.max(1, Math.min(requested, maximum));
   }
 
+  /**
+   * Implements the {@code userHistoryRowLimit} operation for this agent component.
+   *
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   private static int userHistoryRowLimit(JsonObject arguments) {
     int requested =
         arguments.has("limit") ? arguments.get("limit").getAsInt() : MAX_USER_HISTORY_ROW_LIMIT;
     return Math.max(1, Math.min(requested, MAX_USER_HISTORY_ROW_LIMIT));
   }
 
+  /**
+   * Implements the {@code rows} operation for this agent component.
+   *
+   * @param values input argument used by this operation
+   * @return the operation result
+   */
   private static JsonObject rows(JsonArray values) {
     JsonObject result = new JsonObject();
     result.add("rows", values);

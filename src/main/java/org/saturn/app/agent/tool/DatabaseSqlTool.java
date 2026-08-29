@@ -40,6 +40,14 @@ public final class DatabaseSqlTool implements AgentTool {
   private final Gson gson = new Gson();
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
+  /**
+   * Implements the {@code DatabaseSqlTool} operation for this agent component.
+   *
+   * @param schemaRepository input argument used by this operation
+   * @param policy input argument used by this operation
+   * @param sqlRepository input argument used by this operation
+   * @param config input argument used by this operation
+   */
   public DatabaseSqlTool(
       AgentSchemaRepository schemaRepository,
       AgentSqlPolicy policy,
@@ -51,16 +59,32 @@ public final class DatabaseSqlTool implements AgentTool {
     this.config = Objects.requireNonNull(config, "config");
   }
 
+  /**
+   * Implements the {@code name} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String name() {
     return "database_sql";
   }
 
+  /**
+   * Implements the {@code description} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String description() {
     return PROMPTS.toolDescription(name());
   }
 
+  /**
+   * Implements the {@code descriptor} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentToolDescriptor descriptor(AgentContext context) {
     return new AgentToolDescriptor(
@@ -85,6 +109,11 @@ public final class DatabaseSqlTool implements AgentTool {
         requiredSuccessfulTools());
   }
 
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public JsonObject parameters() {
     JsonObject sql = new JsonObject();
@@ -101,6 +130,12 @@ public final class DatabaseSqlTool implements AgentTool {
     return schema;
   }
 
+  /**
+   * Implements the {@code isAvailableTo} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public boolean isAvailableTo(AgentContext context) {
     return config.enabled()
@@ -108,13 +143,18 @@ public final class DatabaseSqlTool implements AgentTool {
         && context.hasCapability(AgentCapability.DYNAMIC_SQL);
   }
 
+  /**
+   * Implements the {@code requiredSuccessfulTools} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public Set<String> requiredSuccessfulTools() {
     return Set.of("database_schema");
   }
 
-  @Override
   /** Validates and executes the SQL against the current schema, returning a safe error payload. */
+  @Override
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     if (!isAvailableTo(context)) {
       return AgentToolResult.error(null, name(), "Tool is unavailable for this caller");
@@ -142,6 +182,12 @@ public final class DatabaseSqlTool implements AgentTool {
     }
   }
 
+  /**
+   * Implements the {@code error} operation for this agent component.
+   *
+   * @param code input argument used by this operation
+   * @return the operation result
+   */
   private AgentToolResult error(AgentSqlErrorCode code) {
     JsonObject payload = new JsonObject();
     payload.addProperty("code", code.name());
@@ -149,6 +195,12 @@ public final class DatabaseSqlTool implements AgentTool {
     return AgentToolResult.error(null, name(), gson.toJson(payload));
   }
 
+  /**
+   * Implements the {@code safeMessage} operation for this agent component.
+   *
+   * @param code input argument used by this operation
+   * @return the operation result
+   */
   private String safeMessage(AgentSqlErrorCode code) {
     return switch (code) {
       case EMPTY_SQL -> "A non-blank SQL string is required";

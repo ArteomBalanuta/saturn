@@ -17,11 +17,24 @@ public final class AgentTurnMemory {
   private final AgentConfig config;
   private final AgentResponseSanitizer responseSanitizer = new AgentResponseSanitizer();
 
+  /**
+   * Implements the {@code AgentTurnMemory} operation for this agent component.
+   *
+   * @param store input argument used by this operation
+   * @param config input argument used by this operation
+   */
   public AgentTurnMemory(AgentMemoryStore store, AgentConfig config) {
     this.store = store;
     this.config = config;
   }
 
+  /**
+   * Implements the {@code load} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param correlationId input argument used by this operation
+   * @return the operation result
+   */
   public List<LlmMessage> load(AgentContext context, String correlationId)
       throws AgentRoutingException {
     List<LlmMessage> loaded;
@@ -42,6 +55,14 @@ public final class AgentTurnMemory {
     return history;
   }
 
+  /**
+   * Implements the {@code append} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param user input argument used by this operation
+   * @param assistant input argument used by this operation
+   * @param correlationId input argument used by this operation
+   */
   public void append(AgentContext context, String user, String assistant, String correlationId)
       throws AgentRoutingException {
     try {
@@ -52,6 +73,13 @@ public final class AgentTurnMemory {
     log.info("Agent memory persisted, correlationId={}", correlationId);
   }
 
+  /**
+   * Implements the {@code appendToolEvidence} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @param results input argument used by this operation
+   * @param correlationId input argument used by this operation
+   */
   public void appendToolEvidence(
       AgentContext context, List<AgentToolResult> results, String correlationId)
       throws AgentRoutingException {
@@ -67,6 +95,13 @@ public final class AgentTurnMemory {
     }
   }
 
+  /**
+   * Implements the {@code memoryPersistenceFailure} operation for this agent component.
+   *
+   * @param correlationId input argument used by this operation
+   * @param exception input argument used by this operation
+   * @return the operation result
+   */
   private static AgentRoutingException memoryPersistenceFailure(
       String correlationId, RuntimeException exception) {
     log.warn(
@@ -75,6 +110,13 @@ public final class AgentTurnMemory {
     return new AgentRoutingException("Agent memory persistence failed", exception);
   }
 
+  /**
+   * Implements the {@code memoryLoadFailure} operation for this agent component.
+   *
+   * @param correlationId input argument used by this operation
+   * @param exception input argument used by this operation
+   * @return the operation result
+   */
   private static AgentRoutingException memoryLoadFailure(
       String correlationId, RuntimeException exception) {
     log.warn(

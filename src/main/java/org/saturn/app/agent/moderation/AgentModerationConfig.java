@@ -21,6 +21,38 @@ public record AgentModerationConfig(
     int suspiciousNameJoinCount,
     Duration suspiciousNameJoinWindow,
     Duration actionCooldown) {
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param enabled the enabled input; null handling follows the validation performed by this
+   *     declaration
+   * @param messageBurstCount the messageBurstCount input; null handling follows the validation
+   *     performed by this declaration
+   * @param messageBurstWindow the messageBurstWindow input; null handling follows the validation
+   *     performed by this declaration
+   * @param repeatedMessageCount the repeatedMessageCount input; null handling follows the
+   *     validation performed by this declaration
+   * @param repeatedMessageWindow the repeatedMessageWindow input; null handling follows the
+   *     validation performed by this declaration
+   * @param secondBreachWindow the secondBreachWindow input; null handling follows the validation
+   *     performed by this declaration
+   * @param postKickWindow the postKickWindow input; null handling follows the validation performed
+   *     by this declaration
+   * @param joinBurstCount the joinBurstCount input; null handling follows the validation performed
+   *     by this declaration
+   * @param joinBurstWindow the joinBurstWindow input; null handling follows the validation
+   *     performed by this declaration
+   * @param sameHashJoinCount the sameHashJoinCount input; null handling follows the validation
+   *     performed by this declaration
+   * @param sameHashJoinWindow the sameHashJoinWindow input; null handling follows the validation
+   *     performed by this declaration
+   * @param suspiciousNameJoinCount the suspiciousNameJoinCount input; null handling follows the
+   *     validation performed by this declaration
+   * @param suspiciousNameJoinWindow the suspiciousNameJoinWindow input; null handling follows the
+   *     validation performed by this declaration
+   * @param actionCooldown the actionCooldown input; null handling follows the validation performed
+   *     by this declaration
+   */
   public AgentModerationConfig {
     requirePositive(messageBurstCount, "moderationMessageBurstCount");
     requirePositive(messageBurstWindow, "moderationMessageBurstWindowSeconds");
@@ -37,6 +69,12 @@ public record AgentModerationConfig(
     requirePositive(actionCooldown, "moderationActionCooldownSeconds");
   }
 
+  /**
+   * Implements the {@code from} operation for this agent component.
+   *
+   * @param root input argument used by this operation
+   * @return the operation result
+   */
   public static AgentModerationConfig from(Toml root) {
     Toml table = root == null ? null : root.getTable("agent");
     return new AgentModerationConfig(
@@ -75,12 +113,24 @@ public record AgentModerationConfig(
             AgentConfigValueReader.readLong(table, "moderationActionCooldownSeconds", 30)));
   }
 
+  /**
+   * Implements the {@code requirePositive} operation for this agent component.
+   *
+   * @param value input argument used by this operation
+   * @param name input argument used by this operation
+   */
   private static void requirePositive(long value, String name) {
     if (value <= 0) {
       throw new IllegalArgumentException("agent." + name + " must be positive");
     }
   }
 
+  /**
+   * Implements the {@code requirePositive} operation for this agent component.
+   *
+   * @param value input argument used by this operation
+   * @param name input argument used by this operation
+   */
   private static void requirePositive(Duration value, String name) {
     Objects.requireNonNull(value, name);
     if (value.isZero() || value.isNegative()) {

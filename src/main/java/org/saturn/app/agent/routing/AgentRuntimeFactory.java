@@ -20,8 +20,18 @@ import org.saturn.app.service.impl.OutService;
 
 /** Builds the runtime collaborators used to execute agent turns. */
 public final class AgentRuntimeFactory {
+  /** Implements the {@code AgentRuntimeFactory} operation for this agent component. */
   private AgentRuntimeFactory() {}
 
+  /**
+   * Implements the {@code create} operation for this agent component.
+   *
+   * @param engine input argument used by this operation
+   * @param rootConfig input argument used by this operation
+   * @param databasePath input argument used by this operation
+   * @param outService input argument used by this operation
+   * @return the operation result
+   */
   public static AgentService create(
       EngineImpl engine, Toml rootConfig, String databasePath, OutService outService) {
     AgentConfig config = AgentConfigLoader.load(rootConfig, System.getenv());

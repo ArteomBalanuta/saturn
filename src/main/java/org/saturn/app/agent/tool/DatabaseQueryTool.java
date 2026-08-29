@@ -26,20 +26,41 @@ public final class DatabaseQueryTool implements AgentTool {
   private final AgentQueryRepository repository;
   private static final AgentPromptCatalog PROMPTS = new AgentPromptCatalog();
 
+  /**
+   * Implements the {@code DatabaseQueryTool} operation for this agent component.
+   *
+   * @param repository input argument used by this operation
+   */
   public DatabaseQueryTool(AgentQueryRepository repository) {
     this.repository = repository;
   }
 
+  /**
+   * Implements the {@code name} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String name() {
     return "database_query";
   }
 
+  /**
+   * Implements the {@code description} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public String description() {
     return PROMPTS.toolDescription(name());
   }
 
+  /**
+   * Implements the {@code descriptor} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentToolDescriptor descriptor(AgentContext context) {
     return new AgentToolDescriptor(
@@ -64,6 +85,11 @@ public final class DatabaseQueryTool implements AgentTool {
         Set.of());
   }
 
+  /**
+   * Implements the {@code parameters} operation for this agent component.
+   *
+   * @return the operation result
+   */
   @Override
   public JsonObject parameters() {
     JsonArray queryNames = new JsonArray();
@@ -98,8 +124,8 @@ public final class DatabaseQueryTool implements AgentTool {
     return schema;
   }
 
-  @Override
   /** Executes an allow-listed query and converts repository failures into tool errors. */
+  @Override
   public AgentToolResult execute(AgentContext context, JsonObject arguments) {
     if (arguments == null || !arguments.has("query")) {
       return AgentToolResult.error(null, name(), "Missing required query name");

@@ -22,6 +22,12 @@ final class VerifiedQuoteCatalog {
     this.entries = load();
   }
 
+  /**
+   * Finds a verified quote by exact line text, returning no match when absent.
+   *
+   * @param line the line input; null handling follows the validation performed by this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   Optional<Entry> find(String line) {
     if (line == null) {
       return Optional.empty();
@@ -30,10 +36,20 @@ final class VerifiedQuoteCatalog {
     return entries.stream().filter(entry -> entry.line().equals(normalized)).findFirst();
   }
 
+  /**
+   * Returns the deterministic fallback quote.
+   *
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   Entry fallback() {
     return entries.getFirst();
   }
 
+  /**
+   * Returns the verified quote entries used to construct prompts.
+   *
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   String promptEntries() {
     return entries.stream()
         .map(entry -> entry.id() + ": " + entry.line())
@@ -97,6 +113,11 @@ final class VerifiedQuoteCatalog {
       Objects.requireNonNull(reference);
     }
 
+    /**
+     * Returns the quote line text.
+     *
+     * @return the computed result; empty or false indicates that no applicable value was available
+     */
     String line() {
       return "\"" + quote + "\" — " + book + ", " + author;
     }

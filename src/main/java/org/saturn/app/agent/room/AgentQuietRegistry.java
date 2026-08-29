@@ -25,6 +25,12 @@ public final class AgentQuietRegistry {
   private final Clock clock;
   private final ConcurrentMap<QuietKey, Instant> quietUntil = new ConcurrentHashMap<>();
 
+  /**
+   * Implements the {@code AgentQuietRegistry} operation for this agent component.
+   *
+   * @param quietDuration input argument used by this operation
+   * @param clock input argument used by this operation
+   */
   public AgentQuietRegistry(Duration quietDuration, Clock clock) {
     this.quietDuration = Objects.requireNonNull(quietDuration, "quietDuration");
     this.clock = Objects.requireNonNull(clock, "clock");
@@ -33,10 +39,21 @@ public final class AgentQuietRegistry {
     }
   }
 
+  /**
+   * Implements the {@code silence} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   */
   public void silence(AgentContext context) {
     quietUntil.put(key(context), clock.instant().plus(quietDuration));
   }
 
+  /**
+   * Implements the {@code isQuiet} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   public boolean isQuiet(AgentContext context) {
     QuietKey key = key(context);
     Instant expiresAt = quietUntil.get(key);
@@ -50,6 +67,13 @@ public final class AgentQuietRegistry {
     return false;
   }
 
+  /**
+   * Implements the {@code isPoliteQuietRequest} operation for this agent component.
+   *
+   * @param text input argument used by this operation
+   * @param botNick input argument used by this operation
+   * @return the operation result
+   */
   public boolean isPoliteQuietRequest(String text, String botNick) {
     if (text == null || text.isBlank()) {
       return false;
@@ -58,6 +82,12 @@ public final class AgentQuietRegistry {
     return POLITE_LANGUAGE.matcher(normalized).find() && QUIET_INTENT.matcher(normalized).find();
   }
 
+  /**
+   * Implements the {@code key} operation for this agent component.
+   *
+   * @param context input argument used by this operation
+   * @return the operation result
+   */
   private static QuietKey key(AgentContext context) {
     return new QuietKey(
         context.room().strip().toLowerCase(Locale.ROOT), AgentUserIdentity.from(context));

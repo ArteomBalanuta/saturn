@@ -34,10 +34,22 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
       PROMPTS.text("correction/router-command-not-executed-correction.txt");
   private final LlmClient client;
 
+  /**
+   * Constructs this value after validating and defensively retaining its supplied inputs.
+   *
+   * @param client the client input; null handling follows the validation performed by this
+   *     declaration
+   */
   AgentCommandChannelPolicy(LlmClient client) {
     this.client = client;
   }
 
+  /**
+   * Implements the {@code apply} operation for this agent component.
+   *
+   * @param input input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentTurnPolicyResult apply(AgentTurnPolicyInput input)
       throws LlmException, AgentRoutingException {
@@ -53,6 +65,25 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
     return new AgentTurnPolicyResult(result.response(), result.correctionUsed());
   }
 
+  /**
+   * Enforces structured command output when prose contains a Saturn command.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param definitions the definitions input; null handling follows the validation performed by
+   *     this declaration
+   * @param guard the guard input; null handling follows the validation performed by this
+   *     declaration
+   * @param state the state input; null handling follows the validation performed by this
+   *     declaration
+   * @param prompt the prompt input; null handling follows the validation performed by this
+   *     declaration
+   * @param correlationId the correlationId input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   Result enforce(
       LlmResponse response,
       List<LlmMessage> messages,
@@ -92,6 +123,14 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
     return new Result(corrected, true);
   }
 
+  /**
+   * Implements the {@code resolve} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @param guard input argument used by this operation
+   * @param command input argument used by this operation
+   * @return the operation result
+   */
   private static LlmResponse resolve(
       LlmResponse response, AgentCommandProseGuard guard, String command)
       throws AgentRoutingException {
@@ -105,11 +144,22 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
     return new LlmResponse(content, List.of(), "stop");
   }
 
+  /**
+   * Implements the {@code invalid} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private static AgentRoutingException invalid() {
     return new AgentRoutingException(
         "Agent did not return exactly one required Saturn tool call or non-command correction");
   }
 
+  /**
+   * Implements the {@code correctionDefinitions} operation for this agent component.
+   *
+   * @param definitions input argument used by this operation
+   * @return the operation result
+   */
   private static List<JsonObject> correctionDefinitions(List<JsonObject> definitions) {
     List<JsonObject> values = new ArrayList<>();
     definitions.stream()
@@ -120,12 +170,23 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
     return List.copyOf(values);
   }
 
+  /**
+   * Implements the {@code isRunCommand} operation for this agent component.
+   *
+   * @param definition input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isRunCommand(JsonObject definition) {
     return AgentToolDefinitionJson.functionName(definition)
         .filter("run_command"::equals)
         .isPresent();
   }
 
+  /**
+   * Implements the {@code responseWithoutCommandDefinition} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private static JsonObject responseWithoutCommandDefinition() {
     JsonObject response = new JsonObject();
     response.addProperty("type", "string");
@@ -149,6 +210,12 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
     return definition;
   }
 
+  /**
+   * Implements the {@code responseWithoutCommand} operation for this agent component.
+   *
+   * @param arguments input argument used by this operation
+   * @return the operation result
+   */
   private static String responseWithoutCommand(String arguments) throws AgentRoutingException {
     try {
       JsonObject parsed = JsonParser.parseString(arguments).getAsJsonObject();
@@ -164,6 +231,11 @@ final class AgentCommandChannelPolicy implements AgentTurnPolicy {
     }
   }
 
+  /**
+   * Implements the {@code invalidResponse} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private static AgentRoutingException invalidResponse() {
     return new AgentRoutingException("Agent returned an invalid non-command correction");
   }

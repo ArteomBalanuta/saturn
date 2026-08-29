@@ -17,15 +17,39 @@ import org.saturn.app.util.Util;
 public final class AgentInvocationFactory {
   private final AgentParticipationConfig config;
 
+  /**
+   * Implements the {@code AgentInvocationFactory} operation for this agent component.
+   *
+   * @param config input argument used by this operation
+   */
   public AgentInvocationFactory(AgentParticipationConfig config) {
     this.config = Objects.requireNonNull(config, "config");
   }
 
+  /**
+   * Implements the {@code create} operation for this agent component.
+   *
+   * @param engine input argument used by this operation
+   * @param message input argument used by this operation
+   * @param prompt input argument used by this operation
+   * @param mode input argument used by this operation
+   * @return the operation result
+   */
   public AgentInvocation create(
       EngineImpl engine, ChatMessage message, String prompt, AgentInvocationMode mode) {
     return create(engine, message, prompt, mode, false);
   }
 
+  /**
+   * Implements the {@code create} operation for this agent component.
+   *
+   * @param engine input argument used by this operation
+   * @param message input argument used by this operation
+   * @param prompt input argument used by this operation
+   * @param mode input argument used by this operation
+   * @param commandOriginated input argument used by this operation
+   * @return the operation result
+   */
   public AgentInvocation create(
       EngineImpl engine,
       ChatMessage message,
@@ -71,6 +95,13 @@ public final class AgentInvocationFactory {
         UUID.randomUUID().toString(), context, prompt, mode, message.getText(), commandOriginated);
   }
 
+  /**
+   * Implements the {@code isDynamicSqlAdmin} operation for this agent component.
+   *
+   * @param engine input argument used by this operation
+   * @param trip input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isDynamicSqlAdmin(EngineImpl engine, String trip) {
     if (trip == null || trip.isBlank()) {
       return false;

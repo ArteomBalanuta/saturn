@@ -10,8 +10,16 @@ public final class AgentMessageHistory {
   private static final String INTERNAL_TOOL_EVIDENCE_PREFIX = "[Internal tool evidence from ";
   private static final String INTERNAL_TOOL_EVIDENCE_SUFFIX = "]\n";
 
+  /** Implements the {@code AgentMessageHistory} operation for this agent component. */
   private AgentMessageHistory() {}
 
+  /**
+   * Implements the {@code latestContent} operation for this agent component.
+   *
+   * @param messages input argument used by this operation
+   * @param role input argument used by this operation
+   * @return the operation result
+   */
   public static Optional<String> latestContent(List<LlmMessage> messages, String role) {
     for (int index = messages.size() - 1; index >= 0; index--) {
       LlmMessage message = messages.get(index);
@@ -22,6 +30,12 @@ public final class AgentMessageHistory {
     return Optional.empty();
   }
 
+  /**
+   * Implements the {@code latestConversationAssistant} operation for this agent component.
+   *
+   * @param messages input argument used by this operation
+   * @return the operation result
+   */
   public static Optional<String> latestConversationAssistant(List<LlmMessage> messages) {
     for (int index = messages.size() - 1; index >= 0; index--) {
       LlmMessage message = messages.get(index);
@@ -32,6 +46,12 @@ public final class AgentMessageHistory {
     return Optional.empty();
   }
 
+  /**
+   * Implements the {@code internalToolEvidenceName} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   public static Optional<String> internalToolEvidenceName(String content) {
     if (content == null || !content.startsWith(INTERNAL_TOOL_EVIDENCE_PREFIX)) {
       return Optional.empty();
@@ -44,6 +64,12 @@ public final class AgentMessageHistory {
     return Optional.of(content.substring(INTERNAL_TOOL_EVIDENCE_PREFIX.length(), end));
   }
 
+  /**
+   * Implements the {@code isInternalToolEvidence} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   public static boolean isInternalToolEvidence(String content) {
     return content != null && content.startsWith(INTERNAL_TOOL_EVIDENCE_PREFIX);
   }

@@ -45,6 +45,11 @@ public final class AgentResponseCorrector {
 
   private final LlmClient client;
 
+  /**
+   * Implements the {@code AgentResponseCorrector} operation for this agent component.
+   *
+   * @param client input argument used by this operation
+   */
   public AgentResponseCorrector(LlmClient client) {
     this.client = client;
   }
@@ -75,6 +80,17 @@ public final class AgentResponseCorrector {
     return fresh;
   }
 
+  /**
+   * Corrects a response that is required to contain only verified quote material.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param correlationId the correlationId input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   LlmResponse correctQuoteOnly(
       LlmResponse response, List<LlmMessage> messages, String correlationId)
       throws LlmException, AgentRoutingException {
@@ -121,21 +137,44 @@ public final class AgentResponseCorrector {
     return fallbackQuote();
   }
 
+  /**
+   * Implements the {@code quoteOnlyCorrectionPrompt} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private static String quoteOnlyCorrectionPrompt() {
     return PROMPTS.text("correction/router-quote-only-correction.txt").strip()
         + "\\n\\nVerified catalog entries (return one exact line; do not edit it):\\n"
         + VERIFIED_QUOTES.promptEntries();
   }
 
+  /**
+   * Implements the {@code verifiedResponse} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @param entry input argument used by this operation
+   * @return the operation result
+   */
   private static LlmResponse verifiedResponse(
       LlmResponse response, VerifiedQuoteCatalog.Entry entry) {
     return new LlmResponse(entry.line(), response.toolCalls(), response.finishReason());
   }
 
+  /**
+   * Implements the {@code fallbackQuote} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private static LlmResponse fallbackQuote() {
     return new LlmResponse(VERIFIED_QUOTES.fallback().line(), List.of(), "stop");
   }
 
+  /**
+   * Implements the {@code parseStructuredQuote} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @return the operation result
+   */
   private static LlmResponse parseStructuredQuote(LlmResponse response)
       throws AgentRoutingException {
     if (isQuoteOnly(response.content())) {
@@ -162,6 +201,11 @@ public final class AgentResponseCorrector {
     }
   }
 
+  /**
+   * Implements the {@code quoteOnlyResponseFormat} operation for this agent component.
+   *
+   * @return the operation result
+   */
   private static JsonObject quoteOnlyResponseFormat() {
     JsonObject line = new JsonObject();
     line.addProperty("type", "string");
@@ -184,6 +228,12 @@ public final class AgentResponseCorrector {
     return format;
   }
 
+  /**
+   * Implements the {@code logInvalidQuoteCorrection} operation for this agent component.
+   *
+   * @param correlationId input argument used by this operation
+   * @param content input argument used by this operation
+   */
   private static void logInvalidQuoteCorrection(String correlationId, String content) {
     log.warn(
         "Quote correction failed validation, correlationId={}, responseMode=quote-only, contentLength={}, contentHash={}",
@@ -192,6 +242,12 @@ public final class AgentResponseCorrector {
         shortHash(content));
   }
 
+  /**
+   * Implements the {@code shortHash} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   private static String shortHash(String content) {
     try {
       byte[] digest =
@@ -207,6 +263,12 @@ public final class AgentResponseCorrector {
     }
   }
 
+  /**
+   * Implements the {@code isQuoteOnly} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   static boolean isQuoteOnly(String content) {
     if (content == null) {
       return false;
@@ -217,6 +279,13 @@ public final class AgentResponseCorrector {
         && !normalized.contains("\\r");
   }
 
+  /**
+   * Implements the {@code isolatedCorrectionMessages} operation for this agent component.
+   *
+   * @param messages input argument used by this operation
+   * @param contract input argument used by this operation
+   * @return the operation result
+   */
   private static List<LlmMessage> isolatedCorrectionMessages(
       List<LlmMessage> messages, String contract) throws AgentRoutingException {
     LlmMessage newestUserMessage =
@@ -231,6 +300,15 @@ public final class AgentResponseCorrector {
         LlmMessage.system(contract.strip()), LlmMessage.user(newestUserMessage.content()));
   }
 
+  /**
+   * Implements the {@code correctUnverifiedActionClaim} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @param messages input argument used by this operation
+   * @param definitions input argument used by this operation
+   * @param correlationId input argument used by this operation
+   * @return the operation result
+   */
   public LlmResponse correctUnverifiedActionClaim(
       LlmResponse response,
       List<LlmMessage> messages,
@@ -264,6 +342,17 @@ public final class AgentResponseCorrector {
     return corrected;
   }
 
+  /**
+   * Replaces a provider failure placeholder with a user-safe response.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param correlationId the correlationId input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   LlmResponse correctFailurePlaceholder(
       LlmResponse response, List<LlmMessage> messages, String correlationId)
       throws LlmException, AgentRoutingException {
@@ -286,6 +375,17 @@ public final class AgentResponseCorrector {
     return corrected;
   }
 
+  /**
+   * Removes internal evidence details from a user-visible response.
+   *
+   * @param response the response input; null handling follows the validation performed by this
+   *     declaration
+   * @param messages the messages input; null handling follows the validation performed by this
+   *     declaration
+   * @param correlationId the correlationId input; null handling follows the validation performed by
+   *     this declaration
+   * @return the computed result; empty or false indicates that no applicable value was available
+   */
   LlmResponse correctInternalEvidenceLeak(
       LlmResponse response, List<LlmMessage> messages, String correlationId)
       throws LlmException, AgentRoutingException {
@@ -308,6 +408,12 @@ public final class AgentResponseCorrector {
     return corrected;
   }
 
+  /**
+   * Implements the {@code requireResponse} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @return the operation result
+   */
   public static LlmResponse requireResponse(LlmResponse response) throws AgentRoutingException {
     if (response == null) {
       throw new AgentRoutingException("Agent returned no response");
@@ -315,6 +421,12 @@ public final class AgentResponseCorrector {
     return response;
   }
 
+  /**
+   * Implements the {@code isFailurePlaceholder} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @return the operation result
+   */
   public static boolean isFailurePlaceholder(LlmResponse response) {
     if (response == null || !response.toolCalls().isEmpty() || response.content() == null) {
       return false;
@@ -326,12 +438,26 @@ public final class AgentResponseCorrector {
         || normalized.equals("i could not answer that request");
   }
 
+  /**
+   * Implements the {@code containsInternalToolEvidence} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @return the operation result
+   */
   private static boolean containsInternalToolEvidence(LlmResponse response) {
     return response.toolCalls().isEmpty()
         && response.content() != null
         && response.content().contains("[Internal tool evidence from ");
   }
 
+  /**
+   * Implements the {@code isStaleDuplicate} operation for this agent component.
+   *
+   * @param response input argument used by this operation
+   * @param history input argument used by this operation
+   * @param currentPrompt input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isStaleDuplicate(
       LlmResponse response, List<LlmMessage> history, String currentPrompt) {
     if (!response.toolCalls().isEmpty()
@@ -350,6 +476,12 @@ public final class AgentResponseCorrector {
             || isGenericAcknowledgement(response.content()));
   }
 
+  /**
+   * Implements the {@code isGenericAcknowledgement} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   private static boolean isGenericAcknowledgement(String content) {
     String normalized = content.strip().toLowerCase(Locale.ROOT);
     return normalized.equals("i am ready")
@@ -358,11 +490,23 @@ public final class AgentResponseCorrector {
         || normalized.equals("ready.");
   }
 
+  /**
+   * Implements the {@code userAuthoredBody} operation for this agent component.
+   *
+   * @param prompt input argument used by this operation
+   * @return the operation result
+   */
   private static String userAuthoredBody(String prompt) {
     int separator = prompt == null ? -1 : prompt.lastIndexOf("\n");
     return separator < 0 ? String.valueOf(prompt) : prompt.substring(separator + 1);
   }
 
+  /**
+   * Implements the {@code containsUnverifiedActionClaim} operation for this agent component.
+   *
+   * @param content input argument used by this operation
+   * @return the operation result
+   */
   private static boolean containsUnverifiedActionClaim(String content) {
     if (content == null || content.isBlank()) {
       return false;

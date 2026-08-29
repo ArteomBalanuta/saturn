@@ -6,6 +6,13 @@ import java.util.regex.Pattern;
 
 /** Parses agent mentions and their accompanying prompt text from room messages. */
 public final class AgentMentionParser {
+  /**
+   * Implements the {@code parse} operation for this agent component.
+   *
+   * @param text input argument used by this operation
+   * @param botNick input argument used by this operation
+   * @return the operation result
+   */
   public Optional<String> parse(String text, String botNick) {
     if (text == null || text.isBlank() || botNick == null || botNick.isBlank()) {
       return Optional.empty();

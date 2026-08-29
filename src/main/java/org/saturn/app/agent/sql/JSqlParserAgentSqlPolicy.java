@@ -32,10 +32,22 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
 
   private final AgentSqlConfig config;
 
+  /**
+   * Implements the {@code JSqlParserAgentSqlPolicy} operation for this agent component.
+   *
+   * @param config input argument used by this operation
+   */
   public JSqlParserAgentSqlPolicy(AgentSqlConfig config) {
     this.config = Objects.requireNonNull(config, "config");
   }
 
+  /**
+   * Implements the {@code validate} operation for this agent component.
+   *
+   * @param sql input argument used by this operation
+   * @param schema input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public ValidatedAgentSql validate(String sql, AgentDatabaseSchema schema) {
     Objects.requireNonNull(schema, "schema");
@@ -70,6 +82,12 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
     return new ValidatedAgentSql(sql, fingerprint(sql));
   }
 
+  /**
+   * Implements the {@code parseSingleStatement} operation for this agent component.
+   *
+   * @param sql input argument used by this operation
+   * @return the operation result
+   */
   private Statement parseSingleStatement(String sql) {
     try {
       Statements statements = CCJSqlParserUtil.parseStatements(sql);
@@ -88,6 +106,11 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
     }
   }
 
+  /**
+   * Implements the {@code requireReadOnlyWithItems} operation for this agent component.
+   *
+   * @param select input argument used by this operation
+   */
   private void requireReadOnlyWithItems(Select select) {
     List<WithItem<?>> withItems = select.getWithItemsList();
     if (withItems == null) {
@@ -103,6 +126,12 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
     }
   }
 
+  /**
+   * Implements the {@code fingerprint} operation for this agent component.
+   *
+   * @param sql input argument used by this operation
+   * @return the operation result
+   */
   private static String fingerprint(String sql) {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -112,6 +141,12 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
     }
   }
 
+  /**
+   * Implements the {@code leadingKeyword} operation for this agent component.
+   *
+   * @param sql input argument used by this operation
+   * @return the operation result
+   */
   private static String leadingKeyword(String sql) {
     String stripped = sql.stripLeading();
     int end = 0;
@@ -121,6 +156,12 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
     return stripped.substring(0, end).toLowerCase(Locale.ROOT);
   }
 
+  /**
+   * Implements the {@code normalizeIdentifier} operation for this agent component.
+   *
+   * @param identifier input argument used by this operation
+   * @return the operation result
+   */
   private static String normalizeIdentifier(String identifier) {
     String normalized = identifier.strip();
     if (normalized.length() >= 2) {
@@ -135,6 +176,13 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
     return normalized.toLowerCase(Locale.ROOT);
   }
 
+  /**
+   * Implements the {@code rejection} operation for this agent component.
+   *
+   * @param code input argument used by this operation
+   * @param message input argument used by this operation
+   * @return the operation result
+   */
   private static AgentSqlPolicyException rejection(AgentSqlErrorCode code, String message) {
     return new AgentSqlPolicyException(code, message);
   }
@@ -143,18 +191,37 @@ public final class JSqlParserAgentSqlPolicy implements AgentSqlPolicy {
    * Provides the policy tables names finder implementation used by the enclosing agent component.
    */
   private static final class PolicyTablesNamesFinder extends TablesNamesFinder<Void> {
+    /**
+     * Implements the {@code visit} operation for this agent component.
+     *
+     * @param function input argument used by this operation
+     * @param context input argument used by this operation
+     * @return the operation result
+     */
     @Override
     public <S> Void visit(Function function, S context) {
       requireSafeFunction(function.getName());
       return super.visit(function, context);
     }
 
+    /**
+     * Implements the {@code visit} operation for this agent component.
+     *
+     * @param tableFunction input argument used by this operation
+     * @param context input argument used by this operation
+     * @return the operation result
+     */
     @Override
     public <S> Void visit(TableFunction tableFunction, S context) {
       requireSafeFunction(tableFunction.getFunction().getName());
       return super.visit(tableFunction, context);
     }
 
+    /**
+     * Implements the {@code requireSafeFunction} operation for this agent component.
+     *
+     * @param name input argument used by this operation
+     */
     private void requireSafeFunction(String name) {
       if (name == null) {
         return;

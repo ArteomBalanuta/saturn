@@ -12,6 +12,7 @@ final class AgentExecutionState {
     this.limits = limits;
   }
 
+  /** Advances the bounded execution state by one step. */
   boolean advanceStep() {
     if (steps >= limits.maxSteps()) {
       return false;
@@ -20,6 +21,12 @@ final class AgentExecutionState {
     return true;
   }
 
+  /**
+   * Reserves tool-call budget for this turn and rejects an over-budget request.
+   *
+   * @param requestedCalls the requestedCalls input; null handling follows the validation performed
+   *     by this declaration
+   */
   boolean reserveToolCalls(int requestedCalls) {
     if (requestedCalls < 0 || toolCalls + requestedCalls > limits.maxToolCallsPerTurn()) {
       return false;

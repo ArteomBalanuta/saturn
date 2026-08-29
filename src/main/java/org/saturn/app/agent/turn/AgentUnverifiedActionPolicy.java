@@ -9,10 +9,21 @@ import org.saturn.app.agent.routing.AgentResponseCorrector;
 public final class AgentUnverifiedActionPolicy implements AgentTurnPolicy {
   private final AgentResponseCorrector responseCorrector;
 
+  /**
+   * Implements the {@code AgentUnverifiedActionPolicy} operation for this agent component.
+   *
+   * @param responseCorrector input argument used by this operation
+   */
   public AgentUnverifiedActionPolicy(AgentResponseCorrector responseCorrector) {
     this.responseCorrector = responseCorrector;
   }
 
+  /**
+   * Implements the {@code apply} operation for this agent component.
+   *
+   * @param input input argument used by this operation
+   * @return the operation result
+   */
   @Override
   public AgentTurnPolicyResult apply(AgentTurnPolicyInput input)
       throws LlmException, AgentRoutingException {
