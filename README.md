@@ -52,7 +52,7 @@ channel = "programming"
 nick = "alphaBot"
 trip = "YOUR_BOT_TRIP_HERE"
 userTrips = ""
-adminTrips = "g0KY09,595754"
+adminTrips = "YOUR_ADMIN_TRIP_HERE"
 autoReconnect = true
 healthCheckInterval = 5
 autorunCommands = "replica lounge, say hello lads!!"
@@ -118,15 +118,14 @@ Important fields:
 - `agent.dynamicSqlMax*`: bounds SQL length, rows, columns, cells, and serialized results
 - `agent.dynamicSqlTimeoutMillis`: interrupts generated queries after the configured deadline
 
-Environment variables take precedence over TOML for all provider settings, router limits, memory
-bounds, and dynamic-SQL bounds. Their names use the `SATURN_AGENT_` prefix and upper snake case,
-for example `agent.maxSteps` becomes `SATURN_AGENT_MAX_STEPS`. Copy [`.env.example`](.env.example)
-to the ignored `.env` file only when you want environment-specific overrides. Existing values in
-the ignored `config.toml`, including an existing `agent.enabled`, `agent.endpoint`, model, and
-limits, remain valid TOML fallbacks and are not replaced by this change. The endpoint selects the
-model by default, so `agent.model` may remain empty. Set `SATURN_AGENT_API_KEY` only when the
-endpoint requires authentication. Keep the agent disabled until an explicit endpoint is configured;
-use HTTPS or a trusted private network for all prompts and tool results.
+Environment variables take precedence over TOML for the provider, router limits, memory bounds, and
+dynamic-SQL bounds that expose `SATURN_AGENT_*` overrides. Their names use the `SATURN_AGENT_` prefix
+and upper snake case; for example `agent.maxSteps` becomes `SATURN_AGENT_MAX_STEPS`. Copy
+[`.env.example`](.env.example) to the ignored `.env` file only when you want environment-specific
+agent overrides. Participation and moderation thresholds are configured in `[agent]` TOML. The
+endpoint selects the model by default, so `agent.model` may remain empty. Set `SATURN_AGENT_API_KEY`
+only when the endpoint requires authentication. Keep the agent disabled until an explicit endpoint is
+configured; use HTTPS or a trusted private network for all prompts and tool results.
 
 For production, choose one of these supported paths:
 
@@ -137,9 +136,10 @@ For production, choose one of these supported paths:
 
 ### Vaelen Agent
 
-Maintainers should start with [`AGENTIC_ARCHITECTURE.md`](AGENTIC_ARCHITECTURE.md) for the package
-map, end-to-end request lifecycle, extension workflow, focused tests, and troubleshooting. The
-section below describes operator-visible behavior and deployment constraints.
+Maintainers should start with [`docs/AGENTIC_BEHAVIOR.md`](docs/AGENTIC_BEHAVIOR.md) for the
+implementation-grounded behavior contract and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the
+current package map and lifecycle. The section below summarizes operator-visible behavior and
+deployment constraints.
 
 ```text
 *l how many users are in the room right now?
@@ -180,6 +180,56 @@ Database metadata tables, writes, schema changes, and administrative statements 
 Logs contain only a query fingerprint, duration, row count, and outcome; raw
 generated SQL is not logged.
 
+## Agentic Runtime Contract
+
+The optional agent is a bounded orchestration layer, not an unrestricted chatbot or replacement for
+Saturn's command, persistence, or moderation systems. An OpenAI-compatible provider proposes text or
+structured tool calls; Saturn owns the immutable request context, tool definitions, authorization,
+argument/result validation, ordering, timeouts, persistence, and final room output. The provider is
+called at the configured endpoint's `/v1/chat/completions` path.
+
+### Invocation modes and capabilities
+
+Agent invocations are created in four modes:
+
+- `DIRECT`: an explicit `*l <prompt>` command or whisper command; a user-visible answer is expected.
+- `MENTION`: an exact public `@<bot-nick>` mention; a user-visible answer is expected.
+- `AMBIENT`: an eligible sampled public message; no acknowledgement is required and silence is normal.
+- `MODERATION`: a semantic moderation candidate; output is intentionally silent and the action path is
+  restricted to approved moderation commands.
+
+Contextual tools can read room users, retrieve bounded public message history, inspect the schema,
+run bounded read-only SQL for authorized admins, and execute approved Saturn commands. Tool visibility
+is calculated for the current caller and mode. Informational tools are broadly available; moderation
+requires the configured creator/admin/persisted roles where eligible; permanent bans and admin commands
+require a direct creator invocation. The agent cannot bypass `SaturnCommandGateway`, protected-principal
+rules, or command authorization, and RPC/MCP/plugin/arbitrary skill execution is not part of this
+in-process boundary.
+
+### Safety, memory, evidence, and output
+
+Every proposed call is checked against its contextual descriptor, JSON arguments, capability policy,
+prerequisites, duplicate ledger, per-turn budgets, deadlines, and cancellation state before execution.
+Failures, denials, invalid results, timeouts, and cancellations remain explicit failures; they are never
+reported as successful actions. A request is limited by `agent.maxSteps`, `agent.maxToolCallsPerTurn`
+(with legacy `agent.maxToolCalls` compatibility), per-tool/failure limits, prompt/output bounds, and
+tool deadlines. Safe independent read-only calls may run in contiguous parallel segments, but barriers,
+side effects, prerequisites, and resource conflicts remain ordered; this is not an unbounded loop or a
+general dependency DAG.
+
+`memoryKey` is both the session lock and durable-memory namespace. Public turns share ordered memory per
+room; whispers use a private per-user namespace and are not added to the public session. H2 memory is
+bounded by turns and TTL. Public room context and regular history tools use only classified `PUBLIC`
+rows; `WHISPER` rows are private, and pre-migration unclassified rows are excluded from regular history
+queries. Tool evidence records what was actually attempted and whether it succeeded, failed, or was
+unavailable. Durable history is not mutated by provider-side trimming or projection, and non-silent
+conversation persistence occurs only after final response validation.
+
+`ToolResultMode` controls result visibility independently of whether the agent replies: `MODEL_DATA` is
+sent to the model and may become reusable evidence; `ROOM_DELIVERY` is delivered to the room without a
+normal model-data observation and is not reusable; `ROOM_DELIVERY_AND_MODEL_DATA` uses both immediate
+channels but is not reusable cross-turn. `AgentResult.silent` intentionally suppresses conversational
+output for ambient/moderation cases.
 ### Autonomous Moderation
 
 With `agent.moderationEnabled = true`, Saturn watches bounded in-memory windows for message floods,
@@ -221,11 +271,24 @@ Windows:
 mvnw.cmd package
 ```
 
-The build output is:
+The image build copies `VERSION` into the build context so the shaded jar and runtime `/VERSION`
+resource report the same release artifact version. The Dockerfile currently builds with JDK 24 while the
+Maven source/target level is Java 23; local development requires JDK 23+ and the container supplies its
+own JDK.
 
-```text
-target/saturn.jar
+Run the focused test class while iterating, then the normal quality gates:
+
+```bash
+./mvnw -Dtest=<TestClass> test
+./mvnw spotless:check
+./mvnw test
+./mvnw package
 ```
+
+`package` produces the shaded `target/saturn.jar`. The Maven project remains `1.0-SNAPSHOT`; the
+release artifact version is read from the root [`VERSION`](VERSION) file and is embedded in the jar.
+The repository's release process should update `VERSION` deliberately; do not infer a release
+version from the Maven snapshot string.
 
 ### Run
 
@@ -331,8 +394,7 @@ The provider may emit multiple tool calls in one response. Saturn remains sequen
 `run_command`, moderation, room delivery, and dependency chains execute in provider order. Only
 contiguous, independent tools marked both read-only and idempotent may run concurrently; their
 observations still return to the provider in original call order. This reduces provider round trips
-for compound read requests without reordering Saturn commands. See
-[`AGENTIC_ARCHITECTURE.md`](AGENTIC_ARCHITECTURE.md) for the full lifecycle and extension guide.
+for compound read requests without reordering Saturn commands. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full lifecycle and extension guide.
 
 Existing tools remain compatible: tools that do not override `descriptor(context)` receive safe
 read-only defaults from `AgentTool`. Add an explicit descriptor for new tools, especially when a
