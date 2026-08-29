@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.agent.api.AgentContext;
 import org.saturn.app.agent.api.AgentTool;
@@ -42,17 +43,38 @@ public final class AgentToolExecutor implements AutoCloseable {
   private final AgentToolInvoker toolInvoker = new AgentToolInvoker(toolExecutor);
   private final AgentToolCallScheduler scheduler = new AgentToolCallScheduler(toolExecutor);
   private final AgentToolExecutionPolicy executionPolicy = new AgentToolExecutionPolicy();
+  private final List<AgentToolExecutionMiddleware> middleware;
+  private final List<AgentToolExecutionObserver> observers;
 
   public AgentToolExecutor(AgentToolRegistry registry, AgentConfig config) {
-    this(registry, config, Set.of());
+    this(registry, config, Set.of(), AgentToolExecutionHooks.empty());
   }
 
   public AgentToolExecutor(
       AgentToolRegistry registry, AgentConfig config, Set<String> allowedTools) {
+    this(registry, config, allowedTools, AgentToolExecutionHooks.empty());
+  }
+
+  public AgentToolExecutor(
+      AgentToolRegistry registry,
+      AgentConfig config,
+      Set<String> allowedTools,
+      AgentToolExecutionHooks hooks) {
+    this(registry, config, allowedTools, hooks.middleware(), hooks.observers());
+  }
+
+  AgentToolExecutor(
+      AgentToolRegistry registry,
+      AgentConfig config,
+      Set<String> allowedTools,
+      List<AgentToolExecutionMiddleware> middleware,
+      List<AgentToolExecutionObserver> observers) {
     this.registry = registry;
     this.config = config;
     this.allowedTools = Set.copyOf(allowedTools);
     this.validator = new AgentToolCallValidator(registry);
+    this.middleware = List.copyOf(middleware);
+    this.observers = List.copyOf(observers);
   }
 
   /**
@@ -65,6 +87,14 @@ public final class AgentToolExecutor implements AutoCloseable {
 
   private AgentToolResult execute(
       AgentContext context, LlmToolCall call, AgentToolDescriptor classifiedDescriptor) {
+    return execute(context, call, classifiedDescriptor, AgentToolBatchContext.unlimited());
+  }
+
+  private AgentToolResult execute(
+      AgentContext context,
+      LlmToolCall call,
+      AgentToolDescriptor classifiedDescriptor,
+      AgentToolBatchContext batch) {
     if (ledger.isDisabled(call.name())) {
       return error(call, "TOOL_DISABLED", "Tool disabled after repeated failures: " + call.name());
     }
@@ -95,10 +125,23 @@ public final class AgentToolExecutor implements AutoCloseable {
       return error(call, "TOOL_CALL_LIMIT_REACHED", "Tool call limit reached for " + call.name());
     }
 
+    AgentToolExecutionContext executionContext =
+        new AgentToolExecutionContext(
+            context,
+            call,
+            validated.descriptor(),
+            validated.invocationKey(),
+            allowedTools,
+            batch.deadline(),
+            batch.cancellation(),
+            false);
     try {
-      AgentToolResult result =
-          executeWithTimeout(
+      AgentToolExecutionMiddleware.Continuation continuation =
+          oneShotContinuation(
               validated.tool(), context, validated.arguments(), validated.descriptor().timeout());
+      AgentToolResult result =
+          executeMiddleware(
+              0, executionContext, validated.tool(), validated.arguments(), continuation);
       result = result.withCallId(call.id());
       if (result.isError()) {
         ledger.recordFailure(validated.invocationKey(), call.name(), config.maxToolFailures());
@@ -108,22 +151,32 @@ public final class AgentToolExecutor implements AutoCloseable {
                 validated.descriptor().resultSchema(), parseResult(result.content()));
         if (resultError != null) {
           ledger.recordFailure(validated.invocationKey(), call.name(), config.maxToolFailures());
-          return error(call, "INVALID_TOOL_RESULT", resultError);
+          AgentToolResult failure = error(call, "INVALID_TOOL_RESULT", resultError);
+          notifyObservers(executionContext, failure);
+          return failure;
         }
         ledger.recordSuccess(validated.invocationKey(), call.name());
       }
+      notifyObservers(executionContext, result);
       return result;
     } catch (TimeoutException exception) {
       ledger.recordFailure(validated.invocationKey(), call.name(), config.maxToolFailures());
-      return error(call, "TOOL_TIMEOUT", "Tool execution exceeded its configured timeout");
+      AgentToolResult failure =
+          error(call, "TOOL_TIMEOUT", "Tool execution exceeded its configured timeout");
+      notifyObservers(executionContext, failure);
+      return failure;
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
       ledger.recordFailure(validated.invocationKey(), call.name(), config.maxToolFailures());
-      return error(call, "TOOL_INTERRUPTED", "Tool execution was interrupted");
-    } catch (ExecutionException | RuntimeException exception) {
+      AgentToolResult failure = error(call, "TOOL_INTERRUPTED", "Tool execution was interrupted");
+      notifyObservers(executionContext, failure);
+      return failure;
+    } catch (Exception exception) {
       ledger.recordFailure(validated.invocationKey(), call.name(), config.maxToolFailures());
       log.warn("Agent tool {} failed: {}", call.name(), exception.getMessage());
-      return error(call, "TOOL_EXECUTION_FAILED", "Tool execution failed");
+      AgentToolResult failure = error(call, "TOOL_EXECUTION_FAILED", "Tool execution failed");
+      notifyObservers(executionContext, failure);
+      return failure;
     }
   }
 
@@ -134,6 +187,11 @@ public final class AgentToolExecutor implements AutoCloseable {
    * <p>Action tools, including {@code run_command}, are order barriers and execute sequentially.
    */
   public List<AgentToolResult> executeAll(AgentContext context, List<LlmToolCall> calls) {
+    return executeAll(context, calls, AgentToolBatchContext.unlimited());
+  }
+
+  public List<AgentToolResult> executeAll(
+      AgentContext context, List<LlmToolCall> calls, AgentToolBatchContext batch) {
     List<AgentScheduledToolCall> scheduledCalls = new ArrayList<>();
     Map<LlmToolCall, Classification> classifications = new IdentityHashMap<>();
     for (LlmToolCall call : calls) {
@@ -143,11 +201,12 @@ public final class AgentToolExecutor implements AutoCloseable {
     }
     return scheduler.executeAll(
         scheduledCalls,
+        batch,
         call -> {
           Classification classification = classifications.get(call);
           return classification.error() != null
               ? classification.error()
-              : execute(context, call, classification.descriptor());
+              : execute(context, call, classification.descriptor(), batch);
         });
   }
 
@@ -156,6 +215,49 @@ public final class AgentToolExecutor implements AutoCloseable {
   public void close() {
     scheduler.close();
     toolInvoker.close();
+  }
+
+  private AgentToolExecutionMiddleware.Continuation oneShotContinuation(
+      AgentTool tool, AgentContext context, JsonObject arguments, Duration timeout) {
+    AtomicBoolean invoked = new AtomicBoolean();
+    return () -> {
+      if (!invoked.compareAndSet(false, true)) {
+        throw new IllegalStateException("Tool execution continuation invoked more than once");
+      }
+      return executeWithTimeout(tool, context, arguments, timeout);
+    };
+  }
+
+  private AgentToolResult executeMiddleware(
+      int index,
+      AgentToolExecutionContext context,
+      AgentTool tool,
+      JsonObject arguments,
+      AgentToolExecutionMiddleware.Continuation continuation)
+      throws Exception {
+    if (index == middleware.size()) {
+      return continuation.invoke();
+    }
+    return middleware
+        .get(index)
+        .execute(
+            context,
+            tool,
+            arguments,
+            () -> executeMiddleware(index + 1, context, tool, arguments, continuation));
+  }
+
+  private void notifyObservers(AgentToolExecutionContext context, AgentToolResult result) {
+    for (AgentToolExecutionObserver observer : observers) {
+      try {
+        observer.onOutcome(context, result);
+      } catch (RuntimeException exception) {
+        log.warn(
+            "Agent tool execution observer failed, tool={}, callId={}",
+            context.call().name(),
+            context.call().id());
+      }
+    }
   }
 
   private AgentToolResult executeWithTimeout(
@@ -178,7 +280,13 @@ public final class AgentToolExecutor implements AutoCloseable {
     try {
       AgentToolDescriptor descriptor = tool.descriptor(context);
       return new Classification(
-          new AgentScheduledToolCall(call, executionPolicy.classify(descriptor)), descriptor, null);
+          new AgentScheduledToolCall(
+              call,
+              executionPolicy.classify(descriptor),
+              descriptor.resourceReads(),
+              descriptor.resourceWrites()),
+          descriptor,
+          null);
     } catch (RuntimeException exception) {
       return new Classification(
           new AgentScheduledToolCall(call, AgentToolExecutionMode.SEQUENTIAL_ACTION),

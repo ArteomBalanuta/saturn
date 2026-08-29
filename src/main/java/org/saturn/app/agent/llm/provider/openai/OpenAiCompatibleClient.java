@@ -41,6 +41,14 @@ public final class OpenAiCompatibleClient implements LlmClient {
 
   @Override
   public LlmResponse complete(LlmRequest request) throws LlmException {
+    if (request.projection() != null) {
+      org.slf4j.LoggerFactory.getLogger(OpenAiCompatibleClient.class)
+          .debug(
+              "agent context projection chars={} tokens={} fingerprint={}",
+              request.projection().serializedChars(),
+              request.projection().estimatedTokens(),
+              request.projection().fingerprint());
+    }
     JsonObject payload = toJson(request);
     for (int attempt = 0; ; attempt++) {
       try {

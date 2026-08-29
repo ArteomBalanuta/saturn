@@ -12,7 +12,14 @@ record AgentPreparedRequest(
     String contextualizedPrompt,
     Optional<String> requiredFreshTool,
     Optional<String> requiredFreshNick,
-    AgentRequestKind requestKind) {
+    AgentRequestKind requestKind,
+    int serializedChars,
+    int estimatedTokens,
+    int budgetChars,
+    boolean pruned,
+    boolean overflow,
+    int removedUnits,
+    String contextFingerprint) {
   AgentPreparedRequest(
       List<LlmMessage> messages,
       List<JsonObject> definitions,
@@ -26,6 +33,65 @@ record AgentPreparedRequest(
         requiredFreshTool,
         requiredFreshNick,
         AgentRequestKind.UNCLASSIFIED);
+  }
+
+  AgentPreparedRequest(
+      List<LlmMessage> messages,
+      List<JsonObject> definitions,
+      String contextualizedPrompt,
+      Optional<String> requiredFreshTool,
+      Optional<String> requiredFreshNick,
+      AgentRequestKind requestKind) {
+    this(
+        messages,
+        definitions,
+        contextualizedPrompt,
+        requiredFreshTool,
+        requiredFreshNick,
+        requestKind,
+        messages.stream().mapToInt(m -> String.valueOf(m.content()).length()).sum(),
+        0,
+        0,
+        false,
+        false,
+        0,
+        "");
+  }
+
+  AgentPreparedRequest(
+      List<LlmMessage> messages,
+      List<JsonObject> definitions,
+      String contextualizedPrompt,
+      Optional<String> requiredFreshTool,
+      Optional<String> requiredFreshNick,
+      AgentRequestKind requestKind,
+      AgentContextProjection projection) {
+    this(
+        messages,
+        definitions,
+        contextualizedPrompt,
+        requiredFreshTool,
+        requiredFreshNick,
+        requestKind,
+        projection.serializedChars(),
+        projection.estimatedTokens(),
+        projection.budgetChars(),
+        projection.pruned(),
+        projection.overflow(),
+        projection.removedUnits(),
+        projection.fingerprint());
+  }
+
+  public AgentContextProjection projection() {
+    return new AgentContextProjection(
+        messages,
+        serializedChars,
+        estimatedTokens,
+        budgetChars,
+        pruned,
+        overflow,
+        removedUnits,
+        contextFingerprint);
   }
 
   AgentPreparedRequest {

@@ -190,6 +190,55 @@ class AgentToolDescriptorTest {
   }
 
   @Test
+  void preservesAndValidatesResourceContracts() {
+    AgentToolDescriptor descriptor =
+        new AgentToolDescriptor(
+            "tool",
+            "Tool",
+            "Reads data.",
+            "test",
+            ToolAccess.PUBLIC,
+            ToolEffect.READ_ONLY,
+            ToolResultMode.MODEL_DATA,
+            parameters(),
+            List.of(),
+            List.of("Do not use for unrelated work."),
+            List.of(),
+            Set.of(),
+            Set.of(),
+            true,
+            java.time.Duration.ZERO,
+            resultSchema(),
+            Set.of("room"),
+            Set.of("cache"));
+
+    assertEquals(Set.of("room"), descriptor.resourceReads());
+    assertEquals(Set.of("cache"), descriptor.resourceWrites());
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new AgentToolDescriptor(
+                "tool",
+                "Tool",
+                "Reads data.",
+                "test",
+                ToolAccess.PUBLIC,
+                ToolEffect.READ_ONLY,
+                ToolResultMode.MODEL_DATA,
+                parameters(),
+                List.of(),
+                List.of("Do not use for unrelated work."),
+                List.of(),
+                Set.of(),
+                Set.of(),
+                true,
+                java.time.Duration.ZERO,
+                new JsonObject(),
+                Set.of("same"),
+                Set.of("same")));
+  }
+
+  @Test
   void rejectsNegativeTimeouts() {
     assertThrows(
         IllegalArgumentException.class,
@@ -245,6 +294,13 @@ class AgentToolDescriptorTest {
         List.of(),
         Set.of(),
         Set.of());
+  }
+
+  private JsonObject resultSchema() {
+    JsonObject schema = new JsonObject();
+    schema.addProperty("type", "object");
+    schema.add("properties", new JsonObject());
+    return schema;
   }
 
   private JsonObject parameters() {

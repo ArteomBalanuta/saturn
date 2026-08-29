@@ -57,6 +57,18 @@ class AgentToolExecutionLedgerTest {
   }
 
   @Test
+  void duplicateOutcomeAccountingIsIdempotent() {
+    AgentToolExecutionLedger ledger = new AgentToolExecutionLedger();
+    assertEquals(
+        AgentToolExecutionLedger.Reservation.ACCEPTED, ledger.reserve("read|{}", "read", 2));
+
+    ledger.recordFailure("read|{}", "read", 2);
+    ledger.recordFailure("read|{}", "read", 2);
+
+    assertFalse(ledger.isDisabled("read"));
+  }
+
+  @Test
   void returnsAnImmutablePrerequisiteSnapshot() {
     AgentToolExecutionLedger ledger = new AgentToolExecutionLedger();
 

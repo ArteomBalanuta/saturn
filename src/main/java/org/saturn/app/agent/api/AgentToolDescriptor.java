@@ -30,7 +30,9 @@ public record AgentToolDescriptor(
     Set<String> requiredSuccessfulTools,
     boolean isIdempotent,
     Duration timeout,
-    JsonObject resultSchema) {
+    JsonObject resultSchema,
+    Set<String> resourceReads,
+    Set<String> resourceWrites) {
   public AgentToolDescriptor {
     name = required(name, "name");
     if (!name.matches("[a-z][a-z0-9_]{0,63}")) {
@@ -62,6 +64,46 @@ public record AgentToolDescriptor(
     }
     resultSchema = Objects.requireNonNull(resultSchema, "resultSchema").deepCopy();
     AgentToolSchemas.validateResultSchema(resultSchema);
+    resourceReads = immutableResources(resourceReads, "resourceReads");
+    resourceWrites = immutableResources(resourceWrites, "resourceWrites");
+  }
+
+  public AgentToolDescriptor(
+      String name,
+      String label,
+      String description,
+      String category,
+      ToolAccess access,
+      ToolEffect effect,
+      ToolResultMode resultMode,
+      JsonObject parameters,
+      List<String> whenToUse,
+      List<String> whenNotToUse,
+      List<ToolExample> examples,
+      Set<String> requiredCapabilities,
+      Set<String> requiredSuccessfulTools,
+      boolean isIdempotent,
+      Duration timeout,
+      JsonObject resultSchema) {
+    this(
+        name,
+        label,
+        description,
+        category,
+        access,
+        effect,
+        resultMode,
+        parameters,
+        whenToUse,
+        whenNotToUse,
+        examples,
+        requiredCapabilities,
+        requiredSuccessfulTools,
+        isIdempotent,
+        timeout,
+        resultSchema,
+        Set.of(),
+        Set.of());
   }
 
   public AgentToolDescriptor(
@@ -94,7 +136,9 @@ public record AgentToolDescriptor(
         requiredSuccessfulTools,
         effect == ToolEffect.READ_ONLY,
         Duration.ZERO,
-        anyResultSchema());
+        anyResultSchema(),
+        Set.of(),
+        Set.of());
   }
 
   /** Returns whether this descriptor declares no Saturn-side effect. */
@@ -131,5 +175,13 @@ public record AgentToolDescriptor(
 
   private static <T> Set<T> immutableSet(Set<T> values, String field) {
     return Set.copyOf(Objects.requireNonNull(values, field));
+  }
+
+  private static Set<String> immutableResources(Set<String> values, String field) {
+    Set<String> copy = immutableSet(values, field);
+    if (copy.stream().anyMatch(value -> value == null || value.isBlank())) {
+      throw new IllegalArgumentException(field + " must contain only nonblank keys");
+    }
+    return copy;
   }
 }

@@ -22,6 +22,7 @@ final class AgentRequestAssembler {
   private final AgentSystemPrompt systemPrompt;
   private final AgentFreshnessPolicy freshnessPolicy = new AgentFreshnessPolicy();
   private final AgentPromptCatalog prompts = new AgentPromptCatalog();
+  private final AgentMessageProjector projector = new AgentMessageProjector();
 
   AgentRequestAssembler(
       AgentConfig config, AgentToolRegistry registry, AgentSystemPrompt systemPrompt) {
@@ -74,14 +75,15 @@ final class AgentRequestAssembler {
                 "CANDIDATE")));
     messages.addAll(history.stream().filter(message -> retainHistory(context, message)).toList());
     messages.add(LlmMessage.user(contextualizedPrompt));
-    trimToBudget(messages);
+    AgentContextProjection projection = projector.project(messages, contextBudget());
     return new AgentPreparedRequest(
-        messages,
+        projection.messages(),
         definitions(context, invocation.mode(), invocation.prompt()),
         contextualizedPrompt,
         requiredFreshTool,
         requiredFreshNick,
-        requestKind);
+        requestKind,
+        projection);
   }
 
   private List<JsonObject> definitions(
@@ -123,19 +125,5 @@ final class AgentRequestAssembler {
   int contextBudget() {
     long scaledBudget = (long) config.maxPromptChars() * 8L;
     return (int) Math.min(Integer.MAX_VALUE, Math.max(32_000L, scaledBudget));
-  }
-
-  private void trimToBudget(List<LlmMessage> messages) {
-    int length = serializedLength(messages);
-    while (length > contextBudget() && messages.size() > 2) {
-      LlmMessage removed = messages.remove(1);
-      length -= removed.content() == null ? 0 : removed.content().length();
-    }
-  }
-
-  private static int serializedLength(List<LlmMessage> messages) {
-    return messages.stream()
-        .mapToInt(message -> message.content() == null ? 0 : message.content().length())
-        .sum();
   }
 }

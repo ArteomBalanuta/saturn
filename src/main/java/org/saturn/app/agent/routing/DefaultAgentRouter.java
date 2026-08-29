@@ -27,7 +27,9 @@ import org.saturn.app.agent.llm.LlmResponse;
 import org.saturn.app.agent.room.AgentSessionLockManager;
 import org.saturn.app.agent.tool.contract.AgentToolDefinitionJson;
 import org.saturn.app.agent.tool.execution.AgentModelVisibleToolResultRenderer;
+import org.saturn.app.agent.tool.execution.AgentToolBatchContext;
 import org.saturn.app.agent.tool.execution.AgentToolBudgetPolicy;
+import org.saturn.app.agent.tool.execution.AgentToolExecutionHooks;
 import org.saturn.app.agent.tool.execution.AgentToolExecutor;
 import org.saturn.app.agent.tool.execution.AgentToolRegistry;
 import org.saturn.app.agent.tool.execution.AgentToolResultCoordinator;
@@ -72,6 +74,7 @@ public final class DefaultAgentRouter implements AgentRouter {
   private final AgentRequestAssembler requestAssembler;
   private final AgentRequestClassifier requestClassifier = new AgentRequestClassifier();
   private final AgentSessionLockManager sessionLockManager = new AgentSessionLockManager();
+  private final AgentToolExecutionHooks executionHooks;
 
   public DefaultAgentRouter(
       AgentConfig config, LlmClient client, AgentToolRegistry registry, AgentMemoryStore memory) {
@@ -81,7 +84,8 @@ public final class DefaultAgentRouter implements AgentRouter {
         registry,
         memory,
         AgentParticipationConfig.from(null),
-        AgentConversationContextProvider.none());
+        AgentConversationContextProvider.none(),
+        AgentToolExecutionHooks.empty());
   }
 
   public DefaultAgentRouter(
@@ -91,12 +95,31 @@ public final class DefaultAgentRouter implements AgentRouter {
       AgentMemoryStore memory,
       AgentParticipationConfig participationConfig,
       AgentConversationContextProvider conversationContextProvider) {
+    this(
+        config,
+        client,
+        registry,
+        memory,
+        participationConfig,
+        conversationContextProvider,
+        AgentToolExecutionHooks.empty());
+  }
+
+  public DefaultAgentRouter(
+      AgentConfig config,
+      LlmClient client,
+      AgentToolRegistry registry,
+      AgentMemoryStore memory,
+      AgentParticipationConfig participationConfig,
+      AgentConversationContextProvider conversationContextProvider,
+      AgentToolExecutionHooks executionHooks) {
     this.config = config;
     this.client = client;
     this.registry = registry;
     this.memory = memory;
     this.participationConfig = participationConfig;
     this.conversationContextProvider = conversationContextProvider;
+    this.executionHooks = executionHooks;
     this.systemPrompt = new AgentSystemPrompt(participationConfig);
     this.responseCorrector = new AgentResponseCorrector(client);
     this.turnPolicyChain =
@@ -151,12 +174,18 @@ public final class DefaultAgentRouter implements AgentRouter {
         new AgentToolResultCoordinator(freshDataPolicy, commandProseGuard);
     Set<String> allowedTools =
         invocation.mode() == AgentInvocationMode.MODERATION ? Set.of("run_command") : Set.of();
-    AgentToolExecutor toolExecutor = new AgentToolExecutor(registry, config, allowedTools);
+    AgentToolExecutor toolExecutor =
+        new AgentToolExecutor(registry, config, allowedTools, executionHooks);
+    AgentToolBatchContext batchContext =
+        new AgentToolBatchContext(
+            java.time.Instant.now().plus(config.timeout()),
+            new org.saturn.app.agent.tool.execution.CancellationToken());
     AgentTurnState turnState = new AgentTurnState(AgentExecutionLimits.from(config));
     try (toolExecutor) {
       LlmResponse response =
           requiredFreshTool.isPresent()
-              ? client.complete(new LlmRequest(messages, definitions))
+              ? client.complete(
+                  providerRequest(messages, definitions, requestAssembler.contextBudget()))
               : responseCorrector.completeInitialRequest(
                   messages, definitions, history, invocation.prompt(), correlationId);
       response = AgentResponseCorrector.requireResponse(response);
@@ -185,17 +214,19 @@ public final class DefaultAgentRouter implements AgentRouter {
         response = AgentResponseCorrector.requireResponse(response);
         if (freshDataResult.restartLoop()) {
           if (turnState.attemptedToolCount() > 0) {
-            messages.set(
-                0,
-                LlmMessage.system(
-                    systemPrompt.render(
-                        invocation,
-                        correlationId,
-                        AgentTextBounds.truncate(
-                            recentRoomContext, requestAssembler.contextBudget()),
-                        AgentRequestKind.TOOL_CALL,
-                        turnState.toolEvidence(),
-                        "FINAL")));
+            messages =
+                replaceSystemMessageForProvider(
+                    messages,
+                    LlmMessage.system(
+                        systemPrompt.render(
+                            invocation,
+                            correlationId,
+                            AgentTextBounds.truncate(
+                                recentRoomContext, requestAssembler.contextBudget()),
+                            AgentRequestKind.TOOL_CALL,
+                            turnState.toolEvidence(),
+                            "FINAL")),
+                    requestAssembler.contextBudget());
           }
           continue;
         }
@@ -224,13 +255,14 @@ public final class DefaultAgentRouter implements AgentRouter {
         AgentToolBudgetPolicy.Result budgetResult =
             toolBudgetPolicy.reserve(response.toolCalls().size(), turnState);
         if (budgetResult.finalizeWithoutTools()) {
-          response = finalizeResponse(messages);
+          response = finalizeResponse(messages, requestAssembler.contextBudget());
           continue;
         }
 
         messages.add(LlmMessage.assistant(response.content(), response.toolCalls()));
         turnState.markToolAttempted(response.toolCalls().size());
-        List<AgentToolResult> toolResults = toolExecutor.executeAll(context, response.toolCalls());
+        List<AgentToolResult> toolResults =
+            toolExecutor.executeAll(context, response.toolCalls(), batchContext);
         toolResultCoordinator.record(
             context,
             response.toolCalls(),
@@ -242,19 +274,23 @@ public final class DefaultAgentRouter implements AgentRouter {
             modelVisibleToolResultRenderer::render,
             correlationId);
         turnState.resetUnverifiedActionCheck();
-        messages.set(
-            0,
-            LlmMessage.system(
-                systemPrompt.render(
-                    invocation,
-                    correlationId,
-                    AgentTextBounds.truncate(recentRoomContext, requestAssembler.contextBudget()),
-                    AgentRequestKind.TOOL_CALL,
-                    turnState.toolEvidence(),
-                    "FINAL")));
+        messages =
+            replaceSystemMessageForProvider(
+                messages,
+                LlmMessage.system(
+                    systemPrompt.render(
+                        invocation,
+                        correlationId,
+                        AgentTextBounds.truncate(
+                            recentRoomContext, requestAssembler.contextBudget()),
+                        AgentRequestKind.TOOL_CALL,
+                        turnState.toolEvidence(),
+                        "FINAL")),
+                requestAssembler.contextBudget());
         response =
             AgentResponseCorrector.requireResponse(
-                client.complete(new LlmRequest(messages, definitions)));
+                client.complete(
+                    providerRequest(messages, definitions, requestAssembler.contextBudget())));
       }
 
       AgentResponseFinalizer.Result finalResponse =
@@ -283,6 +319,12 @@ public final class DefaultAgentRouter implements AgentRouter {
     }
   }
 
+  private static LlmRequest providerRequest(
+      List<LlmMessage> messages, List<JsonObject> definitions, int budget) {
+    AgentContextProjection projection = new AgentMessageProjector().project(messages, budget);
+    return new LlmRequest(projection.messages(), definitions, projection);
+  }
+
   private static List<JsonObject> definitionFor(List<JsonObject> definitions, String toolName)
       throws AgentRoutingException {
     List<JsonObject> matches =
@@ -300,6 +342,19 @@ public final class DefaultAgentRouter implements AgentRouter {
     return matches;
   }
 
+  static List<LlmMessage> replaceSystemMessageForProvider(
+      List<LlmMessage> messages, LlmMessage replacement, int budget) {
+    List<LlmMessage> providerCopy = new ArrayList<>(messages);
+    providerCopy.set(0, replacement);
+    AgentMessageProjector projector = new AgentMessageProjector();
+    List<LlmMessage> projected =
+        ("user".equals(providerCopy.getLast().role())
+                ? projector.project(providerCopy, budget)
+                : projector.projectAfterTool(providerCopy, budget))
+            .messages();
+    return new ArrayList<>(projected);
+  }
+
   private List<AgentToolResult> persistentToolEvidence(
       AgentContext context, List<AgentToolResult> results) {
     return results.stream()
@@ -312,12 +367,12 @@ public final class DefaultAgentRouter implements AgentRouter {
         .toList();
   }
 
-  private LlmResponse finalizeResponse(List<LlmMessage> messages)
+  private LlmResponse finalizeResponse(List<LlmMessage> messages, int budget)
       throws LlmException, AgentRoutingException {
     List<LlmMessage> finalMessages = new ArrayList<>(messages);
     finalMessages.add(LlmMessage.user(FINALIZE_PROMPT));
     return AgentResponseCorrector.requireResponse(
-        client.complete(new LlmRequest(finalMessages, List.of())));
+        client.complete(providerRequest(finalMessages, List.of(), budget)));
   }
 
   private List<LlmMessage> loadMemory(AgentContext context, String correlationId)

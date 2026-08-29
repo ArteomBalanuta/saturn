@@ -38,6 +38,7 @@ import org.saturn.app.agent.config.AgentConfig;
 import org.saturn.app.agent.config.AgentSqlConfig;
 import org.saturn.app.agent.llm.LlmClient;
 import org.saturn.app.agent.llm.LlmException;
+import org.saturn.app.agent.llm.LlmMessage;
 import org.saturn.app.agent.llm.LlmRequest;
 import org.saturn.app.agent.llm.LlmResponse;
 import org.saturn.app.agent.llm.LlmToolCall;
@@ -52,6 +53,24 @@ import org.saturn.app.agent.tool.UserMessageHistoryTool;
 import org.saturn.app.agent.tool.execution.AgentToolRegistry;
 
 class DefaultAgentRouterTest {
+  @Test
+  void postToolSystemReplacementProjectsProviderCopyWithoutMutatingDurableMessages() {
+    LlmMessage originalSystem = LlmMessage.system("candidate");
+    LlmMessage durableTurn = LlmMessage.user("durable history that should be pruned");
+    LlmMessage currentPrompt = LlmMessage.user("current prompt");
+    List<LlmMessage> messages =
+        new ArrayList<>(List.of(originalSystem, durableTurn, currentPrompt));
+    LlmMessage replacement = LlmMessage.system("tool evidence");
+
+    List<LlmMessage> projected =
+        DefaultAgentRouter.replaceSystemMessageForProvider(messages, replacement, 32);
+
+    assertEquals(originalSystem, messages.getFirst());
+    assertEquals(List.of("system", "user"), projected.stream().map(LlmMessage::role).toList());
+    assertEquals("tool evidence", projected.getFirst().content());
+    assertEquals("current prompt", projected.getLast().content());
+  }
+
   @Test
   void commandOriginatedNoToolResponseBypassesQuoteOnlyPolicy() throws Exception {
     ScriptedClient client =

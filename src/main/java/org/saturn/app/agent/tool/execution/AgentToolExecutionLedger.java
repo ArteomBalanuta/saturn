@@ -39,13 +39,17 @@ final class AgentToolExecutionLedger {
   }
 
   synchronized void recordSuccess(String invocationKey, String toolName) {
-    inFlightInvocationKeys.remove(invocationKey);
+    if (!inFlightInvocationKeys.remove(invocationKey)) {
+      return;
+    }
     invocationKeys.add(invocationKey);
     successfulTools.add(toolName);
   }
 
   synchronized void recordFailure(String invocationKey, String toolName, int maxFailures) {
-    inFlightInvocationKeys.remove(invocationKey);
+    if (!inFlightInvocationKeys.remove(invocationKey)) {
+      return;
+    }
     int failures = failuresByTool.merge(toolName, 1, Integer::sum);
     if (failures >= maxFailures) {
       disabledTools.add(toolName);

@@ -50,6 +50,43 @@ class AgentToolExecutionPolicyTest {
   }
 
   @Test
+  void resourceConflictsAreSequentialBarriers() {
+    AgentToolDescriptor roomRead = descriptorWithResources(Set.of("room"), Set.of());
+    AgentToolDescriptor cacheRead = descriptorWithResources(Set.of("cache"), Set.of());
+    AgentToolDescriptor roomWrite = descriptorWithResources(Set.of(), Set.of("room"));
+
+    assertEquals(AgentToolExecutionMode.PARALLEL_READ, policy.classify(roomRead, cacheRead));
+    assertEquals(
+        AgentToolExecutionMode.SEQUENTIAL_DEPENDENT_READ, policy.classify(roomRead, roomWrite));
+    assertEquals(
+        AgentToolExecutionMode.SEQUENTIAL_DEPENDENT_READ,
+        policy.classify(roomRead, descriptorWithResources(Set.of(), Set.of("room"))));
+  }
+
+  private AgentToolDescriptor descriptorWithResources(Set<String> reads, Set<String> writes) {
+    AgentToolDescriptor base = descriptor(ToolEffect.READ_ONLY, true, Set.of());
+    return new AgentToolDescriptor(
+        base.name(),
+        base.label(),
+        base.description(),
+        base.category(),
+        base.access(),
+        base.effect(),
+        base.resultMode(),
+        base.parameters(),
+        base.whenToUse(),
+        base.whenNotToUse(),
+        base.examples(),
+        base.requiredCapabilities(),
+        base.requiredSuccessfulTools(),
+        base.isIdempotent(),
+        base.timeout(),
+        base.resultSchema(),
+        reads,
+        writes);
+  }
+
+  @Test
   void classifiesSideEffectingToolsAsSequentialActions() {
     for (ToolEffect effect :
         List.of(ToolEffect.ROOM_MESSAGE, ToolEffect.MODERATION, ToolEffect.PERSISTENCE)) {
