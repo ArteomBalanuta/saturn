@@ -36,14 +36,8 @@ public class RemoveUserCommandImpl extends UserCommandBaseImpl {
       return failWithUsage("remove [merc|g0KY09]");
     }
 
-    String value = arguments.getFirst();
-    if (!isRegistered(value)) {
-      replyToAuthor("No registered user found for: %s".formatted(value));
-      log.info("Executed [remove] command by user: {}, no user found for: {}", author(), value);
-      return Optional.of(Status.FAILED);
-    }
-
-    int code = engine.userService.delete(value, value);
+    String value = arguments.getFirst().trim();
+    int code = engine.userService.deleteByNameOrTrip(value);
     if (code == 1) {
       return fail("Something went wrong deleting the user");
     }
@@ -51,9 +45,5 @@ public class RemoveUserCommandImpl extends UserCommandBaseImpl {
     replyToAuthor("User has been removed successfully");
     log.info("Executed [remove] command by user: {}, arguments: {}", author(), arguments);
     return successful();
-  }
-
-  private boolean isRegistered(String value) {
-    return engine.userService.isNameRegistered(value) || engine.userService.isTripRegistered(value);
   }
 }

@@ -5,7 +5,6 @@ import static org.saturn.app.util.Util.getAdminAndUserTrips;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -32,7 +31,7 @@ public class DBZStatsCommandImpl extends UserCommandBaseImpl {
 
     String stats = engine.dbzService.getStats(author);
 
-    engine.outService.enqueueMessageForSending(StringEscapeUtils.escapeJava(stats));
+    engine.outService.enqueueMessageForSending(stats);
     log.info("Executed [dbz_stats] command by user: {}", author);
 
     return Optional.of(Status.SUCCESSFUL);

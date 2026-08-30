@@ -52,6 +52,7 @@ import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 public class EngineImpl extends Base implements Engine {
@@ -129,7 +130,20 @@ public class EngineImpl extends Base implements Engine {
 
   @Override
   public void setActiveUsers(List<User> users) {
-    this.currentChannelUsers.addAll(users);
+    synchronized (currentChannelUsers) {
+      Map<String, User> snapshot = new java.util.LinkedHashMap<>();
+      if (users == null) {
+        currentChannelUsers.clear();
+        return;
+      }
+      for (User user : users) {
+        if (user != null && user.getNick() != null && !user.getNick().trim().isBlank()) {
+          snapshot.put(IdentityUtil.canonicalNick(user.getNick()), user);
+        }
+      }
+      currentChannelUsers.clear();
+      currentChannelUsers.addAll(snapshot.values());
+    }
   }
 
   @Override
@@ -323,24 +337,36 @@ public class EngineImpl extends Base implements Engine {
   }
 
   public void removeActiveUser(String leftUser) {
-    for (User user : currentChannelUsers) {
-      if (leftUser.equals(user.getNick())) {
-        currentChannelUsers.remove(user);
-        log.info("User left: {}", user.getNick());
-        logRepository.logMessage(
-            MessageAuditEvent.publicMessage(
-                user.getTrip(),
-                user.getNick(),
-                user.getHash(),
-                "LEFT",
-                this.channel,
-                DateUtil.getTimestampNow()));
-      }
+    synchronized (currentChannelUsers) {
+      currentChannelUsers.removeIf(
+          user -> {
+            if (IdentityUtil.sameNick(user.getNick(), leftUser)) {
+              log.info("User left: {}", user.getNick());
+              logRepository.logMessage(
+                  MessageAuditEvent.publicMessage(
+                      user.getTrip(),
+                      user.getNick(),
+                      user.getHash(),
+                      "LEFT",
+                      this.channel,
+                      DateUtil.getTimestampNow()));
+              return true;
+            }
+            return false;
+          });
     }
   }
 
   public void addActiveUser(User newUser) {
-    currentChannelUsers.add(newUser);
+    synchronized (currentChannelUsers) {
+      if (newUser == null
+          || newUser.getNick() == null
+          || currentChannelUsers.stream()
+              .anyMatch(user -> IdentityUtil.sameNick(user.getNick(), newUser.getNick()))) {
+        return;
+      }
+      currentChannelUsers.add(newUser);
+    }
     log.info("Added user: {}, to list of active users", newUser.getNick());
     logRepository.logMessage(
         MessageAuditEvent.publicMessage(

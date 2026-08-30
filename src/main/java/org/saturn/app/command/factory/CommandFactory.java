@@ -10,7 +10,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommand;
@@ -109,7 +112,51 @@ public class CommandFactory {
           }
         });
 
+    definitions.sort(Comparator.comparing(CommandDefinition::className));
+    validateCommandCatalog(definitions);
     return List.copyOf(definitions);
+  }
+
+  static void validateCommandCatalog(List<CommandDefinition> definitions) {
+    Map<String, CommandDefinition> exact = new HashMap<>();
+    for (CommandDefinition definition : definitions) {
+      for (String alias : definition.aliases()) {
+        String normalized = alias.trim().toLowerCase();
+        CommandDefinition prior = exact.putIfAbsent(normalized, definition);
+        if (prior != null) {
+          throw new IllegalStateException(
+              "Duplicate command alias '"
+                  + normalized
+                  + "' between "
+                  + prior.className()
+                  + " aliases "
+                  + prior.aliases()
+                  + " and "
+                  + definition.className()
+                  + " aliases "
+                  + definition.aliases());
+        }
+      }
+    }
+    for (int i = 0; i < definitions.size(); i++) {
+      for (int j = i + 1; j < definitions.size(); j++) {
+        for (String left : definitions.get(i).aliases()) {
+          for (String right : definitions.get(j).aliases()) {
+            if (Util.checkAnagrams(left, List.of(right))) {
+              throw new IllegalStateException(
+                  "Anagram-equivalent command aliases '"
+                      + left
+                      + "' and '"
+                      + right
+                      + "' between "
+                      + definitions.get(i).className()
+                      + " and "
+                      + definitions.get(j).className());
+            }
+          }
+        }
+      }
+    }
   }
 
   private void logCatalogIfNeeded() {
@@ -132,6 +179,6 @@ public class CommandFactory {
     }
   }
 
-  private record CommandDefinition(
+  static record CommandDefinition(
       String className, List<String> aliases, Constructor<? extends UserCommand> constructor) {}
 }

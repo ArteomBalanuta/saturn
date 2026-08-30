@@ -10,6 +10,7 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 @CommandAliases(aliases = {"info", "i", "whois", "who"})
@@ -27,17 +28,18 @@ public class InfoUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     String author = chatMessage.getNick();
-    Optional<String> nick = getArguments().stream().findFirst();
-
+    Optional<String> nick = normalizedNickArgument(0, "info merc");
     if (nick.isEmpty()) {
       log.info("Executed [info] command by user: {}, target: not set", author);
-      engine.outService.enqueueMessageForSending(
-          author, "\\n Example: " + engine.prefix + "info merc", isWhisper());
+      replyToAuthor("\\n Example: " + engine.prefix + "info merc");
       return Optional.of(Status.FAILED);
     }
 
+    final String normalizedNick = nick.get();
     Optional<User> user =
-        engine.currentChannelUsers.stream().filter(u -> nick.get().equals(u.getNick())).findFirst();
+        engine.currentChannelUsers.stream()
+            .filter(u -> IdentityUtil.sameNick(normalizedNick, u.getNick()))
+            .findFirst();
 
     if (user.isEmpty()) {
       engine.outService.enqueueMessageForSending(

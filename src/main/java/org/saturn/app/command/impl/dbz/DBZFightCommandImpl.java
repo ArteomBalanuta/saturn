@@ -5,7 +5,6 @@ import static org.saturn.app.util.Util.getAdminAndUserTrips;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -29,13 +28,14 @@ public class DBZFightCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     String author = chatMessage.getNick();
-    String enemy = getArguments().getFirst();
+    Optional<String> target = requiredArgument(0, "dfight enemy");
+    if (target.isEmpty()) return Optional.of(Status.FAILED);
+    String enemy = target.get();
     engine.dbzService.fight(enemy);
     engine.dbzService.lvlUp(author);
 
     engine.outService.enqueueMessageForSending(
-        StringEscapeUtils.escapeJava(
-            "Gz. Enemy has been slain. Your leveled up! Granted 5 free stats!"));
+        "Gz. Enemy has been slain. Your leveled up! Granted 5 free stats!");
     log.info("Executed [dbz_fight] command by user: {}", author);
 
     return Optional.of(Status.SUCCESSFUL);

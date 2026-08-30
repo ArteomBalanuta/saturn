@@ -38,7 +38,7 @@ public class OverflowCommandImpl extends UserCommandBaseImpl {
     }
 
     Optional<String> argument = arguments.stream().findFirst();
-    String target = argument.get().replace("@", "");
+    String target = org.saturn.app.util.IdentityUtil.normalizeNickTarget(argument.get());
     engine.modService.overflow(target);
 
     log.info("Executed [overflow] command by user: {}, target: {}", author, target);

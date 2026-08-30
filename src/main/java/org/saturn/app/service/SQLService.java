@@ -5,5 +5,7 @@ public interface SQLService {
 
   String executeFormatted(String sql);
 
+  String executeActivityStats(String trip);
+
   String getBasicUserData(String hash, String trip);
 }

@@ -95,6 +95,31 @@ public class SQLServiceImpl extends OutService implements SQLService {
   }
 
   @Override
+  public String executeActivityStats(String trip) {
+    try (PreparedStatement statement =
+        connection.prepareStatement(
+            org.saturn.app.command.impl.moderator.ActivityCommandImpl.SQL_STATS_PER_HOUR_OF_WEEK)) {
+      statement.setString(1, trip.trim());
+      try (ResultSet result = statement.executeQuery()) {
+        ResultSetMetaData metaData = result.getMetaData();
+        List<String> columns = new ArrayList<>();
+        for (int i = 1; i <= metaData.getColumnCount(); i++) columns.add(metaData.getColumnName(i));
+        List<List<String>> rows = new ArrayList<>();
+        while (result.next()) {
+          List<String> row = new ArrayList<>();
+          for (int i = 1; i <= metaData.getColumnCount(); i++) row.add(result.getString(i));
+          rows.add(row);
+        }
+        if (rows.isEmpty()) return "No activity found.";
+        return "\\n```Text\\n" + generateTable(columns, rows) + "\\n ```";
+      }
+    } catch (SQLException e) {
+      log.error("Activity query failed", e);
+      return e.getMessage();
+    }
+  }
+
+  @Override
   public String getBasicUserData(String hash, String trip) {
     Set<String> hashes = new HashSet<>();
     Set<String> nicks = new HashSet<>();

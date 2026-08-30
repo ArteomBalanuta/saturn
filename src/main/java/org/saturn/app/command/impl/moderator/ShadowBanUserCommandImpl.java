@@ -14,6 +14,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.BanRecord;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 @CommandAliases(aliases = {"shadowban", "sban"})
@@ -44,7 +45,7 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
       return successful();
     }
 
-    String target = normalizeTarget(arguments.getFirst());
+    String target = IdentityUtil.normalizeNickTarget(arguments.getFirst());
     shadowBanSingleTarget(author, target);
     log.info("Executed [shadow ban] command by user: {}", author);
     return successful();
@@ -100,9 +101,5 @@ public class ShadowBanUserCommandImpl extends UserCommandBaseImpl {
         user.getTrip());
     engine.modService.kick(user.getNick());
     log.info("User: {}, has been kicked", user.getNick());
-  }
-
-  private String normalizeTarget(String argument) {
-    return argument.replace("@", "");
   }
 }

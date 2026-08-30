@@ -16,7 +16,7 @@ public interface ModService {
 
   void unshadowBan(String target);
 
-  void unshadowbanAll(String author);
+  void unshadowbanAll(String author, boolean whisper);
 
   void listShadowBanned(ChatMessage chatMessage);
 

@@ -51,7 +51,7 @@ public class InfoMessage {
   }
 
   public String getText() {
-    return text.replace("\n", "\\n");
+    return text;
   }
 
   public void setText(String text) {

@@ -38,4 +38,13 @@ class OutServiceTest {
     Assertions.assertEquals("line1\nline2", actual);
     Assertions.assertEquals(actual, queue.poll());
   }
+
+  @Test
+  void enqueueAgentMessageRejectsMissingAuthorAndBlankMessage() {
+    Assertions.assertThrows(
+        RuntimeException.class, () -> outService.enqueueAgentMessage(null, "answer", false, "id"));
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> outService.enqueueAgentMessage("author", " ", false, "id"));
+  }
 }

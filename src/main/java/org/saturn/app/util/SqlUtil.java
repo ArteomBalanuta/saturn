@@ -67,8 +67,9 @@ INNER JOIN trips t on tn.trip_id = t.id\s
 INNER JOIN names n on tn.name_id = n.id ORDER BY t.trip DESC;
 """;
   public static final String SELECT_MAIL_BY_NICK_OR_TRIP =
-      "SELECT id, owner, receiver, message, status, is_whisper, created_on FROM mail WHERE receiver"
-          + " LIKE ? AND status = 'PENDING';";
+      "SELECT id, owner, receiver, message, status, is_whisper, created_on FROM mail "
+          + "WHERE LOCATE(',' || LOWER(?) || ',', ',' || LOWER(receiver) || ',') > 0 "
+          + "AND status = 'PENDING';";
   public static final String UPDATE_MAIL_SET_STATUS_DELIVERED_WHERE_RECEIVER =
       "UPDATE mail SET status='DELIVERED' WHERE id = ?";
   public static final String INSERT_INTO_BANNED_USERS_TRIP_NAME_HASH_REASON_CREATED_ON_VALUES =

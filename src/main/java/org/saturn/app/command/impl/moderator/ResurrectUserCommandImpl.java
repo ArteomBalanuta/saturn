@@ -41,7 +41,7 @@ public class ResurrectUserCommandImpl extends UserCommandBaseImpl {
       return Optional.of(Status.FAILED);
     }
 
-    String target = arguments.get(0).replace("@", "");
+    String target = org.saturn.app.util.IdentityUtil.normalizeNickTarget(arguments.get(0));
     String from = arguments.get(1);
     String to = arguments.get(2);
     moveUser(target, from, to);

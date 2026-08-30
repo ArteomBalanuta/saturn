@@ -13,6 +13,7 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 @CommandAliases(aliases = {"kick", "k", "out"})
@@ -29,7 +30,12 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    final List<String> arguments = sanitizeArguments(getArguments());
+    final List<String> arguments;
+    try {
+      arguments = sanitizeArguments(getArguments());
+    } catch (IllegalArgumentException e) {
+      return failWithUsage("kick merc");
+    }
     final String author = author();
 
     if (arguments.isEmpty()) {
@@ -96,9 +102,12 @@ public class KickUserCommandImpl extends UserCommandBaseImpl {
   }
 
   private List<String> sanitizeArguments(List<String> arguments) {
-    List<String> sanitizedArguments = new java.util.ArrayList<>(arguments.size());
-    for (String argument : arguments) {
-      sanitizedArguments.add(argument.replace("@", ""));
+    if (arguments.isEmpty()) return arguments;
+    List<String> sanitizedArguments = new java.util.ArrayList<>(arguments);
+    if ("-c".equals(arguments.getFirst())) return sanitizedArguments;
+    int firstTarget = "-m".equals(arguments.getFirst()) ? 1 : 0;
+    for (int i = firstTarget; i < sanitizedArguments.size(); i++) {
+      sanitizedArguments.set(i, IdentityUtil.normalizeNickTarget(sanitizedArguments.get(i)));
     }
     return sanitizedArguments;
   }

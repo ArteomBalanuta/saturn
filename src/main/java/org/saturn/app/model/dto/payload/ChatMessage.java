@@ -53,7 +53,7 @@ public class ChatMessage {
   }
 
   public String getNick() {
-    return nick.replace("\n", "");
+    return nick;
   }
 
   public void setNick(String nick) {
@@ -77,7 +77,7 @@ public class ChatMessage {
   }
 
   public String getText() {
-    return text == null ? "" : text.replace("\n", "\\n");
+    return text;
   }
 
   public void setText(String text) {

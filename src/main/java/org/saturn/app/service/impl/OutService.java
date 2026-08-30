@@ -33,6 +33,10 @@ public class OutService {
   }
 
   public String enqueueMessageForSending(String message) {
+    if (StringUtils.isBlank(message)) {
+      log.error("Message should not be blank!");
+      throw new IllegalArgumentException("Message should not be blank!");
+    }
     message = normalizeForChatPayload(message);
     queue.add(message);
     CommandOutputCapture.recordChat(message);
@@ -87,6 +91,14 @@ public class OutService {
   }
 
   private static String formatAddressedMessage(String author, String message, boolean isWhisper) {
+    if (StringUtils.isBlank(author)) {
+      log.error("Author should not be blank!");
+      throw new RuntimeException("Author should not be blank!");
+    }
+    if (StringUtils.isBlank(message)) {
+      log.error("Message should not be blank!");
+      throw new IllegalArgumentException("Message should not be blank!");
+    }
     message = normalizeForChatPayload(message);
     if (isWhisper) {
       return StringUtils.prependIfMissingIgnoreCase(message, "/whisper @%s ".formatted(author));

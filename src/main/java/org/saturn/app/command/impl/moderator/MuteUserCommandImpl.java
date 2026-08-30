@@ -11,6 +11,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 @CommandAliases(aliases = {"mute", "dumb"})
@@ -28,15 +29,15 @@ public class MuteUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     final String author = author();
-    final Optional<String> target = firstArgument();
+    final Optional<String> target = normalizedNickArgument(0, "mute merc");
     if (target.isEmpty()) {
       log.info("Executed [mute] command by user: {}, no target set", author);
-      return failWithUsage("mute merc");
+      return Optional.of(Status.FAILED);
     }
 
     Optional<String> hash =
         engine.currentChannelUsers.stream()
-            .filter(u -> u.getNick().equals(target.get()))
+            .filter(u -> IdentityUtil.sameNick(u.getNick(), target.get()))
             .map(u -> u.getHash())
             .findFirst();
     if (hash.isEmpty()) {

@@ -31,14 +31,15 @@ public class ListNicksCommandImpl extends UserCommandBaseImpl {
     String author = chatMessage.getNick();
 
     List<String> arguments = getArguments();
-    String trip = arguments.getFirst();
-    if (trip == null) {
+    Optional<String> tripArgument = requiredArgument(0, "t2n QLnV66");
+    if (tripArgument.isEmpty()) {
       engine.outService.enqueueMessageForSending(
           author, "Set the trip. Example: " + engine.prefix + "t2n QLnV66", isWhisper());
 
       return Optional.of(Status.FAILED);
     }
 
+    String trip = tripArgument.get();
     List<String> nicksByTrip = engine.userService.getNicksByTrip(trip);
     String collected = String.join(",", nicksByTrip);
 

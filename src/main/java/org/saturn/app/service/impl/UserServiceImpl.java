@@ -148,6 +148,36 @@ public class UserServiceImpl extends OutService implements UserService {
   }
 
   @Override
+  public Optional<RegisteredIdentity> resolveRegisteredIdentity(String nameOrTrip) {
+    if (nameOrTrip == null || nameOrTrip.trim().isBlank()) return Optional.empty();
+    try (PreparedStatement statement =
+        connection.prepareStatement(
+            "SELECT DISTINCT n.name, t.trip FROM trip_names tn "
+                + "JOIN names n ON n.id = tn.name_id JOIN trips t ON t.id = tn.trip_id "
+                + "WHERE LOWER(n.name) = LOWER(?) OR LOWER(t.trip) = LOWER(?)")) {
+      String value = nameOrTrip.trim();
+      statement.setString(1, value);
+      statement.setString(2, value);
+      try (ResultSet result = statement.executeQuery()) {
+        RegisteredIdentity identity = null;
+        if (result.next())
+          identity = new RegisteredIdentity(result.getString(1), result.getString(2));
+        if (identity == null || result.next()) return Optional.empty();
+        return Optional.of(identity);
+      }
+    } catch (SQLException e) {
+      log.error("Unable to resolve registered identity", e);
+      return Optional.empty();
+    }
+  }
+
+  @Override
+  public int deleteByNameOrTrip(String nameOrTrip) {
+    Optional<RegisteredIdentity> identity = resolveRegisteredIdentity(nameOrTrip);
+    return identity.map(value -> delete(value.name(), value.trip())).orElse(1);
+  }
+
+  @Override
   public int delete(String name, String trip) {
     try {
       runInTransaction(

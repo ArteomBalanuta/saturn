@@ -27,16 +27,15 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    List<String> arguments = getArguments();
-    if (arguments.isEmpty()) {
+    Optional<String> argument = requiredArgument(0, "active 8Wotmg");
+    if (argument.isEmpty()) {
       log.info("Executed [active] command by user: {}, no target set", author());
       replyToAuthor("Example: %sactive 8Wotmg".formatted(engine.prefix));
       return Optional.of(Status.FAILED);
     }
 
-    String target = sanitizeTarget(arguments.getFirst());
-    String result =
-        engine.sqlService.executeFormatted(SQL_STATS_PER_HOUR_OF_WEEK.replace("?", target));
+    String target = argument.get();
+    String result = engine.sqlService.executeActivityStats(target);
     replyToAuthor("Stats: \\n%s".formatted(result));
     log.info(
         "Executed [active] command by user: {}, trip: {}, target: {}",
@@ -44,10 +43,6 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
         chatMessage.getTrip(),
         target);
     return successful();
-  }
-
-  private String sanitizeTarget(String target) {
-    return target.trim().replace("'", "").replace("\"", "");
   }
 
   public static final String SQL_STATS_PER_HOUR_OF_WEEK =
@@ -98,5 +93,5 @@ public class ActivityCommandImpl extends UserCommandBaseImpl {
                     day_full AS day_of_week,
                     hour,
                     probability_percentage
-                FROM Probability where LOWER(trip) = LOWER('?') ORDER BY trip, day_number, hour;""";
+                FROM Probability where LOWER(trip) = LOWER(?) ORDER BY trip, day_number, hour;""";
 }

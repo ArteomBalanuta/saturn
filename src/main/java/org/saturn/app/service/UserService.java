@@ -7,11 +7,17 @@ import org.saturn.app.model.dto.User;
 
 public interface UserService {
 
+  record RegisteredIdentity(String name, String trip) {}
+
   Optional<String> isSeenRecently(User user);
 
   String lastOnline(String tripOrNick);
 
   int delete(String name, String trip);
+
+  Optional<RegisteredIdentity> resolveRegisteredIdentity(String nameOrTrip);
+
+  int deleteByNameOrTrip(String nameOrTrip);
 
   int register(String name, String trip, String role);
 

@@ -14,6 +14,7 @@ import org.saturn.app.model.dto.Mail;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.MailService;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.IdentityUtil;
 import org.saturn.app.util.SqlUtil;
 import org.saturn.app.util.Util;
 
@@ -30,7 +31,17 @@ public class MailServiceImpl extends OutService implements MailService {
   public void executeMail(ChatMessage chatMessage, UserCommand command) {
     List<String> arguments = command.getArguments();
     String author = chatMessage.getNick();
-    String receiver = arguments.get(0).replace("@", "");
+    if (arguments.isEmpty()) {
+      enqueueMessageForSending(author, "Example: -mail merc message", chatMessage.isWhisper());
+      return;
+    }
+    final String receiver;
+    try {
+      receiver = IdentityUtil.normalizeNickTarget(arguments.get(0));
+    } catch (IllegalArgumentException e) {
+      enqueueMessageForSending(author, "Receiver cannot be blank.", chatMessage.isWhisper());
+      return;
+    }
 
     /* check against trip_names table. */
     List<String> trips = this.getTripsByNickOrTrip(receiver);
@@ -44,7 +55,7 @@ public class MailServiceImpl extends OutService implements MailService {
       return;
     }
 
-    receiver = Util.listToCommaString(trips);
+    String receivers = Util.listToCommaString(trips);
 
     StringBuilder message = new StringBuilder();
     /* skipping fist argument as it is the receiver's nickname */
@@ -55,11 +66,11 @@ public class MailServiceImpl extends OutService implements MailService {
     this.orderMessageDelivery(
         message.toString(),
         author.concat("#") + chatMessage.getTrip(),
-        receiver,
+        receivers,
         String.valueOf(chatMessage.isWhisper()));
     enqueueMessageForSending(
         author,
-        "trips: " + receiver + " will receive your message as soon they chat",
+        "trips: " + receivers + " will receive your message as soon they chat",
         chatMessage.isWhisper());
   }
 
@@ -141,7 +152,7 @@ public class MailServiceImpl extends OutService implements MailService {
     List<Mail> messages = new ArrayList<>();
     try {
       PreparedStatement mail = connection.prepareStatement(SqlUtil.SELECT_MAIL_BY_NICK_OR_TRIP);
-      mail.setString(1, "%" + trip + "%");
+      mail.setString(1, trip.trim());
       mail.execute();
 
       ResultSet resultSet = mail.getResultSet();

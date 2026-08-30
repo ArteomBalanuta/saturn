@@ -5,7 +5,6 @@ import static org.saturn.app.util.Util.getAdminAndUserTrips;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -14,7 +13,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
-@CommandAliases(aliases = {"dspawn", "ds"})
+@CommandAliases(aliases = {"dspawn"})
 public class DBZSpawnEnemyCommandImpl extends UserCommandBaseImpl {
   public DBZSpawnEnemyCommandImpl(EngineImpl engine, ChatMessage message, List<String> aliases) {
     super(message, engine, getAdminAndUserTrips(engine));
@@ -29,11 +28,12 @@ public class DBZSpawnEnemyCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     String author = chatMessage.getNick();
-    String enemyName = getArguments().getFirst();
+    Optional<String> enemy = requiredArgument(0, "dspawn enemy");
+    if (enemy.isEmpty()) return Optional.of(Status.FAILED);
+    String enemyName = enemy.get();
 
     engine.dbzService.spawnEnemy(enemyName);
-    engine.outService.enqueueMessageForSending(
-        StringEscapeUtils.escapeJava("spawned enemy: " + enemyName));
+    engine.outService.enqueueMessageForSending("spawned enemy: " + enemyName);
 
     log.info("Executed [dbz_spawnEnemy] command by user: {}", author);
 

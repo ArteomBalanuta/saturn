@@ -4,8 +4,8 @@ import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.StringEscapeUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.impl.EngineImpl;
@@ -30,18 +30,19 @@ public class DBZAddStrCommandImpl extends UserCommandBaseImpl {
   public Optional<Status> execute() {
     String author = chatMessage.getNick();
 
-    String stats = getArguments().getFirst();
+    OptionalInt parsed = requiredIntArgument(0, "daddstr amount", value -> value > 0);
+    if (parsed.isEmpty()) return Optional.of(Status.FAILED);
+    String stats = String.valueOf(parsed.getAsInt());
 
     int freeStats = engine.dbzService.getFreeStats(author);
     if (freeStats <= 0) {
-      engine.outService.enqueueMessageForSending(
-          StringEscapeUtils.escapeJava("You don't have free stats. Level up!"));
+      engine.outService.enqueueMessageForSending("You don't have free stats. Level up!");
       return Optional.of(Status.SUCCESSFUL);
     }
 
-    engine.dbzService.addStr(author, Integer.parseInt(stats));
+    engine.dbzService.addStr(author, parsed.getAsInt());
 
-    engine.outService.enqueueMessageForSending(StringEscapeUtils.escapeJava(stats));
+    engine.outService.enqueueMessageForSending(stats);
     log.info("Executed [dbz_stats] command by user: {}", author);
 
     return Optional.of(Status.SUCCESSFUL);

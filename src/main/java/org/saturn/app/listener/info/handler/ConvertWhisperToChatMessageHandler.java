@@ -6,6 +6,7 @@ import org.saturn.app.listener.info.InfoMessageContext;
 import org.saturn.app.listener.info.InfoMessageHandler;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 public class ConvertWhisperToChatMessageHandler implements InfoMessageHandler {
@@ -25,7 +26,7 @@ public class ConvertWhisperToChatMessageHandler implements InfoMessageHandler {
 
     User user =
         context.getEngine().currentChannelUsers.stream()
-            .filter(u -> u.getNick().equals(author.get()))
+            .filter(u -> IdentityUtil.sameNick(u.getNick(), author.get()))
             .findFirst()
             .orElseThrow();
 

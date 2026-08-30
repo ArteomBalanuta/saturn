@@ -9,6 +9,7 @@ import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 @CommandAliases(aliases = {"lastonline", "seen", "last", "online", "lastseen"})
@@ -26,8 +27,12 @@ public class LastOnlineUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     String author = chatMessage.getNick();
-    Optional<String> target = getArguments().stream().findFirst();
-
+    Optional<String> target;
+    try {
+      target = firstArgument().map(IdentityUtil::normalizeNickTarget);
+    } catch (IllegalArgumentException e) {
+      target = Optional.empty();
+    }
     if (target.isEmpty()) {
       engine.outService.enqueueMessageForSending(
           author, "\\n Example: " + engine.prefix + "lastseen merc", isWhisper());

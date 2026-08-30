@@ -28,10 +28,10 @@ public class BanUserCommandImpl extends UserCommandBaseImpl {
   @Override
   public Optional<Status> execute() {
     final String author = author();
-    final Optional<String> target = firstArgument();
+    final Optional<String> target = normalizedNickArgument(0, "ban merc");
     if (target.isEmpty()) {
       log.info("Executed [ban] command by user: {}, no target set", author);
-      return failWithUsage("ban merc");
+      return Optional.of(Status.FAILED);
     }
     engine.modService.ban(target.get());
     replyToAuthor(target.get() + " has been banned");

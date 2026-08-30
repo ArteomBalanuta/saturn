@@ -12,6 +12,7 @@ import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 @CommandAliases(
@@ -31,14 +32,19 @@ public class FlairCommandImpl extends UserCommandBaseImpl {
 
   @Override
   public Optional<Status> execute() {
-    List<String> arguments = getArguments().stream().map(arg -> arg.replace("@", "")).toList();
+    List<String> arguments = getArguments();
     if (arguments.size() < 2) {
       log.info("Executed [flair] command by user: {}, no username parameter specified", author());
       replyToAuthor("\\n Example: %sflair merc trusted".formatted(engine.prefix));
       return Optional.of(Status.FAILED);
     }
 
-    String target = arguments.getFirst();
+    String target;
+    try {
+      target = IdentityUtil.normalizeNickTarget(arguments.getFirst());
+    } catch (IllegalArgumentException e) {
+      return failWithUsage("flair merc trusted");
+    }
     String flair = arguments.get(1);
     if (!isUserActive(target)) {
       replyToAuthor("User %s is not in the room, flair was not applied.".formatted(target));
@@ -54,6 +60,8 @@ public class FlairCommandImpl extends UserCommandBaseImpl {
   }
 
   private boolean isUserActive(String target) {
-    return engine.currentChannelUsers.stream().map(User::getNick).anyMatch(target::equals);
+    return engine.currentChannelUsers.stream()
+        .map(User::getNick)
+        .anyMatch(nick -> IdentityUtil.sameNick(nick, target));
   }
 }

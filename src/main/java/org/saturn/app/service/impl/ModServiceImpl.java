@@ -20,6 +20,7 @@ import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.service.ModService;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.IdentityUtil;
 import org.saturn.app.util.JsonPayloads;
 import org.saturn.app.util.SqlUtil;
 
@@ -81,7 +82,8 @@ public class ModServiceImpl extends OutService implements ModService {
 
   @Override
   public void ban(String target) {
-    enqueueRawMessageForSending(JsonPayloads.command("ban", "nick", target));
+    enqueueRawMessageForSending(
+        JsonPayloads.command("ban", "nick", IdentityUtil.normalizeNickTarget(target)));
   }
 
   @Override
@@ -121,7 +123,8 @@ public class ModServiceImpl extends OutService implements ModService {
 
   @Override
   public void mute(String target) {
-    enqueueRawMessageForSending(JsonPayloads.command("mute", "nick", target));
+    enqueueRawMessageForSending(
+        JsonPayloads.command("mute", "nick", IdentityUtil.normalizeNickTarget(target)));
   }
 
   @Override
@@ -131,13 +134,16 @@ public class ModServiceImpl extends OutService implements ModService {
 
   @Override
   public void forceFlair(String target, String flair) {
-    enqueueRawMessageForSending(JsonPayloads.command("forceflair", "nick", target, "flair", flair));
+    enqueueRawMessageForSending(
+        JsonPayloads.command(
+            "forceflair", "nick", IdentityUtil.normalizeNickTarget(target), "flair", flair));
   }
 
   @Override
   public void forceColor(String target, String hexcolor) {
     enqueueRawMessageForSending(
-        JsonPayloads.command("forcecolor", "nick", target, "color", hexcolor));
+        JsonPayloads.command(
+            "forcecolor", "nick", IdentityUtil.normalizeNickTarget(target), "color", hexcolor));
   }
 
   @Override
@@ -224,10 +230,10 @@ public class ModServiceImpl extends OutService implements ModService {
   }
 
   @Override
-  public void unshadowbanAll(String author) {
+  public void unshadowbanAll(String author, boolean whisper) {
     List<BanRecord> bannedIds = this.getBannedUsers();
     if (bannedIds.isEmpty()) {
-      enqueueMessageForSending(author, "No users has been banned.", false);
+      enqueueMessageForSending(author, "No users has been banned.", whisper);
     } else {
       StringBuilder output = new StringBuilder();
       bannedIds.forEach(
@@ -253,23 +259,27 @@ public class ModServiceImpl extends OutService implements ModService {
         log.info("Error: {}", e.getMessage());
         log.error("Stack trace", e);
       }
-      enqueueMessageForSending(author, "Unbanned hashes, trips, nicks: \\n" + output, false);
+      enqueueMessageForSending(author, "Unbanned hashes, trips, nicks: \\n" + output, whisper);
     }
   }
 
   @Override
   public void kick(String target) {
-    enqueueRawMessageForSending(JsonPayloads.command("kick", "nick", target));
+    enqueueRawMessageForSending(
+        JsonPayloads.command("kick", "nick", IdentityUtil.normalizeNickTarget(target)));
   }
 
   @Override
   public void kickTo(String target, String channel) {
-    enqueueRawMessageForSending(JsonPayloads.command("kick", "nick", target, "to", channel));
+    enqueueRawMessageForSending(
+        JsonPayloads.command(
+            "kick", "nick", IdentityUtil.normalizeNickTarget(target), "to", channel));
   }
 
   @Override
   public void overflow(String target) {
-    enqueueRawMessageForSending(JsonPayloads.command("overflow", "nick", target));
+    enqueueRawMessageForSending(
+        JsonPayloads.command("overflow", "nick", IdentityUtil.normalizeNickTarget(target)));
   }
 
   @Override

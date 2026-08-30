@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
@@ -19,6 +21,7 @@ import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.DateUtil;
+import org.saturn.app.util.IdentityUtil;
 import org.saturn.app.util.JsonPayloads;
 
 @Slf4j
@@ -42,23 +45,26 @@ public class UserCommandBaseImpl implements UserCommand {
 
     this.authorizedTrips.addAll(authorizedTrips);
 
-    String message = chatMessage.getText().substring(engine.getPrefix().length());
-    if (message.contains(" ")) {
-      setAliases(List.of(message.substring(0, message.indexOf(" ")).trim().toUpperCase()));
-      parseArguments(message);
+    String message = chatMessage.getText().substring(engine.getPrefix().length()).trim();
+    int separator = -1;
+    for (int i = 0; i < message.length(); i++) {
+      if (Character.isWhitespace(message.charAt(i))) {
+        separator = i;
+        break;
+      }
+    }
+    if (separator >= 0) {
+      setAliases(List.of(message.substring(0, separator).toUpperCase()));
+      parseArguments(message.substring(separator));
       return;
     }
 
-    setAliases(List.of(message.trim().toUpperCase()));
+    setAliases(List.of(message.toUpperCase()));
   }
 
   private void parseArguments(String message) {
-    String arguments = message.substring(message.indexOf(" ") + 1);
-    if (arguments.contains(" ")) {
-      this.arguments.addAll(Arrays.asList(arguments.split(" ")));
-    } else {
-      this.arguments.add(arguments);
-    }
+    String arguments = message.trim();
+    if (!arguments.isBlank()) this.arguments.addAll(Arrays.asList(arguments.split("\\s+")));
   }
 
   protected void setAliases(List<String> aliases) {
@@ -140,6 +146,43 @@ public class UserCommandBaseImpl implements UserCommand {
 
   protected Optional<String> firstArgument() {
     return getArguments().stream().findFirst();
+  }
+
+  protected Optional<String> requiredArgument(int index, String label) {
+    List<String> args = getArguments();
+    if (index < 0
+        || index >= args.size()
+        || args.get(index) == null
+        || args.get(index).trim().isBlank()) {
+      failWithUsage(label);
+      return Optional.empty();
+    }
+    return Optional.of(args.get(index).trim());
+  }
+
+  protected OptionalInt requiredIntArgument(int index, String label, IntPredicate valid) {
+    Optional<String> raw = requiredArgument(index, label);
+    if (raw.isEmpty()) return OptionalInt.empty();
+    try {
+      int value = Integer.parseInt(raw.get());
+      if (!valid.test(value)) {
+        failWithUsage(label);
+        return OptionalInt.empty();
+      }
+      return OptionalInt.of(value);
+    } catch (NumberFormatException e) {
+      failWithUsage(label);
+      return OptionalInt.empty();
+    }
+  }
+
+  protected Optional<String> normalizedNickArgument(int index, String label) {
+    try {
+      return requiredArgument(index, label).map(IdentityUtil::normalizeNickTarget);
+    } catch (IllegalArgumentException e) {
+      failWithUsage(label);
+      return Optional.empty();
+    }
   }
 
   protected void replyToAuthor(String message) {

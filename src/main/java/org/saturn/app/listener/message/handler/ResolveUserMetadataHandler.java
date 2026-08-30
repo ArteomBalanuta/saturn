@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.listener.message.ChatMessageContext;
 import org.saturn.app.listener.message.ChatMessageHandler;
 import org.saturn.app.model.dto.User;
+import org.saturn.app.util.IdentityUtil;
 
 @Slf4j
 public class ResolveUserMetadataHandler implements ChatMessageHandler {
@@ -12,7 +13,7 @@ public class ResolveUserMetadataHandler implements ChatMessageHandler {
   public boolean handle(ChatMessageContext context) {
     context.setAuthor(
         context.getEngine().currentChannelUsers.stream()
-            .filter(u -> u.getNick().equals(context.getMessage().getNick()))
+            .filter(u -> IdentityUtil.sameNick(u.getNick(), context.getMessage().getNick()))
             .findFirst());
 
     context
