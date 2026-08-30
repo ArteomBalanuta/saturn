@@ -4,16 +4,19 @@ import static org.saturn.app.util.Util.getAdminAndUserTrips;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.listener.JoinChannelListener;
-import org.saturn.app.listener.impl.MsgChannelCommandListenerImpl;
+import org.saturn.app.listener.snapshot.DefaultRoomSnapshotCoordinator;
+import org.saturn.app.listener.snapshot.DeliverMessageToRoomOperation;
+import org.saturn.app.listener.snapshot.EngineSnapshotSession;
+import org.saturn.app.listener.snapshot.GsonOnlineSetPayloadParser;
+import org.saturn.app.listener.snapshot.RoomSnapshotRequest;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
 @Slf4j
@@ -78,26 +81,27 @@ public class MsgChannelCommandImpl extends UserCommandBaseImpl {
   }
 
   private void deliverToRemoteRoom(String room, String message) {
-    EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
-    setupEngine(room, slaveEngine);
-
-    JoinChannelListener joinChannelListener =
-        new MsgChannelCommandListenerImpl(
-            new JoinChannelListenerDto(this.engine, slaveEngine, author(), room));
-
-    joinChannelListener.setAction(
-        () -> {
-          slaveEngine.outService.enqueueMessageForSending("*", formatMessage(message), false);
-          slaveEngine.shareMessages();
-          replyToAuthor("sent successfully.");
-          log.info(
-              "Executed [msgchannel] command by user: {}, room: {}, message: {}",
-              author(),
-              room,
-              message);
-        });
-
-    slaveEngine.setOnlineSetListener(joinChannelListener);
-    slaveEngine.start();
+    String workflowId = UUID.randomUUID().toString();
+    DefaultRoomSnapshotCoordinator coordinator =
+        new DefaultRoomSnapshotCoordinator(
+            (request, sink) ->
+                EngineSnapshotSession.create(
+                    workflowId,
+                    engine.getConfig(),
+                    room,
+                    "msg-" + workflowId.substring(0, 8),
+                    engine.password,
+                    sink),
+            (request, reply) -> replyToAuthor(reply),
+            new GsonOnlineSetPayloadParser(EngineType.LIST_CMD, workflowId, room));
+    coordinator.submit(
+        new RoomSnapshotRequest(
+            workflowId,
+            author(),
+            engine.channel,
+            room,
+            null,
+            chatMessage,
+            new DeliverMessageToRoomOperation(formatMessage(message))));
   }
 }

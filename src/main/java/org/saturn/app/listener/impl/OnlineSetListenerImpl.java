@@ -1,18 +1,14 @@
 package org.saturn.app.listener.impl;
 
-import static org.saturn.app.util.Util.gson;
-
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
 import org.saturn.app.listener.Listener;
-import org.saturn.app.model.dto.User;
+import org.saturn.app.listener.snapshot.GsonOnlineSetPayloadParser;
+import org.saturn.app.listener.snapshot.OnlineSetSnapshot;
+import org.saturn.app.listener.snapshot.PayloadDecodeException;
 
 @Slf4j
 public class OnlineSetListenerImpl implements Listener {
@@ -29,25 +25,16 @@ public class OnlineSetListenerImpl implements Listener {
 
   @Override
   public void notify(String jsonText) {
-    JsonElement e = JsonParser.parseString(jsonText);
-
-    JsonElement listingElement = null;
-    if (engine.engineType.equals(EngineType.AGENT)) {
-      List<JsonElement> nicks = e.getAsJsonObject().getAsJsonArray("nicks").asList();
-      List<User> users = new ArrayList<>(nicks.size());
-      for (JsonElement nick : nicks) {
-        users.add(new User(nick.getAsString()));
+    try {
+      OnlineSetSnapshot snapshot =
+          new GsonOnlineSetPayloadParser(engine.engineType, "permanent", engine.channel)
+              .parse(jsonText);
+      engine.setActiveUsers(snapshot.users());
+      if (engine.engineType.equals(EngineType.HOST)) {
+        executeStartupCommands();
       }
-      engine.setActiveUsers(users);
-      return;
-    } else {
-      listingElement = e.getAsJsonObject().get("users");
-    }
-
-    User[] users = gson.fromJson(listingElement, User[].class);
-    engine.setActiveUsers(Arrays.asList(users));
-    if (engine.engineType.equals(EngineType.HOST)) {
-      executeStartupCommands();
+    } catch (PayloadDecodeException | RuntimeException e) {
+      log.error("Failed to decode onlineSet for channel {}", engine.channel, e);
     }
   }
 

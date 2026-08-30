@@ -8,16 +8,19 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.listener.JoinChannelListener;
-import org.saturn.app.listener.impl.ListCommandListenerImpl;
+import org.saturn.app.listener.snapshot.DefaultRoomSnapshotCoordinator;
+import org.saturn.app.listener.snapshot.EngineSnapshotSession;
+import org.saturn.app.listener.snapshot.GsonOnlineSetPayloadParser;
+import org.saturn.app.listener.snapshot.ListRoomSnapshotOperation;
+import org.saturn.app.listener.snapshot.RoomSnapshotRequest;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.User;
 import org.saturn.app.model.dto.payload.ChatMessage;
 
@@ -58,16 +61,30 @@ public class ListUserCommandImpl extends UserCommandBaseImpl {
   }
 
   public void joinChannel(String channel) {
-    EngineImpl slaveEngine = new EngineImpl(null, super.engine.getConfig(), EngineType.LIST_CMD);
-    setupEngine(channel, slaveEngine);
-
-    JoinChannelListener onlineSetListener =
-        new ListCommandListenerImpl(
-            new JoinChannelListenerDto(this.engine, slaveEngine, author(), channel));
-    onlineSetListener.setChatMessage(chatMessage);
-
-    slaveEngine.setOnlineSetListener(onlineSetListener);
-    slaveEngine.start();
+    String workflowId = UUID.randomUUID().toString();
+    DefaultRoomSnapshotCoordinator coordinator =
+        new DefaultRoomSnapshotCoordinator(
+            (request, sink) ->
+                EngineSnapshotSession.create(
+                    workflowId,
+                    engine.getConfig(),
+                    channel,
+                    "list-" + workflowId.substring(0, 8),
+                    engine.password,
+                    sink),
+            (request, reply) ->
+                engine.outService.enqueueMessageForSending(
+                    author(), reply, chatMessage.isWhisper()),
+            new GsonOnlineSetPayloadParser(EngineType.LIST_CMD, workflowId, channel));
+    coordinator.submit(
+        new RoomSnapshotRequest(
+            workflowId,
+            author(),
+            engine.channel,
+            channel,
+            null,
+            chatMessage,
+            new ListRoomSnapshotOperation()));
   }
 
   public void printUsers(String author, List<User> users, boolean isWhisper) {

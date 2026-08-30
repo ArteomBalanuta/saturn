@@ -2,23 +2,27 @@ package org.saturn.app.command.impl.admin;
 
 import static org.saturn.app.util.Util.getAdminTrips;
 
-import com.moandjiezana.toml.Toml;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.saturn.app.command.UserCommandBaseImpl;
 import org.saturn.app.command.annotation.CommandAliases;
 import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.listener.Listener;
-import org.saturn.app.listener.impl.MinerListenerImpl;
+import org.saturn.app.listener.snapshot.DefaultRoomSnapshotCoordinator;
+import org.saturn.app.listener.snapshot.EngineSnapshotSession;
+import org.saturn.app.listener.snapshot.GsonOnlineSetPayloadParser;
+import org.saturn.app.listener.snapshot.MineTripOperation;
+import org.saturn.app.listener.snapshot.RoomSnapshotRequest;
 import org.saturn.app.model.Status;
 import org.saturn.app.model.dto.Proxy;
 import org.saturn.app.model.dto.payload.ChatMessage;
@@ -29,6 +33,7 @@ import org.saturn.app.model.dto.payload.ChatMessage;
 //  awk '$4 ~ /^[a-z]+$/ {print $4}' trips.txt | sort
 
 /* TODO: implement logging separately too not flood the main logging output. P.S This class is horrible. */
+@Slf4j
 @CommandAliases(aliases = {"mine"})
 public class MineTripCommandImpl extends UserCommandBaseImpl {
   private static final ScheduledThreadPoolExecutor executorService =
@@ -127,25 +132,25 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
         () -> joinChannel(channel, proxy), initialDelaySeconds, delaySeconds, TimeUnit.SECONDS);
 
     if (proxy != null) {
-      System.out.println(
+      log.info(
           "Started miner, initial delay: %d, room: %s, delay: %d, proxy: %s:%s"
               .formatted(
                   initialDelaySeconds, channel, delaySeconds, proxy.getIp(), proxy.getPort()));
       return;
     }
 
-    System.out.println(
+    log.info(
         "Started miner, initial delay: %d, room: %s, delay: %d"
             .formatted(initialDelaySeconds, channel, delaySeconds));
   }
 
   private void stopMining(String channel) {
     executorService.shutdownNow();
-    System.out.println("Stopped mining, room: %s".formatted(channel));
+    log.info("Stopped mining, room: %s".formatted(channel));
     try {
-      System.out.println("Awaiting termination: %s".formatted(executorService.isTerminated()));
+      log.info("Awaiting termination: %s".formatted(executorService.isTerminated()));
       boolean terminated = executorService.awaitTermination(10, TimeUnit.SECONDS);
-      System.out.println("Miner service is terminated: %s".formatted(terminated));
+      log.info("Miner service is terminated: %s".formatted(terminated));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -156,38 +161,35 @@ public class MineTripCommandImpl extends UserCommandBaseImpl {
       for (Future<?> task : tasks) {
         if (task.isDone()) {
           Object o = task.get();
-          System.out.println("mined successfully: " + o);
+          log.info("mined successfully: " + o);
         }
       }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     } catch (ExecutionException e) {
-      System.out.println("Caught: " + e);
+      log.info("Caught: " + e);
     }
   }
 
   private void joinChannel(String channel, Proxy proxyDto) {
-    Toml config = super.engine.getConfig();
-    EngineImpl mineBot = new EngineImpl(null, config, EngineType.LIST_CMD);
-
-    mineBot.setChannel(channel);
-    int nickLength = 8;
-    boolean useLetters = true;
-    boolean useNumbers = true;
-
-    String nick = RandomStringUtils.random(nickLength, useLetters, useNumbers);
-    String password = RandomStringUtils.random(128, useLetters, useNumbers);
-
-    mineBot.setNick(nick);
-    mineBot.setPassword(password);
-
-    Listener listener = new MinerListenerImpl(mineBot);
-    mineBot.setOnlineSetListener(listener);
-
-    try {
-      mineBot.start(proxyDto);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+    String workflowId = UUID.randomUUID().toString();
+    String nick = RandomStringUtils.random(8, true, true);
+    String password = RandomStringUtils.random(128, true, true);
+    DefaultRoomSnapshotCoordinator coordinator =
+        new DefaultRoomSnapshotCoordinator(
+            (request, sink) ->
+                EngineSnapshotSession.create(
+                    workflowId, engine.getConfig(), channel, nick, password, sink),
+            (request, reply) -> log.warn("Mining workflow {}: {}", workflowId, reply),
+            new GsonOnlineSetPayloadParser(EngineType.LIST_CMD, workflowId, channel));
+    coordinator.submit(
+        new RoomSnapshotRequest(
+            workflowId,
+            nick,
+            engine.channel,
+            channel,
+            null,
+            null,
+            new MineTripOperation(nick, password, java.nio.file.Paths.get("trips.txt"))));
   }
 }

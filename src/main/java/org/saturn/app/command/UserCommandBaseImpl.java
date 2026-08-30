@@ -7,22 +7,25 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.UUID;
 import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.saturn.app.facade.EngineType;
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.listener.JoinChannelListener;
-import org.saturn.app.listener.impl.KickCommandListenerImpl;
+import org.saturn.app.listener.snapshot.DefaultRoomSnapshotCoordinator;
+import org.saturn.app.listener.snapshot.EngineSnapshotSession;
+import org.saturn.app.listener.snapshot.GsonOnlineSetPayloadParser;
+import org.saturn.app.listener.snapshot.KickOrResurrectOperation;
+import org.saturn.app.listener.snapshot.RoomSnapshotRequest;
 import org.saturn.app.model.Role;
 import org.saturn.app.model.Status;
-import org.saturn.app.model.dto.JoinChannelListenerDto;
 import org.saturn.app.model.dto.payload.ChatMessage;
 import org.saturn.app.util.DateUtil;
 import org.saturn.app.util.IdentityUtil;
-import org.saturn.app.util.JsonPayloads;
 
 @Slf4j
 public class UserCommandBaseImpl implements UserCommand {
@@ -211,26 +214,28 @@ public class UserCommandBaseImpl implements UserCommand {
   }
 
   public void resurrect(String channel, String nick, String targetChannel, EngineImpl slaveEngine) {
-    setupEngine(channel, slaveEngine);
-
-    JoinChannelListenerDto dto =
-        new JoinChannelListenerDto(this.engine, slaveEngine, slaveEngine.nick, channel);
-    dto.target = nick;
-    dto.destinationChannel = targetChannel;
-
-    JoinChannelListener onlineSetListener = new KickCommandListenerImpl(dto);
-    onlineSetListener.setChatMessage(chatMessage);
-
-    onlineSetListener.setAction(
-        () -> {
-          slaveEngine.outService.enqueueRawMessageForSending(
-              JsonPayloads.command("kick", "nick", nick, "to", targetChannel));
-          slaveEngine.shareMessages();
-          log.info("user: {}, has been moved to: {}", nick, targetChannel);
-        });
-
-    slaveEngine.setOnlineSetListener(onlineSetListener);
-    slaveEngine.start();
+    String workflowId = UUID.randomUUID().toString();
+    DefaultRoomSnapshotCoordinator coordinator =
+        new DefaultRoomSnapshotCoordinator(
+            (request, sink) ->
+                EngineSnapshotSession.create(
+                    workflowId,
+                    engine.getConfig(),
+                    channel,
+                    "move-" + workflowId.substring(0, 8),
+                    engine.password,
+                    sink),
+            (request, reply) -> replyToAuthor(reply),
+            new GsonOnlineSetPayloadParser(EngineType.LIST_CMD, workflowId, channel));
+    coordinator.submit(
+        new RoomSnapshotRequest(
+            workflowId,
+            author(),
+            engine.channel,
+            channel,
+            targetChannel,
+            chatMessage,
+            new KickOrResurrectOperation(nick)));
   }
 
   public void setupEngine(String channel, EngineImpl listBot) {

@@ -21,7 +21,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.saturn.app.facade.impl.EngineImpl;
-import org.saturn.app.model.dto.User;
 
 @Slf4j
 public class Util {
@@ -50,13 +49,6 @@ public class Util {
 
   public static List<String> getAdminTrips(EngineImpl engine) {
     return new ArrayList<>(Arrays.asList(engine.adminTrips.split(",")));
-  }
-
-  public static List<User> extractUsersFromJson(String jsonText) {
-    JsonElement e = JsonParser.parseString(jsonText);
-    JsonElement listingElement = e.getAsJsonObject().get("users");
-    User[] users = gson.fromJson(listingElement, User[].class);
-    return Arrays.asList(users);
   }
 
   public static boolean checkAnagrams(String target, List<String> cmdAliases) {

@@ -37,6 +37,7 @@ import org.saturn.app.command.impl.admin.WhiskeyReplicaCommandImpl.ProxyTestResu
 import org.saturn.app.facade.Base;
 import org.saturn.app.facade.Engine;
 import org.saturn.app.facade.EngineType;
+import org.saturn.app.facade.ListenerProfile;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.listener.impl.ConnectionListenerImpl;
 import org.saturn.app.listener.impl.IncomingMessageListenerImpl;
@@ -65,6 +66,7 @@ public class EngineImpl extends Base implements Engine {
   public final Set<String> subscribers = new HashSet<>();
   public final Map<String, Afk> afkUsers = new HashMap<>();
   private final Map<String, Listener> payloadListeners = new HashMap<>();
+  private final ListenerProfile listenerProfile;
   private Listener onlineSetListener = new OnlineSetListenerImpl(this);
   private final Listener userJoinedListener = new UserJoinedListenerImpl(this);
   private final Listener userLeftListener = new UserLeftListenerImpl(this);
@@ -73,13 +75,17 @@ public class EngineImpl extends Base implements Engine {
   private final Listener connectionListener = new ConnectionListenerImpl(this);
   private final Listener incomingMessageListener = new IncomingMessageListenerImpl(this);
 
-  public void setOnlineSetListener(Listener listener) {
-    this.onlineSetListener = listener;
-    registerPayloadListener("onlineSet", listener);
+  public EngineImpl(Connection dbConnection, Toml config, EngineType engineType) {
+    this(dbConnection, config, engineType, ListenerProfile.PERMANENT);
   }
 
-  public EngineImpl(Connection dbConnection, Toml config, EngineType engineType) {
+  public EngineImpl(
+      Connection dbConnection,
+      Toml config,
+      EngineType engineType,
+      ListenerProfile listenerProfile) {
     super(dbConnection, config, engineType);
+    this.listenerProfile = listenerProfile;
     if (super.proxies != null) {
       if (!super.proxies.isEmpty() || !super.proxies.isBlank()) {
         this.proxies = Arrays.asList(super.proxies.split(","));
@@ -95,6 +101,9 @@ public class EngineImpl extends Base implements Engine {
 
   private void registerDefaultPayloadListeners() {
     registerPayloadListener("onlineSet", onlineSetListener);
+    if (listenerProfile == ListenerProfile.TEMPORARY_ONLINE_SET) {
+      return;
+    }
     registerPayloadListener("onlineAdd", userJoinedListener);
     registerPayloadListener("onlineRemove", userLeftListener);
     registerPayloadListener("chat", chatMessageListener);
@@ -103,6 +112,10 @@ public class EngineImpl extends Base implements Engine {
 
   public void registerPayloadListener(String command, Listener listener) {
     payloadListeners.put(command, listener);
+  }
+
+  public boolean hasPayloadListener(String command) {
+    return payloadListeners.containsKey(command);
   }
 
   public void setHostRef(EngineImpl hostRef) {
@@ -160,8 +173,7 @@ public class EngineImpl extends Base implements Engine {
       hcConnection.startNonBlocking();
       log.debug("Started non-blocking connection");
     } catch (Exception e) {
-      log.info("Error: {}", e.getMessage());
-      log.error("Exception: ", e);
+      log.error("Failed to start WebSocket connection", e);
       throw new RuntimeException(e);
     }
   }
@@ -175,8 +187,7 @@ public class EngineImpl extends Base implements Engine {
       hcConnection.startNonBlocking();
       log.debug("Started non-blocking connection");
     } catch (Exception e) {
-      log.info("Error: {}", e.getMessage());
-      log.error("Exception: ", e);
+      log.error("Failed to start WebSocket connection", e);
       throw new RuntimeException(e);
     }
   }
@@ -184,7 +195,7 @@ public class EngineImpl extends Base implements Engine {
   public void sendJoinMessage() {
     String joinPayload = buildJoinPayload(channel, nick, password);
     hcConnection.write(joinPayload);
-    log.debug("Sent join payload: {}", joinPayload);
+    log.debug("Sent join payload for channel: {}, nick: {}", channel, nick);
   }
 
   public synchronized void shareMessages() {
@@ -213,10 +224,8 @@ public class EngineImpl extends Base implements Engine {
     }
 
     if (message != null) {
-      log.debug("Flushing message: {}", message);
+      log.debug("Flushing outbound message");
       hcConnection.write(message);
-    } else {
-      log.debug("Message can't be null");
     }
   }
 
@@ -240,16 +249,14 @@ public class EngineImpl extends Base implements Engine {
     try {
       stopReplicas();
       if (hcConnection != null) {
-        log.debug("Closing the host WS connection...");
+        log.debug("Closing WebSocket connection");
         this.hcConnection.close();
-        log.debug("Closed the WS connection...");
       } else {
-        log.debug("WS Connection is already closed");
+        log.debug("WebSocket connection is already closed");
       }
 
     } catch (Exception e) {
-      log.info("Error: {}", e.getMessage());
-      log.error("Exception: ", e);
+      log.error("Failed to stop engine", e);
     } finally {
       if (getAgentService() != null) {
         getAgentService().close();
@@ -269,7 +276,7 @@ public class EngineImpl extends Base implements Engine {
     for (Map.Entry<String, EngineImpl> replicaEntry : replicas) {
       String channel = replicaEntry.getKey();
       EngineImpl replica = replicaEntry.getValue();
-      log.warn("Shutting down replica in channel: {}", channel);
+      log.warn("Stopping replica engine for channel: {}", channel);
       replica.stop();
       // Trigger reconnection with backup proxy if available (async)
       CompletableFuture.runAsync(
@@ -286,22 +293,21 @@ public class EngineImpl extends Base implements Engine {
 
   public final void dispatchMessage(String jsonText) {
     try {
-      log.debug("Dispatching message: {}", jsonText);
       String cmd = extractFieldFromJson(jsonText, "cmd");
+      log.debug("Dispatching inbound command: {}", cmd);
       if ("join".equals(cmd)) {
         return;
       }
 
       Listener listener = payloadListeners.get(cmd);
       if (listener == null) {
-        log.warn("Non functional payload: {}", jsonText);
+        log.warn("No listener registered for inbound command: {}", cmd);
         return;
       }
 
       listener.notify(jsonText);
     } catch (Exception e) {
-      log.error("Warning: {}", e.getMessage());
-      log.error("Stack trace:", e);
+      log.error("Failed to dispatch inbound message", e);
     }
   }
 
@@ -318,7 +324,7 @@ public class EngineImpl extends Base implements Engine {
           continue;
         }
         log.warn(
-            "Sharing hash, nick lists with subscriber: {}, trip: {} ",
+            "Sharing user data with subscriber nick: {}, trip: {}",
             currentUser.getNick(),
             currentUser.getTrip());
         outService.enqueueMessageForSending(
@@ -330,9 +336,12 @@ public class EngineImpl extends Base implements Engine {
   public void kickIfShadowBanned(User user) {
     Optional<BanRecord> bannedUser = modService.isShadowBanned(user);
     if (bannedUser.isPresent()) {
-      log.info("Channel: {}, user is banned: {}", user.getChannel(), bannedUser.get());
+      log.info(
+          "Shadow-banned user detected in channel: {}, nick: {}",
+          user.getChannel(),
+          user.getNick());
       modService.kick(user.getNick());
-      log.warn("User: {} has been kicked", user.getNick());
+      log.warn("Kicked shadow-banned user: {}", user.getNick());
     }
   }
 
@@ -367,7 +376,7 @@ public class EngineImpl extends Base implements Engine {
       }
       currentChannelUsers.add(newUser);
     }
-    log.info("Added user: {}, to list of active users", newUser.getNick());
+    log.info("Added active user: {}", newUser.getNick());
     logRepository.logMessage(
         MessageAuditEvent.publicMessage(
             newUser.getTrip(),
@@ -424,7 +433,7 @@ public class EngineImpl extends Base implements Engine {
       outService.enqueueMessageForSending(
           user.getNick(), "%s\\n reason: %s".formatted(ago, reason), false);
       afkUsers.remove(user.getTrip());
-      log.debug("Removed user: {}, trip: {}, from afk list", user.getNick(), user.getTrip());
+      log.debug("Removed user from AFK list: nick={}, trip={}", user.getNick(), user.getTrip());
     }
   }
 
@@ -455,7 +464,7 @@ public class EngineImpl extends Base implements Engine {
     String youtubeVidDetails = getYoutubeVidDetails(id);
     String title = StringEscapeUtils.escapeJava(extractFieldFromJson(youtubeVidDetails, "title"));
 
-    String url = "![%s](https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)".formatted(title);
+    String url = "![%s](https://i.ytimg.com/vi/VIDEO_ID/hqdefault.jpg)".formatted(title);
     String urlFormatted = url.replace("VIDEO_ID", id);
     String payload = "Title: %s%n%s".formatted(title, urlFormatted);
     outService.enqueueMessageForSending(author, StringEscapeUtils.escapeJava(payload), false);
@@ -497,7 +506,7 @@ public class EngineImpl extends Base implements Engine {
       }
       return result;
     } catch (IOException e) {
-      e.printStackTrace();
+      log.error("Failed to fetch YouTube metadata", e);
     }
 
     return null;
@@ -552,14 +561,14 @@ public class EngineImpl extends Base implements Engine {
     }
 
     if (!whisperMails.isEmpty()) {
-      log.info("User: {}, got pending whisper messages", author);
+      log.info("Delivering pending whisper mail to user: {}", author);
       String whisperMailPayload = formatMail(whisperMails);
       outService.enqueueMessageForSending(
           author, " new mail: \\n %s".formatted(whisperMailPayload), true);
     }
 
     if (!publicMessages.isEmpty()) {
-      log.info("User: {}, got pending messages", author);
+      log.info("Delivering pending public mail to user: {}", author);
       String publicMailPayload = formatMail(publicMessages);
       outService.enqueueMessageForSending(
           author, " new mail: \\n %s".formatted(publicMailPayload), false);
@@ -567,7 +576,7 @@ public class EngineImpl extends Base implements Engine {
 
     for (Mail mail : messages) {
       mailService.updateMailStatus(mail.id);
-      log.debug("Updated message status with ID: {}, to 'DELIVERED'", mail.id);
+      log.debug("Marked mail delivered: id={}", mail.id);
     }
   }
 

@@ -10,6 +10,7 @@ import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import org.junit.jupiter.api.Test;
 import org.saturn.app.facade.EngineType;
+import org.saturn.app.facade.ListenerProfile;
 import org.saturn.app.listener.Listener;
 import org.saturn.app.model.dto.User;
 
@@ -89,14 +90,19 @@ class EngineImplTest {
   }
 
   @Test
-  void setOnlineSetListenerUpdatesPayloadRegistry() {
-    CountingListener listener = new CountingListener();
-    engine.setOnlineSetListener(listener);
+  void temporaryProfileDoesNotRegisterNormalRoomEventListeners() {
+    EngineImpl temporary =
+        new EngineImpl(
+            noopConnection(),
+            buildConfig(),
+            EngineType.LIST_CMD,
+            ListenerProfile.TEMPORARY_ONLINE_SET);
 
-    engine.dispatchMessage("{\"cmd\":\"onlineSet\",\"users\":[]}");
-
-    assertEquals(1, listener.notifications());
-    assertEquals("{\"cmd\":\"onlineSet\",\"users\":[]}", listener.lastMessage());
+    assertTrue(temporary.hasPayloadListener("onlineSet"));
+    assertFalse(temporary.hasPayloadListener("chat"));
+    assertFalse(temporary.hasPayloadListener("info"));
+    assertFalse(temporary.hasPayloadListener("onlineAdd"));
+    assertFalse(temporary.hasPayloadListener("onlineRemove"));
   }
 
   @Test
